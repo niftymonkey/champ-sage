@@ -22,26 +22,14 @@ You can also just talk to it mid-game. "Their Vayne is shredding me, what should
 
 ## How it works
 
-- **Desktop app** that sits in an always-on-top window on your second monitor (and eventually as an in-game overlay)
-- **Voice input** with a global hotkey. It understands League terminology (champion names, item names, augment names) even when speech-to-text mangles them
-- **Text input** too, for when you don't want to talk
-- **Automatic game tracking** by polling the Riot API every few seconds so it always knows the current state
-- **Conversational.** It remembers what it told you earlier in the game, so you can ask follow-ups
-- **Blunt by default.** Gives you a clear answer fast, not a hedged analysis
+Desktop app with an always-on-top window on your second monitor. Voice input via global hotkey (understands League terminology even when speech-to-text mangles it), or text if you'd rather type. Polls the Riot API so it always knows the current game state. Conversational, so you can ask follow-ups. Blunt by default, because you need a clear answer fast.
 
 ## What's coming
 
-The first version targets ARAM Mayhem with augment and item recommendations. After that:
-
-- **In-game overlay** so you don't need a second monitor
-- **Mode-specific features** like augment set tracking, where it factors in whether completing a synergy set is worth taking a weaker individual pick
-- **Cross-game memory** so it can say "last game you went full AP against a tank comp and it didn't work out"
-- **More modes** like Arena, regular ARAM, even Summoner's Rift where it could advise based on how the game is progressing, how the enemy team is building, what objectives are in play
-- **TTS** so you can hear recommendations without looking away during a teamfight
-- **Coaching style options** like blunt, educational, whatever fits how you want to learn
+The first version targets ARAM Mayhem with augment and item recommendations. After that: in-game overlay, augment set tracking, cross-game memory ("last game you went full AP against tanks and it didn't work out"), more modes (Arena, regular ARAM, Summoner's Rift), TTS so you can hear advice during a teamfight, and coaching style options.
 
 ## Why I'm building it
 
 I've been playing a lot of ARAM lately and really enjoying it, but I wanted a way to experiment with different ideas and playstyles, to ask "what if I tried this?" and get an answer that actually accounts for what's happening in the game. That tool doesn't exist. The knowledge is out there, scattered across Reddit posts and YouTube videos, but nobody has built something that reasons about it in real time.
 
-So I'm building one.
+So I'm building one. It's a fun project, a chance to combine two things I enjoy spending time on.
