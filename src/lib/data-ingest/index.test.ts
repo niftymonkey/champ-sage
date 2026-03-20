@@ -92,6 +92,16 @@ const mockArenaAugments = new Map<string, Augment>([
       mode: "arena",
     },
   ],
+  [
+    "typhoon",
+    {
+      name: "Typhoon",
+      description: "Arena storm damage",
+      tier: "Gold",
+      sets: [],
+      mode: "arena",
+    },
+  ],
 ]);
 
 beforeEach(() => {
@@ -120,7 +130,7 @@ describe("loadGameData", () => {
     expect(data.champions.size).toBe(1);
     expect(data.items.size).toBe(1);
     expect(data.runes).toHaveLength(1);
-    expect(data.augments.size).toBe(2); // 1 mayhem + 1 arena
+    expect(data.augments.size).toBe(3); // 1 mayhem + 1 arena unique + 1 arena collision
     expect(data.augmentSets).toHaveLength(9);
   });
 
@@ -183,6 +193,26 @@ describe("loadGameData", () => {
     const results = data.dictionary.search("aatrox");
     expect(results[0].name).toBe("Aatrox");
     expect(results[0].type).toBe("champion");
+  });
+
+  it("stores cross-mode augment collisions with arena: prefix", async () => {
+    const data = await loadGameData();
+
+    // Mayhem version stored under plain key
+    const mayhemTyphoon = data.augments.get("typhoon");
+    expect(mayhemTyphoon).toBeDefined();
+    expect(mayhemTyphoon!.mode).toBe("mayhem");
+
+    // Arena version stored under prefixed key
+    const arenaTyphoon = data.augments.get("arena:typhoon");
+    expect(arenaTyphoon).toBeDefined();
+    expect(arenaTyphoon!.mode).toBe("arena");
+    expect(arenaTyphoon!.description).toBe("Arena storm damage");
+
+    // Arena-only augment stored under plain key
+    const bladeWaltz = data.augments.get("blade waltz");
+    expect(bladeWaltz).toBeDefined();
+    expect(bladeWaltz!.mode).toBe("arena");
   });
 
   it("merges ARAM overrides onto matching champions", async () => {

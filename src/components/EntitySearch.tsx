@@ -96,7 +96,8 @@ function renderDetails(match: EntityMatch, data: LoadedGameData) {
       );
     }
     case "augment": {
-      const aug = data.augments.get(match.name.toLowerCase());
+      const key = match.name.toLowerCase();
+      const aug = data.augments.get(key) ?? data.augments.get(`arena:${key}`);
       if (!aug) return null;
       return (
         <div className="entity-details">

@@ -117,14 +117,14 @@ export async function fetchChampionAbilities(
   version: string,
   championIds: string[]
 ): Promise<Map<string, ChampionAbilities>> {
-  const results = await Promise.all(
+  const results = await Promise.allSettled(
     championIds.map((id) => fetchSingleChampionAbilities(version, id))
   );
 
   const abilities = new Map<string, ChampionAbilities>();
   for (const result of results) {
-    if (result) {
-      abilities.set(result.key, result.abilities);
+    if (result.status === "fulfilled" && result.value) {
+      abilities.set(result.value.key, result.value.abilities);
     }
   }
   return abilities;
@@ -139,8 +139,10 @@ async function fetchSingleChampionAbilities(
   );
   if (!res.ok) return null;
 
-  const json = await res.json();
-  const data = json.data[championId] as RawChampionFull | undefined;
+  const json = (await res.json()) as {
+    data?: Record<string, RawChampionFull>;
+  };
+  const data = json.data?.[championId];
   if (!data) return null;
 
   return {

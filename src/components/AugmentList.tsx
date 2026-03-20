@@ -75,6 +75,7 @@ export function AugmentList({ augments }: AugmentListProps) {
                 key={mode}
                 className={modeFilter === mode ? "tab active" : "tab"}
                 onClick={() => {
+                  setExpanded(null);
                   setModeFilter(mode);
                   setSetFilter(null);
                 }}
