@@ -49,7 +49,7 @@ This prints your champion, items, teams, and game state. If it can't connect, it
 
 ## Project structure
 
-```
+```text
 src/                  # React frontend (TypeScript)
 src-tauri/            # Tauri backend (Rust)
   src/lib.rs          # Rust entry point, plugin initialization

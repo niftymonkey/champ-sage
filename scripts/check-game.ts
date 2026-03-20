@@ -49,7 +49,15 @@ function fetchGameData(): Promise<GameData> {
             reject(new Error(`API returned ${res.statusCode}`));
             return;
           }
-          resolve(JSON.parse(body));
+          try {
+            resolve(JSON.parse(body) as GameData);
+          } catch {
+            reject(
+              Object.assign(new Error("Invalid JSON from Riot API"), {
+                code: "EBADJSON",
+              })
+            );
+          }
         });
       }
     );
