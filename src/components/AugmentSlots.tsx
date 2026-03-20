@@ -53,7 +53,19 @@ export function AugmentSlots({
             <div
               key={i}
               className={`augment-slot augment-slot-empty${isClickable ? " augment-slot-clickable" : ""}${isSlotPending ? " augment-slot-pending" : ""}`}
+              role={isClickable ? "button" : undefined}
+              tabIndex={isClickable ? 0 : undefined}
               onClick={isClickable ? () => setPickerOpen(true) : undefined}
+              onKeyDown={
+                isClickable
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setPickerOpen(true);
+                      }
+                    }
+                  : undefined
+              }
             >
               <div className="augment-slot-placeholder">
                 <span className="augment-slot-number">{i + 1}</span>

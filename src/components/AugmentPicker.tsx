@@ -30,6 +30,7 @@ export function AugmentPicker({ augments, onSelect }: AugmentPickerProps) {
       <input
         type="text"
         placeholder="Search augments..."
+        aria-label="Search augments"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="search-input"

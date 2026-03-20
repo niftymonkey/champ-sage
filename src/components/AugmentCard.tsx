@@ -22,18 +22,18 @@ export function AugmentCard({ augment, onClick, compact }: AugmentCardProps) {
           loading="lazy"
         />
       )}
-      <p className="augment-card-name">{augment.name}</p>
+      <span className="augment-card-name">{augment.name}</span>
       {!compact && augment.description && (
-        <p className="augment-card-desc">{augment.description}</p>
+        <span className="augment-card-desc">{augment.description}</span>
       )}
       {!compact && augment.sets.length > 0 && (
-        <div className="augment-card-sets">
+        <span className="augment-card-sets">
           {augment.sets.map((s) => (
             <span key={s} className="augment-card-set">
               {s}
             </span>
           ))}
-        </div>
+        </span>
       )}
     </Tag>
   );

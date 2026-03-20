@@ -9,7 +9,9 @@ import { DataBrowser } from "./components/DataBrowser";
 function App() {
   const { data, loading, error, refresh } = useGameData();
   const gameState = useGameState();
-  const augmentSelection = useAugmentSelection(gameState.gameMode);
+  const augmentSelection = useAugmentSelection(
+    `${gameState.status}:${gameState.gameMode}`
+  );
   const effectiveState = useEffectiveGameState(
     gameState,
     data,

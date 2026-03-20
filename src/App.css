@@ -462,7 +462,6 @@ h1 {
   border-radius: 0;
   border: 0.375rem solid #333;
   background: linear-gradient(180deg, #1e1e30 0%, #14141f 100%);
-  cursor: pointer;
   text-align: center;
   font-family: inherit;
   color: inherit;
@@ -471,6 +470,10 @@ h1 {
     background 0.15s;
   overflow: hidden;
   aspect-ratio: 2 / 3;
+}
+
+button.augment-card {
+  cursor: pointer;
 }
 
 .augment-card:hover {
@@ -529,6 +532,7 @@ h1 {
 }
 
 .augment-card-name {
+  display: block;
   font-size: 0.95em;
   font-weight: 600;
   margin: 0;
@@ -538,6 +542,7 @@ h1 {
 }
 
 .augment-card-desc {
+  display: block;
   font-size: 0.7em;
   color: #aaa;
   margin: 0;
