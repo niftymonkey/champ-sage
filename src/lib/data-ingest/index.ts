@@ -1,5 +1,6 @@
 import type {
   GameData,
+  AramOverrides,
   Champion,
   Item,
   Augment,
@@ -14,6 +15,7 @@ import {
 } from "./sources/data-dragon";
 import { fetchWikiAugments } from "./sources/wiki-augments";
 import { mergeAugmentIds } from "./sources/community-dragon";
+import { fetchAramOverrides } from "./sources/wiki-aram-overrides";
 import { readCache, writeCache, mapToObject, objectToMap } from "./cache";
 import { buildEntityDictionary } from "./entity-dictionary";
 
@@ -47,14 +49,17 @@ export async function loadGameData(): Promise<LoadedGameData> {
 
 export async function fetchAndCache(): Promise<LoadedGameData> {
   const version = await fetchLatestVersion();
-  const [champions, items, runes, augments] = await Promise.all([
-    fetchChampions(version),
-    fetchItems(version),
-    fetchRunes(version),
-    fetchWikiAugments(),
-  ]);
+  const [champions, items, runes, augments, aramOverrideMap] =
+    await Promise.all([
+      fetchChampions(version),
+      fetchItems(version),
+      fetchRunes(version),
+      fetchWikiAugments(),
+      fetchAramOverrides(),
+    ]);
 
   await mergeAugmentIds(augments);
+  mergeAramOverrides(champions, aramOverrideMap);
 
   const data: CachedGameData = {
     version,
@@ -67,6 +72,18 @@ export async function fetchAndCache(): Promise<LoadedGameData> {
   await writeCache(CACHE_KEY, data);
 
   return fromCached(data);
+}
+
+function mergeAramOverrides(
+  champions: Map<string, Champion>,
+  overrides: Map<string, AramOverrides>
+): void {
+  for (const [key, champion] of champions) {
+    const aram = overrides.get(key);
+    if (aram) {
+      champion.aramOverrides = aram;
+    }
+  }
 }
 
 function fromCached(cached: CachedGameData): LoadedGameData {
