@@ -3,7 +3,9 @@
     system-ui,
     -apple-system,
     sans-serif;
-  font-size: 14px;
+  /* Base font size — zoomed via document.documentElement.style.fontSize in useZoom.
+     Use Ctrl+=/- to adjust, persisted to localStorage across restarts. */
+  font-size: 13px;
   line-height: 1.5;
   color: #e0e0e0;
   background-color: #1a1a1a;
@@ -21,9 +23,7 @@ body,
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 1.5rem;
 }
 
 .app-header {
@@ -48,13 +48,28 @@ h1 {
   align-items: center;
 }
 
+.zoom-indicator {
+  font-size: 0.75rem;
+  color: #888;
+  background: none;
+  border: 0.0625rem solid #444;
+  border-radius: 0.1875rem;
+  padding: 0.1em 0.4em;
+  cursor: pointer;
+}
+
+.zoom-indicator:hover {
+  color: #e0e0e0;
+  border-color: #666;
+}
+
 .refresh-btn {
   font-size: 0.8em;
   padding: 0.3em 0.8em;
   color: #aaa;
   background-color: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 4px;
+  border: 0.0625rem solid #444;
+  border-radius: 0.25rem;
   cursor: pointer;
 }
 
@@ -83,13 +98,13 @@ h1 {
   flex-shrink: 0;
   display: flex;
   gap: 0.25rem;
-  border-bottom: 1px solid #333;
+  border-bottom: 0.0625rem solid #333;
   background-color: #1a1a1a;
 }
 
 .tab {
-  border-radius: 6px 6px 0 0;
-  border: 1px solid transparent;
+  border-radius: 0.375rem 0.375rem 0 0;
+  border: 0.0625rem solid transparent;
   border-bottom: none;
   padding: 0.5em 1em;
   font-size: 0.9em;
@@ -119,12 +134,12 @@ h1 {
 .entity-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.125rem;
 }
 
 .entity-item {
   background-color: #222;
-  border-radius: 4px;
+  border-radius: 0.25rem;
 }
 
 .entity-header {
@@ -171,8 +186,8 @@ h1 {
 .tier-btn {
   font-size: 0.8em;
   padding: 0.2em 0.6em;
-  border-radius: 3px;
-  border: 1px solid transparent;
+  border-radius: 0.1875rem;
+  border: 0.0625rem solid transparent;
   cursor: pointer;
   opacity: 0.4;
   font-family: inherit;
@@ -213,7 +228,7 @@ h1 {
 
 .entity-details {
   padding: 0.5em 0.75em 0.75em;
-  border-top: 1px solid #333;
+  border-top: 0.0625rem solid #333;
   font-size: 0.9em;
   color: #ccc;
 }
@@ -231,7 +246,7 @@ h1 {
 .tier {
   font-size: 0.8em;
   padding: 0.15em 0.5em;
-  border-radius: 3px;
+  border-radius: 0.1875rem;
 }
 
 .tier-prismatic {
@@ -254,7 +269,7 @@ h1 {
   font-size: 0.7em;
   padding: 0.1em 0.4em;
   margin-left: 0.5em;
-  border-radius: 3px;
+  border-radius: 0.1875rem;
   color: #c9a0dc;
   background-color: #2a1a35;
   vertical-align: middle;
@@ -262,15 +277,15 @@ h1 {
 
 .set-filter {
   display: flex;
-  gap: 4px;
+  gap: 0.25rem;
   flex-wrap: wrap;
-  padding-top: 4px;
-  border-top: 1px solid #333;
+  padding-top: 0.25rem;
+  border-top: 0.0625rem solid #333;
 }
 
 .set-filter .tab {
   font-size: 0.75em;
-  padding: 2px 6px;
+  padding: 0.125rem 0.375rem;
 }
 
 /* ARAM overrides */
@@ -278,14 +293,59 @@ h1 {
   font-size: 0.7em;
   padding: 0.1em 0.4em;
   margin-left: 0.5em;
-  border-radius: 3px;
+  border-radius: 0.1875rem;
   color: #7cb3ff;
   background-color: #1a2a40;
   vertical-align: middle;
 }
 
 .aram-overrides {
-  margin-top: 0.5em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+  padding: 0.25em 0.75em 0.5em;
+}
+
+.override-badge {
+  font-size: 0.75em;
+  padding: 0.15em 0.5em;
+  border-radius: 0.1875rem;
+  color: #f0c060;
+  background-color: #2a2510;
+}
+
+.player-position {
+  font-size: 0.7em;
+  color: #6ab0f3;
+  background-color: #1a2a3a;
+  padding: 0.1em 0.4em;
+  margin-left: 0.5em;
+  border-radius: 0.1875rem;
+  font-weight: normal;
+  vertical-align: middle;
+}
+
+.player-tags {
+  font-size: 0.7em;
+  color: #888;
+  margin-left: 0.5em;
+  font-weight: normal;
+}
+
+.team-comp-summary {
+  background-color: #222;
+  border-radius: 0.25rem;
+  padding: 0.5em 0.75em;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+}
+
+.team-comp-row {
+  display: flex;
+  gap: 0.5em;
+  align-items: baseline;
 }
 
 /* Game state */
@@ -313,8 +373,8 @@ h1 {
 
 .status-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   margin-left: 0.4em;
   vertical-align: middle;
@@ -334,25 +394,36 @@ h1 {
 
 .active-player-card {
   background-color: #1a2a30;
-  border: 1px solid #2a4a50;
-  border-radius: 6px;
+  border: 0.0625rem solid #2a4a50;
+  border-radius: 0.375rem;
   margin-bottom: 1rem;
 }
 
 .active-player-card .entity-details {
-  border-top: 1px solid #2a4a50;
+  border-top: 0.0625rem solid #2a4a50;
 }
 
-.team-section {
+.teams-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 1rem;
   margin-bottom: 1rem;
 }
 
-.team-section .entity-title {
-  margin-bottom: 0.5em;
+.teams-grid .entity-title {
+  margin-bottom: 0.25em;
+}
+
+.team-cell {
+  display: flex;
+}
+
+.team-cell .entity-item {
+  flex: 1;
 }
 
 .active-player {
-  border-left: 2px solid #4ade80;
+  border-left: 0.125rem solid #4ade80;
 }
 
 .player-items {
@@ -365,7 +436,7 @@ h1 {
 .player-item {
   font-size: 0.8em;
   padding: 0.15em 0.4em;
-  border-radius: 3px;
+  border-radius: 0.1875rem;
   background-color: #2a2a30;
   color: #aaa;
 }
@@ -394,8 +465,8 @@ h1 {
   font-family: inherit;
   color: #e0e0e0;
   background-color: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 6px;
+  border: 0.0625rem solid #444;
+  border-radius: 0.375rem;
   outline: none;
   margin-bottom: 1rem;
 }

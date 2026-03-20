@@ -45,6 +45,7 @@ export interface PlayerInfo {
   items: PlayerItem[];
   summonerSpells: [string, string];
   riotIdGameName: string;
+  position: string;
   isActivePlayer: boolean;
 }
 

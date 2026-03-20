@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { LoadedGameData } from "../lib/data-ingest";
-import type { GameState } from "../lib/game-state";
+import type { EffectiveGameState } from "../lib/mode";
 import { ChampionList } from "./ChampionList";
 import { ItemList } from "./ItemList";
 import { RuneList } from "./RuneList";
@@ -12,7 +12,7 @@ type Tab = "game" | "champions" | "items" | "runes" | "augments" | "search";
 
 interface DataBrowserProps {
   data: LoadedGameData;
-  gameState: GameState;
+  effectiveState: EffectiveGameState;
 }
 
 const TABS: { key: Tab; label: string }[] = [
@@ -24,7 +24,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "search", label: "Search" },
 ];
 
-export function DataBrowser({ data, gameState }: DataBrowserProps) {
+export function DataBrowser({ data, effectiveState }: DataBrowserProps) {
   const [activeTab, setActiveTab] = useState<Tab>("game");
 
   return (
@@ -38,7 +38,7 @@ export function DataBrowser({ data, gameState }: DataBrowserProps) {
           >
             {tab.label}
             {tab.key === "game" && (
-              <span className={`status-dot ${gameState.status}`} />
+              <span className={`status-dot ${effectiveState.status}`} />
             )}
             {tab.key !== "search" && tab.key !== "game" && (
               <span className="count">{getCount(data, tab.key)}</span>
@@ -47,7 +47,7 @@ export function DataBrowser({ data, gameState }: DataBrowserProps) {
         ))}
       </div>
       <div className="tab-content">
-        {activeTab === "game" && <GameStateView state={gameState} />}
+        {activeTab === "game" && <GameStateView state={effectiveState} />}
         {activeTab === "champions" && (
           <ChampionList champions={data.champions} />
         )}

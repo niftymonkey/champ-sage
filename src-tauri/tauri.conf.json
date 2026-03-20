@@ -13,8 +13,11 @@
     "windows": [
       {
         "title": "Champ Sage",
-        "width": 900,
-        "height": 700
+        "width": 1400,
+        "height": 1000,
+        "minWidth": 900,
+        "minHeight": 700,
+        "zoomHotkeysEnabled": false
       }
     ],
     "security": {
