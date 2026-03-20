@@ -18,13 +18,14 @@ This starts the Vite dev server and launches the Tauri desktop app. First build 
 
 ## Commands
 
-| Command            | What it does                                |
-| ------------------ | ------------------------------------------- |
-| `pnpm tauri dev`   | Launch the app in development mode          |
-| `pnpm tauri build` | Build a release binary                      |
-| `pnpm test`        | Run tests once                              |
-| `pnpm test:watch`  | Run tests in watch mode                     |
-| `pnpm build`       | Build the frontend only (TypeScript + Vite) |
+| Command            | What it does                                               |
+| ------------------ | ---------------------------------------------------------- |
+| `pnpm tauri dev`   | Launch the app in development mode                         |
+| `pnpm tauri build` | Build a release binary                                     |
+| `pnpm test`        | Run tests once                                             |
+| `pnpm test:watch`  | Run tests in watch mode                                    |
+| `pnpm build`       | Build the frontend only (TypeScript + Vite)                |
+| `pnpm check-game`  | Print live game state from Riot API (needs a game running) |
 
 ## Developing on WSL2
 
@@ -46,6 +47,16 @@ pnpm check-game
 ```
 
 This prints your champion, items, teams, and game state. If it can't connect, it'll tell you why.
+
+## Helper scripts
+
+Scripts in `scripts/` are development tools, not part of the app. Run them with `pnpm exec tsx scripts/<name>.ts`.
+
+| Script                   | Shortcut                                       | What it does                                                                                                                                                                                                                                        |
+| ------------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check-game.ts`          | `pnpm check-game`                              | Checks Riot API connectivity and prints live game state (champion, items, teams). Use to verify WSL2 networking works. Requires a game running (Practice Tool is fine).                                                                             |
+| `dump-data.ts`           | `pnpm exec tsx scripts/dump-data.ts`           | Runs the full data ingest pipeline and prints everything to the console: champions, items, runes, augments grouped by mode/tier. Writes raw JSON to `data-dump/` (gitignored). Use to debug data quality issues — shows the same data the app sees. |
+| `check-augment-modes.ts` | `pnpm exec tsx scripts/check-augment-modes.ts` | Fetches CDragon augments and shows how they're classified by mode (Mayhem/Arena/Swarm) based on icon paths. Use when augment mode classification seems wrong.                                                                                       |
 
 ## Project structure
 
