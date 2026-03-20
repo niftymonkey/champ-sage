@@ -8,6 +8,27 @@ export interface Champion {
   stats: ChampionStats;
   image: string;
   aramOverrides?: AramOverrides;
+  abilities?: ChampionAbilities;
+}
+
+export interface ChampionAbilities {
+  passive: AbilityPassive;
+  spells: AbilitySpell[];
+}
+
+export interface AbilityPassive {
+  name: string;
+  description: string;
+}
+
+export interface AbilitySpell {
+  id: string;
+  name: string;
+  description: string;
+  maxRank: number;
+  cooldowns: number[];
+  costs: number[];
+  range: number[];
 }
 
 export interface AramOverrides {
@@ -89,10 +110,20 @@ export interface Augment {
   name: string;
   description: string;
   tier: "Silver" | "Gold" | "Prismatic";
-  set: string;
+  sets: string[];
   mode: AugmentMode;
   id?: number;
   iconPath?: string;
+}
+
+export interface AugmentSetBonus {
+  threshold: number;
+  description: string;
+}
+
+export interface AugmentSet {
+  name: string;
+  bonuses: AugmentSetBonus[];
 }
 
 export interface GameData {
@@ -101,6 +132,7 @@ export interface GameData {
   items: Map<number, Item>;
   runes: RuneTree[];
   augments: Map<string, Augment>;
+  augmentSets: AugmentSet[];
 }
 
 export interface EntityDictionary {

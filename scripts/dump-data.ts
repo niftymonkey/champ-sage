@@ -1,14 +1,6 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import {
-  fetchLatestVersion,
-  fetchChampions,
-  fetchItems,
-  fetchRunes,
-} from "../src/lib/data-ingest/sources/data-dragon";
-import { fetchWikiAugments } from "../src/lib/data-ingest/sources/wiki-augments";
-import { mergeAugmentIds } from "../src/lib/data-ingest/sources/community-dragon";
-import { buildEntityDictionary } from "../src/lib/data-ingest/entity-dictionary";
+import { fetchAndCache } from "../src/lib/data-ingest/index";
 import type { AugmentMode } from "../src/lib/data-ingest/types";
 
 const DUMP_DIR = join(import.meta.dirname, "..", "data-dump");
@@ -16,32 +8,20 @@ const DUMP_DIR = join(import.meta.dirname, "..", "data-dump");
 async function main() {
   mkdirSync(DUMP_DIR, { recursive: true });
 
-  console.log("Fetching latest version...");
-  const version = await fetchLatestVersion();
-  console.log(`Patch: ${version}\n`);
-
-  console.log("Fetching champions, items, runes, augments...");
-  const [champions, items, runes, augments] = await Promise.all([
-    fetchChampions(version),
-    fetchItems(version),
-    fetchRunes(version),
-    fetchWikiAugments(),
-  ]);
-
-  console.log("Merging CDragon augment data...");
-  await mergeAugmentIds(augments);
+  console.log("Loading game data (same pipeline as the app)...\n");
+  const data = await fetchAndCache();
 
   // Champions
-  const champList = [...champions.values()].sort((a, b) =>
+  const champList = [...data.champions.values()].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
-  console.log(`\n=== Champions (${champList.length}) ===`);
+  console.log(`=== Champions (${champList.length}) ===`);
   for (const c of champList) {
     console.log(`  ${c.name} — ${c.title} [${c.tags.join(", ")}]`);
   }
 
   // Items
-  const itemList = [...items.values()].sort((a, b) =>
+  const itemList = [...data.items.values()].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
   const purchasable = itemList.filter((i) => i.gold.purchasable);
@@ -53,8 +33,8 @@ async function main() {
   }
 
   // Runes
-  console.log(`\n=== Runes (${runes.length} trees) ===`);
-  for (const tree of runes) {
+  console.log(`\n=== Runes (${data.runes.length} trees) ===`);
+  for (const tree of data.runes) {
     console.log(`  ${tree.name}`);
     console.log(
       `    Keystones: ${tree.keystones.map((r) => r.name).join(", ")}`
@@ -67,7 +47,7 @@ async function main() {
   }
 
   // Augments by mode
-  const augList = [...augments.values()];
+  const augList = [...data.augments.values()];
   const byMode = new Map<AugmentMode, typeof augList>();
   for (const a of augList) {
     const list = byMode.get(a.mode) ?? [];
@@ -86,25 +66,33 @@ async function main() {
       const desc = a.description
         ? a.description.slice(0, 60) + (a.description.length > 60 ? "..." : "")
         : "(no description)";
-      const setLabel = a.set !== "-" ? ` [Set: ${a.set}]` : "";
+      const setLabel = a.sets.length > 0 ? ` [Sets: ${a.sets.join(", ")}]` : "";
       const idLabel = a.id != null ? ` (ID: ${a.id})` : "";
       console.log(`  ${a.name} [${a.tier}]${setLabel}${idLabel}`);
       console.log(`    ${desc}`);
     }
   }
 
+  // Augment sets
+  console.log(`\n=== Augment Sets (${data.augmentSets.length}) ===`);
+  for (const set of data.augmentSets) {
+    const bonusText = set.bonuses
+      .map((b) => `${b.threshold}pc: ${b.description}`)
+      .join(" | ");
+    console.log(`  ${set.name}: ${bonusText}`);
+  }
+
   // Entity dictionary
-  const dict = buildEntityDictionary(champions, items, augments);
   console.log(`\n=== Entity Dictionary ===`);
-  console.log(`Champions: ${dict.champions.length}`);
-  console.log(`Items: ${dict.items.length}`);
-  console.log(`Augments: ${dict.augments.length}`);
-  console.log(`Total: ${dict.allNames.length}`);
+  console.log(`Champions: ${data.dictionary.champions.length}`);
+  console.log(`Items: ${data.dictionary.items.length}`);
+  console.log(`Augments: ${data.dictionary.augments.length}`);
+  console.log(`Total: ${data.dictionary.allNames.length}`);
 
   // Test a few searches
   console.log(`\n=== Search Tests ===`);
   for (const query of ["typhoon", "rabadons", "aurelion", "adapt"]) {
-    const results = dict.search(query).slice(0, 3);
+    const results = data.dictionary.search(query).slice(0, 3);
     console.log(
       `  "${query}" → ${results.map((r) => `${r.name} (${r.type}, ${r.score.toFixed(2)})`).join(", ")}`
     );
@@ -115,17 +103,18 @@ async function main() {
     join(DUMP_DIR, "all-data.json"),
     JSON.stringify(
       {
-        version,
-        championCount: champions.size,
-        itemCount: items.size,
-        runeTreeCount: runes.length,
+        version: data.version,
+        championCount: data.champions.size,
+        itemCount: data.items.size,
+        runeTreeCount: data.runes.length,
+        augmentSets: data.augmentSets,
         augmentsByMode: Object.fromEntries(
           [...byMode.entries()].map(([mode, list]) => [
             mode,
             list.map((a) => ({
               name: a.name,
               tier: a.tier,
-              set: a.set,
+              sets: a.sets,
               mode: a.mode,
               id: a.id,
               hasDescription: !!a.description,

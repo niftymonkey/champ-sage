@@ -1,5 +1,6 @@
 import type {
   Champion,
+  ChampionAbilities,
   Item,
   ItemGold,
   ItemMode,
@@ -106,6 +107,63 @@ function mapRune(raw: RawRune): Rune {
 }
 
 /**
+ * Fetch full ability data for a list of champions by their DDragon IDs.
+ * Each champion requires an individual API call — callers should batch
+ * strategically (e.g., only the 10 in a live game, or one at a time during idle).
+ *
+ * Returns a Map keyed by lowercase champion ID (e.g., "ahri", "aurelionsol").
+ */
+export async function fetchChampionAbilities(
+  version: string,
+  championIds: string[]
+): Promise<Map<string, ChampionAbilities>> {
+  const results = await Promise.all(
+    championIds.map((id) => fetchSingleChampionAbilities(version, id))
+  );
+
+  const abilities = new Map<string, ChampionAbilities>();
+  for (const result of results) {
+    if (result) {
+      abilities.set(result.key, result.abilities);
+    }
+  }
+  return abilities;
+}
+
+async function fetchSingleChampionAbilities(
+  version: string,
+  championId: string
+): Promise<{ key: string; abilities: ChampionAbilities } | null> {
+  const res = await fetch(
+    `${BASE_URL}/cdn/${version}/data/en_US/champion/${championId}.json`
+  );
+  if (!res.ok) return null;
+
+  const json = await res.json();
+  const data = json.data[championId] as RawChampionFull | undefined;
+  if (!data) return null;
+
+  return {
+    key: championId.toLowerCase(),
+    abilities: {
+      passive: {
+        name: data.passive.name,
+        description: stripHtml(data.passive.description),
+      },
+      spells: data.spells.map((spell) => ({
+        id: spell.id,
+        name: spell.name,
+        description: stripHtml(spell.description),
+        maxRank: spell.maxrank,
+        cooldowns: spell.cooldown,
+        costs: spell.cost,
+        range: spell.range,
+      })),
+    },
+  };
+}
+
+/**
  * Classify an item's game mode based on its ID range.
  * - 1000-8999: standard (Summoner's Rift)
  * - 9000-9999: swarm
@@ -158,6 +216,24 @@ interface RawItem {
   from?: string[];
   into?: string[];
   image: { full: string };
+}
+
+interface RawChampionFull {
+  passive: {
+    name: string;
+    description: string;
+    image: { full: string };
+  };
+  spells: {
+    id: string;
+    name: string;
+    description: string;
+    maxrank: number;
+    cooldown: number[];
+    cost: number[];
+    costType: string;
+    range: number[];
+  }[];
 }
 
 interface RawRuneTree {
