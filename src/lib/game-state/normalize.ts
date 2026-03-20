@@ -84,6 +84,7 @@ function normalizePlayer(raw: any, activeRiotId: string): PlayerInfo {
       raw.summonerSpells?.summonerSpellTwo?.displayName ?? "",
     ],
     riotIdGameName: raw.riotIdGameName ?? "",
+    position: raw.position ?? "",
     isActivePlayer: activeRiotId !== "" && raw.riotIdGameName === activeRiotId,
   };
 }
