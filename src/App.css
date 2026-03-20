@@ -233,8 +233,7 @@ h1 {
   color: #ccc;
 }
 
-.stat-grid,
-.stats-grid {
+.stat-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5em 1.5em;

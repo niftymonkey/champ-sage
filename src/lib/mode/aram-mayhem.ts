@@ -18,7 +18,9 @@ export const aramMayhemMode: GameMode = {
   },
 
   buildContext(gameState: GameState, gameData: LoadedGameData): ModeContext {
-    const activeTeam = gameState.players.find((p) => p.isActivePlayer)?.team;
+    const activePlayer = gameState.players.find((p) => p.isActivePlayer);
+    // Default to ORDER if no active player (spectator/loading edge case)
+    const activeTeam = activePlayer?.team ?? "ORDER";
 
     const playerContexts = new Map<string, PlayerModeContext>();
     const allyPlayers: PlayerModeContext[] = [];

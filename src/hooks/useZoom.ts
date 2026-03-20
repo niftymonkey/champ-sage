@@ -8,7 +8,11 @@ const STORAGE_KEY = "champ-sage:zoom";
 export function useZoom() {
   const [zoom, setZoom] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? parseFloat(stored) : 1.0;
+    if (!stored) return 1.0;
+    const parsed = parseFloat(stored);
+    return !isNaN(parsed) && parsed >= MIN_ZOOM && parsed <= MAX_ZOOM
+      ? parsed
+      : 1.0;
   });
 
   const zoomIn = useCallback(() => {

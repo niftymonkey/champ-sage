@@ -117,29 +117,23 @@ function TeamsGrid({
       <p className="entity-title">Your Team</p>
       <p className="entity-title">Enemy Team</p>
       {Array.from({ length: maxRows }, (_, i) => (
-        <PlayerRow key={i} index={i} ally={allies[i]} enemy={enemies[i]} />
+        <PlayerRow key={i} ally={allies[i]} enemy={enemies[i]} />
       ))}
     </div>
   );
 }
 
 function PlayerRow({
-  index,
   ally,
   enemy,
 }: {
-  index: number;
   ally?: EffectivePlayer;
   enemy?: EffectivePlayer;
 }) {
   return (
     <>
-      <div key={`ally-${index}`} className="team-cell">
-        {ally && <PlayerCard player={ally} />}
-      </div>
-      <div key={`enemy-${index}`} className="team-cell">
-        {enemy && <PlayerCard player={enemy} />}
-      </div>
+      <div className="team-cell">{ally && <PlayerCard player={ally} />}</div>
+      <div className="team-cell">{enemy && <PlayerCard player={enemy} />}</div>
     </>
   );
 }

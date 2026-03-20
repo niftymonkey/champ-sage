@@ -72,7 +72,7 @@ function renderDetails(match: EntityMatch, data: LoadedGameData) {
           <p>
             {champ.title} — {champ.tags.join(", ")} ({champ.partype})
           </p>
-          <div className="stats-grid">
+          <div className="stat-grid">
             <span>HP: {champ.stats.hp}</span>
             <span>AD: {champ.stats.attackdamage}</span>
             <span>Armor: {champ.stats.armor}</span>
