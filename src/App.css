@@ -264,6 +264,88 @@ h1 {
   margin-top: 0.5em;
 }
 
+/* Game state */
+.game-status {
+  margin-bottom: 1rem;
+}
+
+.game-status-label {
+  font-weight: 600;
+  font-size: 1.1em;
+  margin: 0.25em 0;
+}
+
+.game-status-label.connected {
+  color: #4ade80;
+}
+
+.game-status-label.loading {
+  color: #fbbf24;
+}
+
+.game-status-label.disconnected {
+  color: #888;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 0.4em;
+  vertical-align: middle;
+}
+
+.status-dot.connected {
+  background-color: #4ade80;
+}
+
+.status-dot.loading {
+  background-color: #fbbf24;
+}
+
+.status-dot.disconnected {
+  background-color: #666;
+}
+
+.active-player-card {
+  background-color: #1a2a30;
+  border: 1px solid #2a4a50;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.active-player-card .entity-details {
+  border-top: 1px solid #2a4a50;
+}
+
+.team-section {
+  margin-bottom: 1rem;
+}
+
+.team-section .entity-title {
+  margin-bottom: 0.5em;
+}
+
+.active-player {
+  border-left: 2px solid #4ade80;
+}
+
+.player-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+  padding: 0.25em 0.75em 0.5em;
+}
+
+.player-item {
+  font-size: 0.8em;
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  background-color: #2a2a30;
+  color: #aaa;
+}
+
 /* Runes */
 .rune-entry {
   padding: 0.25em 0;
