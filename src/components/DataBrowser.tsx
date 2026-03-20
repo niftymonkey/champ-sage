@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { Augment } from "../lib/data-ingest/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { EffectiveGameState } from "../lib/mode";
 import { ChampionList } from "./ChampionList";
@@ -10,9 +11,16 @@ import { GameStateView } from "./GameStateView";
 
 type Tab = "game" | "champions" | "items" | "runes" | "augments" | "search";
 
+interface AugmentSelectionActions {
+  selectedAugments: Augment[];
+  select: (augment: Augment) => void;
+  reset: () => void;
+}
+
 interface DataBrowserProps {
   data: LoadedGameData;
   effectiveState: EffectiveGameState;
+  augmentSelection: AugmentSelectionActions;
 }
 
 const TABS: { key: Tab; label: string }[] = [
@@ -24,7 +32,11 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "search", label: "Search" },
 ];
 
-export function DataBrowser({ data, effectiveState }: DataBrowserProps) {
+export function DataBrowser({
+  data,
+  effectiveState,
+  augmentSelection,
+}: DataBrowserProps) {
   const [activeTab, setActiveTab] = useState<Tab>("game");
 
   return (
@@ -47,7 +59,13 @@ export function DataBrowser({ data, effectiveState }: DataBrowserProps) {
         ))}
       </div>
       <div className="tab-content">
-        {activeTab === "game" && <GameStateView state={effectiveState} />}
+        {activeTab === "game" && (
+          <GameStateView
+            state={effectiveState}
+            modeAugments={effectiveState.modeContext?.modeAugments}
+            augmentSelection={augmentSelection}
+          />
+        )}
         {activeTab === "champions" && (
           <ChampionList champions={data.champions} />
         )}

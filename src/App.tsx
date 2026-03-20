@@ -2,13 +2,19 @@ import "./App.css";
 import { useGameData } from "./hooks/useGameData";
 import { useGameState } from "./hooks/useGameState";
 import { useEffectiveGameState } from "./hooks/useEffectiveGameState";
+import { useAugmentSelection } from "./hooks/useAugmentSelection";
 import { useZoom } from "./hooks/useZoom";
 import { DataBrowser } from "./components/DataBrowser";
 
 function App() {
   const { data, loading, error, refresh } = useGameData();
   const gameState = useGameState();
-  const effectiveState = useEffectiveGameState(gameState, data);
+  const augmentSelection = useAugmentSelection(gameState.gameMode);
+  const effectiveState = useEffectiveGameState(
+    gameState,
+    data,
+    augmentSelection.selectedAugments
+  );
   const { zoom, resetZoom } = useZoom();
 
   return (
@@ -37,7 +43,13 @@ function App() {
           )}
         </div>
       </div>
-      {data && <DataBrowser data={data} effectiveState={effectiveState} />}
+      {data && (
+        <DataBrowser
+          data={data}
+          effectiveState={effectiveState}
+          augmentSelection={augmentSelection}
+        />
+      )}
     </main>
   );
 }
