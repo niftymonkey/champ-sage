@@ -27,8 +27,8 @@ export function normalizeGameState(raw: any): GameState {
   const activePlayer: ActivePlayer | null = activePlayerRaw
     ? {
         championName: activePlayerMatch?.championName ?? "",
-        level: activePlayerRaw.level,
-        currentGold: activePlayerRaw.currentGold,
+        level: activePlayerRaw.level ?? 0,
+        currentGold: activePlayerRaw.currentGold ?? 0,
         runes: normalizeRunes(activePlayerRaw.fullRunes),
         stats: normalizeStats(activePlayerRaw.championStats),
       }
@@ -84,7 +84,7 @@ function normalizePlayer(raw: any, activeRiotId: string): PlayerInfo {
       raw.summonerSpells?.summonerSpellTwo?.displayName ?? "",
     ],
     riotIdGameName: raw.riotIdGameName ?? "",
-    isActivePlayer: raw.riotIdGameName === activeRiotId,
+    isActivePlayer: activeRiotId !== "" && raw.riotIdGameName === activeRiotId,
   };
 }
 
