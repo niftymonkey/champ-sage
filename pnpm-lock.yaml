@@ -16,6 +16,9 @@ importers:
       "@tauri-apps/plugin-opener":
         specifier: ^2
         version: 2.5.3
+      luaparse:
+        specifier: ^0.3.1
+        version: 0.3.1
       react:
         specifier: ^19.1.0
         version: 19.2.4
@@ -32,6 +35,9 @@ importers:
       "@testing-library/react":
         specifier: ^16.3.0
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      "@types/luaparse":
+        specifier: ^0.2.13
+        version: 0.2.13
       "@types/react":
         specifier: ^19.1.8
         version: 19.2.14
@@ -945,6 +951,12 @@ packages:
         integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==,
       }
 
+  "@types/luaparse@0.2.13":
+    resolution:
+      {
+        integrity: sha512-nWs2m9b/zrMcAA2Rs+wTxdIsBkSYMo0+6ko8mpeqS5dhchU3hQN9kZGcSw96n497Vc7kGpDLtSicjdpaUrRAkw==,
+      }
+
   "@types/react-dom@19.2.3":
     resolution:
       {
@@ -1467,6 +1479,13 @@ packages:
       {
         integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==,
       }
+
+  luaparse@0.3.1:
+    resolution:
+      {
+        integrity: sha512-b21h2bFEbtGXmVqguHogbyrMAA0wOHyp9u/rx+w6Yc9pW1t9YjhGUsp87lYcp7pFRqSWN/PhFkrdIqKEUzRjjQ==,
+      }
+    hasBin: true
 
   lz-string@1.5.0:
     resolution:
@@ -2488,6 +2507,8 @@ snapshots:
 
   "@types/estree@1.0.8": {}
 
+  "@types/luaparse@0.2.13": {}
+
   "@types/react-dom@19.2.3(@types/react@19.2.14)":
     dependencies:
       "@types/react": 19.2.14
@@ -2803,6 +2824,8 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  luaparse@0.3.1: {}
 
   lz-string@1.5.0: {}
 

@@ -1,21 +1,30 @@
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
+import { useGameData } from "./hooks/useGameData";
+import { DataBrowser } from "./components/DataBrowser";
 
 function App() {
-  const [rustMessage, setRustMessage] = useState("");
-
-  async function testBridge() {
-    const message = await invoke<string>("greet", { name: "Champ Sage" });
-    setRustMessage(message);
-  }
+  const { data, loading, error, refresh } = useGameData();
 
   return (
     <main className="container">
-      <h1>Champ Sage</h1>
-      <p>State machine visualizer — modules will appear here as they are built.</p>
-      <button onClick={testBridge}>Test Rust Bridge</button>
-      {rustMessage && <p data-testid="rust-message">{rustMessage}</p>}
+      <div className="app-header">
+        <div className="header-row">
+          <h1>Champ Sage</h1>
+          {data && (
+            <button
+              className="refresh-btn"
+              onClick={refresh}
+              disabled={loading}
+            >
+              {loading ? "Loading..." : "Refresh"}
+            </button>
+          )}
+        </div>
+        {loading && !data && <p>Loading game data...</p>}
+        {error && <p className="error">Error: {error}</p>}
+        {data && <p className="version">Patch {data.version}</p>}
+      </div>
+      {data && <DataBrowser data={data} />}
     </main>
   );
 }

@@ -1,30 +1,284 @@
 :root {
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 16px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
   line-height: 1.5;
-  color: #f6f6f6;
+  color: #e0e0e0;
   background-color: #1a1a1a;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
 .container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 900px;
   margin: 0 auto;
-  max-width: 800px;
-  padding: 2rem;
+  padding: 0 2rem;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid #444;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #f6f6f6;
+.app-header {
+  flex-shrink: 0;
+  padding-top: 1rem;
+  background-color: #1a1a1a;
+}
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 1rem;
+}
+
+h1 {
+  margin-bottom: 0.25rem;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.refresh-btn {
+  font-size: 0.8em;
+  padding: 0.3em 0.8em;
+  color: #aaa;
   background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
   cursor: pointer;
-  transition: border-color 0.25s;
 }
 
-button:hover {
+.refresh-btn:hover {
+  color: #e0e0e0;
+  border-color: #646cff;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.version {
+  color: #888;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.error {
+  color: #ff6b6b;
+}
+
+/* Tabs */
+.app-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid #333;
+  background-color: #1a1a1a;
+}
+
+.tab {
+  border-radius: 6px 6px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  padding: 0.5em 1em;
+  font-size: 0.9em;
+  font-family: inherit;
+  color: #aaa;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: #e0e0e0;
+}
+
+.tab.active {
+  color: #e0e0e0;
+  background-color: #2a2a2a;
+  border-color: #333;
+}
+
+.count {
+  font-size: 0.8em;
+  color: #666;
+  margin-left: 0.4em;
+}
+
+/* Entity list */
+.entity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.entity-item {
+  background-color: #222;
+  border-radius: 4px;
+}
+
+.entity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5em 0.75em;
+  cursor: pointer;
+}
+
+.entity-header:hover {
+  background-color: #2a2a2a;
+}
+
+.entity-name {
+  font-weight: 500;
+}
+
+.mode-filter {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.filter-bar.sticky,
+.mode-filter.sticky {
+  position: sticky;
+  top: 0;
+  background-color: #1a1a1a;
+  padding: 0.5rem 0;
+  z-index: 1;
+}
+
+.filter-bar .mode-filter {
+  margin-bottom: 0.25rem;
+}
+
+/* Tier filter */
+.tier-filter {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tier-btn {
+  font-size: 0.8em;
+  padding: 0.2em 0.6em;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  opacity: 0.4;
+  font-family: inherit;
+}
+
+.tier-btn.active {
+  opacity: 1;
+}
+
+.tier-btn.tier-prismatic {
+  color: #e0c8ff;
+  background-color: #3a2a4a;
+  border-color: #5a4a6a;
+}
+
+.tier-btn.tier-gold {
+  color: #ffd700;
+  background-color: #3a3520;
+  border-color: #5a5530;
+}
+
+.tier-btn.tier-silver {
+  color: #c0c0c0;
+  background-color: #2a2a30;
+  border-color: #4a4a50;
+}
+
+.entity-meta {
+  color: #888;
+  font-size: 0.85em;
+}
+
+.entity-title {
+  color: #aaa;
+  font-style: italic;
+  margin: 0.25rem 0;
+}
+
+.entity-details {
+  padding: 0.5em 0.75em 0.75em;
+  border-top: 1px solid #333;
+  font-size: 0.9em;
+  color: #ccc;
+}
+
+.stat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em 1.5em;
+  margin-top: 0.5em;
+  font-size: 0.85em;
+  color: #aaa;
+}
+
+/* Tiers */
+.tier {
+  font-size: 0.8em;
+  padding: 0.15em 0.5em;
+  border-radius: 3px;
+}
+
+.tier-prismatic {
+  color: #e0c8ff;
+  background-color: #3a2a4a;
+}
+
+.tier-gold {
+  color: #ffd700;
+  background-color: #3a3520;
+}
+
+.tier-silver {
+  color: #c0c0c0;
+  background-color: #2a2a30;
+}
+
+/* Runes */
+.rune-entry {
+  padding: 0.25em 0;
+}
+
+.rune-entry .entity-name {
+  color: #ccc;
+}
+
+.rune-entry p {
+  margin: 0.15em 0 0.5em;
+  color: #999;
+  font-size: 0.9em;
+}
+
+/* Search */
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6em 0.75em;
+  font-size: 1em;
+  font-family: inherit;
+  color: #e0e0e0;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  outline: none;
+  margin-bottom: 1rem;
+}
+
+.search-input:focus {
   border-color: #646cff;
 }
