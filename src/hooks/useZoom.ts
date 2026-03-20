@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 
+const BASE_FONT_PX = 13;
 const ZOOM_STEP = 0.1;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.0;
@@ -29,7 +30,7 @@ export function useZoom() {
 
   // Apply zoom by scaling root font size — everything in rem units scales with it
   useEffect(() => {
-    document.documentElement.style.fontSize = `${zoom * 100}%`;
+    document.documentElement.style.fontSize = `${zoom * BASE_FONT_PX}px`;
     localStorage.setItem(STORAGE_KEY, zoom.toString());
   }, [zoom]);
 

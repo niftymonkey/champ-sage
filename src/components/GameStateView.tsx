@@ -160,9 +160,9 @@ function PlayerCard({ player: p }: { player: EffectivePlayer }) {
       </div>
       <div className="player-items">
         {p.items.length > 0 ? (
-          p.items.map((item) => (
+          p.items.map((item, idx) => (
             <span
-              key={`${p.riotIdGameName}-${item.id}`}
+              key={`${p.riotIdGameName}-${item.id}-${idx}`}
               className="player-item"
             >
               {item.name}
@@ -205,6 +205,21 @@ function BalanceOverridesView({
       {overrides.shielding != null && overrides.shielding !== 1 && (
         <span className="override-badge">
           Shield {formatModifier(overrides.shielding)}
+        </span>
+      )}
+      {overrides.tenacity != null && overrides.tenacity !== 1 && (
+        <span className="override-badge">
+          Tenacity {formatModifier(overrides.tenacity)}
+        </span>
+      )}
+      {overrides.energyRegenMod != null && overrides.energyRegenMod !== 1 && (
+        <span className="override-badge">
+          Energy {formatModifier(overrides.energyRegenMod)}
+        </span>
+      )}
+      {overrides.totalAs != null && overrides.totalAs !== 1 && (
+        <span className="override-badge">
+          AS {formatModifier(overrides.totalAs)}
         </span>
       )}
       {overrides.abilityHaste != null && overrides.abilityHaste !== 0 && (
