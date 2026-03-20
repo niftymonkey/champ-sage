@@ -79,6 +79,7 @@ const stubMode: GameMode = {
   id: "test",
   displayName: "Test",
   decisionTypes: [],
+  augmentSelectionLevels: [],
   matches: () => true,
   buildContext: () => ({}) as ModeContext,
 };

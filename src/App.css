@@ -622,6 +622,28 @@ h1 {
   background-color: #1a1a2a;
 }
 
+.augment-slot-pending {
+  border-color: #4ade80;
+  border-style: solid;
+  animation: slot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes slot-pulse {
+  0%,
+  100% {
+    border-color: #4ade80;
+  }
+  50% {
+    border-color: #22c55e80;
+  }
+}
+
+.augment-slot-available {
+  font-size: 0.7em;
+  color: #4ade80;
+  font-weight: 500;
+}
+
 .augment-slot-placeholder {
   display: flex;
   flex-direction: column;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Augment } from "../lib/data-ingest/types";
+import type { AugmentAvailability } from "../lib/mode/augment-availability";
 import { AugmentCard } from "./AugmentCard";
 import { AugmentPicker } from "./AugmentPicker";
 
@@ -8,6 +9,7 @@ const MAX_AUGMENT_SLOTS = 4;
 interface AugmentSlotsProps {
   selectedAugments: Augment[];
   availableAugments: Map<string, Augment>;
+  availability?: AugmentAvailability;
   onSelect: (augment: Augment) => void;
   onReset: () => void;
 }
@@ -15,6 +17,7 @@ interface AugmentSlotsProps {
 export function AugmentSlots({
   selectedAugments,
   availableAugments,
+  availability,
   onSelect,
   onReset,
 }: AugmentSlotsProps) {
@@ -27,6 +30,7 @@ export function AugmentSlots({
 
   const nextEmptySlot = selectedAugments.length;
   const canPick = nextEmptySlot < MAX_AUGMENT_SLOTS;
+  const isPending = availability?.isAvailable ?? false;
 
   return (
     <div className="augment-slots-container">
@@ -43,17 +47,24 @@ export function AugmentSlots({
           const augment = selectedAugments[i];
           const isEmpty = !augment;
           const isClickable = isEmpty && i === nextEmptySlot && canPick;
+          const isSlotPending = isPending && availability?.pendingSlot === i;
 
           return isEmpty ? (
             <div
               key={i}
-              className={`augment-slot augment-slot-empty${isClickable ? " augment-slot-clickable" : ""}`}
+              className={`augment-slot augment-slot-empty${isClickable ? " augment-slot-clickable" : ""}${isSlotPending ? " augment-slot-pending" : ""}`}
               onClick={isClickable ? () => setPickerOpen(true) : undefined}
             >
               <div className="augment-slot-placeholder">
                 <span className="augment-slot-number">{i + 1}</span>
-                {isClickable && (
-                  <span className="augment-slot-hint">Tap to choose</span>
+                {isSlotPending ? (
+                  <span className="augment-slot-available">
+                    Augment available
+                  </span>
+                ) : (
+                  isClickable && (
+                    <span className="augment-slot-hint">Tap to choose</span>
+                  )
                 )}
               </div>
             </div>

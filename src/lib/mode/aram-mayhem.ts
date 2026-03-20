@@ -12,6 +12,7 @@ export const aramMayhemMode: GameMode = {
   id: "aram-mayhem",
   displayName: "ARAM Mayhem",
   decisionTypes: ["augment-selection", "item-purchase", "open-ended-coaching"],
+  augmentSelectionLevels: [1, 7, 11, 15],
 
   matches(gameMode: string): boolean {
     return gameMode === "ARAM";

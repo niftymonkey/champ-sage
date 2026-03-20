@@ -1,5 +1,6 @@
 import type { EffectiveGameState, EffectivePlayer } from "../lib/mode";
 import type { Augment, AramOverrides } from "../lib/data-ingest/types";
+import { checkAugmentAvailability } from "../lib/mode/augment-availability";
 import { AugmentSlots } from "./AugmentSlots";
 
 interface AugmentSelectionActions {
@@ -116,6 +117,15 @@ export function GameStateView({
         <AugmentSlots
           selectedAugments={augmentSelection.selectedAugments}
           availableAugments={modeAugments}
+          availability={
+            modeCtx && active
+              ? checkAugmentAvailability(
+                  active.level,
+                  augmentSelection.selectedAugments.length,
+                  modeCtx.mode
+                )
+              : undefined
+          }
           onSelect={augmentSelection.select}
           onReset={augmentSelection.reset}
         />

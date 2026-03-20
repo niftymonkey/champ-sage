@@ -10,6 +10,7 @@ function createStubMode(
     id,
     displayName: id,
     decisionTypes: [],
+    augmentSelectionLevels: [],
     matches: matchFn,
     buildContext: () => ({}) as ModeContext,
   };
