@@ -1,7 +1,6 @@
 import type { EffectiveGameState, EffectivePlayer } from "../lib/mode";
 import type { Augment, AramOverrides } from "../lib/data-ingest/types";
-import { AugmentCard } from "./AugmentCard";
-import { AugmentPicker } from "./AugmentPicker";
+import { AugmentSlots } from "./AugmentSlots";
 
 interface AugmentSelectionActions {
   selectedAugments: Augment[];
@@ -113,32 +112,13 @@ export function GameStateView({
 
       <TeamsGrid allies={state.allies} enemies={state.enemies} />
 
-      {augmentSelection.selectedAugments.length > 0 && (
-        <div>
-          <div className="header-row">
-            <p className="entity-title">
-              Your Augments ({augmentSelection.selectedAugments.length})
-            </p>
-            <button className="refresh-btn" onClick={augmentSelection.reset}>
-              Clear
-            </button>
-          </div>
-          <div className="selected-augments">
-            {augmentSelection.selectedAugments.map((aug, idx) => (
-              <AugmentCard key={`${aug.name}-${idx}`} augment={aug} compact />
-            ))}
-          </div>
-        </div>
-      )}
-
       {modeAugments && modeAugments.size > 0 && (
-        <div>
-          <p className="entity-title">Select Augment</p>
-          <AugmentPicker
-            augments={modeAugments}
-            onSelect={augmentSelection.select}
-          />
-        </div>
+        <AugmentSlots
+          selectedAugments={augmentSelection.selectedAugments}
+          availableAugments={modeAugments}
+          onSelect={augmentSelection.select}
+          onReset={augmentSelection.reset}
+        />
       )}
     </div>
   );
