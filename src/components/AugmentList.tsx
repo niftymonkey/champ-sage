@@ -1,15 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Augment, AugmentMode } from "../lib/data-ingest/types";
 
 interface AugmentListProps {
   augments: Map<string, Augment>;
 }
-
-const TIER_ORDER: Record<string, number> = {
-  Prismatic: 0,
-  Gold: 1,
-  Silver: 2,
-};
 
 type Tier = Augment["tier"];
 const TIERS: Tier[] = ["Prismatic", "Gold", "Silver"];
@@ -26,12 +20,12 @@ export function AugmentList({ augments }: AugmentListProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [modeFilter, setModeFilter] = useState<AugmentMode>("mayhem");
   const [tierFilters, setTierFilters] = useState<Set<Tier>>(new Set(TIERS));
+  const [setFilter, setSetFilter] = useState<string | null>(null);
 
   function toggleTier(tier: Tier) {
     setTierFilters((prev) => {
       const next = new Set(prev);
       if (next.has(tier)) {
-        // Don't allow deselecting all
         if (next.size > 1) next.delete(tier);
       } else {
         next.add(tier);
@@ -44,13 +38,20 @@ export function AugmentList({ augments }: AugmentListProps) {
     (a) => a.mode === modeFilter
   );
 
-  const filtered = modeFiltered.filter((a) => tierFilters.has(a.tier));
+  // Collect unique set names for the current mode
+  const setNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const a of modeFiltered) {
+      for (const s of a.sets) names.add(s);
+    }
+    return [...names].sort();
+  }, [modeFilter, augments]);
 
-  const sorted = filtered.sort((a, b) => {
-    const tierDiff = (TIER_ORDER[a.tier] ?? 3) - (TIER_ORDER[b.tier] ?? 3);
-    if (tierDiff !== 0) return tierDiff;
-    return a.name.localeCompare(b.name);
-  });
+  const filtered = modeFiltered
+    .filter((a) => tierFilters.has(a.tier))
+    .filter((a) => (setFilter ? a.sets.includes(setFilter) : true));
+
+  const sorted = filtered.sort((a, b) => a.name.localeCompare(b.name));
 
   const modeCounts = new Map<AugmentMode, number>();
   for (const a of augments.values()) {
@@ -73,7 +74,11 @@ export function AugmentList({ augments }: AugmentListProps) {
               <button
                 key={mode}
                 className={modeFilter === mode ? "tab active" : "tab"}
-                onClick={() => setModeFilter(mode)}
+                onClick={() => {
+                  setExpanded(null);
+                  setModeFilter(mode);
+                  setSetFilter(null);
+                }}
               >
                 {MODE_LABELS[mode]} ({count})
               </button>
@@ -94,7 +99,29 @@ export function AugmentList({ augments }: AugmentListProps) {
             );
           })}
         </div>
+        {setNames.length > 0 && (
+          <div className="set-filter">
+            <button
+              className={setFilter === null ? "tab active" : "tab"}
+              onClick={() => setSetFilter(null)}
+            >
+              All
+            </button>
+            {setNames.map((name) => (
+              <button
+                key={name}
+                className={setFilter === name ? "tab active" : "tab"}
+                onClick={() => setSetFilter(setFilter === name ? null : name)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+      <p className="entity-meta" style={{ padding: "0 8px" }}>
+        Showing {sorted.length} augments
+      </p>
       <div className="entity-list">
         {sorted.map((aug) => (
           <div key={`${aug.mode}-${aug.name}`} className="entity-item">
@@ -104,7 +131,14 @@ export function AugmentList({ augments }: AugmentListProps) {
                 setExpanded(expanded === aug.name ? null : aug.name)
               }
             >
-              <span className="entity-name">{aug.name}</span>
+              <span className="entity-name">
+                {aug.name}
+                {aug.sets.map((s) => (
+                  <span key={s} className="set-badge">
+                    {s}
+                  </span>
+                ))}
+              </span>
               <span className="entity-meta">
                 <span className={`tier tier-${aug.tier.toLowerCase()}`}>
                   {aug.tier}
@@ -117,9 +151,6 @@ export function AugmentList({ augments }: AugmentListProps) {
                   <p>{aug.description}</p>
                 ) : (
                   <p className="entity-meta">No description available</p>
-                )}
-                {aug.set !== "-" && (
-                  <p className="entity-title">Set: {aug.set}</p>
                 )}
                 {aug.id != null && (
                   <p className="entity-meta">

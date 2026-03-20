@@ -249,6 +249,30 @@ h1 {
   background-color: #2a2a30;
 }
 
+/* Set badge and filter */
+.set-badge {
+  font-size: 0.7em;
+  padding: 0.1em 0.4em;
+  margin-left: 0.5em;
+  border-radius: 3px;
+  color: #c9a0dc;
+  background-color: #2a1a35;
+  vertical-align: middle;
+}
+
+.set-filter {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px solid #333;
+}
+
+.set-filter .tab {
+  font-size: 0.75em;
+  padding: 2px 6px;
+}
+
 /* ARAM overrides */
 .aram-badge {
   font-size: 0.7em;

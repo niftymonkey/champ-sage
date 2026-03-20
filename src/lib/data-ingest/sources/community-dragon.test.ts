@@ -64,7 +64,7 @@ describe("mergeAugmentIds", () => {
           name: "ADAPt",
           description: "test",
           tier: "Silver",
-          set: "-",
+          sets: [],
           mode: "mayhem",
         },
       ],
@@ -97,7 +97,7 @@ describe("mergeAugmentIds", () => {
           name: "Get Excited",
           description: "test",
           tier: "Gold",
-          set: "-",
+          sets: [],
           mode: "mayhem",
         },
       ],
@@ -121,7 +121,7 @@ describe("mergeAugmentIds", () => {
     expect(augments.get("get excited")!.id).toBe(999);
   });
 
-  it("adds unmatched CDragon augments with their classified mode", async () => {
+  it("skips unmatched CDragon augments (no wiki source = no description)", async () => {
     const augments = new Map<string, Augment>();
 
     mockFetch.mockResolvedValue({
@@ -135,38 +135,18 @@ describe("mergeAugmentIds", () => {
               "/lol-game-data/assets/ASSETS/UX/Cherry/Augments/Icons/AndMyAxe_small.png",
             rarity: "kGold",
           },
-        ]),
-    });
-
-    await mergeAugmentIds(augments);
-    const aug = augments.get("and my axe!");
-    expect(aug).toBeDefined();
-    expect(aug!.mode).toBe("arena");
-    expect(aug!.id).toBe(309);
-    expect(aug!.description).toBe("");
-  });
-
-  it("adds Strawberry augments classified as swarm", async () => {
-    const augments = new Map<string, Augment>();
-
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve([
           {
-            id: 500,
-            nameTRA: "Armor Up",
+            id: 404,
+            nameTRA: "404 Augment Not Found",
             augmentSmallIconPath:
-              "/lol-game-data/assets/ASSETS/UX/Strawberry/UpgradeSelection/Icons/ArmorUp_Large.png",
-            rarity: "kGold",
+              "/lol-game-data/assets/ASSETS/UX/Cherry/Augments/Icons/Augment404_small.png",
+            rarity: "kSilver",
           },
         ]),
     });
 
     await mergeAugmentIds(augments);
-    const aug = augments.get("armor up");
-    expect(aug).toBeDefined();
-    expect(aug!.mode).toBe("swarm");
+    expect(augments.size).toBe(0);
   });
 
   it("prefers Mayhem-mode CDragon entries over Arena duplicates for wiki augments", async () => {
@@ -177,7 +157,7 @@ describe("mergeAugmentIds", () => {
           name: "ADAPt",
           description: "test",
           tier: "Silver",
-          set: "-",
+          sets: [],
           mode: "mayhem",
         },
       ],

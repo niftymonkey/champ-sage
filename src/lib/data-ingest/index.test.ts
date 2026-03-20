@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { loadGameData } from "./index";
 import * as dataDragon from "./sources/data-dragon";
 import * as wikiAugments from "./sources/wiki-augments";
+import * as arenaAugments from "./sources/wiki-arena-augments";
 import * as communityDragon from "./sources/community-dragon";
 import * as aramOverrides from "./sources/wiki-aram-overrides";
 import * as cache from "./cache";
@@ -9,6 +10,7 @@ import type { AramOverrides, Champion, Item, Augment, RuneTree } from "./types";
 
 vi.mock("./sources/data-dragon");
 vi.mock("./sources/wiki-augments");
+vi.mock("./sources/wiki-arena-augments");
 vi.mock("./sources/community-dragon");
 vi.mock("./sources/wiki-aram-overrides");
 vi.mock("./cache", async (importOriginal) => {
@@ -66,15 +68,38 @@ const mockRunes: RuneTree[] = [
   },
 ];
 
-const mockAugments = new Map<string, Augment>([
+const mockMayhemAugments = new Map<string, Augment>([
   [
     "typhoon",
     {
       name: "Typhoon",
       description: "Storm damage",
       tier: "Gold",
-      set: "-",
+      sets: [],
       mode: "mayhem",
+    },
+  ],
+]);
+
+const mockArenaAugments = new Map<string, Augment>([
+  [
+    "blade waltz",
+    {
+      name: "Blade Waltz",
+      description: "Attack speed bonus",
+      tier: "Silver",
+      sets: [],
+      mode: "arena",
+    },
+  ],
+  [
+    "typhoon",
+    {
+      name: "Typhoon",
+      description: "Arena storm damage",
+      tier: "Gold",
+      sets: [],
+      mode: "arena",
     },
   ],
 ]);
@@ -87,7 +112,12 @@ beforeEach(() => {
   vi.mocked(dataDragon.fetchChampions).mockResolvedValue(createMockChampions());
   vi.mocked(dataDragon.fetchItems).mockResolvedValue(mockItems);
   vi.mocked(dataDragon.fetchRunes).mockResolvedValue(mockRunes);
-  vi.mocked(wikiAugments.fetchWikiAugments).mockResolvedValue(mockAugments);
+  vi.mocked(wikiAugments.fetchWikiAugments).mockResolvedValue(
+    mockMayhemAugments
+  );
+  vi.mocked(arenaAugments.fetchArenaAugments).mockResolvedValue(
+    mockArenaAugments
+  );
   vi.mocked(communityDragon.mergeAugmentIds).mockResolvedValue(undefined);
   vi.mocked(aramOverrides.fetchAramOverrides).mockResolvedValue(new Map());
 });
@@ -100,7 +130,8 @@ describe("loadGameData", () => {
     expect(data.champions.size).toBe(1);
     expect(data.items.size).toBe(1);
     expect(data.runes).toHaveLength(1);
-    expect(data.augments.size).toBe(1);
+    expect(data.augments.size).toBe(3); // 1 mayhem + 1 arena unique + 1 arena collision
+    expect(data.augmentSets).toHaveLength(9);
   });
 
   it("calls all data sources", async () => {
@@ -111,7 +142,12 @@ describe("loadGameData", () => {
     expect(dataDragon.fetchItems).toHaveBeenCalledWith("15.6.1");
     expect(dataDragon.fetchRunes).toHaveBeenCalledWith("15.6.1");
     expect(wikiAugments.fetchWikiAugments).toHaveBeenCalled();
-    expect(communityDragon.mergeAugmentIds).toHaveBeenCalledWith(mockAugments);
+    expect(arenaAugments.fetchArenaAugments).toHaveBeenCalled();
+    // mergeAugmentIds receives the combined mayhem + arena map
+    const mergedMap = vi.mocked(communityDragon.mergeAugmentIds).mock
+      .calls[0][0];
+    expect(mergedMap.has("typhoon")).toBe(true);
+    expect(mergedMap.has("blade waltz")).toBe(true);
     expect(aramOverrides.fetchAramOverrides).toHaveBeenCalled();
   });
 
@@ -131,7 +167,8 @@ describe("loadGameData", () => {
       champions: { aatrox: createMockChampions().get("aatrox") },
       items: { "1001": mockItems.get(1001) },
       runes: mockRunes,
-      augments: { typhoon: mockAugments.get("typhoon") },
+      augments: { typhoon: mockMayhemAugments.get("typhoon") },
+      augmentSets: [],
     });
 
     const data = await loadGameData();
@@ -151,10 +188,31 @@ describe("loadGameData", () => {
     expect(data.dictionary.champions).toContain("Aatrox");
     expect(data.dictionary.items).toContain("Boots");
     expect(data.dictionary.augments).toContain("Typhoon");
+    expect(data.dictionary.augments).toContain("Blade Waltz");
 
     const results = data.dictionary.search("aatrox");
     expect(results[0].name).toBe("Aatrox");
     expect(results[0].type).toBe("champion");
+  });
+
+  it("stores cross-mode augment collisions with arena: prefix", async () => {
+    const data = await loadGameData();
+
+    // Mayhem version stored under plain key
+    const mayhemTyphoon = data.augments.get("typhoon");
+    expect(mayhemTyphoon).toBeDefined();
+    expect(mayhemTyphoon!.mode).toBe("mayhem");
+
+    // Arena version stored under prefixed key
+    const arenaTyphoon = data.augments.get("arena:typhoon");
+    expect(arenaTyphoon).toBeDefined();
+    expect(arenaTyphoon!.mode).toBe("arena");
+    expect(arenaTyphoon!.description).toBe("Arena storm damage");
+
+    // Arena-only augment stored under plain key
+    const bladeWaltz = data.augments.get("blade waltz");
+    expect(bladeWaltz).toBeDefined();
+    expect(bladeWaltz!.mode).toBe("arena");
   });
 
   it("merges ARAM overrides onto matching champions", async () => {

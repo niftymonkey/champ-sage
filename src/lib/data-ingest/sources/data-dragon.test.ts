@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchChampions, fetchItems, fetchRunes } from "./data-dragon";
+import {
+  fetchChampions,
+  fetchItems,
+  fetchRunes,
+  fetchChampionAbilities,
+} from "./data-dragon";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -366,5 +371,288 @@ describe("fetchRunes", () => {
     expect(runes[0].keystones[0].shortDesc).not.toContain("<b>");
     expect(runes[0].slots).toHaveLength(1);
     expect(runes[0].slots[0][0].name).toBe("Cheap Shot");
+  });
+});
+
+describe("fetchChampionAbilities", () => {
+  it("fetches per-champion endpoint and normalizes abilities", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          Ahri: {
+            passive: {
+              name: "Essence Theft",
+              description: "After killing 9 minions or monsters, Ahri heals.",
+              image: { full: "Ahri_SoulEater2.png" },
+            },
+            spells: [
+              {
+                id: "AhriQ",
+                name: "Orb of Deception",
+                description:
+                  "Ahri sends out and pulls back her orb, dealing magic damage on the way out and true damage on the way back.",
+                maxrank: 5,
+                cooldown: [7, 7, 7, 7, 7],
+                cost: [55, 65, 75, 85, 95],
+                costType: " {{ abilityresourcename }}",
+                range: [970, 970, 970, 970, 970],
+              },
+              {
+                id: "AhriW",
+                name: "Fox-Fire",
+                description: "Ahri releases three fox-fires.",
+                maxrank: 5,
+                cooldown: [9, 8, 7, 6, 5],
+                cost: [25, 25, 25, 25, 25],
+                costType: " {{ abilityresourcename }}",
+                range: [700, 700, 700, 700, 700],
+              },
+              {
+                id: "AhriE",
+                name: "Charm",
+                description:
+                  "Ahri blows a kiss that charms an enemy it encounters.",
+                maxrank: 5,
+                cooldown: [14, 13, 12, 11, 10],
+                cost: [60, 70, 80, 90, 100],
+                costType: " {{ abilityresourcename }}",
+                range: [975, 975, 975, 975, 975],
+              },
+              {
+                id: "AhriR",
+                name: "Spirit Rush",
+                description: "Ahri dashes forward and fires essence bolts.",
+                maxrank: 3,
+                cooldown: [130, 105, 80],
+                cost: [100, 100, 100],
+                costType: " {{ abilityresourcename }}",
+                range: [450, 450, 450],
+              },
+            ],
+          },
+        },
+      })
+    );
+
+    const abilities = await fetchChampionAbilities("15.6.1", ["Ahri"]);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/champion/Ahri.json")
+    );
+    expect(abilities.size).toBe(1);
+
+    const ahri = abilities.get("ahri");
+    expect(ahri).toBeDefined();
+    expect(ahri!.passive.name).toBe("Essence Theft");
+    expect(ahri!.passive.description).toContain("heals");
+    expect(ahri!.spells).toHaveLength(4);
+    expect(ahri!.spells[0].name).toBe("Orb of Deception");
+    expect(ahri!.spells[0].cooldowns).toEqual([7, 7, 7, 7, 7]);
+    expect(ahri!.spells[0].costs).toEqual([55, 65, 75, 85, 95]);
+    expect(ahri!.spells[0].range).toEqual([970, 970, 970, 970, 970]);
+    expect(ahri!.spells[0].maxRank).toBe(5);
+    expect(ahri!.spells[3].name).toBe("Spirit Rush");
+    expect(ahri!.spells[3].maxRank).toBe(3);
+  });
+
+  it("returns map keyed by lowercase champion name", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          AurelionSol: {
+            passive: {
+              name: "Cosmic Creator",
+              description: "Stars orbit.",
+              image: { full: "AurelionSol_P.png" },
+            },
+            spells: [
+              {
+                id: "AurelionSolQ",
+                name: "Breath of Light",
+                description: "Channel starfire.",
+                maxrank: 5,
+                cooldown: [3, 3, 3, 3, 3],
+                cost: [45, 50, 55, 60, 65],
+                costType: " {{ abilityresourcename }}",
+                range: [750, 750, 750, 750, 750],
+              },
+              {
+                id: "AurelionSolW",
+                name: "Astral Flight",
+                description: "Fly over terrain.",
+                maxrank: 5,
+                cooldown: [22, 20.5, 19, 17.5, 16],
+                cost: [80, 85, 90, 95, 100],
+                costType: " {{ abilityresourcename }}",
+                range: [5500, 5750, 6000, 6250, 6500],
+              },
+              {
+                id: "AurelionSolE",
+                name: "Singularity",
+                description: "Summon a black hole.",
+                maxrank: 5,
+                cooldown: [12, 12, 12, 12, 12],
+                cost: [70, 75, 80, 85, 90],
+                costType: " {{ abilityresourcename }}",
+                range: [750, 750, 750, 750, 750],
+              },
+              {
+                id: "AurelionSolR",
+                name: "Falling Star",
+                description: "Crash a star into the earth.",
+                maxrank: 3,
+                cooldown: [120, 100, 80],
+                cost: [100, 100, 100],
+                costType: " {{ abilityresourcename }}",
+                range: [1250, 1250, 1250],
+              },
+            ],
+          },
+        },
+      })
+    );
+
+    const abilities = await fetchChampionAbilities("15.6.1", ["AurelionSol"]);
+    expect(abilities.has("aurelion sol")).toBe(false);
+    expect(abilities.has("aurelionsol")).toBe(true);
+  });
+
+  it("handles multiple champions in parallel", async () => {
+    const makeChampResponse = (id: string, passiveName: string) =>
+      jsonResponse({
+        data: {
+          [id]: {
+            passive: {
+              name: passiveName,
+              description: "test",
+              image: { full: `${id}_P.png` },
+            },
+            spells: [
+              {
+                id: `${id}Q`,
+                name: "Q",
+                description: "q",
+                maxrank: 5,
+                cooldown: [10, 10, 10, 10, 10],
+                cost: [50, 50, 50, 50, 50],
+                costType: " Mana",
+                range: [600, 600, 600, 600, 600],
+              },
+              {
+                id: `${id}W`,
+                name: "W",
+                description: "w",
+                maxrank: 5,
+                cooldown: [10, 10, 10, 10, 10],
+                cost: [50, 50, 50, 50, 50],
+                costType: " Mana",
+                range: [600, 600, 600, 600, 600],
+              },
+              {
+                id: `${id}E`,
+                name: "E",
+                description: "e",
+                maxrank: 5,
+                cooldown: [10, 10, 10, 10, 10],
+                cost: [50, 50, 50, 50, 50],
+                costType: " Mana",
+                range: [600, 600, 600, 600, 600],
+              },
+              {
+                id: `${id}R`,
+                name: "R",
+                description: "r",
+                maxrank: 3,
+                cooldown: [120, 100, 80],
+                cost: [100, 100, 100],
+                costType: " Mana",
+                range: [600, 600, 600],
+              },
+            ],
+          },
+        },
+      });
+
+    mockFetch
+      .mockResolvedValueOnce(makeChampResponse("Ahri", "Essence Theft"))
+      .mockResolvedValueOnce(
+        makeChampResponse("Aatrox", "Deathbringer Stance")
+      );
+
+    const abilities = await fetchChampionAbilities("15.6.1", [
+      "Ahri",
+      "Aatrox",
+    ]);
+    expect(abilities.size).toBe(2);
+    expect(abilities.get("ahri")!.passive.name).toBe("Essence Theft");
+    expect(abilities.get("aatrox")!.passive.name).toBe("Deathbringer Stance");
+  });
+
+  it("strips HTML from ability descriptions", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          Ahri: {
+            passive: {
+              name: "Essence Theft",
+              description:
+                "After killing <b>9</b> minions, Ahri <status>heals</status>.",
+              image: { full: "Ahri_P.png" },
+            },
+            spells: [
+              {
+                id: "AhriQ",
+                name: "Orb of Deception",
+                description:
+                  "Deals <magicDamage>magic damage</magicDamage> and <trueDamage>true damage</trueDamage>.",
+                maxrank: 5,
+                cooldown: [7, 7, 7, 7, 7],
+                cost: [55, 65, 75, 85, 95],
+                costType: " Mana",
+                range: [970, 970, 970, 970, 970],
+              },
+              {
+                id: "AhriW",
+                name: "W",
+                description: "w",
+                maxrank: 5,
+                cooldown: [9, 8, 7, 6, 5],
+                cost: [25, 25, 25, 25, 25],
+                costType: " Mana",
+                range: [700, 700, 700, 700, 700],
+              },
+              {
+                id: "AhriE",
+                name: "E",
+                description: "e",
+                maxrank: 5,
+                cooldown: [14, 13, 12, 11, 10],
+                cost: [60, 70, 80, 90, 100],
+                costType: " Mana",
+                range: [975, 975, 975, 975, 975],
+              },
+              {
+                id: "AhriR",
+                name: "R",
+                description: "r",
+                maxrank: 3,
+                cooldown: [130, 105, 80],
+                cost: [100, 100, 100],
+                costType: " Mana",
+                range: [450, 450, 450],
+              },
+            ],
+          },
+        },
+      })
+    );
+
+    const abilities = await fetchChampionAbilities("15.6.1", ["Ahri"]);
+    const ahri = abilities.get("ahri")!;
+    expect(ahri.passive.description).not.toContain("<");
+    expect(ahri.passive.description).toContain("heals");
+    expect(ahri.spells[0].description).not.toContain("<");
+    expect(ahri.spells[0].description).toContain("magic damage");
+    expect(ahri.spells[0].description).toContain("true damage");
   });
 });

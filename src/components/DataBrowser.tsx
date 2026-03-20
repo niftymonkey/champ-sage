@@ -54,9 +54,7 @@ export function DataBrowser({ data, gameState }: DataBrowserProps) {
         {activeTab === "items" && <ItemList items={data.items} />}
         {activeTab === "runes" && <RuneList runes={data.runes} />}
         {activeTab === "augments" && <AugmentList augments={data.augments} />}
-        {activeTab === "search" && (
-          <EntitySearch dictionary={data.dictionary} />
-        )}
+        {activeTab === "search" && <EntitySearch data={data} />}
       </div>
     </>
   );

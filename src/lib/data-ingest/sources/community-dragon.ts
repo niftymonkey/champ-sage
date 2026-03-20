@@ -39,12 +39,6 @@ function normalizeForMatch(name: string): string {
     .trim();
 }
 
-function normalizeRarity(rarity: string): Augment["tier"] {
-  if (rarity === "kGold") return "Gold";
-  if (rarity === "kPrismatic") return "Prismatic";
-  return "Silver";
-}
-
 function normalizePath(path: string): string {
   const cleaned = path.replace("/lol-game-data/assets/", "").toLowerCase();
   return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/${cleaned}`;
@@ -93,20 +87,11 @@ export async function mergeAugmentIds(
       // Merge ID and icon but DO NOT overwrite mode
       existing.id = best.id;
       existing.iconPath = normalizePath(best.augmentSmallIconPath);
-    } else {
-      // New augment not in wiki — add it with CDragon data and classified mode
-      const mode = classifyAugmentMode(best.augmentSmallIconPath);
-      const key = best.nameTRA.toLowerCase();
-      augments.set(key, {
-        name: best.nameTRA,
-        description: "",
-        tier: normalizeRarity(best.rarity),
-        set: "-",
-        mode,
-        id: best.id,
-        iconPath: normalizePath(best.augmentSmallIconPath),
-      });
     }
+    // CDragon-only augments (not in any wiki source) are skipped.
+    // They have no description and are often test/internal entries
+    // (e.g., "404 Augment Not Found", "Augment 405") or from
+    // unsupported modes. Wiki sources are authoritative for augment data.
   }
 }
 

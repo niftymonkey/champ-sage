@@ -4,7 +4,7 @@
  */
 
 // Bump this version when the cache schema changes to invalidate stale data
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const CACHE_PREFIX = `champ-sage:v${CACHE_VERSION}:`;
 
 export async function readCache<T>(key: string): Promise<T | null> {
