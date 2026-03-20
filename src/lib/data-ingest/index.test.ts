@@ -3,12 +3,14 @@ import { loadGameData } from "./index";
 import * as dataDragon from "./sources/data-dragon";
 import * as wikiAugments from "./sources/wiki-augments";
 import * as communityDragon from "./sources/community-dragon";
+import * as aramOverrides from "./sources/wiki-aram-overrides";
 import * as cache from "./cache";
-import type { Champion, Item, Augment, RuneTree } from "./types";
+import type { AramOverrides, Champion, Item, Augment, RuneTree } from "./types";
 
 vi.mock("./sources/data-dragon");
 vi.mock("./sources/wiki-augments");
 vi.mock("./sources/community-dragon");
+vi.mock("./sources/wiki-aram-overrides");
 vi.mock("./cache", async (importOriginal) => {
   const actual = await importOriginal<typeof cache>();
   return {
@@ -18,21 +20,23 @@ vi.mock("./cache", async (importOriginal) => {
   };
 });
 
-const mockChampions = new Map<string, Champion>([
-  [
-    "aatrox",
-    {
-      id: "Aatrox",
-      key: 266,
-      name: "Aatrox",
-      title: "the Darkin Blade",
-      tags: ["Fighter"],
-      partype: "Blood Well",
-      stats: {} as Champion["stats"],
-      image: "",
-    },
-  ],
-]);
+function createMockChampions() {
+  return new Map<string, Champion>([
+    [
+      "aatrox",
+      {
+        id: "Aatrox",
+        key: 266,
+        name: "Aatrox",
+        title: "the Darkin Blade",
+        tags: ["Fighter"],
+        partype: "Blood Well",
+        stats: {} as Champion["stats"],
+        image: "",
+      },
+    ],
+  ]);
+}
 
 const mockItems = new Map<number, Item>([
   [
@@ -80,11 +84,12 @@ beforeEach(() => {
   vi.mocked(cache.readCache).mockResolvedValue(null);
   vi.mocked(cache.writeCache).mockResolvedValue(undefined);
   vi.mocked(dataDragon.fetchLatestVersion).mockResolvedValue("15.6.1");
-  vi.mocked(dataDragon.fetchChampions).mockResolvedValue(mockChampions);
+  vi.mocked(dataDragon.fetchChampions).mockResolvedValue(createMockChampions());
   vi.mocked(dataDragon.fetchItems).mockResolvedValue(mockItems);
   vi.mocked(dataDragon.fetchRunes).mockResolvedValue(mockRunes);
   vi.mocked(wikiAugments.fetchWikiAugments).mockResolvedValue(mockAugments);
   vi.mocked(communityDragon.mergeAugmentIds).mockResolvedValue(undefined);
+  vi.mocked(aramOverrides.fetchAramOverrides).mockResolvedValue(new Map());
 });
 
 describe("loadGameData", () => {
@@ -107,6 +112,7 @@ describe("loadGameData", () => {
     expect(dataDragon.fetchRunes).toHaveBeenCalledWith("15.6.1");
     expect(wikiAugments.fetchWikiAugments).toHaveBeenCalled();
     expect(communityDragon.mergeAugmentIds).toHaveBeenCalledWith(mockAugments);
+    expect(aramOverrides.fetchAramOverrides).toHaveBeenCalled();
   });
 
   it("writes fetched data to cache", async () => {
@@ -122,7 +128,7 @@ describe("loadGameData", () => {
 
     vi.mocked(cache.readCache).mockResolvedValue({
       version: "15.5.1",
-      champions: { aatrox: mockChampions.get("aatrox") },
+      champions: { aatrox: createMockChampions().get("aatrox") },
       items: { "1001": mockItems.get(1001) },
       runes: mockRunes,
       augments: { typhoon: mockAugments.get("typhoon") },
@@ -149,5 +155,26 @@ describe("loadGameData", () => {
     const results = data.dictionary.search("aatrox");
     expect(results[0].name).toBe("Aatrox");
     expect(results[0].type).toBe("champion");
+  });
+
+  it("merges ARAM overrides onto matching champions", async () => {
+    const mockOverrides = new Map<string, AramOverrides>([
+      ["aatrox", { dmgDealt: 1.05, dmgTaken: 1 }],
+    ]);
+    vi.mocked(aramOverrides.fetchAramOverrides).mockResolvedValue(
+      mockOverrides
+    );
+
+    const data = await loadGameData();
+    const aatrox = data.champions.get("aatrox");
+    expect(aatrox!.aramOverrides).toEqual({ dmgDealt: 1.05, dmgTaken: 1 });
+  });
+
+  it("leaves aramOverrides undefined for champions without overrides", async () => {
+    vi.mocked(aramOverrides.fetchAramOverrides).mockResolvedValue(new Map());
+
+    const data = await loadGameData();
+    const aatrox = data.champions.get("aatrox");
+    expect(aatrox!.aramOverrides).toBeUndefined();
   });
 });

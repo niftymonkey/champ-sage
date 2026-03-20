@@ -7,6 +7,18 @@ export interface Champion {
   partype: string;
   stats: ChampionStats;
   image: string;
+  aramOverrides?: AramOverrides;
+}
+
+export interface AramOverrides {
+  dmgDealt: number;
+  dmgTaken: number;
+  healing?: number;
+  shielding?: number;
+  tenacity?: number;
+  energyRegenMod?: number;
+  totalAs?: number;
+  abilityHaste?: number;
 }
 
 export interface ChampionStats {

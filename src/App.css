@@ -249,6 +249,21 @@ h1 {
   background-color: #2a2a30;
 }
 
+/* ARAM overrides */
+.aram-badge {
+  font-size: 0.7em;
+  padding: 0.1em 0.4em;
+  margin-left: 0.5em;
+  border-radius: 3px;
+  color: #7cb3ff;
+  background-color: #1a2a40;
+  vertical-align: middle;
+}
+
+.aram-overrides {
+  margin-top: 0.5em;
+}
+
 /* Runes */
 .rune-entry {
   padding: 0.25em 0;
