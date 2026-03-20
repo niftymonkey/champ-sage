@@ -1,18 +1,22 @@
 import { useState } from "react";
 import type { LoadedGameData } from "../lib/data-ingest";
+import type { GameState } from "../lib/game-state";
 import { ChampionList } from "./ChampionList";
 import { ItemList } from "./ItemList";
 import { RuneList } from "./RuneList";
 import { AugmentList } from "./AugmentList";
 import { EntitySearch } from "./EntitySearch";
+import { GameStateView } from "./GameStateView";
 
-type Tab = "champions" | "items" | "runes" | "augments" | "search";
+type Tab = "game" | "champions" | "items" | "runes" | "augments" | "search";
 
 interface DataBrowserProps {
   data: LoadedGameData;
+  gameState: GameState;
 }
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: "game", label: "Game" },
   { key: "champions", label: "Champions" },
   { key: "items", label: "Items" },
   { key: "runes", label: "Runes" },
@@ -20,8 +24,8 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "search", label: "Search" },
 ];
 
-export function DataBrowser({ data }: DataBrowserProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("champions");
+export function DataBrowser({ data, gameState }: DataBrowserProps) {
+  const [activeTab, setActiveTab] = useState<Tab>("game");
 
   return (
     <>
@@ -33,13 +37,17 @@ export function DataBrowser({ data }: DataBrowserProps) {
             onClick={() => setActiveTab(tab.key)}
           >
             {tab.label}
-            {tab.key !== "search" && (
+            {tab.key === "game" && (
+              <span className={`status-dot ${gameState.status}`} />
+            )}
+            {tab.key !== "search" && tab.key !== "game" && (
               <span className="count">{getCount(data, tab.key)}</span>
             )}
           </button>
         ))}
       </div>
       <div className="tab-content">
+        {activeTab === "game" && <GameStateView state={gameState} />}
         {activeTab === "champions" && (
           <ChampionList champions={data.champions} />
         )}

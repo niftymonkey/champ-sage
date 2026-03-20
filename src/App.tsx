@@ -1,9 +1,11 @@
 import "./App.css";
 import { useGameData } from "./hooks/useGameData";
+import { useGameState } from "./hooks/useGameState";
 import { DataBrowser } from "./components/DataBrowser";
 
 function App() {
   const { data, loading, error, refresh } = useGameData();
+  const gameState = useGameState();
 
   return (
     <main className="container">
@@ -24,7 +26,7 @@ function App() {
         {error && <p className="error">Error: {error}</p>}
         {data && <p className="version">Patch {data.version}</p>}
       </div>
-      {data && <DataBrowser data={data} />}
+      {data && <DataBrowser data={data} gameState={gameState} />}
     </main>
   );
 }
