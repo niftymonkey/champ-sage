@@ -6,6 +6,7 @@ import { addSelectedAugment } from "../lib/mode/augment-selection";
 interface AugmentSelectionState {
   selectedAugments: Augment[];
   select: (augment: Augment) => void;
+  removeLast: () => void;
   reset: () => void;
   applyToContext: (modeContext: ModeContext, playerKey: string) => ModeContext;
 }
@@ -26,6 +27,10 @@ export function useAugmentSelection(resetKey: string): AugmentSelectionState {
     setSelectedAugments((prev) => [...prev, augment]);
   }, []);
 
+  const removeLast = useCallback(() => {
+    setSelectedAugments((prev) => prev.slice(0, -1));
+  }, []);
+
   const reset = useCallback(() => {
     setSelectedAugments([]);
   }, []);
@@ -41,5 +46,5 @@ export function useAugmentSelection(resetKey: string): AugmentSelectionState {
     [selectedAugments]
   );
 
-  return { selectedAugments, select, reset, applyToContext };
+  return { selectedAugments, select, removeLast, reset, applyToContext };
 }

@@ -643,6 +643,24 @@ button.augment-card {
   }
 }
 
+.augment-slot-removable {
+  cursor: pointer;
+  position: relative;
+}
+
+.augment-slot-removable:hover::after {
+  content: "Remove";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(10, 10, 15, 0.8);
+  color: #ff6b6b;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
 .augment-slot-available {
   font-size: 0.7em;
   color: #4ade80;

@@ -14,6 +14,7 @@ type Tab = "game" | "champions" | "items" | "runes" | "augments" | "search";
 interface AugmentSelectionActions {
   selectedAugments: Augment[];
   select: (augment: Augment) => void;
+  removeLast: () => void;
   reset: () => void;
 }
 

@@ -11,6 +11,7 @@ interface AugmentSlotsProps {
   availableAugments: Map<string, Augment>;
   availability?: AugmentAvailability;
   onSelect: (augment: Augment) => void;
+  onRemoveLast: () => void;
   onReset: () => void;
 }
 
@@ -19,6 +20,7 @@ export function AugmentSlots({
   availableAugments,
   availability,
   onSelect,
+  onRemoveLast,
   onReset,
 }: AugmentSlotsProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -31,6 +33,7 @@ export function AugmentSlots({
   const nextEmptySlot = selectedAugments.length;
   const canPick = nextEmptySlot < MAX_AUGMENT_SLOTS;
   const isPending = availability?.isAvailable ?? false;
+  const selectedNames = new Set(selectedAugments.map((a) => a.name));
 
   return (
     <div className="augment-slots-container">
@@ -47,41 +50,52 @@ export function AugmentSlots({
           const augment = selectedAugments[i];
           const isEmpty = !augment;
           const isClickable = isEmpty && i === nextEmptySlot && canPick;
+          const isLastFilled = !isEmpty && i === nextEmptySlot - 1;
           const isSlotPending = isPending && availability?.pendingSlot === i;
 
-          return isEmpty ? (
+          if (isEmpty) {
+            return (
+              <div
+                key={i}
+                className={`augment-slot augment-slot-empty${isClickable ? " augment-slot-clickable" : ""}${isSlotPending ? " augment-slot-pending" : ""}`}
+                role={isClickable ? "button" : undefined}
+                tabIndex={isClickable ? 0 : undefined}
+                onClick={isClickable ? () => setPickerOpen(true) : undefined}
+                onKeyDown={
+                  isClickable
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setPickerOpen(true);
+                        }
+                      }
+                    : undefined
+                }
+              >
+                <div className="augment-slot-placeholder">
+                  <span className="augment-slot-number">{i + 1}</span>
+                  {isSlotPending ? (
+                    <span className="augment-slot-available">
+                      Augment available
+                    </span>
+                  ) : (
+                    isClickable && (
+                      <span className="augment-slot-hint">Tap to choose</span>
+                    )
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          return (
             <div
               key={i}
-              className={`augment-slot augment-slot-empty${isClickable ? " augment-slot-clickable" : ""}${isSlotPending ? " augment-slot-pending" : ""}`}
-              role={isClickable ? "button" : undefined}
-              tabIndex={isClickable ? 0 : undefined}
-              onClick={isClickable ? () => setPickerOpen(true) : undefined}
-              onKeyDown={
-                isClickable
-                  ? (e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setPickerOpen(true);
-                      }
-                    }
-                  : undefined
-              }
+              className={`augment-slot${isLastFilled ? " augment-slot-removable" : ""}`}
+              onClick={isLastFilled ? onRemoveLast : undefined}
             >
-              <div className="augment-slot-placeholder">
-                <span className="augment-slot-number">{i + 1}</span>
-                {isSlotPending ? (
-                  <span className="augment-slot-available">
-                    Augment available
-                  </span>
-                ) : (
-                  isClickable && (
-                    <span className="augment-slot-hint">Tap to choose</span>
-                  )
-                )}
-              </div>
+              <AugmentCard augment={augment} />
             </div>
-          ) : (
-            <AugmentCard key={i} augment={augment} />
           );
         })}
       </div>
@@ -97,7 +111,11 @@ export function AugmentSlots({
               Cancel
             </button>
           </div>
-          <AugmentPicker augments={availableAugments} onSelect={handleSelect} />
+          <AugmentPicker
+            augments={availableAugments}
+            excludeNames={selectedNames}
+            onSelect={handleSelect}
+          />
         </div>
       )}
     </div>

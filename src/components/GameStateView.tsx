@@ -6,6 +6,7 @@ import { AugmentSlots } from "./AugmentSlots";
 interface AugmentSelectionActions {
   selectedAugments: Augment[];
   select: (augment: Augment) => void;
+  removeLast: () => void;
   reset: () => void;
 }
 
@@ -127,6 +128,7 @@ export function GameStateView({
               : undefined
           }
           onSelect={augmentSelection.select}
+          onRemoveLast={augmentSelection.removeLast}
           onReset={augmentSelection.reset}
         />
       )}

@@ -4,16 +4,21 @@ import { AugmentCard } from "./AugmentCard";
 
 interface AugmentPickerProps {
   augments: Map<string, Augment>;
+  excludeNames?: Set<string>;
   onSelect: (augment: Augment) => void;
 }
 
-export function AugmentPicker({ augments, onSelect }: AugmentPickerProps) {
+export function AugmentPicker({
+  augments,
+  excludeNames,
+  onSelect,
+}: AugmentPickerProps) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
-    const all = [...augments.values()].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    const all = [...augments.values()]
+      .filter((a) => !excludeNames?.has(a.name))
+      .sort((a, b) => a.name.localeCompare(b.name));
     if (query.trim().length < 2) return all;
 
     const lower = query.toLowerCase();
@@ -23,7 +28,7 @@ export function AugmentPicker({ augments, onSelect }: AugmentPickerProps) {
         a.description.toLowerCase().includes(lower) ||
         a.sets.some((s) => s.toLowerCase().includes(lower))
     );
-  }, [augments, query]);
+  }, [augments, excludeNames, query]);
 
   return (
     <div className="augment-picker">
