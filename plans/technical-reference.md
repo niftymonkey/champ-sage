@@ -43,7 +43,8 @@ The API uses a self-signed HTTPS certificate. The Tauri webview can't fetch it d
 
 **Not exposed:**
 
-- Augments (any mode) — requires voice/manual input
+- Augments (any mode) — requires voice/manual input. In ARAM Mayhem, augment selection happens at levels 1, 7, 11, and 15 (4 total per game), but only after the player returns to the Nexus at that level. The API exposes player level but not whether they're at the Nexus or have an augment offer pending.
+- Some augments auto-select a follow-up (e.g., Transmute: Chaos grants two random augments instead of one). This can happen once per game, meaning a player can end up with 5 augments total (4 chosen + 1 granted). The API doesn't expose these auto-selections, so the app needs a way to record the granted augment. The UI should distinguish between "chosen" slots (4 max) and a "granted" slot that appears as a result of choosing certain augments. With voice input, the user can report all augments received in one utterance.
 - Enemy gold (only active player's gold)
 - Ability cooldowns (Riot policy)
 - Detailed stats for other players

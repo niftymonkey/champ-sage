@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Augment, AugmentMode } from "../lib/data-ingest/types";
+import { AugmentCard } from "./AugmentCard";
 
 interface AugmentListProps {
   augments: Map<string, Augment>;
@@ -17,10 +18,10 @@ const MODE_LABELS: Record<AugmentMode, string> = {
 };
 
 export function AugmentList({ augments }: AugmentListProps) {
-  const [expanded, setExpanded] = useState<string | null>(null);
   const [modeFilter, setModeFilter] = useState<AugmentMode>("mayhem");
   const [tierFilters, setTierFilters] = useState<Set<Tier>>(new Set(TIERS));
   const [setFilter, setSetFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   function toggleTier(tier: Tier) {
     setTierFilters((prev) => {
@@ -38,7 +39,6 @@ export function AugmentList({ augments }: AugmentListProps) {
     (a) => a.mode === modeFilter
   );
 
-  // Collect unique set names for the current mode
   const setNames = useMemo(() => {
     const names = new Set<string>();
     for (const a of modeFiltered) {
@@ -49,7 +49,15 @@ export function AugmentList({ augments }: AugmentListProps) {
 
   const filtered = modeFiltered
     .filter((a) => tierFilters.has(a.tier))
-    .filter((a) => (setFilter ? a.sets.includes(setFilter) : true));
+    .filter((a) => (setFilter ? a.sets.includes(setFilter) : true))
+    .filter((a) => {
+      if (query.trim().length < 2) return true;
+      const lower = query.toLowerCase();
+      return (
+        a.name.toLowerCase().includes(lower) ||
+        a.description.toLowerCase().includes(lower)
+      );
+    });
 
   const sorted = filtered.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -75,7 +83,6 @@ export function AugmentList({ augments }: AugmentListProps) {
                 key={mode}
                 className={modeFilter === mode ? "tab active" : "tab"}
                 onClick={() => {
-                  setExpanded(null);
                   setModeFilter(mode);
                   setSetFilter(null);
                 }}
@@ -118,48 +125,21 @@ export function AugmentList({ augments }: AugmentListProps) {
             ))}
           </div>
         )}
+        <input
+          type="text"
+          placeholder="Search augments..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="search-input"
+          style={{ marginTop: "0.5rem", marginBottom: 0 }}
+        />
       </div>
-      <p className="entity-meta" style={{ padding: "0 8px" }}>
+      <p className="entity-meta" style={{ padding: "0.25rem 0" }}>
         Showing {sorted.length} augments
       </p>
-      <div className="entity-list">
+      <div className="augment-card-grid">
         {sorted.map((aug) => (
-          <div key={`${aug.mode}-${aug.name}`} className="entity-item">
-            <div
-              className="entity-header"
-              onClick={() =>
-                setExpanded(expanded === aug.name ? null : aug.name)
-              }
-            >
-              <span className="entity-name">
-                {aug.name}
-                {aug.sets.map((s) => (
-                  <span key={s} className="set-badge">
-                    {s}
-                  </span>
-                ))}
-              </span>
-              <span className="entity-meta">
-                <span className={`tier tier-${aug.tier.toLowerCase()}`}>
-                  {aug.tier}
-                </span>
-              </span>
-            </div>
-            {expanded === aug.name && (
-              <div className="entity-details">
-                {aug.description ? (
-                  <p>{aug.description}</p>
-                ) : (
-                  <p className="entity-meta">No description available</p>
-                )}
-                {aug.id != null && (
-                  <p className="entity-meta">
-                    ID: {aug.id} | Mode: {MODE_LABELS[aug.mode]}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          <AugmentCard key={`${aug.mode}-${aug.name}`} augment={aug} />
         ))}
       </div>
     </div>

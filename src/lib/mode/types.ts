@@ -27,6 +27,8 @@ export interface GameMode {
   id: string;
   displayName: string;
   decisionTypes: DecisionType[];
+  /** Levels at which augment selection becomes available (mode-specific). */
+  augmentSelectionLevels: number[];
   matches(gameMode: string): boolean;
   buildContext(gameState: GameState, gameData: LoadedGameData): ModeContext;
 }

@@ -1,11 +1,26 @@
 import type { EffectiveGameState, EffectivePlayer } from "../lib/mode";
-import type { AramOverrides } from "../lib/data-ingest/types";
+import type { Augment, AramOverrides } from "../lib/data-ingest/types";
+import { checkAugmentAvailability } from "../lib/mode/augment-availability";
+import { AugmentSlots } from "./AugmentSlots";
+
+interface AugmentSelectionActions {
+  selectedAugments: Augment[];
+  select: (augment: Augment) => void;
+  removeLast: () => void;
+  reset: () => void;
+}
 
 interface GameStateViewProps {
   state: EffectiveGameState;
+  modeAugments?: Map<string, Augment>;
+  augmentSelection: AugmentSelectionActions;
 }
 
-export function GameStateView({ state }: GameStateViewProps) {
+export function GameStateView({
+  state,
+  modeAugments,
+  augmentSelection,
+}: GameStateViewProps) {
   if (state.status === "disconnected") {
     return (
       <div className="game-status">
@@ -98,6 +113,25 @@ export function GameStateView({ state }: GameStateViewProps) {
       )}
 
       <TeamsGrid allies={state.allies} enemies={state.enemies} />
+
+      {modeAugments && modeAugments.size > 0 && (
+        <AugmentSlots
+          selectedAugments={augmentSelection.selectedAugments}
+          availableAugments={modeAugments}
+          availability={
+            modeCtx && active
+              ? checkAugmentAvailability(
+                  active.level,
+                  augmentSelection.selectedAugments.length,
+                  modeCtx.mode
+                )
+              : undefined
+          }
+          onSelect={augmentSelection.select}
+          onRemoveLast={augmentSelection.removeLast}
+          onReset={augmentSelection.reset}
+        />
+      )}
     </div>
   );
 }
