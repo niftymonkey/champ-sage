@@ -286,6 +286,46 @@ describe("ReactiveEngine", () => {
 
       expect(bridge.connectLcuWebSocket).toHaveBeenCalledWith(12345, "secret");
     });
+
+    it("fetches initial phase via REST on connect", async () => {
+      bridge.setLcuAvailable(12345, "secret");
+      bridge.setFetchLcuResponse("None");
+      engine.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(bridge.fetchLcu).toHaveBeenCalledWith(
+        12345,
+        "secret",
+        "/lol-gameflow/v1/gameflow-phase"
+      );
+    });
+
+    it("starts polling when initial phase is InProgress", async () => {
+      bridge.setLcuAvailable(12345, "secret");
+      // fetchLcu returns "InProgress" for phase query
+      (bridge.fetchLcu as Mock).mockImplementation(
+        async (_port: number, _token: string, endpoint: string) => {
+          if (endpoint === "/lol-gameflow/v1/gameflow-phase") {
+            return JSON.stringify("InProgress");
+          }
+          if (endpoint === "/lol-gameflow/v1/session") {
+            return JSON.stringify({ phase: "InProgress" });
+          }
+          return "{}";
+        }
+      );
+      bridge.setRiotApiResponse(createRiotApiResponse({ gameTime: 42 }));
+      engine.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      // Allow the initial phase fetch + poll to complete
+      await vi.advanceTimersByTimeAsync(0);
+
+      const state = liveGameState$.getValue();
+      expect(state.gameTime).toBe(42);
+      expect(state.activePlayer).not.toBeNull();
+    });
   });
 
   // =========================================================================
@@ -1220,12 +1260,14 @@ describe("ReactiveEngine", () => {
 
       engine.stop();
 
+      // Collect before restart so we capture the connection event
+      const { events, teardown } = collectLifecycleEvents();
+
       // Restart
       engine.start();
       await vi.advanceTimersByTimeAsync(0);
 
       // Should be polling again
-      const { events, teardown } = collectLifecycleEvents();
       expect(events).toContainEqual({ type: "connection", connected: true });
 
       teardown();

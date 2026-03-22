@@ -148,6 +148,10 @@ export class ReactiveEngine {
                 .then(([ul, uld]) => {
                   unlisten = ul;
                   unlistenDisconnect = uld;
+
+                  // Fetch current phase via REST so we don't miss state
+                  // if the app started after a phase transition already happened
+                  this.fetchInitialState(creds.port, creds.token);
                 })
                 .catch((err) => subscriber.error(err));
 
@@ -308,6 +312,46 @@ export class ReactiveEngine {
         userInput$.next(event);
       })
     );
+  }
+
+  /**
+   * Fetch the current gameflow phase and session via REST on initial connect.
+   * This ensures we pick up the current state even if the app started after
+   * the phase transition already happened (e.g., game already InProgress).
+   */
+  private fetchInitialState(port: number, token: string): void {
+    // Fetch current phase
+    this.bridge
+      .fetchLcu(port, token, "/lol-gameflow/v1/gameflow-phase")
+      .then((json) => {
+        // The phase endpoint returns a plain JSON string like "InProgress"
+        const phase = JSON.parse(json) as string;
+        if (phase && phase !== "None") {
+          this.wsEvents$.next({
+            uri: "/lol-gameflow/v1/gameflow-phase",
+            event_type: "Update",
+            data: phase,
+          });
+        }
+      })
+      .catch(() => {
+        // Phase not available — client might be in None state
+      });
+
+    // Fetch current session
+    this.bridge
+      .fetchLcu(port, token, "/lol-gameflow/v1/session")
+      .then((json) => {
+        const session: unknown = JSON.parse(json);
+        this.wsEvents$.next({
+          uri: "/lol-gameflow/v1/session",
+          event_type: "Update",
+          data: session,
+        });
+      })
+      .catch(() => {
+        // Session not available outside game flow
+      });
   }
 
   /**
