@@ -36,4 +36,19 @@ export const notifications$ = new Subject<AppNotification>();
 export const manualInput$ = new Subject<UserInputEvent & { type: "augment" }>();
 export const playerIntent$ = new Subject<UserInputEvent & { type: "query" }>();
 
+// Debug stream — raw input events from data sources (discovery, WebSocket, API polls)
+export interface DebugInputEvent {
+  source:
+    | "discovery"
+    | "websocket"
+    | "ws-filtered"
+    | "riot-api"
+    | "lcu-rest"
+    | "initial-state";
+  summary: string;
+  detail?: string;
+}
+
+export const debugInput$ = new Subject<DebugInputEvent>();
+
 export { createDefaultLiveGameState };

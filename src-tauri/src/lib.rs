@@ -289,6 +289,13 @@ async fn connect_lcu_websocket(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Install ring as the default crypto provider for rustls.
+    // Both ring and aws-lc-rs are pulled in transitively (reqwest uses ring,
+    // tokio-tungstenite uses aws-lc-rs), so rustls can't auto-detect.
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {

@@ -745,6 +745,7 @@ button.augment-card {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  height: 100%;
 }
 
 .debug-status-grid {
@@ -808,17 +809,27 @@ button.augment-card {
   border-color: #666;
 }
 
-.debug-streams-header {
-  background-color: #222;
-  border-radius: 0.25rem;
-  padding: 0.5em 0.75em;
+.debug-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  flex: 1;
+  min-height: 0;
 }
 
-.debug-stream-indicators {
+.debug-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.debug-source-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75em;
-  margin-top: 0.4em;
+  gap: 0.5em;
+  padding: 0.3em 0;
 }
 
 .debug-stream-indicator {
@@ -839,16 +850,25 @@ button.augment-card {
   color: #aaa;
 }
 
-.debug-stream-time {
-  color: #555;
-  font-size: 0.9em;
+.debug-noise-toggle {
+  font-size: 0.85em;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+}
+
+.debug-noise-toggle input {
+  cursor: pointer;
 }
 
 .debug-log {
   background-color: #111;
   border-radius: 0.25rem;
   padding: 0.5em;
-  max-height: 24rem;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
   font-size: 0.78em;
@@ -887,7 +907,7 @@ button.augment-card {
 .debug-log-stream {
   font-weight: 600;
   flex-shrink: 0;
-  min-width: 6em;
+  min-width: 5em;
 }
 
 .debug-log-summary {
@@ -905,8 +925,4 @@ button.augment-card {
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
-}
-
-.debug-eog-section {
-  margin-top: 0.25rem;
 }

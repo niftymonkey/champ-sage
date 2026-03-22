@@ -16,6 +16,9 @@ importers:
       "@tauri-apps/plugin-opener":
         specifier: ^2
         version: 2.5.3
+      deep-object-diff:
+        specifier: ^1.1.9
+        version: 1.1.9
       luaparse:
         specifier: ^0.3.1
         version: 0.3.1
@@ -1239,6 +1242,12 @@ packages:
         integrity: sha512-h5k/5U50IJJFpzfL6nO9jaaumfjO/f2NjK/oYB2Djzm4p9L+3T9qWpZqZ2hAbLPuuYq9wrU08WQyBTL5GbPk5Q==,
       }
     engines: { node: ">=6" }
+
+  deep-object-diff@1.1.9:
+    resolution:
+      {
+        integrity: sha512-Rn+RuwkmkDwCi2/oXOFS9Gsr5lJZu/yTGpK7wAaAIE75CC+LCGEZHpY6VQJa/RoJcrmaA/docWJZvYohlNkWPA==,
+      }
 
   dequal@2.0.3:
     resolution:
@@ -2700,6 +2709,8 @@ snapshots:
   decimal.js@10.6.0: {}
 
   deep-eql@5.0.2: {}
+
+  deep-object-diff@1.1.9: {}
 
   dequal@2.0.3: {}
 

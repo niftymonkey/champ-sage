@@ -10,7 +10,9 @@ export type GameflowPhase =
   | "ChampSelect"
   | "InProgress"
   | "PreEndOfGame"
-  | "EndOfGame";
+  | "EndOfGame"
+  | "WaitingForStats"
+  | "TerminatedInError";
 
 // LCU connection
 export interface LcuCredentials {

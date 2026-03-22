@@ -18,8 +18,10 @@ export {
   notifications$,
   manualInput$,
   playerIntent$,
+  debugInput$,
   createDefaultLiveGameState,
 } from "./streams";
+export type { DebugInputEvent } from "./streams";
 
 export { ReactiveEngine } from "./engine";
 export type { TauriBridge } from "./tauri-bridge";

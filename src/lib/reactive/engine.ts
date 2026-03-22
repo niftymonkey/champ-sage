@@ -23,6 +23,7 @@ import {
   userInput$,
   manualInput$,
   playerIntent$,
+  debugInput$,
 } from "./streams";
 import { normalizeGameState } from "../game-state/normalize";
 import type { TauriBridge, LcuEventPayload } from "./tauri-bridge";
@@ -115,14 +116,28 @@ export class ReactiveEngine {
     // Push connection events to gameLifecycle$ and track credentials
     this.subscription.add(
       lcuConnection$.subscribe((status) => {
+        debugInput$.next({
+          source: "discovery",
+          summary: status.connected
+            ? `LCU found — port ${status.port}`
+            : "LCU not found",
+        });
         if (status.connected) {
           this.currentPort = status.port;
           this.currentToken = status.token;
         }
-        gameLifecycle$.next({
-          type: "connection",
-          connected: status.connected,
-        });
+        // Only emit if the connection status actually changed from what
+        // the BehaviorSubject already holds (avoids duplicate on startup)
+        const current = gameLifecycle$.getValue();
+        if (
+          current.type !== "connection" ||
+          current.connected !== status.connected
+        ) {
+          gameLifecycle$.next({
+            type: "connection",
+            connected: status.connected,
+          });
+        }
       })
     );
 
@@ -132,16 +147,24 @@ export class ReactiveEngine {
         .pipe(
           filter((s) => s.connected),
           switchMap((creds) => {
-            return new Observable<void>((subscriber) => {
+            return new Observable<void>(() => {
               let unlisten: (() => void) | null = null;
               let unlistenDisconnect: (() => void) | null = null;
+
+              debugInput$.next({
+                source: "websocket",
+                summary: `Connecting WebSocket to port ${creds.port}...`,
+              });
 
               Promise.all([
                 this.bridge.listenLcuEvent((event) =>
                   this.wsEvents$.next(event)
                 ),
-                this.bridge.listenLcuDisconnect(() => {
-                  // Disconnect will be picked up by discovery polling
+                this.bridge.listenLcuDisconnect((event) => {
+                  debugInput$.next({
+                    source: "websocket",
+                    summary: `WebSocket disconnected: ${event.reason}`,
+                  });
                 }),
                 this.bridge.connectLcuWebSocket(creds.port, creds.token),
               ])
@@ -149,11 +172,22 @@ export class ReactiveEngine {
                   unlisten = ul;
                   unlistenDisconnect = uld;
 
+                  debugInput$.next({
+                    source: "websocket",
+                    summary: "WebSocket connected and subscribed",
+                  });
+
                   // Fetch current phase via REST so we don't miss state
                   // if the app started after a phase transition already happened
                   this.fetchInitialState(creds.port, creds.token);
                 })
-                .catch((err) => subscriber.error(err));
+                .catch((err) => {
+                  debugInput$.next({
+                    source: "websocket",
+                    summary: `WebSocket connection FAILED: ${err instanceof Error ? err.message : String(err)}`,
+                  });
+                  // Don't error the subscriber — let discovery retry
+                });
 
               return () => {
                 unlisten?.();
@@ -166,6 +200,19 @@ export class ReactiveEngine {
     );
 
     // Layer 3: WebSocket event splits
+    // Log all raw WebSocket events (including noise)
+    this.subscription.add(
+      this.wsEvents$.subscribe((evt) => {
+        const isNoise = NOISE_PREFIXES.some((prefix) =>
+          evt.uri.startsWith(prefix)
+        );
+        debugInput$.next({
+          source: "websocket",
+          summary: `${evt.event_type} ${evt.uri}${isNoise ? " [noise]" : ""}`,
+        });
+      })
+    );
+
     const wsFiltered$ = this.wsEvents$.pipe(
       filter(
         (evt) => !NOISE_PREFIXES.some((prefix) => evt.uri.startsWith(prefix))
@@ -187,36 +234,42 @@ export class ReactiveEngine {
       })
     );
 
-    // Push lobby events to gameLifecycle$
+    // Push lobby events to gameLifecycle$ (deduplicated)
     this.subscription.add(
       wsFiltered$
         .pipe(
           filter((evt) => evt.uri === "/lol-lobby/v2/lobby"),
-          map((evt) => evt.data)
+          map((evt) => JSON.stringify(evt.data)),
+          distinctUntilChanged(),
+          map((json) => JSON.parse(json) as unknown)
         )
         .subscribe((data) => {
           gameLifecycle$.next({ type: "lobby", data });
         })
     );
 
-    // Push matchmaking events to gameLifecycle$
+    // Push matchmaking events to gameLifecycle$ (deduplicated)
     this.subscription.add(
       wsFiltered$
         .pipe(
           filter((evt) => evt.uri === "/lol-matchmaking/v1/search"),
-          map((evt) => evt.data)
+          map((evt) => JSON.stringify(evt.data)),
+          distinctUntilChanged(),
+          map((json) => JSON.parse(json) as unknown)
         )
         .subscribe((data) => {
           gameLifecycle$.next({ type: "matchmaking", data });
         })
     );
 
-    // Push session events to gameLifecycle$
+    // Push session events to gameLifecycle$ (deduplicated)
     this.subscription.add(
       wsFiltered$
         .pipe(
           filter((evt) => evt.uri === "/lol-gameflow/v1/session"),
-          map((evt) => evt.data)
+          map((evt) => JSON.stringify(evt.data)),
+          distinctUntilChanged(),
+          map((json) => JSON.parse(json) as unknown)
         )
         .subscribe((data) => {
           gameLifecycle$.next({ type: "session", data });
@@ -324,8 +377,11 @@ export class ReactiveEngine {
     this.bridge
       .fetchLcu(port, token, "/lol-gameflow/v1/gameflow-phase")
       .then((json) => {
-        // The phase endpoint returns a plain JSON string like "InProgress"
         const phase = JSON.parse(json) as string;
+        debugInput$.next({
+          source: "initial-state",
+          summary: `Phase: ${phase}`,
+        });
         if (phase && phase !== "None") {
           this.wsEvents$.next({
             uri: "/lol-gameflow/v1/gameflow-phase",
@@ -334,8 +390,11 @@ export class ReactiveEngine {
           });
         }
       })
-      .catch(() => {
-        // Phase not available — client might be in None state
+      .catch((err) => {
+        debugInput$.next({
+          source: "initial-state",
+          summary: `Phase fetch failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
       });
 
     // Fetch current session
@@ -343,6 +402,11 @@ export class ReactiveEngine {
       .fetchLcu(port, token, "/lol-gameflow/v1/session")
       .then((json) => {
         const session: unknown = JSON.parse(json);
+        debugInput$.next({
+          source: "initial-state",
+          summary: "Session fetched",
+          detail: JSON.stringify(session, null, 2),
+        });
         this.wsEvents$.next({
           uri: "/lol-gameflow/v1/session",
           event_type: "Update",
@@ -350,7 +414,10 @@ export class ReactiveEngine {
         });
       })
       .catch(() => {
-        // Session not available outside game flow
+        debugInput$.next({
+          source: "initial-state",
+          summary: "Session not available",
+        });
       });
   }
 
@@ -381,9 +448,24 @@ export class ReactiveEngine {
           .then(
             (json) => {
               const raw: unknown = JSON.parse(json);
-              return { success: true as const, data: normalizeGameState(raw) };
+              const normalized = normalizeGameState(raw);
+              debugInput$.next({
+                source: "riot-api",
+                summary: `Poll OK — ${normalized.gameMode} ${Math.floor(normalized.gameTime / 60)}:${Math.floor(
+                  normalized.gameTime % 60
+                )
+                  .toString()
+                  .padStart(2, "0")} ${normalized.players.length}p`,
+              });
+              return { success: true as const, data: normalized };
             },
-            () => ({ success: false as const, data: null })
+            (err) => {
+              debugInput$.next({
+                source: "riot-api",
+                summary: `Poll failed — ${err instanceof Error ? err.message : String(err)}`,
+              });
+              return { success: false as const, data: null };
+            }
           )
           .then((result) => {
             if (result.success && result.data) {
