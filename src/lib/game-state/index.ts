@@ -1,4 +1,3 @@
-export { GameStateManager } from "./manager";
 export { normalizeGameState } from "./normalize";
 export type {
   GameState,
