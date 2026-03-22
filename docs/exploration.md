@@ -70,17 +70,17 @@ This isn't a problem unique to one mode. Any mode with compounding in-game choic
 
 ## Key Decisions Made
 
-| Decision | Outcome | Rationale |
-|----------|---------|-----------|
-| Platform | Desktop app (Tauri vs Electron TBD) | Needs global hotkey + always-on-top window; player has multiple monitors |
-| Primary input | Voice via global hotkey | Can't alt-tab out of game; voice is fastest mid-game input |
-| Language | TypeScript preferred | Developer preference; viable for full stack including vector DB work |
-| LLM provider | Not locked in; speed is top priority | Open to any provider; PickAI library handles model selection with latency as a benchmark criterion |
-| Data fetch | Fetch on launch, serve from local cache | App always has data immediately from last fetch; background refresh on launch updates cache with anything new |
-| Game state | Riot Live Client Data API if it works, voice fallback | Minimize manual input; API could eliminate item/gold/level/enemy tracking |
-| Starting mode | ARAM Mayhem | Most decision complexity (augments + items); core engine generalizes to other modes |
-| Distribution | Local app, BYOK for now | Hosted service considered for the future |
-| Coach personality | Blunt and decisive as default | More style options later |
+| Decision          | Outcome                                               | Rationale                                                                                                     |
+| ----------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Platform          | Desktop app (Tauri vs Electron TBD)                   | Needs global hotkey + always-on-top window; player has multiple monitors                                      |
+| Primary input     | Voice via global hotkey                               | Can't alt-tab out of game; voice is fastest mid-game input                                                    |
+| Language          | TypeScript preferred                                  | Developer preference; viable for full stack including vector DB work                                          |
+| LLM provider      | Not locked in; speed is top priority                  | Open to any provider; PickAI library handles model selection with latency as a benchmark criterion            |
+| Data fetch        | Fetch on launch, serve from local cache               | App always has data immediately from last fetch; background refresh on launch updates cache with anything new |
+| Game state        | Riot Live Client Data API if it works, voice fallback | Minimize manual input; API could eliminate item/gold/level/enemy tracking                                     |
+| Starting mode     | ARAM Mayhem                                           | Most decision complexity (augments + items); core engine generalizes to other modes                           |
+| Distribution      | Local app, BYOK for now                               | Hosted service considered for the future                                                                      |
+| Coach personality | Blunt and decisive as default                         | More style options later                                                                                      |
 
 ## Research Findings
 
@@ -91,11 +91,13 @@ Two separate local APIs exist:
 **Game Client API (port 2999)** — Available during active gameplay, no authentication required, localhost only, self-signed SSL certificate.
 
 Data available automatically during gameplay:
+
 - **Active player:** Champion, level, current gold, full rune page, complete stat block (AD, AP, armor, MR, attack speed, ability haste, etc.), ability levels
 - **All 10 players:** Champion names, teams, items (with IDs/names/slots), level, KDA, summoner spells, keystone rune + trees
 - **Game info:** Game mode, game time, map
 
 Data NOT available:
+
 - **Augments** — not exposed for any mode. Voice input is required for augment choices.
 - Ability cooldowns (deliberate Riot policy)
 - Enemy gold (only active player's gold is exposed)
@@ -107,6 +109,7 @@ Data NOT available:
 **Mode support:** The Game Client API runs whenever the game client is active, including ARAM, Mayhem, and Arena. Data structure is the same across modes, though some fields (e.g., position) are empty in non-SR modes.
 
 **Policy restrictions to be aware of:**
+
 - "Products cannot display win rates for Augments or Arena Mode items"
 - Brawl mode data is completely off-limits for third-party products
 - Enemy cooldown tracking is prohibited
@@ -119,12 +122,14 @@ Data NOT available:
 Mayhem augment data is confirmed available from multiple sources:
 
 **Primary: League Wiki Lua Module**
+
 - `wiki.leagueoflegends.com/en-us/Module:MayhemAugmentData/data?action=raw`
 - ~200+ augment entries with: description (full effect text), tier (Silver/Gold/Prismatic), set membership, and notes
 - Format: Lua tables — parseable to JSON. Descriptions contain wiki markup that needs stripping.
 - Note: the wiki migrated from `leagueoflegends.fandom.com` to `wiki.leagueoflegends.com` (fandom URLs return 403)
 
 **Supplementary: Community Dragon**
+
 - `cherry-augments.json` contains both Arena and Mayhem augments mixed together. Mayhem augments identifiable by `Kiwi/` in icon paths.
 - Provides: numeric IDs, display names, icon paths, rarity. Does NOT include descriptions or set membership.
 - `kiwi.bin.json` (~1MB) has deeper augment definitions but uses localization keys instead of actual text.
@@ -138,20 +143,21 @@ Mayhem augment data is confirmed available from multiple sources:
 The critical differentiator is **custom vocabulary support** — League terminology (Morellonomicon, Cho'Gath, Navori, etc.) will be misrecognized by general STT.
 
 **Approaches to custom vocabulary:**
+
 - **Keyword boosting** (Deepgram, AssemblyAI) — explicitly supply a term list with intensity weights; the model actively listens for those terms. Purpose-built for domain-specific jargon.
 - **Prompt hinting** (Whisper-based: OpenAI API, Groq) — a `prompt` parameter (224 token limit) hints at spelling of unusual words. Helps but less reliable than keyword boosting.
 - **Web Speech API** — has a `grammars` API but it's poorly supported in practice (Chrome ignores it). Also unavailable in Tauri (it's a browser API).
 
 **Speed comparison for short utterances (5-15s):**
 
-| Engine | Latency | Custom Vocab | Local? | Pricing |
-|--------|---------|-------------|--------|---------|
-| Deepgram (streaming) | ~300ms | Keyword boosting (strong) | No | ~$0.54/hr with keyterms |
-| Groq Whisper (batch) | ~340ms | Prompt hinting (moderate) | No | $0.04/hr |
-| Local Whisper (CPU) | 1-5s | Prompt hinting (moderate) | Yes | Free (compute only) |
-| OpenAI Whisper API | 3s+ | Prompt hinting (moderate) | No | $0.36/hr |
-| Web Speech API | 200-800ms | Broken in practice | No (sends to Google) | Free |
-| AssemblyAI (streaming) | 200-500ms | Word boost (strong) | No | ~$0.19/hr with keyterms |
+| Engine                 | Latency   | Custom Vocab              | Local?               | Pricing                 |
+| ---------------------- | --------- | ------------------------- | -------------------- | ----------------------- |
+| Deepgram (streaming)   | ~300ms    | Keyword boosting (strong) | No                   | ~$0.54/hr with keyterms |
+| Groq Whisper (batch)   | ~340ms    | Prompt hinting (moderate) | No                   | $0.04/hr                |
+| Local Whisper (CPU)    | 1-5s      | Prompt hinting (moderate) | Yes                  | Free (compute only)     |
+| OpenAI Whisper API     | 3s+       | Prompt hinting (moderate) | No                   | $0.36/hr                |
+| Web Speech API         | 200-800ms | Broken in practice        | No (sends to Google) | Free                    |
+| AssemblyAI (streaming) | 200-500ms | Word boost (strong)       | No                   | ~$0.19/hr with keyterms |
 
 **Key tradeoff:** Keyword boosting (Deepgram, AssemblyAI) gives the best accuracy for game terms. Prompt hinting (Groq) is simpler and cheaper but less reliable for novel vocabulary.
 
@@ -159,13 +165,13 @@ The critical differentiator is **custom vocabulary support** — League terminol
 
 **Resource usage comparison (running alongside a game):**
 
-| Metric | Tauri v2 | Electron |
-|--------|----------|----------|
-| Idle RAM | ~20-80 MB | ~100-300 MB |
-| Installer size | ~3-10 MB | ~80-150 MB |
-| Cold start | <0.5s | 1-2s |
-| Backend language | Rust | Node.js/TypeScript |
-| Frontend | Any web framework (React/TS) | Any web framework (React/TS) |
+| Metric           | Tauri v2                     | Electron                     |
+| ---------------- | ---------------------------- | ---------------------------- |
+| Idle RAM         | ~20-80 MB                    | ~100-300 MB                  |
+| Installer size   | ~3-10 MB                     | ~80-150 MB                   |
+| Cold start       | <0.5s                        | 1-2s                         |
+| Backend language | Rust                         | Node.js/TypeScript           |
+| Frontend         | Any web framework (React/TS) | Any web framework (React/TS) |
 
 Both frameworks support global hotkeys (built-in), always-on-top windows, and system tray. Both work with League's default borderless windowed mode. Neither can overlay on exclusive fullscreen.
 
@@ -178,6 +184,7 @@ Both frameworks support global hotkeys (built-in), always-on-top windows, and sy
 ### Overwolf and In-Game Overlays
 
 **Overwolf capabilities:**
+
 - Renders web-based UI (HTML/CSS/JS) on top of games via Chromium Embedded Framework or Electron fork
 - React + TypeScript fully supported with community boilerplates
 - Game Events Provider (GEP) for League exposes: match state, player info, items, level, K/D/A, team composition, summoner spells, champion select events
@@ -185,6 +192,7 @@ Both frameworks support global hotkeys (built-in), always-on-top windows, and sy
 - Two frameworks: Overwolf Native (CEF, tighter integration) and Overwolf Electron (more flexible)
 
 **Riot policy (as of 2025):**
+
 - Build recommendations, item suggestions, champion select assistance: **allowed**
 - In-game overlay advertisements: **banned**
 - Enemy ult/summoner/jungle timers: **banned**
@@ -200,11 +208,13 @@ Both frameworks support global hotkeys (built-in), always-on-top windows, and sy
 **Built-in scoring criteria:** costEfficiency, recency, contextCapacity, outputCapacity, knowledgeFreshness. All use min-max normalization.
 
 **Custom criteria via `minMaxCriterion()`:** Bring external benchmark data as additional scoring dimensions:
+
 - **Artificial Analysis** — objective benchmarks (MMLU, GPQA, HumanEval) plus throughput/latency metrics. Requires API key.
 - **LMArena** — crowdsourced human preference ELO scores. Free.
 - Both can be blended with built-in criteria at configurable weights.
 
 **Relevant capabilities for this use case:**
+
 - Speed: Artificial Analysis throughput metrics as a custom criterion
 - Structured output: filterable (`structuredOutput: true`)
 - Tool calling: filterable (`toolCall: true`)
@@ -222,14 +232,14 @@ Most queries for a gaming coach ("last game as Jinx against tanks", "win rate wi
 
 **Approaches evaluated:**
 
-| Approach | Query Latency | Complexity | TS Support | Best For |
-|----------|-------------|-----------|-----------|---------|
-| SQLite + FTS5 | <1ms structured, 1-5ms FTS | Low | Excellent (`better-sqlite3`) | Structured game data queries |
-| SQLite + sqlite-vec | +10-50ms (with local embeddings) | Medium | Good | Adding semantic search later |
-| LanceDB | 1-25ms + embedding time | Medium | Good (official TS client) | Standalone embedded vector DB |
-| Vectra | 1-2ms + embedding time | Low | Excellent (TS-first) | Simple vector-only search |
-| ChromaDB | 5-50ms + server overhead | High | Weak (Python server, HTTP client) | Not recommended for desktop app |
-| Mem0/Zep | Hundreds of ms (LLM calls) | Very High | Mixed | Not recommended — solves a different problem |
+| Approach            | Query Latency                    | Complexity | TS Support                        | Best For                                     |
+| ------------------- | -------------------------------- | ---------- | --------------------------------- | -------------------------------------------- |
+| SQLite + FTS5       | <1ms structured, 1-5ms FTS       | Low        | Excellent (`better-sqlite3`)      | Structured game data queries                 |
+| SQLite + sqlite-vec | +10-50ms (with local embeddings) | Medium     | Good                              | Adding semantic search later                 |
+| LanceDB             | 1-25ms + embedding time          | Medium     | Good (official TS client)         | Standalone embedded vector DB                |
+| Vectra              | 1-2ms + embedding time           | Low        | Excellent (TS-first)              | Simple vector-only search                    |
+| ChromaDB            | 5-50ms + server overhead         | High       | Weak (Python server, HTTP client) | Not recommended for desktop app              |
+| Mem0/Zep            | Hundreds of ms (LLM calls)       | Very High  | Mixed                             | Not recommended — solves a different problem |
 
 **Key insight:** Game data arrives pre-structured from the Riot API. Memory frameworks designed for extracting facts from unstructured conversations (Mem0, Zep) add latency and complexity without meaningful benefit. Structured storage with optional semantic search is the right fit.
 

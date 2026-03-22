@@ -1,6 +1,6 @@
 # Plan: Champ Sage
 
-> Source PRD: `plans/prd.md`
+> Source PRD: `docs/prd.md`
 
 ## Architectural decisions
 

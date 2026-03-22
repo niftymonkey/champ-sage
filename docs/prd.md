@@ -51,6 +51,7 @@ The architecture is mode-agnostic — a shared recommendation engine handles any
 ### Project Name
 
 **Champ Sage** — "Champion + Sage (wise advisor)." Validated as available across npm, GitHub, all major domain TLDs (.com, .dev, .gg, .ai, .app, .io), and social media. No existing products, trademarks, or gaming-space conflicts.
+
 - Display name: **Champ Sage** (or **ChampSage**)
 - Repository / package name: `champ-sage`
 
@@ -59,6 +60,7 @@ The architecture is mode-agnostic — a shared recommendation engine handles any
 The system is composed of the following modules. Dependencies are listed to clarify build ordering — a module can only be built/tested once its dependencies exist.
 
 **Data Ingest Pipeline**
+
 - Dependencies: none (foundational)
 - Fetches and normalizes game data from external sources (Data Dragon for champions/items/runes, League Wiki Lua module for augments and set bonuses, Community Dragon for augment IDs/icons, League Wiki for ARAM balance overrides)
 - Serves from local cache; background refresh on launch updates cache with anything new
@@ -67,6 +69,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - The entity dictionary (all known champion/item/augment names) is used downstream by the voice parser for fuzzy matching
 
 **Desktop Shell**
+
 - Dependencies: none (can be built in parallel with data ingest)
 - The Tauri v2 wrapper providing global hotkey registration, always-on-top window management, system tray, and audio capture
 - Built early as a development tool — starts as a state machine visualizer showing all data flowing through the app (Riot API data, parsed game state, augment entries, context payloads, LLM responses)
@@ -74,6 +77,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - The final UI is a polish layer over this foundation, not a separate build
 
 **Mode Module (ARAM Mayhem first)**
+
 - Dependencies: Data Ingest Pipeline
 - Defines mode-specific behavior: what data sources the mode needs, what decision types it supports, what mode-specific context to include (ARAM balance overrides, augment set bonuses)
 - Each game mode is a separate module implementing the same interface — adding Arena or Summoner's Rift means adding a new module, not modifying existing ones
@@ -81,6 +85,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - For ideal product: augment set bonus progression calculations, set completion recommendations
 
 **Game State Manager**
+
 - Dependencies: Data Ingest Pipeline, Mode Module
 - Tracks current game session state by polling the Riot Live Client Data API (port 2999, no auth, localhost, self-signed SSL)
 - Automatically captures: active player champion/level/gold/runes/stats, all players' champions/items/teams/KDA/summoner spells, game mode and time
@@ -91,6 +96,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - Game sessions persist to a local SQLite database as soon as state tracking exists — champion, items, augments, game mode, timestamps. This accumulates real historical data for cross-game memory features rather than starting from zero when those features are built
 
 **Voice Input (STT + Transcript Parser)**
+
 - Dependencies: Data Ingest Pipeline (for entity dictionaries)
 - Two sub-components: audio capture + STT transcription, and transcript parsing
 - STT engine selection is a research task at implementation time — speed and custom vocabulary support for League-specific terms are the key criteria
@@ -99,6 +105,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - Parser outputs a structured intent: what the user is asking about, which entities they referenced, what decision type this is
 
 **Context Assembler**
+
 - Dependencies: Data Ingest Pipeline, Game State Manager, Mode Module, Voice Input
 - Given the current game state and a parsed intent, assembles the full context payload for the LLM
 - Pulls champion ability descriptions, item/augment effect descriptions, enemy team data, mode-specific context (balance overrides, set progress), and the recent conversation history window
@@ -106,6 +113,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - The assembly logic is deterministic and highly testable — given a known game state + intent, the output is predictable
 
 **Model Evaluation Pipeline (Build-Time Tooling)**
+
 - Dependencies: Context Assembler (for representative prompt templates and test game states to evaluate models against)
 - Borrows heavily from the review-kit evaluation infrastructure, including the Evalite integration
 - Multi-stage funnel: Stage 1 uses PickAI for candidate discovery (weighted for speed, structured output, reasoning, context capacity, instruction following, etc. via Artificial Analysis benchmarks and built-in criteria). Subsequent stages run candidates against representative coaching prompts with test game states.
@@ -114,6 +122,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - Re-run when new models are released, prompts change significantly, or scoring methodology is updated
 
 **Recommendation Engine**
+
 - Dependencies: Context Assembler, Model Evaluation Pipeline (must know which model to use)
 - Takes an assembled context payload, constructs a prompt using mode-appropriate templates, calls the evaluated LLM, and parses the response into a structured recommendation
 - Prompt templates are mode-specific but follow a shared structure: system prompt (coaching personality), game context, decision options, instruction for output format
@@ -121,6 +130,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - The LLM model used is determined by the Model Evaluation Pipeline, not selected at runtime
 
 **UI (React/TypeScript)**
+
 - Dependencies: all other modules
 - The final polish layer over the desktop shell's state visualizer
 - Recommendation display (ranked options with reasoning), game state summary, voice activation indicator, text input fallback
@@ -189,6 +199,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 ### Phase Boundaries
 
 **POC** targets validating both the AI recommendation quality and the voice-first interaction model:
+
 - Desktop shell as state machine visualizer (built early, used throughout development)
 - Data ingest pipeline (champions, items, runes, augments, ARAM overrides)
 - Game state tracking via Riot Live Client Data API
@@ -199,6 +210,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - Text display output in always-on-top window
 
 **Ideal product** builds on the POC foundation:
+
 - Augment set tracking and set bonus progression in recommendations
 - TTS output for hands-free advice
 - In-game overlay via Overwolf or similar
@@ -209,10 +221,11 @@ The system is composed of the following modules. Dependencies are listed to clar
 - Automated patch update detection and data refresh
 
 **Future considerations:**
+
 - Overwolf App Store distribution
 - Hosted web service / multi-user support
 - Local LLM support (the context assembly abstraction enables this)
 
 ### Exploration Document
 
-The full exploration and research findings (including detailed data on the Riot API, augment data sources, STT engine landscape, desktop framework comparison, Overwolf capabilities, PickAI integration patterns, and cross-game memory approaches) are in the `plans/` directory alongside this PRD. That document should be referenced when picking up individual implementation tasks.
+The full exploration and research findings (including detailed data on the Riot API, augment data sources, STT engine landscape, desktop framework comparison, Overwolf capabilities, PickAI integration patterns, and cross-game memory approaches) are in the `docs/` directory alongside this PRD. That document should be referenced when picking up individual implementation tasks.
