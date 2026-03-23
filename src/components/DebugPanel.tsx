@@ -247,10 +247,9 @@ function startSubscriptions(): void {
   });
 }
 
-export function DebugPanel() {
-  // Start module-level subscriptions once (survives unmounts)
-  startSubscriptions();
+startSubscriptions();
 
+export function DebugPanel() {
   const [, setRenderTick] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [showNoise, setShowNoise] = useState(false);
@@ -269,9 +268,19 @@ export function DebugPanel() {
     const listener = () => setRenderTick((t) => t + 1);
     listeners.add(listener);
 
+    // Seed from current BehaviorSubject values
+    const currentLifecycle = gameLifecycle$.getValue();
+    if (currentLifecycle.type === "connection")
+      setLcuConnected(currentLifecycle.connected);
+    if (currentLifecycle.type === "phase") {
+      setCurrentPhase(currentLifecycle.phase);
+      setPollingActive(currentLifecycle.phase === "InProgress");
+    }
+    setGameStateSnapshot(liveGameState$.getValue());
+
     // Status card subscriptions (need component state)
     const subs = [
-      gameLifecycle$.subscribe((event) => {
+      gameLifecycle$.pipe(skip(1)).subscribe((event) => {
         if (event.type === "connection") setLcuConnected(event.connected);
         if (event.type === "phase") {
           setCurrentPhase(event.phase);
@@ -279,7 +288,7 @@ export function DebugPanel() {
         }
       }),
 
-      liveGameState$.subscribe((state) => {
+      liveGameState$.pipe(skip(1)).subscribe((state) => {
         setGameStateSnapshot(state);
       }),
     ];
@@ -330,7 +339,7 @@ export function DebugPanel() {
         <StatusCard
           label="Game State"
           value={
-            gameStateSnapshot?.activePlayer
+            gameStateSnapshot
               ? summarizeLiveGameState(gameStateSnapshot)
               : "No data"
           }

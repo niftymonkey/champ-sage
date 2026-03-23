@@ -7,6 +7,7 @@ import type { AppNotification } from "../../lib/reactive";
 describe("useNotifications", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("starts with an empty notification list", () => {

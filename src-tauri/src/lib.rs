@@ -4,9 +4,28 @@ use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, Server
 use tauri::Emitter;
 use tokio_tungstenite::tungstenite;
 
-/// WSL2 path to the League Client lockfile.
-/// Only exists while the League client is running.
-const LCU_LOCKFILE_PATH: &str = "/mnt/c/Riot Games/League of Legends/lockfile";
+/// Resolve the League Client lockfile path for the current platform.
+/// Honors `LCU_LOCKFILE_PATH` env var as an override.
+fn resolve_lockfile_path() -> String {
+    if let Ok(path) = std::env::var("LCU_LOCKFILE_PATH") {
+        return path;
+    }
+
+    // WSL2: /proc/version contains "microsoft" or "WSL"
+    if let Ok(version) = std::fs::read_to_string("/proc/version") {
+        let lower = version.to_lowercase();
+        if lower.contains("microsoft") || lower.contains("wsl") {
+            return "/mnt/c/Riot Games/League of Legends/lockfile".to_string();
+        }
+    }
+
+    if cfg!(target_os = "macos") {
+        return "/Applications/League of Legends.app/Contents/LoL/lockfile".to_string();
+    }
+
+    // Windows native (or fallback)
+    r"C:\Riot Games\League of Legends\lockfile".to_string()
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 struct LcuCredentials {
@@ -146,7 +165,8 @@ async fn fetch_riot_api(endpoint: String) -> Result<String, String> {
 /// Read the League Client lockfile and return connection credentials.
 #[tauri::command]
 async fn discover_lcu() -> Result<LcuCredentials, String> {
-    let content = tokio::fs::read_to_string(LCU_LOCKFILE_PATH)
+    let lockfile_path = resolve_lockfile_path();
+    let content = tokio::fs::read_to_string(&lockfile_path)
         .await
         .map_err(|e| format!("Lockfile not found (client not running?): {e}"))?;
     parse_lockfile(&content)

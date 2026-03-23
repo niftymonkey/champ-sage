@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useGameData } from "./hooks/useGameData";
 import { useGameLifecycle } from "./hooks/useGameLifecycle";
 import { useLiveGameState } from "./hooks/useLiveGameState";
@@ -8,9 +8,17 @@ import { useZoom } from "./hooks/useZoom";
 import { initializeReactiveEngine } from "./lib/reactive";
 import type { ReactiveEngine } from "./lib/reactive";
 import { DataBrowser } from "./components/DataBrowser";
-import { buildEffectiveGameState } from "./lib/mode";
+import {
+  createModeRegistry,
+  aramMayhemMode,
+  buildEffectiveGameState,
+} from "./lib/mode";
+import { addSelectedAugment } from "./lib/mode/augment-selection";
 import type { Augment } from "./lib/data-ingest/types";
 import type { GameState } from "./lib/game-state/types";
+
+const registry = createModeRegistry();
+registry.register(aramMayhemMode);
 
 function App() {
   const engineRef = useRef<ReactiveEngine | null>(null);
@@ -29,12 +37,20 @@ function App() {
   const { submit } = useUserInput();
   const { zoom, resetZoom } = useZoom();
 
-  // Augment selection state — will be driven by reactive streams in a later slice
   const [selectedAugments, setSelectedAugments] = useState<Augment[]>([]);
 
-  // Reset augments when lifecycle changes
+  const prevPhaseRef = useRef<string | null>(null);
+
   useEffect(() => {
-    setSelectedAugments([]);
+    if (lifecycle.type === "phase") {
+      const phase = lifecycle.phase;
+      if (phase === "ChampSelect" || phase === "None") {
+        if (prevPhaseRef.current !== phase) {
+          setSelectedAugments([]);
+        }
+      }
+      prevPhaseRef.current = phase;
+    }
   }, [lifecycle]);
 
   const selectAugment = useCallback(
@@ -53,7 +69,6 @@ function App() {
     setSelectedAugments([]);
   }, []);
 
-  // Build a GameState from the reactive LiveGameState
   const gameState: GameState = {
     status:
       lifecycle.type === "connection" && !lifecycle.connected
@@ -67,7 +82,30 @@ function App() {
     gameTime: liveGame.gameTime,
   };
 
-  const effectiveState = buildEffectiveGameState(gameState, null);
+  const effectiveState = useMemo(() => {
+    if (!data || gameState.status !== "connected") {
+      return buildEffectiveGameState(gameState, null);
+    }
+    const detectedMode = registry.detect(gameState.gameMode);
+    let modeContext = detectedMode
+      ? detectedMode.buildContext(gameState, data)
+      : null;
+
+    if (modeContext && selectedAugments.length > 0) {
+      const activePlayer = gameState.players.find((p) => p.isActivePlayer);
+      if (activePlayer) {
+        for (const augment of selectedAugments) {
+          modeContext = addSelectedAugment(
+            modeContext,
+            activePlayer.riotIdGameName,
+            augment
+          );
+        }
+      }
+    }
+
+    return buildEffectiveGameState(gameState, modeContext);
+  }, [gameState, data, selectedAugments]);
 
   const augmentSelection = {
     selectedAugments,

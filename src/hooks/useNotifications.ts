@@ -8,15 +8,19 @@ export function useNotifications(): AppNotification[] {
   const [items, setItems] = useState<AppNotification[]>([]);
 
   useEffect(() => {
+    const timers = new Set<ReturnType<typeof setTimeout>>();
     const sub = notifications$.subscribe((notification) => {
       setItems((prev) => [...prev, notification]);
-
-      // Auto-dismiss after timeout
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setItems((prev) => prev.filter((n) => n.id !== notification.id));
+        timers.delete(timer);
       }, AUTO_DISMISS_MS);
+      timers.add(timer);
     });
-    return () => sub.unsubscribe();
+    return () => {
+      sub.unsubscribe();
+      timers.forEach((timer) => clearTimeout(timer));
+    };
   }, []);
 
   return items;
