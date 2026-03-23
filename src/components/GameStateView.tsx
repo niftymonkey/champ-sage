@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import type { EffectiveGameState, EffectivePlayer } from "../lib/mode";
 import type { Augment, AramOverrides } from "../lib/data-ingest/types";
 import { checkAugmentAvailability } from "../lib/mode/augment-availability";
 import { AugmentSlots } from "./AugmentSlots";
+import { CoachingInput } from "./CoachingInput";
+import type { CoachingContext } from "../lib/ai/types";
 
 interface AugmentSelectionActions {
   selectedAugments: Augment[];
@@ -46,6 +49,29 @@ export function GameStateView({
   const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
   const active = state.activePlayer;
   const modeCtx = state.modeContext;
+
+  const coachingContext = useMemo((): CoachingContext | null => {
+    if (!active) return null;
+    return {
+      champion: {
+        name: active.championName,
+        level: active.level,
+        abilities: "",
+      },
+      currentItems: active.items.map((i) => i.name),
+      currentAugments: active.selectedAugments?.map((a) => a.name) ?? [],
+      enemyTeam: state.enemies.map((e) => ({
+        champion: e.championName,
+        items: e.items.map((i) => i.name),
+      })),
+      allyTeam: state.allies
+        .filter((a) => !a.isActivePlayer)
+        .map((a) => ({ champion: a.championName })),
+      gameMode: state.gameMode,
+      gameTime: state.gameTime,
+      balanceOverrides: null,
+    };
+  }, [active, state.enemies, state.allies, state.gameMode, state.gameTime]);
 
   return (
     <div>
@@ -132,6 +158,8 @@ export function GameStateView({
           onReset={augmentSelection.reset}
         />
       )}
+
+      <CoachingInput context={coachingContext} />
     </div>
   );
 }
