@@ -22,6 +22,9 @@ importers:
       luaparse:
         specifier: ^0.3.1
         version: 0.3.1
+      openai:
+        specifier: ^6.32.0
+        version: 6.32.0(ws@8.19.0)
       react:
         specifier: ^19.1.0
         version: 19.2.4
@@ -1577,6 +1580,21 @@ packages:
       }
     engines: { node: ">=18" }
 
+  openai@6.32.0:
+    resolution:
+      {
+        integrity: sha512-j3k+BjydAf8yQlcOI7WUQMQTbbF5GEIMAE2iZYCOzwwB3S2pCheaWYp+XZRNAch4jWVc52PMDGRRjutao3lLCg==,
+      }
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   parse5@7.3.0:
     resolution:
       {
@@ -2906,6 +2924,10 @@ snapshots:
   onetime@7.0.0:
     dependencies:
       mimic-function: 5.0.1
+
+  openai@6.32.0(ws@8.19.0):
+    optionalDependencies:
+      ws: 8.19.0
 
   parse5@7.3.0:
     dependencies:

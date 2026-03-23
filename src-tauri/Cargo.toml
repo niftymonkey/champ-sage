@@ -24,3 +24,5 @@ tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 rustls = { version = "0.23", features = ["ring"] }
 futures-util = "0.3"
 base64 = "0.22"
+cpal = "0.15"
+hound = "3.5"

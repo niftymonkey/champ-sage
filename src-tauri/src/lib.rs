@@ -1,6 +1,8 @@
 use base64::Engine;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use futures_util::{SinkExt, StreamExt};
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
+use std::sync::{Arc, Mutex};
 use tauri::Emitter;
 use tokio_tungstenite::tungstenite;
 
@@ -307,6 +309,216 @@ async fn connect_lcu_websocket(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Audio capture for voice input (issue #4)
+//
+// Uses cpal to capture microphone audio in Rust, independent of the webview.
+// This is necessary because:
+// 1. WebView getUserMedia has platform bugs (macOS permission issues, Linux
+//    denied by default) — see docs/voice-input-research.md
+// 2. Recording must work while the game is fullscreen and the app window is
+//    unfocused — cpal runs in the Rust process regardless of window state
+// 3. Global hotkey fires from Rust, so starting/stopping recording here
+//    avoids a round-trip through the webview
+//
+// Audio format: 16-bit PCM, mono, 16kHz — optimized for speech recognition.
+// A 10-second clip at this rate is ~320KB, well within Tauri IPC limits.
+// The frontend receives WAV bytes and sends them to the STT API.
+// ---------------------------------------------------------------------------
+
+/// Managed state for audio recording.
+///
+/// cpal::Stream is !Send, so we can't store it in Tauri managed state directly.
+/// Instead, we spawn the stream on a dedicated thread and communicate via
+/// shared state: the buffer collects samples, and `is_recording` signals
+/// the stream thread to stop.
+///
+/// `sample_rate` is set by the recording thread to whatever rate the device
+/// actually supports. We can't hardcode 16kHz because Windows WASAPI devices
+/// often only support 44.1kHz or 48kHz. Whisper resamples internally so any
+/// standard rate works fine.
+struct RecordingState {
+    buffer: Arc<Mutex<Vec<i16>>>,
+    is_recording: Arc<std::sync::atomic::AtomicBool>,
+    sample_rate: Arc<std::sync::atomic::AtomicU32>,
+    channels: Arc<std::sync::atomic::AtomicU16>,
+}
+
+/// Start capturing audio from the default input device.
+///
+/// Opens the default microphone, configures it for 16kHz mono 16-bit PCM,
+/// and begins accumulating samples in memory. The cpal stream runs on a
+/// dedicated thread (since cpal::Stream is !Send and can't live in Tauri
+/// managed state).
+///
+/// Uses a oneshot channel so the command waits for the thread to confirm
+/// the stream is actually recording before returning success. This ensures
+/// errors (no mic, unsupported format) are reported to the frontend rather
+/// than silently failing in the background.
+#[tauri::command]
+fn start_recording(state: tauri::State<'_, RecordingState>) -> Result<(), String> {
+    if state
+        .is_recording
+        .load(std::sync::atomic::Ordering::SeqCst)
+    {
+        return Err("Already recording".to_string());
+    }
+
+    // Clear any previous recording data
+    if let Ok(mut buf) = state.buffer.lock() {
+        buf.clear();
+    }
+
+    let buffer = state.buffer.clone();
+    let is_recording = state.is_recording.clone();
+    let sample_rate_store = state.sample_rate.clone();
+    let channels_store = state.channels.clone();
+
+    // Channel for the thread to report whether recording started successfully.
+    // We block the command until we know the stream is actually capturing.
+    let (tx, rx) = std::sync::mpsc::channel::<Result<(), String>>();
+
+    // Spawn a dedicated thread for the cpal stream.
+    // cpal::Stream is !Send so it must be created and live on the same thread.
+    std::thread::spawn(move || {
+        let host = cpal::default_host();
+        let device = match host.default_input_device() {
+            Some(d) => d,
+            None => {
+                let _ = tx.send(Err("No input device available".to_string()));
+                return;
+            }
+        };
+
+        // Use the device's default input config rather than hardcoding 16kHz mono.
+        // Windows WASAPI devices often only support 44.1kHz or 48kHz stereo —
+        // forcing 16kHz causes "configuration not supported" errors.
+        // Whisper resamples internally, so any standard sample rate works fine.
+        let default_config = match device.default_input_config() {
+            Ok(c) => c,
+            Err(e) => {
+                let _ = tx.send(Err(format!("Failed to get default input config: {e}")));
+                return;
+            }
+        };
+
+        let config: cpal::StreamConfig = default_config.into();
+        let actual_sample_rate = config.sample_rate.0;
+        let actual_channels = config.channels;
+
+        // Store the actual format so stop_recording can encode WAV correctly
+        sample_rate_store.store(actual_sample_rate, std::sync::atomic::Ordering::SeqCst);
+        channels_store.store(actual_channels, std::sync::atomic::Ordering::SeqCst);
+
+        let buffer_clone = buffer.clone();
+        let stream = match device.build_input_stream(
+            &config,
+            move |data: &[i16], _: &cpal::InputCallbackInfo| {
+                if let Ok(mut buf) = buffer_clone.lock() {
+                    buf.extend_from_slice(data);
+                }
+            },
+            |err| {
+                eprintln!("Audio input error: {err}");
+            },
+            None,
+        ) {
+            Ok(s) => s,
+            Err(e) => {
+                let _ = tx.send(Err(format!("Failed to build input stream: {e}")));
+                return;
+            }
+        };
+
+        if let Err(e) = stream.play() {
+            let _ = tx.send(Err(format!("Failed to start recording: {e}")));
+            return;
+        }
+
+        // Stream is now capturing — signal success and set the flag
+        is_recording.store(true, std::sync::atomic::Ordering::SeqCst);
+        let _ = tx.send(Ok(()));
+
+        // Keep the stream alive until stop_recording flips the flag
+        while is_recording.load(std::sync::atomic::Ordering::SeqCst) {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+
+        // Stream is dropped here, stopping capture
+    });
+
+    // Wait for the recording thread to report success or failure.
+    // Timeout after 5 seconds to avoid hanging if the thread panics.
+    rx.recv_timeout(std::time::Duration::from_secs(5))
+        .map_err(|_| "Recording thread timed out".to_string())?
+}
+
+/// Stop recording and return the captured audio as WAV bytes.
+///
+/// Signals the recording thread to stop, then encodes the buffered PCM
+/// samples into a WAV file in memory using hound. Returns the complete
+/// WAV file as a byte vector for the frontend to send to the STT API.
+#[tauri::command]
+fn stop_recording(state: tauri::State<'_, RecordingState>) -> Result<Vec<u8>, String> {
+    if !state
+        .is_recording
+        .load(std::sync::atomic::Ordering::SeqCst)
+    {
+        return Err("Not currently recording".to_string());
+    }
+
+    // Signal the recording thread to stop
+    state
+        .is_recording
+        .store(false, std::sync::atomic::Ordering::SeqCst);
+
+    // Brief pause to let the recording thread finish and drop the stream
+    std::thread::sleep(std::time::Duration::from_millis(100));
+
+    let samples = state
+        .buffer
+        .lock()
+        .map_err(|e| format!("Buffer lock error: {e}"))?;
+
+    if samples.is_empty() {
+        return Err("No audio captured".to_string());
+    }
+
+    // Read the actual sample rate and channel count from the recording thread.
+    // These were stored when the device's default config was queried.
+    let sample_rate = state
+        .sample_rate
+        .load(std::sync::atomic::Ordering::SeqCst);
+    let channels = state.channels.load(std::sync::atomic::Ordering::SeqCst);
+
+    // Encode PCM samples as WAV in memory.
+    // WAV is universally accepted by STT APIs (Whisper, Deepgram, local whisper.cpp).
+    // We use whatever sample rate/channels the device actually captured at —
+    // Whisper resamples internally so this doesn't affect transcription quality.
+    let mut wav_buffer = std::io::Cursor::new(Vec::new());
+    let spec = hound::WavSpec {
+        channels,
+        sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+
+    let mut writer = hound::WavWriter::new(&mut wav_buffer, spec)
+        .map_err(|e| format!("Failed to create WAV writer: {e}"))?;
+
+    for &sample in samples.iter() {
+        writer
+            .write_sample(sample)
+            .map_err(|e| format!("Failed to write sample: {e}"))?;
+    }
+
+    writer
+        .finalize()
+        .map_err(|e| format!("Failed to finalize WAV: {e}"))?;
+
+    Ok(wav_buffer.into_inner())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Install ring as the default crypto provider for rustls.
@@ -318,6 +530,12 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(RecordingState {
+            buffer: Arc::new(Mutex::new(Vec::new())),
+            is_recording: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            sample_rate: Arc::new(std::sync::atomic::AtomicU32::new(16000)),
+            channels: Arc::new(std::sync::atomic::AtomicU16::new(1)),
+        })
         .setup(|app| {
             #[cfg(desktop)]
             app.handle()
@@ -329,7 +547,9 @@ pub fn run() {
             fetch_riot_api,
             discover_lcu,
             fetch_lcu,
-            connect_lcu_websocket
+            connect_lcu_websocket,
+            start_recording,
+            stop_recording
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

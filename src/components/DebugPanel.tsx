@@ -139,6 +139,7 @@ const INPUT_COLORS: Record<string, string> = {
   "riot-api": "#34d399",
   "lcu-rest": "#60a5fa",
   "initial-state": "#fbbf24",
+  voice: "#ec4899",
 };
 
 const OUTPUT_COLORS: Record<string, string> = {

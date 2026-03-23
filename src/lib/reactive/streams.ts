@@ -44,7 +44,8 @@ export interface DebugInputEvent {
     | "ws-filtered"
     | "riot-api"
     | "lcu-rest"
-    | "initial-state";
+    | "initial-state"
+    | "voice";
   summary: string;
   detail?: string;
 }

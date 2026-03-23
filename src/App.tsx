@@ -4,9 +4,11 @@ import { useGameData } from "./hooks/useGameData";
 import { useGameLifecycle } from "./hooks/useGameLifecycle";
 import { useLiveGameState } from "./hooks/useLiveGameState";
 import { useUserInput } from "./hooks/useUserInput";
+import { useVoiceInput } from "./hooks/useVoiceInput";
 import { useZoom } from "./hooks/useZoom";
 import { initializeReactiveEngine } from "./lib/reactive";
 import type { ReactiveEngine } from "./lib/reactive";
+import { WhisperProvider } from "./lib/voice/stt-provider";
 import { DataBrowser } from "./components/DataBrowser";
 import {
   createModeRegistry,
@@ -36,6 +38,19 @@ function App() {
   const liveGame = useLiveGameState();
   const { submit } = useUserInput();
   const { zoom, resetZoom } = useZoom();
+
+  // Voice input — Whisper STT provider uses the same OpenAI API key as the coaching LLM.
+  // The provider is created once and persists for the app lifetime.
+  const whisperProvider = useMemo(() => {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+    if (!apiKey) {
+      console.warn("VITE_OPENAI_API_KEY not set — voice input disabled");
+      return null;
+    }
+    return new WhisperProvider(apiKey);
+  }, []);
+
+  const voice = useVoiceInput(whisperProvider);
 
   const [selectedAugments, setSelectedAugments] = useState<Augment[]>([]);
 
@@ -138,6 +153,30 @@ function App() {
               {Math.round(zoom * 100)}%
             </button>
           )}
+          <span
+            className="voice-indicator"
+            style={{
+              color: voice.isRecording
+                ? "#ef4444"
+                : voice.isTranscribing
+                  ? "#f59e0b"
+                  : "#6b7280",
+              marginLeft: "8px",
+            }}
+          >
+            {voice.isRecording
+              ? "Recording..."
+              : voice.isTranscribing
+                ? "Transcribing..."
+                : `Voice: Num-`}
+          </span>
+          <button
+            style={{ marginLeft: "8px", fontSize: "12px" }}
+            onMouseDown={() => voice.startRecording()}
+            onMouseUp={() => voice.stopAndTranscribe()}
+          >
+            Hold to Talk
+          </button>
         </div>
       </div>
       {data && (
