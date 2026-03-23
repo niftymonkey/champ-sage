@@ -8,8 +8,16 @@ import { RuneList } from "./RuneList";
 import { AugmentList } from "./AugmentList";
 import { EntitySearch } from "./EntitySearch";
 import { GameStateView } from "./GameStateView";
+import { DebugPanel } from "./DebugPanel";
 
-type Tab = "game" | "champions" | "items" | "runes" | "augments" | "search";
+type Tab =
+  | "game"
+  | "champions"
+  | "items"
+  | "runes"
+  | "augments"
+  | "search"
+  | "debug";
 
 interface AugmentSelectionActions {
   selectedAugments: Augment[];
@@ -31,6 +39,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "runes", label: "Runes" },
   { key: "augments", label: "Augments" },
   { key: "search", label: "Search" },
+  { key: "debug", label: "Debug" },
 ];
 
 export function DataBrowser({
@@ -74,6 +83,7 @@ export function DataBrowser({
         {activeTab === "runes" && <RuneList runes={data.runes} />}
         {activeTab === "augments" && <AugmentList augments={data.augments} />}
         {activeTab === "search" && <EntitySearch data={data} />}
+        {activeTab === "debug" && <DebugPanel />}
       </div>
     </>
   );

@@ -16,6 +16,9 @@ importers:
       "@tauri-apps/plugin-opener":
         specifier: ^2
         version: 2.5.3
+      deep-object-diff:
+        specifier: ^1.1.9
+        version: 1.1.9
       luaparse:
         specifier: ^0.3.1
         version: 0.3.1
@@ -25,6 +28,9 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.2.4(react@19.2.4)
+      rxjs:
+        specifier: ^7.8.2
+        version: 7.8.2
     devDependencies:
       "@tauri-apps/cli":
         specifier: ^2
@@ -1237,6 +1243,12 @@ packages:
       }
     engines: { node: ">=6" }
 
+  deep-object-diff@1.1.9:
+    resolution:
+      {
+        integrity: sha512-Rn+RuwkmkDwCi2/oXOFS9Gsr5lJZu/yTGpK7wAaAIE75CC+LCGEZHpY6VQJa/RoJcrmaA/docWJZvYohlNkWPA==,
+      }
+
   dequal@2.0.3:
     resolution:
       {
@@ -1694,6 +1706,12 @@ packages:
         integrity: sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw==,
       }
 
+  rxjs@7.8.2:
+    resolution:
+      {
+        integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==,
+      }
+
   safer-buffer@2.1.2:
     resolution:
       {
@@ -1886,6 +1904,12 @@ packages:
         integrity: sha512-hdF5ZgjTqgAntKkklYw0R03MG2x/bSzTtkxmIRw/sTNV8YXsCJ1tfLAX23lhxhHJlEf3CRCOCGGWw3vI3GaSPw==,
       }
     engines: { node: ">=18" }
+
+  tslib@2.8.1:
+    resolution:
+      {
+        integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==,
+      }
 
   tsx@4.21.0:
     resolution:
@@ -2686,6 +2710,8 @@ snapshots:
 
   deep-eql@5.0.2: {}
 
+  deep-object-diff@1.1.9: {}
+
   dequal@2.0.3: {}
 
   dom-accessibility-api@0.5.16: {}
@@ -2967,6 +2993,10 @@ snapshots:
 
   rrweb-cssom@0.8.0: {}
 
+  rxjs@7.8.2:
+    dependencies:
+      tslib: 2.8.1
+
   safer-buffer@2.1.2: {}
 
   saxes@6.0.0:
@@ -3054,6 +3084,8 @@ snapshots:
   tr46@5.1.1:
     dependencies:
       punycode: 2.3.1
+
+  tslib@2.8.1: {}
 
   tsx@4.21.0:
     dependencies:
