@@ -30,7 +30,7 @@ importers:
         version: 0.3.1
       openai:
         specifier: ^6.32.0
-        version: 6.32.0(ws@8.19.0)
+        version: 6.32.0(ws@8.19.0)(zod@4.3.6)
       react:
         specifier: ^19.1.0
         version: 19.2.4
@@ -3077,9 +3077,10 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  openai@6.32.0(ws@8.19.0):
+  openai@6.32.0(ws@8.19.0)(zod@4.3.6):
     optionalDependencies:
       ws: 8.19.0
+      zod: 4.3.6
 
   parse5@7.3.0:
     dependencies:

@@ -22,7 +22,10 @@ export function assembleContext(
     : `${activePlayer.championName} (no ability data available)`;
 
   const currentItems = activePlayerInfo
-    ? activePlayerInfo.items.map((item) => item.name)
+    ? activePlayerInfo.items.map((item) => ({
+        name: item.name,
+        description: gameData.items.get(item.id)?.description ?? "",
+      }))
     : [];
 
   const activeTeam = activePlayerInfo?.team ?? "ORDER";
@@ -31,7 +34,10 @@ export function assembleContext(
     .filter((p) => p.team !== activeTeam)
     .map((p) => ({
       champion: p.championName,
-      items: p.items.map((item) => item.name),
+      items: p.items.map((item) => ({
+        name: item.name,
+        description: gameData.items.get(item.id)?.description ?? "",
+      })),
     }));
 
   const allyTeam = gameState.players
@@ -55,6 +61,7 @@ export function assembleContext(
     enemyTeam,
     allyTeam,
     gameMode: gameState.gameMode,
+    lcuGameMode: gameState.lcuGameMode,
     gameTime: gameState.gameTime,
     balanceOverrides,
   };

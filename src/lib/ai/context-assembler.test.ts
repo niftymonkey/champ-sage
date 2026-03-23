@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { assembleContext } from "./context-assembler";
 import type { LiveGameState } from "../reactive/types";
 import type { LoadedGameData } from "../data-ingest";
-import type { Champion } from "../data-ingest/types";
+import type { Champion, Item } from "../data-ingest/types";
 
 function createLiveGameState(
   overrides: Partial<LiveGameState> = {}
@@ -72,6 +72,7 @@ function createLiveGameState(
       },
     ],
     gameMode: "ARAM",
+    lcuGameMode: "KIWI",
     gameTime: 600,
     champSelect: null,
     eogStats: null,
@@ -112,10 +113,56 @@ function createGameData(): LoadedGameData {
 
   const champions = new Map<string, Champion>([["ahri", ahri]]);
 
+  const items = new Map<number, Item>([
+    [
+      3089,
+      {
+        id: 3089,
+        name: "Rabadon's Deathcap",
+        description: "Massively increases Ability Power.",
+        plaintext: "Massively increases Ability Power",
+        gold: { base: 1100, total: 3600, sell: 2520, purchasable: true },
+        tags: [],
+        stats: {},
+        image: "",
+        mode: "standard",
+      },
+    ],
+    [
+      3075,
+      {
+        id: 3075,
+        name: "Thornmail",
+        description: "Returns damage to attackers and applies Grievous Wounds.",
+        plaintext: "Returns damage on being hit",
+        gold: { base: 1000, total: 2700, sell: 1890, purchasable: true },
+        tags: [],
+        stats: {},
+        image: "",
+        mode: "standard",
+      },
+    ],
+    [
+      3153,
+      {
+        id: 3153,
+        name: "Blade of the Ruined King",
+        description:
+          "Deals damage based on target's max health. Steals movement speed.",
+        plaintext: "Deals damage based on target health",
+        gold: { base: 900, total: 3200, sell: 2240, purchasable: true },
+        tags: [],
+        stats: {},
+        image: "",
+        mode: "standard",
+      },
+    ],
+  ]);
+
   return {
     version: "14.10.1",
     champions,
-    items: new Map(),
+    items,
     runes: [],
     augments: new Map(),
     augmentSets: [],
@@ -125,6 +172,7 @@ function createGameData(): LoadedGameData {
       items: [],
       augments: [],
       search: () => [],
+      findInText: () => [],
     },
   };
 }
@@ -150,18 +198,39 @@ describe("assembleContext", () => {
     expect(result!.champion.abilities).toContain("Essence Theft");
   });
 
-  it("includes current items from active player", () => {
+  it("includes current items with descriptions from active player", () => {
     const result = assembleContext(createLiveGameState(), createGameData());
     expect(result).not.toBeNull();
-    expect(result!.currentItems).toContain("Rabadon's Deathcap");
+    expect(result!.currentItems).toEqual([
+      {
+        name: "Rabadon's Deathcap",
+        description: "Massively increases Ability Power.",
+      },
+    ]);
   });
 
-  it("includes enemy team with their items", () => {
+  it("falls back to empty description when item not in gameData", () => {
+    const gameData = createGameData();
+    gameData.items.clear();
+    const result = assembleContext(createLiveGameState(), gameData);
+    expect(result).not.toBeNull();
+    expect(result!.currentItems).toEqual([
+      { name: "Rabadon's Deathcap", description: "" },
+    ]);
+  });
+
+  it("includes enemy team with item descriptions", () => {
     const result = assembleContext(createLiveGameState(), createGameData());
     expect(result).not.toBeNull();
     expect(result!.enemyTeam).toHaveLength(1);
     expect(result!.enemyTeam[0].champion).toBe("Vayne");
-    expect(result!.enemyTeam[0].items).toContain("Blade of the Ruined King");
+    expect(result!.enemyTeam[0].items).toEqual([
+      {
+        name: "Blade of the Ruined King",
+        description:
+          "Deals damage based on target's max health. Steals movement speed.",
+      },
+    ]);
   });
 
   it("includes ally team (excluding active player)", () => {

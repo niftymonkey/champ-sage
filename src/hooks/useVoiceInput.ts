@@ -155,6 +155,17 @@ export function useVoiceInput(
 
   const startRecording = useCallback(async () => {
     try {
+      // Force-reset if a previous cycle left state stuck (e.g., focus loss
+      // caused a "Released" event to be missed, or an error mid-transcription)
+      if (isRecordingRef.current) {
+        isRecordingRef.current = false;
+        try {
+          await invoke("stop_recording");
+        } catch {
+          // Ignore — just cleaning up stale state
+        }
+      }
+
       isRecordingRef.current = true;
       setState((s) => ({ ...s, isRecording: true, error: null }));
       debugInput$.next({
@@ -181,42 +192,74 @@ export function useVoiceInput(
 
   useEffect(() => {
     let cancelled = false;
+    let unlistenLowLevel: (() => void) | null = null;
 
     async function registerHotkey() {
       try {
-        // Dynamic import — the global-shortcut plugin is only available in
-        // the Tauri runtime, not in tests or browser dev mode
-        const { register, unregister, isRegistered } =
-          await import("@tauri-apps/plugin-global-shortcut");
-
-        // Guard against React strict mode double-mount: if the hotkey is
-        // already registered (from a previous mount that hasn't cleaned up
-        // yet), unregister it first before re-registering.
-        if (await isRegistered(PUSH_TO_TALK_HOTKEY)) {
-          await unregister(PUSH_TO_TALK_HOTKEY);
-        }
+        // Primary: low-level keyboard hook via Tauri events.
+        // On Windows, the Rust backend installs a WH_KEYBOARD_LL hook that
+        // works even when DirectInput games have focus. It emits "hotkey-event"
+        // Tauri events for the configured key.
+        const { listen } = await import("@tauri-apps/api/event");
 
         if (cancelled) return;
 
-        await register(PUSH_TO_TALK_HOTKEY, (event) => {
-          if (event.state === "Pressed" && !isRecordingRef.current) {
-            startRef.current();
-          } else if (event.state === "Released" && isRecordingRef.current) {
-            stopRef.current();
+        unlistenLowLevel = await listen<{ state: string }>(
+          "hotkey-event",
+          (event) => {
+            const state = event.payload.state;
+            debugInput$.next({
+              source: "voice",
+              summary: `Hotkey event: ${state} (isRecording=${isRecordingRef.current})`,
+            });
+            if (state === "Pressed" && !isRecordingRef.current) {
+              startRef.current();
+            } else if (state === "Released" && isRecordingRef.current) {
+              stopRef.current();
+            }
           }
-        });
+        );
 
         debugInput$.next({
           source: "voice",
-          summary: `Push-to-talk registered: ${PUSH_TO_TALK_HOTKEY}`,
+          summary: `Push-to-talk listening via low-level hook: ${PUSH_TO_TALK_HOTKEY}`,
         });
       } catch (err) {
-        // Expected to fail in non-Tauri environments (tests, browser dev)
-        console.warn("Global shortcut registration failed:", err);
-        debugInput$.next({
-          source: "voice",
-          summary: `Hotkey registration failed: ${err instanceof Error ? err.message : String(err)}`,
-        });
+        // Fallback: Tauri global-shortcut plugin (works on non-Windows,
+        // and when games aren't capturing input)
+        try {
+          const { register, unregister, isRegistered } =
+            await import("@tauri-apps/plugin-global-shortcut");
+
+          if (await isRegistered(PUSH_TO_TALK_HOTKEY)) {
+            await unregister(PUSH_TO_TALK_HOTKEY);
+          }
+
+          if (cancelled) return;
+
+          await register(PUSH_TO_TALK_HOTKEY, (event) => {
+            debugInput$.next({
+              source: "voice",
+              summary: `Hotkey event (fallback): ${event.state} (isRecording=${isRecordingRef.current})`,
+            });
+            if (event.state === "Pressed" && !isRecordingRef.current) {
+              startRef.current();
+            } else if (event.state === "Released" && isRecordingRef.current) {
+              stopRef.current();
+            }
+          });
+
+          debugInput$.next({
+            source: "voice",
+            summary: `Push-to-talk registered (fallback): ${PUSH_TO_TALK_HOTKEY}`,
+          });
+        } catch (fallbackErr) {
+          console.warn("Global shortcut registration failed:", fallbackErr);
+          debugInput$.next({
+            source: "voice",
+            summary: `Hotkey registration failed: ${err instanceof Error ? err.message : String(err)}`,
+          });
+        }
       }
     }
 
@@ -224,6 +267,7 @@ export function useVoiceInput(
 
     return () => {
       cancelled = true;
+      unlistenLowLevel?.();
       import("@tauri-apps/plugin-global-shortcut")
         .then(({ unregister }) => unregister(PUSH_TO_TALK_HOTKEY))
         .catch(() => {});

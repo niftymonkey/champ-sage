@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import type { EffectiveGameState, EffectivePlayer } from "../lib/mode";
 import type { Augment, AramOverrides } from "../lib/data-ingest/types";
+import type { LoadedGameData } from "../lib/data-ingest";
 import { checkAugmentAvailability } from "../lib/mode/augment-availability";
 import { AugmentSlots } from "./AugmentSlots";
 import { CoachingInput } from "./CoachingInput";
-import type { CoachingContext } from "../lib/ai/types";
+import { assembleContext } from "../lib/ai/context-assembler";
+import { useLiveGameState } from "../hooks/useLiveGameState";
 
 interface AugmentSelectionActions {
   selectedAugments: Augment[];
@@ -15,12 +17,14 @@ interface AugmentSelectionActions {
 
 interface GameStateViewProps {
   state: EffectiveGameState;
+  gameData: LoadedGameData;
   modeAugments?: Map<string, Augment>;
   augmentSelection: AugmentSelectionActions;
 }
 
 export function GameStateView({
   state,
+  gameData,
   modeAugments,
   augmentSelection,
 }: GameStateViewProps) {
@@ -50,28 +54,12 @@ export function GameStateView({
   const active = state.activePlayer;
   const modeCtx = state.modeContext;
 
-  const coachingContext = useMemo((): CoachingContext | null => {
-    if (!active) return null;
-    return {
-      champion: {
-        name: active.championName,
-        level: active.level,
-        abilities: "",
-      },
-      currentItems: active.items.map((i) => i.name),
-      currentAugments: active.selectedAugments?.map((a) => a.name) ?? [],
-      enemyTeam: state.enemies.map((e) => ({
-        champion: e.championName,
-        items: e.items.map((i) => i.name),
-      })),
-      allyTeam: state.allies
-        .filter((a) => !a.isActivePlayer)
-        .map((a) => ({ champion: a.championName })),
-      gameMode: state.gameMode,
-      gameTime: state.gameTime,
-      balanceOverrides: null,
-    };
-  }, [active, state.enemies, state.allies, state.gameMode, state.gameTime]);
+  const liveGame = useLiveGameState();
+
+  const coachingContext = useMemo(
+    () => assembleContext(liveGame, gameData),
+    [liveGame, gameData]
+  );
 
   return (
     <div>
@@ -159,7 +147,7 @@ export function GameStateView({
         />
       )}
 
-      <CoachingInput context={coachingContext} />
+      <CoachingInput context={coachingContext} gameData={gameData} />
     </div>
   );
 }

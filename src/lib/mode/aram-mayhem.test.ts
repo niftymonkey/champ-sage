@@ -225,6 +225,7 @@ function createGameData(): LoadedGameData {
       items: [],
       augments: [],
       search: () => [],
+      findInText: () => [],
     },
   };
 }

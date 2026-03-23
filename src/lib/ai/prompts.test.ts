@@ -11,14 +11,40 @@ function createContext(
       level: 10,
       abilities: "Passive: Essence Theft. Q: Orb of Deception.",
     },
-    currentItems: ["Rabadon's Deathcap", "Sorcerer's Shoes"],
+    currentItems: [
+      {
+        name: "Rabadon's Deathcap",
+        description: "Massively increases Ability Power.",
+      },
+      {
+        name: "Sorcerer's Shoes",
+        description: "Enhances Movement Speed and Magic Penetration.",
+      },
+    ],
     currentAugments: ["Jeweled Gauntlet"],
     enemyTeam: [
-      { champion: "Vayne", items: ["Blade of the Ruined King"] },
-      { champion: "Sona", items: ["Ardent Censer"] },
+      {
+        champion: "Vayne",
+        items: [
+          {
+            name: "Blade of the Ruined King",
+            description: "Deals damage based on target health.",
+          },
+        ],
+      },
+      {
+        champion: "Sona",
+        items: [
+          {
+            name: "Ardent Censer",
+            description: "Shields and heals empower attacks.",
+          },
+        ],
+      },
     ],
     allyTeam: [{ champion: "Garen" }],
     gameMode: "ARAM",
+    lcuGameMode: "KIWI",
     gameTime: 600,
     balanceOverrides: "Damage taken: -5%",
     ...overrides,
@@ -27,20 +53,57 @@ function createContext(
 
 describe("buildSystemPrompt", () => {
   it("contains coaching personality", () => {
-    const prompt = buildSystemPrompt();
+    const prompt = buildSystemPrompt({
+      gameMode: "CLASSIC",
+      lcuGameMode: "CLASSIC",
+    });
     expect(prompt.toLowerCase()).toContain("coach");
   });
 
   it("establishes blunt decisive tone", () => {
-    const prompt = buildSystemPrompt().toLowerCase();
+    const prompt = buildSystemPrompt({
+      gameMode: "CLASSIC",
+      lcuGameMode: "CLASSIC",
+    }).toLowerCase();
     expect(prompt).toMatch(/blunt|decisive|direct/);
   });
 
   it("covers general coaching topics", () => {
-    const prompt = buildSystemPrompt().toLowerCase();
+    const prompt = buildSystemPrompt({
+      gameMode: "CLASSIC",
+      lcuGameMode: "CLASSIC",
+    }).toLowerCase();
     expect(prompt).toContain("champion");
     expect(prompt).toContain("items");
     expect(prompt).toContain("enemy");
+  });
+
+  it("includes Mayhem augment rules when lcuGameMode is KIWI", () => {
+    const prompt = buildSystemPrompt({
+      gameMode: "ARAM",
+      lcuGameMode: "KIWI",
+    }).toLowerCase();
+    expect(prompt).toContain("augment");
+    expect(prompt).toContain("re-roll");
+    expect(prompt).toContain("not items");
+    expect(prompt).toContain("mayhem");
+  });
+
+  it("includes Mayhem augment rules when gameMode is ARAM (fallback)", () => {
+    const prompt = buildSystemPrompt({
+      gameMode: "ARAM",
+      lcuGameMode: "",
+    }).toLowerCase();
+    expect(prompt).toContain("augment");
+    expect(prompt).toContain("re-roll");
+  });
+
+  it("does not include augment rules for non-ARAM modes", () => {
+    const prompt = buildSystemPrompt({
+      gameMode: "CLASSIC",
+      lcuGameMode: "CLASSIC",
+    }).toLowerCase();
+    expect(prompt).not.toContain("re-roll");
   });
 });
 
@@ -67,9 +130,15 @@ describe("buildUserPrompt", () => {
       expect(prompt).toContain("Sona");
     });
 
-    it("includes current items", () => {
+    it("includes current items with descriptions", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Rabadon's Deathcap");
+      expect(prompt).toContain("Massively increases Ability Power.");
+    });
+
+    it("includes enemy items as names only", () => {
+      const prompt = buildUserPrompt(createContext(), generalQuery);
+      expect(prompt).toContain("Blade of the Ruined King");
     });
 
     it("includes current augments", () => {

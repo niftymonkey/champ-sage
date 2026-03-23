@@ -357,11 +357,16 @@ struct RecordingState {
 /// than silently failing in the background.
 #[tauri::command]
 fn start_recording(state: tauri::State<'_, RecordingState>) -> Result<(), String> {
+    // If a previous recording is still active (e.g., missed key release event),
+    // stop it cleanly before starting a new one rather than erroring out.
     if state
         .is_recording
         .load(std::sync::atomic::Ordering::SeqCst)
     {
-        return Err("Already recording".to_string());
+        state
+            .is_recording
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+        std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
     // Clear any previous recording data
@@ -519,6 +524,123 @@ fn stop_recording(state: tauri::State<'_, RecordingState>) -> Result<Vec<u8>, St
     Ok(wav_buffer.into_inner())
 }
 
+// ---------------------------------------------------------------------------
+// Low-level keyboard hook for push-to-talk (Windows only)
+//
+// The Tauri global-shortcut plugin uses RegisterHotKey, which doesn't work
+// when a DirectInput game (League of Legends) has focus. WH_KEYBOARD_LL
+// hooks intercept keys at the OS level before any application sees them —
+// the same mechanism Discord and OBS use for in-game hotkeys.
+// ---------------------------------------------------------------------------
+
+#[cfg(windows)]
+mod keyboard_hook {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::OnceLock;
+    use tauri::Emitter;
+    use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        CallNextHookEx, SetWindowsHookExW, HHOOK, KBDLLHOOKSTRUCT, WH_KEYBOARD_LL,
+        WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+    };
+    use windows::Win32::UI::Input::KeyboardAndMouse::VK_SUBTRACT;
+
+    static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
+    static KEY_IS_DOWN: AtomicBool = AtomicBool::new(false);
+
+    #[derive(serde::Serialize, Clone)]
+    pub struct HotkeyEvent {
+        pub state: String, // "Pressed" or "Released"
+    }
+
+    unsafe extern "system" fn hook_proc(
+        n_code: i32,
+        w_param: WPARAM,
+        l_param: LPARAM,
+    ) -> LRESULT {
+        if n_code >= 0 {
+            let kb = unsafe { &*(l_param.0 as *const KBDLLHOOKSTRUCT) };
+
+            // NumpadSubtract = VK_SUBTRACT (0x6D)
+            if kb.vkCode == VK_SUBTRACT.0 as u32 {
+                let msg = w_param.0 as u32;
+                let is_down = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
+                let is_up = msg == WM_KEYUP || msg == WM_SYSKEYUP;
+
+                if is_down && !KEY_IS_DOWN.load(Ordering::SeqCst) {
+                    KEY_IS_DOWN.store(true, Ordering::SeqCst);
+                    if let Some(handle) = APP_HANDLE.get() {
+                        let _ = handle.emit("hotkey-event", HotkeyEvent {
+                            state: "Pressed".to_string(),
+                        });
+                    }
+                } else if is_up && KEY_IS_DOWN.load(Ordering::SeqCst) {
+                    KEY_IS_DOWN.store(false, Ordering::SeqCst);
+                    if let Some(handle) = APP_HANDLE.get() {
+                        let _ = handle.emit("hotkey-event", HotkeyEvent {
+                            state: "Released".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+        unsafe { CallNextHookEx(HHOOK::default(), n_code, w_param, l_param) }
+    }
+
+    pub fn start(app_handle: tauri::AppHandle) {
+        let _ = APP_HANDLE.set(app_handle);
+
+        // The hook must run on a thread with a message pump
+        std::thread::spawn(|| {
+            unsafe {
+                let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(hook_proc), None, 0);
+                if hook.is_err() {
+                    eprintln!("Failed to install keyboard hook");
+                    return;
+                }
+
+                // Message pump — required for WH_KEYBOARD_LL to work
+                let mut msg = windows::Win32::UI::WindowsAndMessaging::MSG::default();
+                while windows::Win32::UI::WindowsAndMessaging::GetMessageW(
+                    &mut msg,
+                    None,
+                    0,
+                    0,
+                ).as_bool() {
+                    let _ = windows::Win32::UI::WindowsAndMessaging::TranslateMessage(&msg);
+                    windows::Win32::UI::WindowsAndMessaging::DispatchMessageW(&msg);
+                }
+            }
+        });
+    }
+}
+
+/// Append a line to a per-session coaching log file in data-dump/.
+/// Each app launch gets its own timestamped log file.
+static COACHING_LOG_PATH: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+
+fn get_coaching_log_path() -> &'static std::path::PathBuf {
+    COACHING_LOG_PATH.get_or_init(|| {
+        let dir = std::path::PathBuf::from("data-dump");
+        let _ = std::fs::create_dir_all(&dir);
+        let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+        dir.join(format!("coaching-{timestamp}.log"))
+    })
+}
+
+#[tauri::command]
+async fn append_coaching_log(text: String) -> Result<(), String> {
+    use std::io::Write;
+    let path = get_coaching_log_path();
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .map_err(|e| format!("Failed to open log file: {e}"))?;
+    writeln!(file, "{text}").map_err(|e| format!("Failed to write log: {e}"))?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Install ring as the default crypto provider for rustls.
@@ -540,6 +662,12 @@ pub fn run() {
             #[cfg(desktop)]
             app.handle()
                 .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
+
+            // Start low-level keyboard hook on Windows for in-game hotkeys.
+            // This works even when DirectInput games have focus.
+            #[cfg(windows)]
+            keyboard_hook::start(app.handle().clone());
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -549,7 +677,8 @@ pub fn run() {
             fetch_lcu,
             connect_lcu_websocket,
             start_recording,
-            stop_recording
+            stop_recording,
+            append_coaching_log
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

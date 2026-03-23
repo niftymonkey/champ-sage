@@ -72,6 +72,7 @@ export function DataBrowser({
         {activeTab === "game" && (
           <GameStateView
             state={effectiveState}
+            gameData={data}
             modeAugments={effectiveState.modeContext?.modeAugments}
             augmentSelection={augmentSelection}
           />

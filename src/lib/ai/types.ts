@@ -12,22 +12,29 @@ export interface Recommendation {
   reasoning: string;
 }
 
+export interface CoachingItem {
+  name: string;
+  description: string;
+}
+
 export interface CoachingContext {
   champion: {
     name: string;
     level: number;
     abilities: string;
   };
-  currentItems: string[];
+  currentItems: CoachingItem[];
   currentAugments: string[];
   enemyTeam: Array<{
     champion: string;
-    items: string[];
+    items: CoachingItem[];
   }>;
   allyTeam: Array<{
     champion: string;
   }>;
   gameMode: string;
+  /** LCU game mode — more specific (KIWI for Mayhem, CHERRY for Arena) */
+  lcuGameMode: string;
   gameTime: number;
   balanceOverrides: string | null;
 }

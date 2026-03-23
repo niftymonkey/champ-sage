@@ -1,41 +1,138 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type {
   CoachingResponse,
   CoachingContext,
   CoachingExchange,
+  CoachingQuery,
 } from "../lib/ai/types";
+import type { LoadedGameData } from "../lib/data-ingest";
 import { getCoachingResponse } from "../lib/ai/recommendation-engine";
+import { playerIntent$, debugInput$ } from "../lib/reactive";
 
 interface CoachingInputProps {
   context: CoachingContext | null;
+  gameData: LoadedGameData;
 }
 
-export function CoachingInput({ context }: CoachingInputProps) {
+function extractAugmentOptions(
+  question: string,
+  gameData: LoadedGameData
+): CoachingQuery["augmentOptions"] {
+  const matches = gameData.dictionary.findInText(question);
+  const augmentMatches = matches.filter((m) => m.type === "augment");
+
+  if (augmentMatches.length === 0) return undefined;
+
+  const options: NonNullable<CoachingQuery["augmentOptions"]> = [];
+  for (const match of augmentMatches) {
+    const augment = gameData.augments.get(match.name.toLowerCase());
+    if (augment) {
+      options.push({
+        name: augment.name,
+        description: augment.description,
+        tier: augment.tier,
+        sets: augment.sets,
+      });
+    }
+  }
+
+  return options.length > 0 ? options : undefined;
+}
+
+export function CoachingInput({ context, gameData }: CoachingInputProps) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [exchanges, setExchanges] = useState<CoachingExchange[]>([]);
+  const [chosenAugments, setChosenAugments] = useState<string[]>([]);
   const [latestResponse, setLatestResponse] = useState<CoachingResponse | null>(
     null
   );
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Refs so the voice subscription callback always sees current values
+  const contextRef = useRef(context);
+  const exchangesRef = useRef(exchanges);
+  const gameDataRef = useRef(gameData);
+  const chosenAugmentsRef = useRef(chosenAugments);
+  contextRef.current = context;
+  exchangesRef.current = exchanges;
+  gameDataRef.current = gameData;
+  chosenAugmentsRef.current = chosenAugments;
+
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!context || !apiKey || !query.trim()) return;
+  const submitQuestion = useCallback(
+    async (question: string) => {
+      if (!contextRef.current || !apiKey || !question.trim()) {
+        debugInput$.next({
+          source: "llm",
+          summary: `Coaching skipped: ${!contextRef.current ? "no context" : !apiKey ? "no API key" : "empty question"}`,
+        });
+        return;
+      }
 
-      const question = query.trim();
+      // Detect augment selection ("I chose X", "I picked X", "I took X")
+      const selectionPattern =
+        /i (?:chose|picked|took|selected|went with)\s+(.+)/i;
+      const selectionMatch = question.match(selectionPattern);
+      if (selectionMatch) {
+        const mentioned = gameDataRef.current.dictionary
+          .findInText(selectionMatch[1])
+          .filter((m) => m.type === "augment");
+        if (mentioned.length > 0) {
+          const newAugment = mentioned[0].name;
+          setChosenAugments((prev) =>
+            prev.includes(newAugment) ? prev : [...prev, newAugment]
+          );
+          debugInput$.next({
+            source: "llm",
+            summary: `Augment selected: ${newAugment} (total: ${chosenAugmentsRef.current.length + 1})`,
+          });
+        }
+      }
+
       setLoading(true);
       setError(null);
-      setQuery("");
+
+      const augmentOptions = extractAugmentOptions(
+        question,
+        gameDataRef.current
+      );
+
+      // Override currentAugments in context with tracked selections
+      const contextWithAugments = {
+        ...contextRef.current,
+        currentAugments:
+          chosenAugmentsRef.current.length > 0
+            ? chosenAugmentsRef.current
+            : contextRef.current.currentAugments,
+      };
+
+      debugInput$.next({
+        source: "llm",
+        summary: `Coaching query: "${question}"`,
+        detail:
+          [
+            augmentOptions
+              ? `Augment options matched: ${augmentOptions.map((a) => a.name).join(", ")}`
+              : null,
+            chosenAugmentsRef.current.length > 0
+              ? `Known augments: ${chosenAugmentsRef.current.join(", ")}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join("\n") || undefined,
+      });
 
       try {
         const response = await getCoachingResponse(
-          context,
-          { question, history: exchanges },
+          contextWithAugments,
+          {
+            question,
+            history: exchangesRef.current,
+            augmentOptions,
+          },
           apiKey
         );
         setLatestResponse(response);
@@ -53,7 +150,32 @@ export function CoachingInput({ context }: CoachingInputProps) {
         setLoading(false);
       }
     },
-    [context, apiKey, query, exchanges]
+    [apiKey]
+  );
+
+  // Subscribe to voice transcripts — trigger coaching when voice input arrives
+  useEffect(() => {
+    const sub = playerIntent$.subscribe((event) => {
+      if (event.type === "query" && event.text.trim()) {
+        debugInput$.next({
+          source: "voice",
+          summary: `Voice transcript received by coaching: "${event.text}"`,
+        });
+        submitQuestion(event.text);
+      }
+    });
+    return () => sub.unsubscribe();
+  }, [submitQuestion]);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const question = query.trim();
+      if (!question) return;
+      setQuery("");
+      await submitQuestion(question);
+    },
+    [query, submitQuestion]
   );
 
   if (!apiKey) {
@@ -104,6 +226,7 @@ export function CoachingInput({ context }: CoachingInputProps) {
         )}
 
       {error && <p className="error">{error}</p>}
+      {loading && <p className="entity-meta">Thinking...</p>}
 
       <form onSubmit={handleSubmit} className="coaching-form">
         <input

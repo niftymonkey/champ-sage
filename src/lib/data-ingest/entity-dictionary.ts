@@ -59,6 +59,9 @@ export function buildEntityDictionary(
     search(query: string): EntityMatch[] {
       return fuzzySearch(entries, query);
     },
+    findInText(text: string): EntityMatch[] {
+      return findEntitiesInText(entries, text);
+    },
   };
 }
 
@@ -117,4 +120,45 @@ function fuzzyScore(nameLower: string, queryLower: string): number {
   }
 
   return 0;
+}
+
+/**
+ * Find entity names mentioned within a block of text.
+ * Unlike fuzzySearch (which matches a short query against entity names),
+ * this scans text for occurrences of known entity names.
+ *
+ * Returns matches sorted by name length (longest first) to prefer
+ * "Upgrade Collector" over "Collector" when both appear.
+ */
+function findEntitiesInText(entries: NameEntry[], text: string): EntityMatch[] {
+  const textLower = text.toLowerCase();
+  const textStripped = textLower.replace(/[^a-z0-9\s]/g, "");
+  const results: EntityMatch[] = [];
+  const seen = new Set<string>();
+
+  // Sort entries by name length descending so longer matches win
+  const sorted = [...entries].sort(
+    (a, b) => b.nameLower.length - a.nameLower.length
+  );
+
+  for (const entry of sorted) {
+    if (seen.has(entry.nameLower)) continue;
+
+    // Check both with and without punctuation
+    const nameStripped = entry.nameLower.replace(/[^a-z0-9\s]/g, "");
+
+    if (
+      textLower.includes(entry.nameLower) ||
+      textStripped.includes(nameStripped)
+    ) {
+      // Skip very short names (3 chars or less) to avoid false positives
+      // like "ADC" matching "adapt" or single-word collisions
+      if (nameStripped.length <= 3) continue;
+
+      results.push({ name: entry.name, type: entry.type, score: 1.0 });
+      seen.add(entry.nameLower);
+    }
+  }
+
+  return results;
 }

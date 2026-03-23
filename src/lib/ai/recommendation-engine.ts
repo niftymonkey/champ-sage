@@ -1,32 +1,44 @@
 import { generateText, Output } from "ai";
+import { invoke } from "@tauri-apps/api/core";
 import type { CoachingContext, CoachingQuery, CoachingResponse } from "./types";
 import { createCoachingModel, MODEL_CONFIG } from "./model-config";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
 import { coachingResponseSchema } from "./schemas";
+
+function logToFile(text: string): void {
+  const timestamp = new Date().toISOString();
+  invoke("append_coaching_log", { text: `[${timestamp}] ${text}` }).catch(
+    () => {}
+  );
+}
 
 export async function getCoachingResponse(
   context: CoachingContext,
   query: CoachingQuery,
   apiKey: string
 ): Promise<CoachingResponse> {
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = buildSystemPrompt(context);
   const userPrompt = buildUserPrompt(context, query);
 
-  console.log("\n=== COACHING REQUEST ===");
-  console.log(`Model: ${MODEL_CONFIG.id}`);
-  console.log(`Question: ${query.question}`);
-  console.log(`Champion: ${context.champion.name} Lv${context.champion.level}`);
-  console.log(`Items: ${context.currentItems.join(", ") || "None"}`);
-  console.log(`Augments: ${context.currentAugments.join(", ") || "None"}`);
-  console.log(`Mode: ${context.gameMode}`);
-  console.log(
-    `Enemies: ${context.enemyTeam.map((e) => e.champion).join(", ") || "None"}`
+  logToFile(
+    [
+      "=== COACHING REQUEST ===",
+      `Model: ${MODEL_CONFIG.id}`,
+      `Question: ${query.question}`,
+      `Champion: ${context.champion.name} Lv${context.champion.level}`,
+      `Items: ${context.currentItems.map((i) => i.name).join(", ") || "None"}`,
+      `Augments: ${context.currentAugments.join(", ") || "None"}`,
+      `Mode: ${context.gameMode}`,
+      `Enemies: ${context.enemyTeam.map((e) => e.champion).join(", ") || "None"}`,
+      `History: ${query.history?.length ?? 0} exchanges`,
+      "",
+      "--- SYSTEM PROMPT ---",
+      systemPrompt,
+      "",
+      "--- USER PROMPT ---",
+      userPrompt,
+    ].join("\n")
   );
-  console.log("\n--- SYSTEM PROMPT ---");
-  console.log(systemPrompt);
-  console.log("\n--- USER PROMPT ---");
-  console.log(userPrompt);
-  console.log("\n--- CALLING LLM ---");
 
   const startMs = Date.now();
   const model = createCoachingModel(apiKey);
@@ -35,33 +47,37 @@ export async function getCoachingResponse(
     const result = await generateText({
       model,
       system: systemPrompt,
-      prompt: userPrompt,
+      prompt: buildUserPrompt(context, query),
       output: Output.object({ schema: coachingResponseSchema }),
       maxOutputTokens: 1024,
     });
 
     const elapsedMs = Date.now() - startMs;
     const usage = result.usage;
+    const recs = result.output.recommendations;
 
-    console.log(`\n--- RESPONSE (${elapsedMs}ms) ---`);
-    console.log(
-      `Tokens: ${usage.inputTokens ?? "?"} in / ${usage.outputTokens ?? "?"} out`
+    logToFile(
+      [
+        `--- RESPONSE (${elapsedMs}ms) ---`,
+        `Tokens: ${usage.inputTokens ?? "?"}in / ${usage.outputTokens ?? "?"}out`,
+        `Answer: ${result.output.answer}`,
+        ...(recs.length > 0
+          ? [
+              "Recommendations:",
+              ...recs.map((r, i) => `  #${i + 1} ${r.name}: ${r.reasoning}`),
+            ]
+          : []),
+        "=== END COACHING REQUEST ===",
+      ].join("\n")
     );
-    console.log(`Answer: ${result.output.answer}`);
-    if (result.output.recommendations.length > 0) {
-      console.log("Recommendations:");
-      for (const rec of result.output.recommendations) {
-        console.log(`  - ${rec.name}: ${rec.reasoning}`);
-      }
-    }
-    console.log("=== END COACHING REQUEST ===\n");
 
     return result.output;
   } catch (err) {
     const elapsedMs = Date.now() - startMs;
-    console.error(`\n--- ERROR (${elapsedMs}ms) ---`);
-    console.error(err);
-    console.error("=== END COACHING REQUEST ===\n");
+    const message = err instanceof Error ? err.message : String(err);
+    logToFile(
+      `--- ERROR (${elapsedMs}ms) ---\n${message}\n=== END COACHING REQUEST ===`
+    );
     throw err;
   }
 }
