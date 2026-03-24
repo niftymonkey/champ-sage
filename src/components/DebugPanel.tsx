@@ -278,8 +278,6 @@ export function DebugPanel() {
     useState<LiveGameState | null>(null);
   const inputLogEndRef = useRef<HTMLDivElement>(null);
   const outputLogEndRef = useRef<HTMLDivElement>(null);
-  const prevInputLen = useRef(inputBuffer.length);
-  const prevOutputLen = useRef(outputBuffer.length);
 
   useEffect(() => {
     // Re-render when buffers change
@@ -331,19 +329,15 @@ export function DebugPanel() {
     };
   }, []);
 
-  // Auto-scroll when new entries arrive
+  // Auto-scroll: always scroll to bottom after each render.
+  // Uses "instant" instead of "smooth" to avoid animation races
+  // when multiple entries arrive in quick succession.
   useEffect(() => {
-    if (inputBuffer.length > prevInputLen.current) {
-      inputLogEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-    prevInputLen.current = inputBuffer.length;
+    inputLogEndRef.current?.scrollIntoView({ behavior: "instant" });
   });
 
   useEffect(() => {
-    if (outputBuffer.length > prevOutputLen.current) {
-      outputLogEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-    prevOutputLen.current = outputBuffer.length;
+    outputLogEndRef.current?.scrollIntoView({ behavior: "instant" });
   });
 
   const filteredInputLog = showNoise
