@@ -147,12 +147,27 @@ function findEntitiesInText(entries: NameEntry[], text: string): EntityMatch[] {
     // Check both with and without punctuation
     const nameStripped = entry.nameLower.replace(/[^a-z0-9\s]/g, "");
 
-    if (
+    // Direct substring match
+    const directMatch =
       textLower.includes(entry.nameLower) ||
-      textStripped.includes(nameStripped)
-    ) {
-      // Skip very short names (3 chars or less) to avoid false positives
-      // like "ADC" matching "adapt" or single-word collisions
+      textStripped.includes(nameStripped);
+
+    // Prefix-stripped match: augment names like "Quest: Urf's Champion"
+    // should match when the user says "Urf's Champion"
+    let prefixMatch = false;
+    if (!directMatch) {
+      const colonIdx = nameStripped.indexOf(" ");
+      if (entry.nameLower.includes(":") && colonIdx > 0) {
+        const afterPrefix = entry.nameLower
+          .replace(/^[^:]+:\s*/, "")
+          .replace(/[^a-z0-9\s]/g, "");
+        if (afterPrefix.length > 3 && textStripped.includes(afterPrefix)) {
+          prefixMatch = true;
+        }
+      }
+    }
+
+    if (directMatch || prefixMatch) {
       if (nameStripped.length <= 3) continue;
 
       results.push({ name: entry.name, type: entry.type, score: 1.0 });

@@ -123,16 +123,26 @@ const mockAugments = new Map<string, Augment>([
       mode: "mayhem",
     },
   ],
+  [
+    "quest: urf's champion",
+    {
+      name: "Quest: Urf's Champion",
+      description: "Complete the quest to become Urf's Champion",
+      tier: "Prismatic",
+      sets: [],
+      mode: "mayhem",
+    },
+  ],
 ]);
 
 describe("buildEntityDictionary", () => {
   const dict = buildEntityDictionary(mockChampions, mockItems, mockAugments);
 
   it("includes all entity names", () => {
-    expect(dict.allNames).toHaveLength(10);
+    expect(dict.allNames).toHaveLength(11);
     expect(dict.champions).toHaveLength(2);
     expect(dict.items).toHaveLength(2);
-    expect(dict.augments).toHaveLength(6);
+    expect(dict.augments).toHaveLength(7);
   });
 
   it("contains correct champion names", () => {
@@ -238,6 +248,14 @@ describe("buildEntityDictionary", () => {
       const results = dict.findInText("Upgrade Collector is my choice");
       const names = results.map((r) => r.name);
       expect(names).toContain("Upgrade Collector");
+    });
+
+    it("matches augments with prefixes like Quest:", () => {
+      const results = dict.findInText(
+        "Protein Shake, Glass Cannon, or Urf's Champion"
+      );
+      const names = results.map((r) => r.name);
+      expect(names).toContain("Quest: Urf's Champion");
     });
   });
 });
