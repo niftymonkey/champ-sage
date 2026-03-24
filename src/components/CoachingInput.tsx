@@ -40,17 +40,15 @@ function extractAugmentOptions(
 }
 
 export function CoachingInput({ context, gameData }: CoachingInputProps) {
-  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [latestExchange, setLatestExchange] = useState<{
+    question: string;
+    response: CoachingResponse;
+  } | null>(null);
   const [exchanges, setExchanges] = useState<CoachingExchange[]>([]);
   const [chosenAugments, setChosenAugments] = useState<string[]>([]);
-  const [latestResponse, setLatestResponse] = useState<CoachingResponse | null>(
-    null
-  );
   const [error, setError] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Refs so the voice subscription callback always sees current values
   const contextRef = useRef(context);
   const exchangesRef = useRef(exchanges);
   const gameDataRef = useRef(gameData);
@@ -72,7 +70,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
         return;
       }
 
-      // Detect augment selection ("I chose X", "I picked X", "I took X")
+      // Detect augment selection
       const selectionPattern =
         /i (?:chose|picked|took|selected|went with)\s+(.+)/i;
       const selectionMatch = question.match(selectionPattern);
@@ -100,7 +98,6 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
         gameDataRef.current
       );
 
-      // Override currentAugments in context with tracked selections
       const contextWithAugments = {
         ...contextRef.current,
         currentAugments:
@@ -135,15 +132,11 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           },
           apiKey
         );
-        setLatestResponse(response);
+        setLatestExchange({ question, response });
         setExchanges((prev) => [
           ...prev,
           { question, answer: response.answer },
         ]);
-        setTimeout(
-          () => scrollRef.current?.scrollIntoView({ behavior: "smooth" }),
-          50
-        );
       } catch (err) {
         setError(err instanceof Error ? err.message : "Request failed");
       } finally {
@@ -153,7 +146,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     [apiKey]
   );
 
-  // Subscribe to voice transcripts — trigger coaching when voice input arrives
+  // Subscribe to voice transcripts
   useEffect(() => {
     const sub = playerIntent$.subscribe((event) => {
       if (event.type === "query" && event.text.trim()) {
@@ -167,20 +160,9 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     return () => sub.unsubscribe();
   }, [submitQuestion]);
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      const question = query.trim();
-      if (!question) return;
-      setQuery("");
-      await submitQuestion(question);
-    },
-    [query, submitQuestion]
-  );
-
   if (!apiKey) {
     return (
-      <div className="coaching-input">
+      <div className="coaching-display">
         <p className="entity-meta">
           Set VITE_OPENAI_API_KEY in .env to enable AI coaching.
         </p>
@@ -193,55 +175,42 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   }
 
   return (
-    <div className="coaching-input">
-      {exchanges.length > 0 && (
-        <div className="coaching-history">
-          {exchanges.map((ex, i) => (
-            <div key={i} className="coaching-exchange">
-              <p className="coaching-question">
-                <span className="coaching-label">You:</span> {ex.question}
-              </p>
-              <p className="coaching-answer">
-                <span className="coaching-label">Coach:</span> {ex.answer}
-              </p>
+    <div className="coaching-display">
+      {loading && <p className="coaching-thinking">Thinking...</p>}
+
+      {error && <p className="error">{error}</p>}
+
+      {!loading && latestExchange && (
+        <div className="coaching-latest">
+          <p className="coaching-question">
+            <span className="coaching-label">You:</span>{" "}
+            {latestExchange.question}
+          </p>
+          <p className="coaching-answer">
+            <span className="coaching-label">Coach:</span>{" "}
+            {latestExchange.response.answer}
+          </p>
+          {latestExchange.response.recommendations.length > 0 && (
+            <div className="coaching-picks">
+              {latestExchange.response.recommendations.map((rec, i) => (
+                <div key={rec.name} className="coaching-pick">
+                  <span className="coaching-pick-rank">#{i + 1}</span>
+                  <div className="coaching-pick-content">
+                    <span className="entity-name">{rec.name}</span>
+                    <p className="entity-meta">{rec.reasoning}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
 
-      {latestResponse &&
-        latestResponse.recommendations.length > 0 &&
-        !loading && (
-          <div className="coaching-picks">
-            {latestResponse.recommendations.map((rec, i) => (
-              <div key={rec.name} className="coaching-pick">
-                <span className="coaching-pick-rank">#{i + 1}</span>
-                <div className="coaching-pick-content">
-                  <span className="entity-name">{rec.name}</span>
-                  <p className="entity-meta">{rec.reasoning}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-      {error && <p className="error">{error}</p>}
-      {loading && <p className="entity-meta">Thinking...</p>}
-
-      <form onSubmit={handleSubmit} className="coaching-form">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={loading ? "Thinking..." : "Ask your coach..."}
-          disabled={loading}
-          className="coaching-text-input"
-        />
-        <button type="submit" disabled={loading || !query.trim()}>
-          {loading ? "..." : "Ask"}
-        </button>
-      </form>
-      <div ref={scrollRef} />
+      {!loading && !latestExchange && (
+        <p className="coaching-placeholder">
+          Hold Num- and speak to ask your coach
+        </p>
+      )}
     </div>
   );
 }
