@@ -15,7 +15,7 @@ export const aramMayhemMode: GameMode = {
   augmentSelectionLevels: [1, 7, 11, 15],
 
   matches(gameMode: string): boolean {
-    return gameMode === "ARAM";
+    return gameMode === "ARAM" || gameMode === "KIWI";
   },
 
   buildContext(gameState: GameState, gameData: LoadedGameData): ModeContext {
