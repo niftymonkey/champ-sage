@@ -62,6 +62,13 @@ function App() {
     abilitiesFetchedRef.current = true;
     const championNames = liveGame.players.map((p) => p.championName);
     ensureAbilities(data, championNames, data.version).catch(() => {});
+
+    // Log game detection info for debugging
+    const detectedMode = registry.detect(liveGame.gameMode);
+    debugInput$.next({
+      source: "discovery",
+      summary: `Game detected: ${liveGame.gameMode} | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.join(", ")} | augments in data: ${data.augments.size}`,
+    });
   }, [data, liveGame.players]);
 
   const prevPhaseRef = useRef<string | null>(null);
