@@ -62,92 +62,107 @@ export function GameStateView({
   );
 
   return (
-    <div>
-      <div className="game-status">
-        <p className="game-status-label connected">
-          {modeCtx ? modeCtx.mode.displayName : state.gameMode} | {timeStr}
-        </p>
+    <div className="game-view-layout">
+      {/* Top: Game info + player summary (compact, always visible) */}
+      <div className="game-view-top">
+        <div className="game-status">
+          <p className="game-status-label connected">
+            {modeCtx ? modeCtx.mode.displayName : state.gameMode} | {timeStr}
+            {active && (
+              <span className="entity-meta" style={{ marginLeft: "0.5em" }}>
+                {active.championName} Lv{active.level} |{" "}
+                {Math.floor(active.currentGold ?? 0)}g
+              </span>
+            )}
+          </p>
+        </div>
+
+        {modeAugments && modeAugments.size > 0 && (
+          <AugmentSlots
+            selectedAugments={augmentSelection.selectedAugments}
+            availableAugments={modeAugments}
+            availability={
+              modeCtx && active
+                ? checkAugmentAvailability(
+                    active.level,
+                    augmentSelection.selectedAugments.length,
+                    modeCtx.mode
+                  )
+                : undefined
+            }
+            onSelect={augmentSelection.select}
+            onRemoveLast={augmentSelection.removeLast}
+            onReset={augmentSelection.reset}
+          />
+        )}
       </div>
 
-      {active && (
-        <div className="active-player-card">
-          <div className="entity-header">
-            <span className="entity-name">
-              {active.championName} (You)
-              {active.tags.length > 0 && (
-                <span className="player-tags">{active.tags.join(", ")}</span>
+      {/* Middle: Coaching (flex-grow, takes available space) */}
+      <div className="game-view-coaching">
+        <CoachingInput context={coachingContext} gameData={gameData} />
+      </div>
+
+      {/* Bottom: Teams + details (scrollable) */}
+      <div className="game-view-bottom">
+        {active && (
+          <div className="active-player-card">
+            <div className="entity-header">
+              <span className="entity-name">
+                {active.championName} (You)
+                {active.tags.length > 0 && (
+                  <span className="player-tags">{active.tags.join(", ")}</span>
+                )}
+              </span>
+              <span className="entity-meta">
+                Lv{active.level} | {Math.floor(active.currentGold ?? 0)}g
+              </span>
+            </div>
+            <div className="entity-details">
+              {active.stats && (
+                <div className="stat-grid">
+                  <span>
+                    HP: {Math.floor(active.stats.currentHealth)}/
+                    {Math.floor(active.stats.maxHealth)}
+                  </span>
+                  <span>AD: {Math.floor(active.stats.attackDamage)}</span>
+                  <span>AP: {Math.floor(active.stats.abilityPower)}</span>
+                  <span>Armor: {Math.floor(active.stats.armor)}</span>
+                  <span>MR: {Math.floor(active.stats.magicResist)}</span>
+                  <span>AS: {active.stats.attackSpeed.toFixed(2)}</span>
+                  <span>AH: {Math.floor(active.stats.abilityHaste)}</span>
+                  <span>MS: {Math.floor(active.stats.moveSpeed)}</span>
+                </div>
               )}
-            </span>
-            <span className="entity-meta">
-              Lv{active.level} | {Math.floor(active.currentGold ?? 0)}g
-            </span>
+              {active.runes && (
+                <p className="entity-meta">
+                  {active.runes.keystone} ({active.runes.primaryTree} /{" "}
+                  {active.runes.secondaryTree})
+                </p>
+              )}
+              <BalanceOverridesView overrides={active.balanceOverrides} />
+            </div>
           </div>
-          <div className="entity-details">
-            {active.stats && (
-              <div className="stat-grid">
-                <span>
-                  HP: {Math.floor(active.stats.currentHealth)}/
-                  {Math.floor(active.stats.maxHealth)}
-                </span>
-                <span>AD: {Math.floor(active.stats.attackDamage)}</span>
-                <span>AP: {Math.floor(active.stats.abilityPower)}</span>
-                <span>Armor: {Math.floor(active.stats.armor)}</span>
-                <span>MR: {Math.floor(active.stats.magicResist)}</span>
-                <span>AS: {active.stats.attackSpeed.toFixed(2)}</span>
-                <span>AH: {Math.floor(active.stats.abilityHaste)}</span>
-                <span>MS: {Math.floor(active.stats.moveSpeed)}</span>
-              </div>
-            )}
-            {active.runes && (
-              <p className="entity-meta">
-                {active.runes.keystone} ({active.runes.primaryTree} /{" "}
-                {active.runes.secondaryTree})
-              </p>
-            )}
-            <BalanceOverridesView overrides={active.balanceOverrides} />
+        )}
+
+        {modeCtx && (
+          <div className="team-comp-summary">
+            <div className="team-comp-row">
+              <span className="entity-title">Allies:</span>
+              <span className="entity-meta">
+                {formatClassCounts(modeCtx.allyTeamComp.classCounts)}
+              </span>
+            </div>
+            <div className="team-comp-row">
+              <span className="entity-title">Enemies:</span>
+              <span className="entity-meta">
+                {formatClassCounts(modeCtx.enemyTeamComp.classCounts)}
+              </span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {modeCtx && (
-        <div className="team-comp-summary">
-          <div className="team-comp-row">
-            <span className="entity-title">Allies:</span>
-            <span className="entity-meta">
-              {formatClassCounts(modeCtx.allyTeamComp.classCounts)}
-            </span>
-          </div>
-          <div className="team-comp-row">
-            <span className="entity-title">Enemies:</span>
-            <span className="entity-meta">
-              {formatClassCounts(modeCtx.enemyTeamComp.classCounts)}
-            </span>
-          </div>
-        </div>
-      )}
-
-      <TeamsGrid allies={state.allies} enemies={state.enemies} />
-
-      {modeAugments && modeAugments.size > 0 && (
-        <AugmentSlots
-          selectedAugments={augmentSelection.selectedAugments}
-          availableAugments={modeAugments}
-          availability={
-            modeCtx && active
-              ? checkAugmentAvailability(
-                  active.level,
-                  augmentSelection.selectedAugments.length,
-                  modeCtx.mode
-                )
-              : undefined
-          }
-          onSelect={augmentSelection.select}
-          onRemoveLast={augmentSelection.removeLast}
-          onReset={augmentSelection.reset}
-        />
-      )}
-
-      <CoachingInput context={coachingContext} gameData={gameData} />
+        <TeamsGrid allies={state.allies} enemies={state.enemies} />
+      </div>
     </div>
   );
 }

@@ -348,9 +348,36 @@ h1 {
   align-items: baseline;
 }
 
+/* Game view layout: three sections */
+.game-view-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.game-view-top {
+  flex-shrink: 0;
+}
+
+.game-view-coaching {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 0.0625rem solid #333;
+  border-bottom: 0.0625rem solid #333;
+  padding: 0.5rem 0;
+}
+
+.game-view-bottom {
+  flex-shrink: 0;
+  max-height: 40%;
+  overflow-y: auto;
+  padding-top: 0.5rem;
+}
+
 /* Game state */
 .game-status {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .game-status-label {
