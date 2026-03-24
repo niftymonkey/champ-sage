@@ -28,7 +28,7 @@ export async function getCoachingResponse(
       `Champion: ${context.champion.name} Lv${context.champion.level}`,
       `Items: ${context.currentItems.map((i) => i.name).join(", ") || "None"}`,
       `Augments: ${context.currentAugments.join(", ") || "None"}`,
-      `Mode: ${context.gameMode}`,
+      `Mode: ${context.gameMode} (LCU: ${context.lcuGameMode})`,
       `Enemies: ${context.enemyTeam.map((e) => e.champion).join(", ") || "None"}`,
       `History: ${query.history?.length ?? 0} exchanges`,
       "",

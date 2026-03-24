@@ -74,6 +74,9 @@ export function GameStateView({
                 {Math.floor(active.currentGold ?? 0)}g
               </span>
             )}
+            <span className="entity-meta" style={{ marginLeft: "0.5em" }}>
+              | mode: {modeCtx ? "yes" : "no"} | augs: {modeAugments?.size ?? 0}
+            </span>
           </p>
         </div>
 
