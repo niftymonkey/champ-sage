@@ -80,4 +80,26 @@ describe("stripWikiMarkup", () => {
       "Set: Enforcers"
     );
   });
+
+  it("strips bare pipe annotations from Lua data", () => {
+    expect(stripWikiMarkup("25%|heal and shield power")).toBe(
+      "25% heal and shield power"
+    );
+    expect(stripWikiMarkup("Firecrackers|fury")).toBe("Firecrackers fury");
+    expect(stripWikiMarkup("100 item haste|ability haste")).toBe(
+      "100 item haste ability haste"
+    );
+  });
+
+  it("strips meta-references like Damage calculated before modifiers", () => {
+    expect(
+      stripWikiMarkup("deal Damage calculated before modifiers to enemies")
+    ).toBe("deal damage to enemies");
+  });
+
+  it("strips Estimated pre-mitigation meta-reference", () => {
+    expect(stripWikiMarkup("deal Estimated pre-mitigation damage")).toBe(
+      "deal damage"
+    );
+  });
 });

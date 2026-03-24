@@ -51,6 +51,13 @@ export function stripWikiMarkup(text: string): string {
   // Strip italic ''text'' → text
   result = result.replace(/''([^']*?)''/g, "$1");
 
+  // Strip bare pipe annotations from Lua data: "25%|heal" → "25% heal"
+  result = result.replace(/\|/g, " ");
+
+  // Strip meta-references that don't convey useful info
+  result = result.replace(/Damage calculated before modifiers/gi, "damage");
+  result = result.replace(/Estimated pre-mitigation/gi, "");
+
   // Collapse multiple spaces left by removals
   result = result.replace(/ {2,}/g, " ");
 
