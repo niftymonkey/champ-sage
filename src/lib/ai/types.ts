@@ -28,6 +28,7 @@ export interface CoachingContext {
     statProfile: string | null;
   };
   currentItems: CoachingItem[];
+  currentGold: number;
   currentAugments: CoachingItem[];
   enemyTeam: Array<{
     champion: string;

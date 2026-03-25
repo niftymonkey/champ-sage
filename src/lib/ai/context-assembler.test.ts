@@ -292,6 +292,12 @@ describe("assembleContext", () => {
     ]);
   });
 
+  it("includes current gold from active player", () => {
+    const result = assembleContext(createLiveGameState(), createGameData());
+    expect(result).not.toBeNull();
+    expect(result!.currentGold).toBe(2500);
+  });
+
   it("falls back to empty description when item not in gameData", () => {
     const gameData = createGameData();
     gameData.items.clear();

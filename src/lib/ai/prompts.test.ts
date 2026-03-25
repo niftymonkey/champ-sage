@@ -13,6 +13,7 @@ function createContext(
       statProfile:
         "Ranged (550) | Mage, Assassin | HP: 590 (+96/lvl) | AD: 53 (+3/lvl) | AS: 0.668 (+2%/lvl) | Armor: 23 (+4.7/lvl) | MR: 30 (+1.3/lvl) | Mana",
     },
+    currentGold: 2500,
     currentItems: [
       {
         name: "Rabadon's Deathcap",
@@ -144,6 +145,11 @@ describe("buildUserPrompt", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Rabadon's Deathcap");
       expect(prompt).toContain("Massively increases Ability Power.");
+    });
+
+    it("includes current gold in items section", () => {
+      const prompt = buildUserPrompt(createContext(), generalQuery);
+      expect(prompt).toContain("2500 gold available");
     });
 
     it("includes enemy items as names only", () => {

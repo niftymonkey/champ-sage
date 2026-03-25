@@ -87,9 +87,13 @@ export function buildUserPrompt(
         ? `- ${item.name}: ${item.description}`
         : `- ${item.name}`
     );
-    sections.push(`### Current Items\n${itemLines.join("\n")}`);
+    sections.push(
+      `### Current Items (${context.currentGold} gold available)\n${itemLines.join("\n")}`
+    );
   } else {
-    sections.push("### Current Items\nNone");
+    sections.push(
+      `### Current Items (${context.currentGold} gold available)\nNone`
+    );
   }
 
   if (context.currentAugments.length > 0) {
