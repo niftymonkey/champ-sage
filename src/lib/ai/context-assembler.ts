@@ -67,6 +67,7 @@ export function assembleContext(
       statProfile,
     },
     currentItems,
+    currentGold: activePlayer.currentGold,
     currentAugments: [],
     teamAnalysis,
     augmentSets: gameData.augmentSets,
