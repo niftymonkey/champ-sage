@@ -87,6 +87,37 @@ The prompt enrichment test validated this. When given champion role ("melee DPS 
 - discover-candidates.ts — PickAI model selection
 - test-prompt-quality.ts — A/B prompt comparison script
 
+## ARAM Mayhem Testing Results
+
+### What worked
+
+- Hotkey works in-game with low-level keyboard hook (WH_KEYBOARD_LL)
+- Voice transcription working, transcripts trigger coaching pipeline
+- Item build advice is contextual (Kraken → BOTRK on Bel'Veth, Serrated Dirk → Collector on MF)
+- Tactical advice references specific teammates (save Nunu snowball for Diana)
+- Response times mostly 1.2–2.5s, occasional outlier at 6.8s
+- Conversation history flows naturally across exchanges
+- Mode correctly detected as KIWI
+- Champion abilities, item descriptions, balance overrides all in context
+- Augment descriptions now injected when fuzzy match finds them
+- Re-roll flow works (keep one, re-roll two, report results)
+
+### What didn't work
+
+- Model recommended "Upgrade Collector" augment when player didn't have/wasn't building Collector (item-upgrade augment confusion — now addressed in prompt)
+- Model recommended Urf's Champion based on "CDR/mana removal" without knowing the reward is The Golden Spatula with massive stats (data gap — quest reward stats not in description)
+- Model recommended Protein Shake for Bel'Veth over Glass Cannon/Urf's Champion because it didn't know Bel'Veth is an auto-attack DPS carry (champion role not in prompt — enrichment tested, proven effective)
+- Re-roll advice initially said "re-roll" in Phase 2 when no re-rolls were left (fixed with per-card re-roll rules)
+- Augment picker UI disappeared because mode detection didn't match "KIWI" (fixed)
+- Some augments not matched by fuzzy search ("Quest: Urf's Champion" prefix issue — fixed)
+
+### User experience observations
+
+- Alt-tab workflow was unusable — voice mode solved this
+- Text input removed in favor of voice-only coaching display
+- Response verbosity was too high initially — strict length rules in prompt helped
+- Player wants to just say augment names without explaining they're augments — the system should infer this from context
+
 ## Fixes Applied This Session
 
 1. KIWI mode detection — aramMayhemMode.matches() accepts "KIWI"
