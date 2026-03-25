@@ -213,6 +213,7 @@ export class ReactiveEngine {
                     source: "websocket",
                     summary: `WebSocket disconnected: ${event.reason}`,
                   });
+                  this.wsRetrySeq++;
                 }),
                 this.bridge.connectLcuWebSocket(creds.port, creds.token),
               ])

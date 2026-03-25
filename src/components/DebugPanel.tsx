@@ -252,7 +252,10 @@ function startSubscriptions(): void {
 
       // Truncate JWT tokens in diffs — they're unreadable noise
       if (detail) {
-        detail = detail.replace(/eyJ[A-Za-z0-9_-]{50,}/g, "[JWT token]");
+        detail = detail.replace(
+          /\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+          "[JWT token]"
+        );
       }
     }
 

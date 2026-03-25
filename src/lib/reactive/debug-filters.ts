@@ -80,7 +80,7 @@ function gameStateFingerprint(state: LiveGameState): string {
     state.activePlayer?.championName ?? "",
     state.activePlayer?.level ?? 0,
     state.players.length,
-    state.gameMode,
+    state.lcuGameMode || state.gameMode,
     state.champSelect != null ? "cs" : "",
     state.eogStats != null ? "eog" : "",
   ].join("|");
