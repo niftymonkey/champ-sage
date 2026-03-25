@@ -57,7 +57,11 @@ export function buildUserPrompt(
 ): string {
   const sections: string[] = [];
 
-  sections.push(`## Game Mode: ${context.gameMode}`);
+  const modeLabel =
+    context.lcuGameMode && context.lcuGameMode !== context.gameMode
+      ? `${context.gameMode} — ${context.lcuGameMode === "KIWI" ? "Mayhem (KIWI)" : context.lcuGameMode}`
+      : context.gameMode;
+  sections.push(`## Game Mode: ${modeLabel}`);
   sections.push(
     `## Game Time: ${Math.floor(context.gameTime / 60)}:${String(Math.floor(context.gameTime % 60)).padStart(2, "0")}`
   );

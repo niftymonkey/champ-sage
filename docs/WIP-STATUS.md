@@ -3,9 +3,9 @@
 **Branch:** feat/11-coaching-engine
 **Last updated:** 2026-03-24
 
-## Current Focus: Prompt Enrichments #3-5
+## Current Focus: Live Testing
 
-Data quality fixes are complete. Prompt enrichments #1 and #2 are implemented. Continuing evaluation of remaining enrichments.
+All planned coaching quality improvements are implemented. Ready for live ARAM Mayhem testing to validate the improvements in-game.
 
 ## Prompt Enrichment Improvements (this session)
 
@@ -81,13 +81,13 @@ The model sees `Bel'Veth: Melee | Fighter | HP: 610 (+105/lvl) | Armor: 32 (+4.7
 
 ## Prompt Enrichment Evaluation Status
 
-| #   | Enrichment                            | Status             | Outcome                                                                                                                          |
-| --- | ------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Augment role tags from set membership | Evaluated, skipped | Clean descriptions + set bonus context make explicit role tags redundant. Model can infer augment roles from descriptions.       |
-| 2   | Champion stat profile                 | Implemented        | Stat profile provides capabilities without prescribing role. Model reasons about build viability from base stats + game context. |
-| 3   | Game phase awareness                  | Not yet evaluated  | Could derive early/mid/late from gameTime. Need to discuss.                                                                      |
-| 4   | Team composition analysis             | Not yet evaluated  | Tested in variant B prompt, helped. Need to discuss implementation.                                                              |
-| 5   | Context compression                   | Not yet evaluated  | Enriched prompt used fewer tokens despite more structured knowledge. Need to discuss.                                            |
+| #   | Enrichment                            | Status              | Outcome                                                                                                                                                  |
+| --- | ------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Augment role tags from set membership | Evaluated, skipped  | Clean descriptions + set bonus context make explicit role tags redundant. Model can infer augment roles from descriptions.                               |
+| 2   | Champion stat profile                 | Implemented         | Stat profile provides capabilities without prescribing role. Model reasons about build viability from base stats + game context.                         |
+| 3   | Game phase awareness                  | Evaluated, skipped  | Game time already in prompt. No observed failures from phase confusion. Model handles timing fine from existing data. Revisit if testing reveals issues. |
+| 4   | Team composition analysis             | Implemented         | Role breakdown with gap detection + enemy damage profile with resistance guidance (all AD/AP/mixed).                                                     |
+| 5   | Context compression                   | Evaluated, deferred | Prompts are ~1,000-1,300 tokens — well within budget. No latency issues. Will revisit if we move to local/open-weight models or see token pressure.      |
 
 ## What's Built (complete list)
 
@@ -95,7 +95,7 @@ The model sees `Bel'Veth: Melee | Fighter | HP: 610 (+105/lvl) | Armor: 32 (+4.7
 
 - model-config.ts — GPT-5.4 mini via Vercel AI SDK v6
 - context-assembler.ts — builds CoachingContext from LiveGameState + LoadedGameData, includes champion stat profile
-- prompts.ts — mode-aware system prompt (KIWI detection), strict length rules, per-card re-roll mechanic, set bonus progress, chosen augment re-injection
+- prompts.ts — mode-aware system prompt (KIWI detection), strict length rules, per-card re-roll mechanic, set bonus progress, chosen augment re-injection, team analysis, explicit Mayhem mode label
 - recommendation-engine.ts — generateText with Output.object, logs to data-dump/coaching-{timestamp}.log
 - schemas.ts — CoachingResponse structured output schema
 - types.ts — CoachingContext (with augmentSets, CoachingItem with sets), CoachingQuery, CoachingResponse, CoachingExchange
@@ -131,6 +131,8 @@ The model sees `Bel'Veth: Melee | Fighter | HP: 610 (+105/lvl) | Armor: 32 (+4.7
 - discover-candidates.ts — PickAI model selection
 - test-prompt-quality.ts — A/B prompt comparison script
 - audit-augments.ts — checks all 202 augments for markup artifacts
+- preview-prompts.ts — shows full assembled prompts for test scenarios, optionally runs through model
+- consistency-test.ts — runs scenarios 3x each to check response consistency
 
 ## ARAM Mayhem Testing Results
 
@@ -217,7 +219,11 @@ Key files to read:
 - This file (docs/WIP-STATUS.md)
 - docs/coaching-engine.md — technical design
 - docs/champ-sage-coaching-brainstorm.md — brainstorm on knowledge vs reasoning
-- scripts/test-prompt-quality.ts — prompt comparison test script
+- scripts/test-prompt-quality.ts — original A/B prompt comparison (pre-improvement baseline)
+- scripts/preview-prompts.ts — view full assembled prompts with all improvements
+- scripts/consistency-test.ts — run scenarios 3x to verify response consistency
 - scripts/audit-augments.ts — augment data quality checker
+
+Next: live test in ARAM Mayhem. If results are good, close out enrichment work and move to remaining known issues or new features.
 
 Continue with: evaluating prompt enrichments #3 (game phase awareness), #4 (team composition analysis), #5 (context compression).

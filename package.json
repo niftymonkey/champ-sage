@@ -14,6 +14,7 @@
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
     "discover-candidates": "tsx scripts/discover-candidates.ts",
     "audit-augments": "tsx scripts/audit-augments.ts",
+    "preview-prompts": "tsx scripts/preview-prompts.ts",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
