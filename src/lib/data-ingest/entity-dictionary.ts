@@ -10,6 +10,8 @@ interface NameEntry {
   name: string;
   type: EntityMatch["type"];
   nameLower: string;
+  /** Punctuation-stripped lowercase name, precomputed for matching */
+  nameStripped: string;
 }
 
 export function buildEntityDictionary(
@@ -23,33 +25,44 @@ export function buildEntityDictionary(
   const augmentNames: string[] = [];
 
   for (const champ of champions.values()) {
+    const nameLower = champ.name.toLowerCase();
     entries.push({
       name: champ.name,
       type: "champion",
-      nameLower: champ.name.toLowerCase(),
+      nameLower,
+      nameStripped: nameLower.replace(/[^a-z0-9\s]/g, ""),
     });
     championNames.push(champ.name);
   }
 
   for (const item of items.values()) {
+    const nameLower = item.name.toLowerCase();
     entries.push({
       name: item.name,
       type: "item",
-      nameLower: item.name.toLowerCase(),
+      nameLower,
+      nameStripped: nameLower.replace(/[^a-z0-9\s]/g, ""),
     });
     itemNames.push(item.name);
   }
 
   for (const aug of augments.values()) {
+    const nameLower = aug.name.toLowerCase();
     entries.push({
       name: aug.name,
       type: "augment",
-      nameLower: aug.name.toLowerCase(),
+      nameLower,
+      nameStripped: nameLower.replace(/[^a-z0-9\s]/g, ""),
     });
     augmentNames.push(aug.name);
   }
 
   const allNames = [...championNames, ...itemNames, ...augmentNames];
+
+  // Precompute sorted entries for findInText (longest name first)
+  const sortedByLength = [...entries].sort(
+    (a, b) => b.nameLower.length - a.nameLower.length
+  );
 
   return {
     allNames,
@@ -59,15 +72,19 @@ export function buildEntityDictionary(
     search(query: string): EntityMatch[] {
       return fuzzySearch(entries, query);
     },
+    findInText(text: string): EntityMatch[] {
+      return findEntitiesInText(sortedByLength, text);
+    },
   };
 }
 
 function fuzzySearch(entries: NameEntry[], query: string): EntityMatch[] {
   const queryLower = query.toLowerCase();
+  const queryStripped = queryLower.replace(/[^a-z0-9\s]/g, "");
   const results: EntityMatch[] = [];
 
   for (const entry of entries) {
-    const score = fuzzyScore(entry.nameLower, queryLower);
+    const score = fuzzyScore(entry, queryLower, queryStripped);
     if (score > 0) {
       results.push({ name: entry.name, type: entry.type, score });
     }
@@ -80,18 +97,20 @@ function fuzzySearch(entries: NameEntry[], query: string): EntityMatch[] {
 /**
  * Score how well a query matches a name. Returns 0-1.
  * - 1.0: exact match
- * - 0.9: case-insensitive exact match
+ * - 0.9: case-insensitive exact match (punctuation-stripped)
  * - 0.8: name starts with query
  * - 0.7: name contains query as a substring
  * - 0.3-0.6: fuzzy character match (all query chars appear in order)
  * - 0: no match
  */
-function fuzzyScore(nameLower: string, queryLower: string): number {
-  if (nameLower === queryLower) return 1;
+function fuzzyScore(
+  entry: NameEntry,
+  queryLower: string,
+  queryStripped: string
+): number {
+  if (entry.nameLower === queryLower) return 1;
 
-  // Strip common punctuation for matching (e.g., "rabadons" vs "rabadon's")
-  const nameStripped = nameLower.replace(/[^a-z0-9\s]/g, "");
-  const queryStripped = queryLower.replace(/[^a-z0-9\s]/g, "");
+  const nameStripped = entry.nameStripped;
 
   if (nameStripped === queryStripped) return 0.9;
   if (nameStripped.startsWith(queryStripped)) return 0.8;
@@ -117,4 +136,57 @@ function fuzzyScore(nameLower: string, queryLower: string): number {
   }
 
   return 0;
+}
+
+/**
+ * Find entity names mentioned within a block of text.
+ * Unlike fuzzySearch (which matches a short query against entity names),
+ * this scans text for occurrences of known entity names.
+ *
+ * Returns matches sorted by name length (longest first) to prefer
+ * "Upgrade Collector" over "Collector" when both appear.
+ */
+function findEntitiesInText(
+  sortedEntries: NameEntry[],
+  text: string
+): EntityMatch[] {
+  const textLower = text.toLowerCase();
+  const textStripped = textLower.replace(/[^a-z0-9\s]/g, "");
+  const results: EntityMatch[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of sortedEntries) {
+    if (seen.has(entry.nameLower)) continue;
+
+    const nameStripped = entry.nameStripped;
+
+    // Direct substring match
+    const directMatch =
+      textLower.includes(entry.nameLower) ||
+      textStripped.includes(nameStripped);
+
+    // Prefix-stripped match: augment names like "Quest: Urf's Champion"
+    // should match when the user says "Urf's Champion"
+    let prefixMatch = false;
+    if (!directMatch) {
+      const colonIdx = nameStripped.indexOf(" ");
+      if (entry.nameLower.includes(":") && colonIdx > 0) {
+        const afterPrefix = entry.nameLower
+          .replace(/^[^:]+:\s*/, "")
+          .replace(/[^a-z0-9\s]/g, "");
+        if (afterPrefix.length > 3 && textStripped.includes(afterPrefix)) {
+          prefixMatch = true;
+        }
+      }
+    }
+
+    if (directMatch || prefixMatch) {
+      if (nameStripped.length <= 3) continue;
+
+      results.push({ name: entry.name, type: entry.type, score: 1.0 });
+      seen.add(entry.nameLower);
+    }
+  }
+
+  return results;
 }

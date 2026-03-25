@@ -28,6 +28,7 @@ import {
 import { normalizeGameState } from "../game-state/normalize";
 import type { TauriBridge, LcuEventPayload } from "./tauri-bridge";
 import type { GameflowPhase, LiveGameState, EogStats } from "./types";
+import { formatGameTime } from "../format";
 
 const DISCOVERY_INTERVAL_MS = 3000;
 const POLL_INTERVAL_MS = 2000;
@@ -45,6 +46,20 @@ const NOISE_PREFIXES = [
   "/data-store/",
   "/entitlements/",
   "/lol-honor-v2/",
+  "/lol-chat/",
+  "/lol-loot/",
+  "/lol-regalia/",
+  "/lol-pre-end-of-game/",
+  "/lol-champion-mastery/",
+  "/lol-ranked/",
+  "/lol-clash/",
+  "/lol-collections/",
+  "/lol-cosmetics/",
+  "/lol-replays/",
+  "/lol-simple-dialog-messages/",
+  "/lol-premade-voice/",
+  "/riot-messaging-service/",
+  "/riotclient/",
 ];
 
 /** Parse raw EOG stats JSON from the LCU into our EogStats shape. */
@@ -85,6 +100,9 @@ export class ReactiveEngine {
   // Track current LCU credentials for fetch_lcu calls (EOG stats)
   private currentPort = 0;
   private currentToken = "";
+
+  // LCU game mode (KIWI for Mayhem, CLASSIC for SR, CHERRY for Arena)
+  private lcuGameMode = "";
 
   // Error recovery state for Live Client Data polling
   private consecutiveFailures = 0;
@@ -200,16 +218,18 @@ export class ReactiveEngine {
     );
 
     // Layer 3: WebSocket event splits
-    // Log all raw WebSocket events (including noise)
+    // Log non-noise WebSocket events only
     this.subscription.add(
       this.wsEvents$.subscribe((evt) => {
         const isNoise = NOISE_PREFIXES.some((prefix) =>
           evt.uri.startsWith(prefix)
         );
-        debugInput$.next({
-          source: "websocket",
-          summary: `${evt.event_type} ${evt.uri}${isNoise ? " [noise]" : ""}`,
-        });
+        if (!isNoise) {
+          debugInput$.next({
+            source: "websocket",
+            summary: `${evt.event_type} ${evt.uri}`,
+          });
+        }
       })
     );
 
@@ -273,6 +293,16 @@ export class ReactiveEngine {
         )
         .subscribe((data) => {
           gameLifecycle$.next({ type: "session", data });
+          // Extract LCU game mode from session (e.g., KIWI for Mayhem)
+          const session = data as Record<string, unknown> | null;
+          const gameData = session?.gameData as
+            | Record<string, unknown>
+            | undefined;
+          const queue = gameData?.queue as Record<string, unknown> | undefined;
+          const lcuMode = queue?.gameMode as string | undefined;
+          if (lcuMode) {
+            this.lcuGameMode = lcuMode;
+          }
         })
     );
 
@@ -282,8 +312,8 @@ export class ReactiveEngine {
         .pipe(
           switchMap((phase) => {
             if (phase !== "InProgress") {
-              // Reset live game state when leaving InProgress
               liveGameState$.next(createDefaultLiveGameState());
+              this.lcuGameMode = "";
 
               // Clear any active error notification when leaving InProgress
               if (this.notified) {
@@ -451,11 +481,7 @@ export class ReactiveEngine {
               const normalized = normalizeGameState(raw);
               debugInput$.next({
                 source: "riot-api",
-                summary: `Poll OK — ${normalized.gameMode} ${Math.floor(normalized.gameTime / 60)}:${Math.floor(
-                  normalized.gameTime % 60
-                )
-                  .toString()
-                  .padStart(2, "0")} ${normalized.players.length}p`,
+                summary: `Poll OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`,
               });
               return { success: true as const, data: normalized };
             },
@@ -489,6 +515,7 @@ export class ReactiveEngine {
                 activePlayer: result.data.activePlayer,
                 players: result.data.players,
                 gameMode: result.data.gameMode,
+                lcuGameMode: this.lcuGameMode,
                 gameTime: result.data.gameTime,
               };
               subscriber.next(gameState);

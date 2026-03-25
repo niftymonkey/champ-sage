@@ -83,16 +83,66 @@ const mockAugments = new Map<string, Augment>([
       mode: "mayhem",
     },
   ],
+  [
+    "upgrade collector",
+    {
+      name: "Upgrade Collector",
+      description: "Upgrades Collector item",
+      tier: "Gold",
+      sets: [],
+      mode: "mayhem",
+    },
+  ],
+  [
+    "goredrink",
+    {
+      name: "Goredrink",
+      description: "Gain 15% omnivamp",
+      tier: "Silver",
+      sets: [],
+      mode: "mayhem",
+    },
+  ],
+  [
+    "demon's dance",
+    {
+      name: "Demon's Dance",
+      description: "Gain Grasp of the Undying",
+      tier: "Gold",
+      sets: [],
+      mode: "mayhem",
+    },
+  ],
+  [
+    "self destruct",
+    {
+      name: "Self Destruct",
+      description: "Explode on death",
+      tier: "Silver",
+      sets: ["Dive Bomb"],
+      mode: "mayhem",
+    },
+  ],
+  [
+    "quest: urf's champion",
+    {
+      name: "Quest: Urf's Champion",
+      description: "Complete the quest to become Urf's Champion",
+      tier: "Prismatic",
+      sets: [],
+      mode: "mayhem",
+    },
+  ],
 ]);
 
 describe("buildEntityDictionary", () => {
   const dict = buildEntityDictionary(mockChampions, mockItems, mockAugments);
 
   it("includes all entity names", () => {
-    expect(dict.allNames).toHaveLength(6);
+    expect(dict.allNames).toHaveLength(11);
     expect(dict.champions).toHaveLength(2);
     expect(dict.items).toHaveLength(2);
-    expect(dict.augments).toHaveLength(2);
+    expect(dict.augments).toHaveLength(7);
   });
 
   it("contains correct champion names", () => {
@@ -145,5 +195,67 @@ describe("buildEntityDictionary", () => {
     for (let i = 1; i < results.length; i++) {
       expect(results[i].score).toBeLessThanOrEqual(results[i - 1].score);
     }
+  });
+
+  describe("findInText", () => {
+    it("finds augment names mentioned in a sentence", () => {
+      const results = dict.findInText(
+        "My Augment options are Upgrade Collector, Goredrink, and Typhoon."
+      );
+      const names = results.map((r) => r.name);
+      expect(names).toContain("Upgrade Collector");
+      expect(names).toContain("Goredrink");
+      expect(names).toContain("Typhoon");
+    });
+
+    it("finds augments with punctuation in names", () => {
+      const results = dict.findInText("I got Demons Dance and Self Destruct.");
+      const names = results.map((r) => r.name);
+      expect(names).toContain("Demon's Dance");
+      expect(names).toContain("Self Destruct");
+    });
+
+    it("finds champion names in text", () => {
+      const results = dict.findInText(
+        "Miss Fortune is killing us, what do I do about Aurelion Sol?"
+      );
+      const names = results.map((r) => r.name);
+      expect(names).toContain("Miss Fortune");
+      expect(names).toContain("Aurelion Sol");
+    });
+
+    it("finds item names in text", () => {
+      const results = dict.findInText(
+        "Should I buy Rabadons Deathcap or Zhonyas Hourglass?"
+      );
+      const names = results.map((r) => r.name);
+      expect(names).toContain("Rabadon's Deathcap");
+      expect(names).toContain("Zhonya's Hourglass");
+    });
+
+    it("returns empty array when no entities found", () => {
+      const results = dict.findInText("What should I do next in this game?");
+      expect(results).toHaveLength(0);
+    });
+
+    it("does not duplicate results", () => {
+      const results = dict.findInText("Typhoon is great, I love Typhoon");
+      const typhoons = results.filter((r) => r.name === "Typhoon");
+      expect(typhoons).toHaveLength(1);
+    });
+
+    it("prefers longer matches over shorter ones", () => {
+      const results = dict.findInText("Upgrade Collector is my choice");
+      const names = results.map((r) => r.name);
+      expect(names).toContain("Upgrade Collector");
+    });
+
+    it("matches augments with prefixes like Quest:", () => {
+      const results = dict.findInText(
+        "Protein Shake, Glass Cannon, or Urf's Champion"
+      );
+      const names = results.map((r) => r.name);
+      expect(names).toContain("Quest: Urf's Champion");
+    });
   });
 });

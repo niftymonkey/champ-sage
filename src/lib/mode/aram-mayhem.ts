@@ -7,6 +7,7 @@ import type {
   PlayerModeContext,
   TeamComposition,
 } from "./types";
+import { LCU_MODE_MAYHEM } from "./types";
 
 export const aramMayhemMode: GameMode = {
   id: "aram-mayhem",
@@ -15,7 +16,7 @@ export const aramMayhemMode: GameMode = {
   augmentSelectionLevels: [1, 7, 11, 15],
 
   matches(gameMode: string): boolean {
-    return gameMode === "ARAM";
+    return gameMode === "ARAM" || gameMode === LCU_MODE_MAYHEM;
   },
 
   buildContext(gameState: GameState, gameData: LoadedGameData): ModeContext {

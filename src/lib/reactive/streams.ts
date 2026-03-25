@@ -12,6 +12,7 @@ function createDefaultLiveGameState(): LiveGameState {
     activePlayer: null,
     players: [],
     gameMode: "",
+    lcuGameMode: "",
     gameTime: 0,
     champSelect: null,
     eogStats: null,
@@ -45,7 +46,8 @@ export interface DebugInputEvent {
     | "riot-api"
     | "lcu-rest"
     | "initial-state"
-    | "voice";
+    | "voice"
+    | "llm";
   summary: string;
   detail?: string;
 }

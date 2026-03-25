@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { skip } from "rxjs/operators";
 import { detailedDiff } from "deep-object-diff";
+import { formatGameTime } from "../lib/format";
 import {
   gameLifecycle$,
   liveGameState$,
@@ -118,9 +119,7 @@ function summarizeLiveGameState(state: LiveGameState): string {
   const parts = [
     state.activePlayer.championName,
     `Lv${state.activePlayer.level}`,
-    `${Math.floor(state.gameTime / 60)}:${Math.floor(state.gameTime % 60)
-      .toString()
-      .padStart(2, "0")}`,
+    formatGameTime(state.gameTime),
   ];
   if (state.gameMode) parts.push(state.gameMode);
   if (state.players.length > 0) parts.push(`${state.players.length}p`);
@@ -140,6 +139,7 @@ const INPUT_COLORS: Record<string, string> = {
   "lcu-rest": "#60a5fa",
   "initial-state": "#fbbf24",
   voice: "#ec4899",
+  llm: "#f472b6",
 };
 
 const OUTPUT_COLORS: Record<string, string> = {
@@ -150,6 +150,22 @@ const OUTPUT_COLORS: Record<string, string> = {
 };
 
 const MAX_LOG_ENTRIES = 100;
+
+function formatBufferAsText(entries: LogEntry[]): string {
+  return entries
+    .map((e) => {
+      let line = `[${e.timestamp}] [${e.stream}] ${e.summary}`;
+      if (e.detail) {
+        line += `\n${e.detail}`;
+      }
+      return line;
+    })
+    .join("\n\n");
+}
+
+function copyToClipboard(text: string): void {
+  navigator.clipboard.writeText(text);
+}
 
 // ---- Module-level log buffers (persist across tab switches) ----
 
@@ -261,27 +277,39 @@ export function DebugPanel() {
     useState<LiveGameState | null>(null);
   const inputLogEndRef = useRef<HTMLDivElement>(null);
   const outputLogEndRef = useRef<HTMLDivElement>(null);
-  const prevInputLen = useRef(inputBuffer.length);
-  const prevOutputLen = useRef(outputBuffer.length);
 
   useEffect(() => {
     // Re-render when buffers change
     const listener = () => setRenderTick((t) => t + 1);
     listeners.add(listener);
 
-    // Seed from current BehaviorSubject values
-    const currentLifecycle = gameLifecycle$.getValue();
-    if (currentLifecycle.type === "connection")
-      setLcuConnected(currentLifecycle.connected);
-    if (currentLifecycle.type === "phase") {
-      setCurrentPhase(currentLifecycle.phase);
-      setPollingActive(currentLifecycle.phase === "InProgress");
+    // Seed from output buffer history — the BehaviorSubject only holds the
+    // latest event which might be a session/lobby, not connection/phase.
+    // Scan the buffer for the most recent connection and phase events.
+    for (let i = outputBuffer.length - 1; i >= 0; i--) {
+      const entry = outputBuffer[i];
+      if (entry.stream === "lifecycle") {
+        if (entry.summary === "Connected" || entry.summary === "Disconnected") {
+          setLcuConnected(entry.summary === "Connected");
+          break;
+        }
+      }
+    }
+    for (let i = outputBuffer.length - 1; i >= 0; i--) {
+      const entry = outputBuffer[i];
+      if (entry.stream === "lifecycle" && entry.summary.startsWith("Phase: ")) {
+        const phase = entry.summary.replace("Phase: ", "");
+        setCurrentPhase(phase);
+        setPollingActive(phase === "InProgress");
+        break;
+      }
     }
     setGameStateSnapshot(liveGameState$.getValue());
 
-    // Status card subscriptions (need component state)
+    // Status card subscriptions — no skip(1) so BehaviorSubject replay
+    // catches us up, and subsequent events update in real time
     const subs = [
-      gameLifecycle$.pipe(skip(1)).subscribe((event) => {
+      gameLifecycle$.subscribe((event) => {
         if (event.type === "connection") setLcuConnected(event.connected);
         if (event.type === "phase") {
           setCurrentPhase(event.phase);
@@ -289,7 +317,7 @@ export function DebugPanel() {
         }
       }),
 
-      liveGameState$.pipe(skip(1)).subscribe((state) => {
+      liveGameState$.subscribe((state) => {
         setGameStateSnapshot(state);
       }),
     ];
@@ -300,19 +328,15 @@ export function DebugPanel() {
     };
   }, []);
 
-  // Auto-scroll when new entries arrive
+  // Auto-scroll: always scroll to bottom after each render.
+  // Uses "instant" instead of "smooth" to avoid animation races
+  // when multiple entries arrive in quick succession.
   useEffect(() => {
-    if (inputBuffer.length > prevInputLen.current) {
-      inputLogEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-    prevInputLen.current = inputBuffer.length;
+    inputLogEndRef.current?.scrollIntoView({ behavior: "instant" });
   });
 
   useEffect(() => {
-    if (outputBuffer.length > prevOutputLen.current) {
-      outputLogEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-    prevOutputLen.current = outputBuffer.length;
+    outputLogEndRef.current?.scrollIntoView({ behavior: "instant" });
   });
 
   const filteredInputLog = showNoise
@@ -363,16 +387,26 @@ export function DebugPanel() {
               noise
             </label>
             {inputBuffer.length > 0 && (
-              <button
-                className="debug-clear-btn"
-                onClick={() => {
-                  inputBuffer.length = 0;
-                  bufferVersion++;
-                  notifyListeners();
-                }}
-              >
-                Clear
-              </button>
+              <>
+                <button
+                  className="debug-clear-btn"
+                  onClick={() =>
+                    copyToClipboard(formatBufferAsText(inputBuffer))
+                  }
+                >
+                  Copy All
+                </button>
+                <button
+                  className="debug-clear-btn"
+                  onClick={() => {
+                    inputBuffer.length = 0;
+                    bufferVersion++;
+                    notifyListeners();
+                  }}
+                >
+                  Clear
+                </button>
+              </>
             )}
           </div>
           <div className="debug-source-legend">
@@ -411,16 +445,26 @@ export function DebugPanel() {
             App Observables
             <span className="debug-log-count">{outputBuffer.length}</span>
             {outputBuffer.length > 0 && (
-              <button
-                className="debug-clear-btn"
-                onClick={() => {
-                  outputBuffer.length = 0;
-                  bufferVersion++;
-                  notifyListeners();
-                }}
-              >
-                Clear
-              </button>
+              <>
+                <button
+                  className="debug-clear-btn"
+                  onClick={() =>
+                    copyToClipboard(formatBufferAsText(outputBuffer))
+                  }
+                >
+                  Copy All
+                </button>
+                <button
+                  className="debug-clear-btn"
+                  onClick={() => {
+                    outputBuffer.length = 0;
+                    bufferVersion++;
+                    notifyListeners();
+                  }}
+                >
+                  Clear
+                </button>
+              </>
             )}
           </div>
           <div className="debug-source-legend">

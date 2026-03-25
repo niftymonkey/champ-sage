@@ -6,7 +6,11 @@ import { useLiveGameState } from "./hooks/useLiveGameState";
 import { useUserInput } from "./hooks/useUserInput";
 import { useVoiceInput } from "./hooks/useVoiceInput";
 import { useZoom } from "./hooks/useZoom";
-import { initializeReactiveEngine } from "./lib/reactive";
+import {
+  initializeReactiveEngine,
+  debugInput$,
+  userInput$,
+} from "./lib/reactive";
 import type { ReactiveEngine } from "./lib/reactive";
 import { WhisperProvider } from "./lib/voice/stt-provider";
 import { DataBrowser } from "./components/DataBrowser";
@@ -16,6 +20,7 @@ import {
   buildEffectiveGameState,
 } from "./lib/mode";
 import { addSelectedAugment } from "./lib/mode/augment-selection";
+import { ensureAbilities } from "./lib/data-ingest/ensure-abilities";
 import type { Augment } from "./lib/data-ingest/types";
 import type { GameState } from "./lib/game-state/types";
 
@@ -53,6 +58,22 @@ function App() {
   const voice = useVoiceInput(whisperProvider);
 
   const [selectedAugments, setSelectedAugments] = useState<Augment[]>([]);
+  const abilitiesFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!data || liveGame.players.length === 0) return;
+    if (abilitiesFetchedRef.current) return;
+    abilitiesFetchedRef.current = true;
+    const championNames = liveGame.players.map((p) => p.championName);
+    ensureAbilities(data, championNames, data.version).catch(() => {});
+
+    // Log game detection info for debugging
+    const detectedMode = registry.detect(liveGame.gameMode);
+    debugInput$.next({
+      source: "discovery",
+      summary: `Game detected: ${liveGame.gameMode} | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.join(", ")} | augments in data: ${data.augments.size}`,
+    });
+  }, [data, liveGame.players]);
 
   const prevPhaseRef = useRef<string | null>(null);
 
@@ -62,15 +83,28 @@ function App() {
       if (phase === "ChampSelect" || phase === "None") {
         if (prevPhaseRef.current !== phase) {
           setSelectedAugments([]);
+          abilitiesFetchedRef.current = false;
         }
       }
       prevPhaseRef.current = phase;
     }
   }, [lifecycle]);
 
+  useEffect(() => {
+    const sub = userInput$.subscribe((event) => {
+      if (event.type === "augment") {
+        setSelectedAugments((prev) => {
+          // Deduplicate: don't add if already selected (by name)
+          if (prev.some((a) => a.name === event.augment.name)) return prev;
+          return [...prev, event.augment];
+        });
+      }
+    });
+    return () => sub.unsubscribe();
+  }, []);
+
   const selectAugment = useCallback(
     (augment: Augment) => {
-      setSelectedAugments((prev) => [...prev, augment]);
       submit({ type: "augment", augment });
     },
     [submit]
@@ -96,6 +130,19 @@ function App() {
     gameMode: liveGame.gameMode,
     gameTime: liveGame.gameTime,
   };
+
+  const prevGameModeRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!data || gameState.status !== "connected") return;
+    const mode = gameState.gameMode;
+    if (mode === prevGameModeRef.current) return;
+    prevGameModeRef.current = mode;
+    const detectedMode = registry.detect(mode);
+    debugInput$.next({
+      source: "discovery",
+      summary: `Mode detection: gameMode="${mode}" → ${detectedMode ? detectedMode.displayName : "none"} | augments: ${detectedMode ? (detectedMode.buildContext(gameState, data).modeAugments?.size ?? 0) : 0}`,
+    });
+  }, [data, gameState]);
 
   const effectiveState = useMemo(() => {
     if (!data || gameState.status !== "connected") {

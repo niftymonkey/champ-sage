@@ -141,6 +141,8 @@ export interface EntityDictionary {
   items: string[];
   augments: string[];
   search(query: string): EntityMatch[];
+  /** Find entity names mentioned within a block of text */
+  findInText(text: string): EntityMatch[];
 }
 
 export interface EntityMatch {

@@ -348,9 +348,36 @@ h1 {
   align-items: baseline;
 }
 
+/* Game view layout: three sections */
+.game-view-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.game-view-top {
+  flex-shrink: 0;
+}
+
+.game-view-coaching {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-top: 0.0625rem solid #333;
+  border-bottom: 0.0625rem solid #333;
+  padding: 0.5rem 0;
+}
+
+.game-view-bottom {
+  flex-shrink: 0;
+  max-height: 40%;
+  overflow-y: auto;
+  padding-top: 0.5rem;
+}
+
 /* Game state */
 .game-status {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .game-status-label {
@@ -925,4 +952,69 @@ button.augment-card {
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* Coaching display */
+.coaching-display {
+  padding: 0.5em;
+}
+
+.coaching-thinking {
+  color: #fbbf24;
+  font-style: italic;
+  margin: 0;
+}
+
+.coaching-placeholder {
+  color: #555;
+  font-style: italic;
+  margin: 0;
+}
+
+.coaching-latest {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.coaching-question {
+  color: #888;
+  margin: 0;
+  font-size: 0.85em;
+}
+
+.coaching-answer {
+  color: #e0e0e0;
+  margin: 0;
+  font-size: 0.9em;
+}
+
+.coaching-label {
+  font-weight: 600;
+  color: #888;
+}
+
+.coaching-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  margin-top: 0.3em;
+}
+
+.coaching-pick {
+  display: flex;
+  gap: 0.5em;
+  padding: 0.3em 0.4em;
+  background: #1a1a1a;
+  border-radius: 0.25rem;
+}
+
+.coaching-pick-rank {
+  color: #888;
+  font-weight: bold;
+  min-width: 1.5em;
+}
+
+.coaching-pick-content {
+  flex: 1;
 }

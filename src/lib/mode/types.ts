@@ -5,6 +5,9 @@ import type {
   AugmentSetBonus,
   Item,
 } from "../data-ingest/types";
+
+/** LCU game mode string for ARAM Mayhem (Live Client API returns this instead of "ARAM") */
+export const LCU_MODE_MAYHEM = "KIWI";
 import type {
   ActivePlayerRunes,
   ActivePlayerStats,

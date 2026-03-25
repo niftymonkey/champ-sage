@@ -36,3 +36,6 @@ vite.config.ts.timestamp-*
 
 # Data dumps
 data-dump/
+
+# "Current status" files
+**/STATUS.md

@@ -19,6 +19,7 @@ import { fetchArenaAugments } from "./sources/wiki-arena-augments";
 import { mergeAugmentIds } from "./sources/community-dragon";
 import { fetchAramOverrides } from "./sources/wiki-aram-overrides";
 import { getMayhemAugmentSets } from "./sources/mayhem-augment-sets";
+import { enrichQuestAugments } from "./sources/quest-augment-rewards";
 import { readCache, writeCache, mapToObject, objectToMap } from "./cache";
 import { buildEntityDictionary } from "./entity-dictionary";
 
@@ -87,6 +88,7 @@ export async function fetchAndCache(): Promise<LoadedGameData> {
   }
 
   await mergeAugmentIds(augments);
+  enrichQuestAugments(augments, items);
   mergeAramOverrides(champions, aramOverrideMap);
 
   const augmentSets = getMayhemAugmentSets();

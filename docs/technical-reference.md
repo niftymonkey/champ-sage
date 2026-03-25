@@ -477,3 +477,21 @@ Embedded in the ChampionData Lua module as `["aram"]` tables inside each champio
 `dmg_dealt` and `dmg_taken` are always present when the `aram` block exists. Other fields are optional and omitted when not modified.
 
 Many champions have `dmg_dealt: 1, dmg_taken: 1` (no actual change) — check for non-neutral values before displaying.
+
+## AI Recommendation Engine
+
+### Architecture
+
+The AI module (`src/lib/ai/`) uses Vercel AI SDK v6 with OpenAI's GPT-5.4 Mini for augment recommendations. Pattern: `generateText` with `Output.object` for structured JSON output via `jsonSchema`.
+
+### Key design decisions
+
+- **Context assembly is a pure function** — `assembleContext()` transforms `LiveGameState` + `LoadedGameData` into a flat `CoachingContext` suitable for LLM consumption. No side effects, fully testable.
+- **Prompt construction is pure** — `buildSystemPrompt()` and `buildUserPrompt()` are deterministic given inputs. Tested via string containment assertions.
+- **The recommendation engine is NOT unit tested** — it calls a real LLM. Only the pure functions around it are tested.
+- **Balance overrides are formatted as human-readable text** for the LLM (e.g., "Damage taken: -5%"), not raw multipliers (0.95).
+- **API key is via Vite env var** — `VITE_OPENAI_API_KEY` in `.env`, following the existing pattern for client-side env vars in Tauri apps.
+
+### Model selection
+
+GPT-5.4 Mini was selected via PickAI discovery (see `scripts/discover-candidates.ts`). Selected for cost/speed balance suitable for real-time coaching during gameplay.

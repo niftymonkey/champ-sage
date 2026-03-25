@@ -38,6 +38,8 @@ export interface LiveGameState {
   activePlayer: ActivePlayer | null;
   players: PlayerInfo[];
   gameMode: string;
+  /** LCU game mode (KIWI for Mayhem, CLASSIC for SR, CHERRY for Arena) — more specific than gameMode */
+  lcuGameMode: string;
   gameTime: number;
   champSelect: unknown | null;
   eogStats: EogStats | null;

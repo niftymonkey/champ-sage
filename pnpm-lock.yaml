@@ -7,6 +7,9 @@ settings:
 importers:
   .:
     dependencies:
+      "@ai-sdk/openai":
+        specifier: ^3.0.47
+        version: 3.0.47(zod@4.3.6)
       "@tauri-apps/api":
         specifier: ^2
         version: 2.10.1
@@ -16,6 +19,9 @@ importers:
       "@tauri-apps/plugin-opener":
         specifier: ^2
         version: 2.5.3
+      ai:
+        specifier: ^6.0.134
+        version: 6.0.134(zod@4.3.6)
       deep-object-diff:
         specifier: ^1.1.9
         version: 1.1.9
@@ -24,7 +30,7 @@ importers:
         version: 0.3.1
       openai:
         specifier: ^6.32.0
-        version: 6.32.0(ws@8.19.0)
+        version: 6.32.0(ws@8.19.0)(zod@4.3.6)
       react:
         specifier: ^19.1.0
         version: 19.2.4
@@ -59,6 +65,9 @@ importers:
       "@vitejs/plugin-react":
         specifier: ^4.6.0
         version: 4.7.0(vite@7.3.1(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2))
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -68,6 +77,9 @@ importers:
       lint-staged:
         specifier: ^16.4.0
         version: 16.4.0
+      pickai:
+        specifier: ^2.1.1
+        version: 2.1.1
       prettier:
         specifier: ^3.8.1
         version: 3.8.1
@@ -93,6 +105,40 @@ packages:
       {
         integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==,
       }
+
+  "@ai-sdk/gateway@3.0.77":
+    resolution:
+      {
+        integrity: sha512-UdwIG2H2YMuntJQ5L+EmED5XiwnlvDT3HOmKfVFxR4Nq/RSLFA/HcchhwfNXHZ5UJjyuL2VO0huLbWSZ9ijemQ==,
+      }
+    engines: { node: ">=18" }
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  "@ai-sdk/openai@3.0.47":
+    resolution:
+      {
+        integrity: sha512-bRsb2sDN5u+pKO3Kdr0flpxtL+cPwQ2uCo/pVyzIbj2I4AkKAokJHhw5JWLVOeEwdlYzWfmv+hzaiGarzUcTFQ==,
+      }
+    engines: { node: ">=18" }
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  "@ai-sdk/provider-utils@4.0.21":
+    resolution:
+      {
+        integrity: sha512-MtFUYI1/8mgDvRmaBDjbLJPFFrMG777AvSgyIFQtZHIMzm88R/12vYBBpnk7pfiWLFE1DSZzY4WDYzGbKAcmiw==,
+      }
+    engines: { node: ">=18" }
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  "@ai-sdk/provider@3.0.8":
+    resolution:
+      {
+        integrity: sha512-oGMAgGoQdBXbZqNG0Ze56CHjDZ1IDYOwGYxYjO5KLSlz5HiNQ9udIXsPZ61VWaHGZ5XW/jyjmr6t2xz2jGVwbQ==,
+      }
+    engines: { node: ">=18" }
 
   "@asamuzakjp/css-color@3.2.0":
     resolution:
@@ -555,6 +601,13 @@ packages:
         integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==,
       }
 
+  "@opentelemetry/api@1.9.0":
+    resolution:
+      {
+        integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==,
+      }
+    engines: { node: ">=8.0.0" }
+
   "@rolldown/pluginutils@1.0.0-beta.27":
     resolution:
       {
@@ -760,6 +813,12 @@ packages:
       }
     cpu: [x64]
     os: [win32]
+
+  "@standard-schema/spec@1.1.0":
+    resolution:
+      {
+        integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==,
+      }
 
   "@tauri-apps/api@2.10.1":
     resolution:
@@ -998,6 +1057,13 @@ packages:
         integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==,
       }
 
+  "@vercel/oidc@3.1.0":
+    resolution:
+      {
+        integrity: sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w==,
+      }
+    engines: { node: ">= 20" }
+
   "@vitejs/plugin-react@4.7.0":
     resolution:
       {
@@ -1063,6 +1129,15 @@ packages:
         integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==,
       }
     engines: { node: ">= 14" }
+
+  ai@6.0.134:
+    resolution:
+      {
+        integrity: sha512-YalNEaavld/kE444gOcsMKXdVVRGEe0SK77fAFcWYcqLg+a7xKnEet8bdfrEAJTfnMjj01rhgrIL10903w1a5Q==,
+      }
+    engines: { node: ">=18" }
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
 
   ansi-escapes@7.3.0:
     resolution:
@@ -1271,6 +1346,13 @@ packages:
         integrity: sha512-7ZgogeTnjuHbo+ct10G9Ffp0mif17idi0IyWNVA/wcwcm7NPOD/WEHVP3n7n3MhXqxoIYm8d6MuZohYWIZ4T3w==,
       }
 
+  dotenv@17.3.1:
+    resolution:
+      {
+        integrity: sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA==,
+      }
+    engines: { node: ">=12" }
+
   electron-to-chromium@1.5.321:
     resolution:
       {
@@ -1329,6 +1411,13 @@ packages:
       {
         integrity: sha512-mlsTRyGaPBjPedk6Bvw+aqbsXDtoAyAzm5MO7JgU+yVRyMQ5O8bD4Kcci7BS85f93veegeCPkL8R4GLClnjLFw==,
       }
+
+  eventsource-parser@3.0.6:
+    resolution:
+      {
+        integrity: sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg==,
+      }
+    engines: { node: ">=18.0.0" }
 
   expect-type@1.3.0:
     resolution:
@@ -1464,6 +1553,12 @@ packages:
       }
     engines: { node: ">=6" }
     hasBin: true
+
+  json-schema@0.4.0:
+    resolution:
+      {
+        integrity: sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==,
+      }
 
   json5@2.2.3:
     resolution:
@@ -1613,6 +1708,13 @@ packages:
         integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==,
       }
     engines: { node: ">= 14.16" }
+
+  pickai@2.1.1:
+    resolution:
+      {
+        integrity: sha512-QsmcG+INi8C5e+EU+Lym7NeW8N7wNvBj53D8MnBfnyuR0Qv7wksLauO6NHoBvKjzzjhxbmKPbaOfb4NQjMy4uA==,
+      }
+    engines: { node: ">=18" }
 
   picocolors@1.1.1:
     resolution:
@@ -2135,8 +2237,38 @@ packages:
     engines: { node: ">= 14.6" }
     hasBin: true
 
+  zod@4.3.6:
+    resolution:
+      {
+        integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==,
+      }
+
 snapshots:
   "@adobe/css-tools@4.4.4": {}
+
+  "@ai-sdk/gateway@3.0.77(zod@4.3.6)":
+    dependencies:
+      "@ai-sdk/provider": 3.0.8
+      "@ai-sdk/provider-utils": 4.0.21(zod@4.3.6)
+      "@vercel/oidc": 3.1.0
+      zod: 4.3.6
+
+  "@ai-sdk/openai@3.0.47(zod@4.3.6)":
+    dependencies:
+      "@ai-sdk/provider": 3.0.8
+      "@ai-sdk/provider-utils": 4.0.21(zod@4.3.6)
+      zod: 4.3.6
+
+  "@ai-sdk/provider-utils@4.0.21(zod@4.3.6)":
+    dependencies:
+      "@ai-sdk/provider": 3.0.8
+      "@standard-schema/spec": 1.1.0
+      eventsource-parser: 3.0.6
+      zod: 4.3.6
+
+  "@ai-sdk/provider@3.0.8":
+    dependencies:
+      json-schema: 0.4.0
 
   "@asamuzakjp/css-color@3.2.0":
     dependencies:
@@ -2377,6 +2509,8 @@ snapshots:
       "@jridgewell/resolve-uri": 3.1.2
       "@jridgewell/sourcemap-codec": 1.5.5
 
+  "@opentelemetry/api@1.9.0": {}
+
   "@rolldown/pluginutils@1.0.0-beta.27": {}
 
   "@rollup/rollup-android-arm-eabi@4.59.0":
@@ -2453,6 +2587,8 @@ snapshots:
 
   "@rollup/rollup-win32-x64-msvc@4.59.0":
     optional: true
+
+  "@standard-schema/spec@1.1.0": {}
 
   "@tauri-apps/api@2.10.1": {}
 
@@ -2591,6 +2727,8 @@ snapshots:
     dependencies:
       "@types/node": 25.5.0
 
+  "@vercel/oidc@3.1.0": {}
+
   "@vitejs/plugin-react@4.7.0(vite@7.3.1(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2))":
     dependencies:
       "@babel/core": 7.29.0
@@ -2646,6 +2784,14 @@ snapshots:
       tinyrainbow: 2.0.0
 
   agent-base@7.1.4: {}
+
+  ai@6.0.134(zod@4.3.6):
+    dependencies:
+      "@ai-sdk/gateway": 3.0.77(zod@4.3.6)
+      "@ai-sdk/provider": 3.0.8
+      "@ai-sdk/provider-utils": 4.0.21(zod@4.3.6)
+      "@opentelemetry/api": 1.9.0
+      zod: 4.3.6
 
   ansi-escapes@7.3.0:
     dependencies:
@@ -2736,6 +2882,8 @@ snapshots:
 
   dom-accessibility-api@0.6.3: {}
 
+  dotenv@17.3.1: {}
+
   electron-to-chromium@1.5.321: {}
 
   emoji-regex@10.6.0: {}
@@ -2782,6 +2930,8 @@ snapshots:
       "@types/estree": 1.0.8
 
   eventemitter3@5.0.4: {}
+
+  eventsource-parser@3.0.6: {}
 
   expect-type@1.3.0: {}
 
@@ -2865,6 +3015,8 @@ snapshots:
 
   jsesc@3.1.0: {}
 
+  json-schema@0.4.0: {}
+
   json5@2.2.3: {}
 
   lint-staged@16.4.0:
@@ -2925,9 +3077,10 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  openai@6.32.0(ws@8.19.0):
+  openai@6.32.0(ws@8.19.0)(zod@4.3.6):
     optionalDependencies:
       ws: 8.19.0
+      zod: 4.3.6
 
   parse5@7.3.0:
     dependencies:
@@ -2936,6 +3089,8 @@ snapshots:
   pathe@2.0.3: {}
 
   pathval@2.0.1: {}
+
+  pickai@2.1.1: {}
 
   picocolors@1.1.1: {}
 
@@ -3240,3 +3395,5 @@ snapshots:
   yallist@3.1.1: {}
 
   yaml@2.8.2: {}
+
+  zod@4.3.6: {}
