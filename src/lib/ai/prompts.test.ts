@@ -21,7 +21,12 @@ function createContext(
         description: "Enhances Movement Speed and Magic Penetration.",
       },
     ],
-    currentAugments: ["Jeweled Gauntlet"],
+    currentAugments: [
+      {
+        name: "Jeweled Gauntlet",
+        description: "Your abilities can critically strike.",
+      },
+    ],
     enemyTeam: [
       {
         champion: "Vayne",
@@ -141,9 +146,10 @@ describe("buildUserPrompt", () => {
       expect(prompt).toContain("Blade of the Ruined King");
     });
 
-    it("includes current augments", () => {
+    it("includes current augments with descriptions", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Jeweled Gauntlet");
+      expect(prompt).toContain("Your abilities can critically strike.");
     });
 
     it("includes game mode", () => {

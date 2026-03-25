@@ -4,6 +4,7 @@ import type {
   CoachingContext,
   CoachingExchange,
   CoachingQuery,
+  CoachingItem,
 } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import { getCoachingResponse } from "../lib/ai/recommendation-engine";
@@ -46,7 +47,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     response: CoachingResponse;
   } | null>(null);
   const [exchanges, setExchanges] = useState<CoachingExchange[]>([]);
-  const [chosenAugments, setChosenAugments] = useState<string[]>([]);
+  const [chosenAugments, setChosenAugments] = useState<CoachingItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const contextRef = useRef(context);
@@ -79,13 +80,22 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           .findInText(selectionMatch[1])
           .filter((m) => m.type === "augment");
         if (mentioned.length > 0) {
-          const newAugment = mentioned[0].name;
+          const newAugmentName = mentioned[0].name;
+          const augmentData = gameDataRef.current.augments.get(
+            newAugmentName.toLowerCase()
+          );
+          const newAugment: CoachingItem = {
+            name: newAugmentName,
+            description: augmentData?.description ?? "",
+          };
           setChosenAugments((prev) =>
-            prev.includes(newAugment) ? prev : [...prev, newAugment]
+            prev.some((a) => a.name === newAugment.name)
+              ? prev
+              : [...prev, newAugment]
           );
           debugInput$.next({
             source: "llm",
-            summary: `Augment selected: ${newAugment} (total: ${chosenAugmentsRef.current.length + 1})`,
+            summary: `Augment selected: ${newAugmentName} (total: ${chosenAugmentsRef.current.length + 1})`,
           });
         }
       }
@@ -115,7 +125,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
               ? `Augment options matched: ${augmentOptions.map((a) => a.name).join(", ")}`
               : null,
             chosenAugmentsRef.current.length > 0
-              ? `Known augments: ${chosenAugmentsRef.current.join(", ")}`
+              ? `Known augments: ${chosenAugmentsRef.current.map((a) => a.name).join(", ")}`
               : null,
           ]
             .filter(Boolean)

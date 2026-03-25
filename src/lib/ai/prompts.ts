@@ -85,9 +85,10 @@ export function buildUserPrompt(
   }
 
   if (context.currentAugments.length > 0) {
-    sections.push(
-      `### Current Augments\n${context.currentAugments.join(", ")}`
+    const augmentLines = context.currentAugments.map((aug) =>
+      aug.description ? `- ${aug.name}: ${aug.description}` : `- ${aug.name}`
     );
+    sections.push(`### Current Augments\n${augmentLines.join("\n")}`);
   }
 
   if (context.allyTeam.length > 0) {

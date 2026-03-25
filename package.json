@@ -13,6 +13,7 @@
     "check-game": "tsx scripts/check-game.ts",
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
     "discover-candidates": "tsx scripts/discover-candidates.ts",
+    "audit-augments": "tsx scripts/audit-augments.ts",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },

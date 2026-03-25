@@ -24,7 +24,7 @@ export interface CoachingContext {
     abilities: string;
   };
   currentItems: CoachingItem[];
-  currentAugments: string[];
+  currentAugments: CoachingItem[];
   enemyTeam: Array<{
     champion: string;
     items: CoachingItem[];
