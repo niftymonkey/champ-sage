@@ -50,11 +50,14 @@ export function assembleContext(
     ? formatBalanceOverrides(champion.aramOverrides)
     : null;
 
+  const statProfile = champion ? formatStatProfile(champion) : null;
+
   return {
     champion: {
       name: activePlayer.championName,
       level: activePlayer.level,
       abilities,
+      statProfile,
     },
     currentItems,
     currentAugments: [],
@@ -108,4 +111,35 @@ function formatBalanceOverrides(overrides: AramOverrides): string | null {
 function formatPct(value: number): string {
   const pct = Math.round((value - 1) * 100);
   return pct >= 0 ? `+${pct}%` : `${pct}%`;
+}
+
+/**
+ * Build a compact stat profile string for a champion.
+ *
+ * Includes range type, DDragon tags, and key base stats with growth rates.
+ * The model uses this to reason about build viability — e.g., a melee Fighter
+ * with high HP/level can pivot to tank, while a ranged Mage/Support cannot.
+ *
+ * Deliberately does NOT prescribe a role. The model derives the optimal
+ * playstyle from this profile + current items + augments + team comp.
+ */
+function formatStatProfile(
+  champion: import("../data-ingest/types").Champion
+): string {
+  const s = champion.stats;
+  const rangeType =
+    s.attackrange <= 300 ? "Melee" : `Ranged (${s.attackrange})`;
+
+  const parts = [
+    rangeType,
+    champion.tags.join(", "),
+    `HP: ${s.hp} (+${s.hpperlevel}/lvl)`,
+    `AD: ${s.attackdamage} (+${s.attackdamageperlevel}/lvl)`,
+    `AS: ${s.attackspeed} (+${s.attackspeedperlevel}%/lvl)`,
+    `Armor: ${s.armor} (+${s.armorperlevel}/lvl)`,
+    `MR: ${s.spellblock} (+${s.spellblockperlevel}/lvl)`,
+    champion.partype || "No resource",
+  ];
+
+  return parts.join(" | ");
 }

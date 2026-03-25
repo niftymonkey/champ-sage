@@ -88,7 +88,26 @@ function createGameData(): LoadedGameData {
     title: "the Nine-Tailed Fox",
     tags: ["Mage", "Assassin"],
     partype: "Mana",
-    stats: {} as Champion["stats"],
+    stats: {
+      hp: 590,
+      hpperlevel: 96,
+      mp: 418,
+      mpperlevel: 25,
+      movespeed: 330,
+      armor: 23,
+      armorperlevel: 4.7,
+      spellblock: 30,
+      spellblockperlevel: 1.3,
+      attackrange: 550,
+      hpregen: 2.5,
+      hpregenperlevel: 0.6,
+      mpregen: 8,
+      mpregenperlevel: 0.8,
+      attackdamage: 53,
+      attackdamageperlevel: 3,
+      attackspeed: 0.668,
+      attackspeedperlevel: 2,
+    },
     image: "",
     aramOverrides: { dmgDealt: 1.0, dmgTaken: 0.95 },
     abilities: {
@@ -268,5 +287,59 @@ describe("assembleContext", () => {
     const result = assembleContext(createLiveGameState(), createGameData());
     expect(result).not.toBeNull();
     expect(result!.currentAugments).toEqual([]);
+  });
+
+  describe("champion stat profile", () => {
+    it("includes range type for ranged champion", () => {
+      const result = assembleContext(createLiveGameState(), createGameData());
+      // Ahri has 550 attack range — ranged
+      expect(result!.champion.statProfile).toContain("Ranged");
+    });
+
+    it("includes DDragon tags", () => {
+      const result = assembleContext(createLiveGameState(), createGameData());
+      expect(result!.champion.statProfile).toContain("Mage");
+      expect(result!.champion.statProfile).toContain("Assassin");
+    });
+
+    it("includes key base stats and growth rates", () => {
+      const result = assembleContext(createLiveGameState(), createGameData());
+      const profile = result!.champion.statProfile!;
+      // Should include HP and HP/level
+      expect(profile).toContain("590");
+      expect(profile).toContain("96");
+      // Should include AD info
+      expect(profile).toContain("53");
+    });
+
+    it("includes melee for low attack range champion", () => {
+      const gameData = createGameData();
+      const ahri = gameData.champions.get("ahri")!;
+      ahri.stats.attackrange = 125;
+      ahri.tags = ["Fighter"];
+
+      const result = assembleContext(createLiveGameState(), gameData);
+      expect(result!.champion.statProfile).toContain("Melee");
+    });
+
+    it("returns null when champion data is not found", () => {
+      const gameState = createLiveGameState({
+        activePlayer: {
+          ...createLiveGameState().activePlayer!,
+          championName: "UnknownChamp",
+        },
+        players: [
+          {
+            ...createLiveGameState().players[0],
+            championName: "UnknownChamp",
+          },
+          ...createLiveGameState().players.slice(1),
+        ],
+      });
+
+      const result = assembleContext(gameState, createGameData());
+      expect(result).not.toBeNull();
+      expect(result!.champion.statProfile).toBeNull();
+    });
   });
 });

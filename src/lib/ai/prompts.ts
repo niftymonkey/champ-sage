@@ -65,6 +65,10 @@ export function buildUserPrompt(
   sections.push(
     `## Your Champion: ${context.champion.name} (Level ${context.champion.level})`
   );
+  if (context.champion.statProfile) {
+    sections.push(`### Stat Profile\n${context.champion.statProfile}`);
+  }
+
   if (context.champion.abilities) {
     sections.push(`### Abilities\n${context.champion.abilities}`);
   }

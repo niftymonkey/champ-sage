@@ -3,67 +3,102 @@
 **Branch:** feat/11-coaching-engine
 **Last updated:** 2026-03-24
 
-## Current Focus: Augment Data Quality
+## Current Focus: Prompt Enrichments #3-5
 
-Testing revealed that poor coaching recommendations stem from incomplete/garbled augment data, not model reasoning. The model reasons correctly when given correct data.
+Data quality fixes are complete. Prompt enrichments #1 and #2 are implemented. Continuing evaluation of remaining enrichments.
 
-### Key Finding
+## Prompt Enrichment Improvements (this session)
 
-The "Quest: Urf's Champion" augment description says "Complete a quest, receive The Golden Spatula" but doesn't include what The Golden Spatula actually gives (+90 AD, +60% AS, +25% crit, +15% omnivamp, +40 armor/MR, +350 HP, etc.). Without these stats, the model reasoned "CDR/mana removal is low value on Bel'Veth" — correct reasoning, wrong data.
+These are the changes made on top of the initial working coaching engine to improve recommendation quality. Each was motivated by a specific failure observed during live ARAM Mayhem testing.
 
-### Prompt Enrichment Test Results
+### Improvement 1: Wiki Markup Parser Rewrite
 
-Script: `scripts/test-prompt-quality.ts` — runs same scenario 3x with current vs enriched prompts.
+**Problem:** 43 of 202 augment descriptions were garbled by residual wiki markup. Templates like `{{ii|The Golden Spatula}}`, `{{fd|0.5}}`, `{{sbc|Quest:}}` were either stripped incorrectly or left artifacts. Nested templates like `{{as|{{fd|3.5}}% bonus AD}}` broke the catch-all regex entirely.
 
-**Current prompt:** Inconsistent (2/3 Protein Shake, 1/3 Urf's Champion). Model admitted "no augment text provided" for Urf's Champion. Guessed wrong.
+**Fix:** Rewrote `src/lib/data-ingest/parsers/wiki-markup.ts` with inside-out iterative template resolution. Instead of a single regex pass, the parser repeatedly resolves innermost templates (no nesting) until none remain. Added explicit handlers for 15+ template types: `ii`, `fd`, `sbc`, `cai`, `ai`, `g`, `nie`, `si`, `bi`, `rd`, `ap`, `ft`, `iis`, `recurring`, plus a fallback for unknown templates.
 
-**Enriched prompt (champion role + team analysis + augment role tags):** Consistent reasoning. All 3 runs correctly identified Urf's Champion as bad for auto-attack champions. But still wrong answer because the augment description didn't reveal the actual reward stats.
+**Result:** 0/202 augments have markup artifacts. All mechanical details preserved in plain text.
 
-**Conclusion:** Both prompt quality AND data quality need fixing. Enrichment improves consistency but can't fix missing data.
+**Files:** `src/lib/data-ingest/parsers/wiki-markup.ts`, `wiki-markup.test.ts` (40 tests)
 
-### Next Steps (in order)
+### Improvement 2: Dynamic Quest Augment Reward Stats
 
-1. **Fix augment descriptions** — better wiki markup stripping to preserve mechanical details already in the raw data. Most augments have good info, we're just garbling it with bad template handling.
+**Problem:** Quest augments say "you receive The Golden Spatula" but don't include what the item gives. The model saw "CDR/mana removal" for Urf's Champion and recommended against it for Bel'Veth — correct reasoning, but the real reward is a massive stat stick (+90 AD, +125 AP, +60% AS, etc.).
 
-2. **Hardcode quest augment rewards** — only 9 quest augments exist. Manually add reward item stats (e.g., Golden Spatula's full stat block). These rarely change.
+**Fix:** Created `src/lib/data-ingest/sources/quest-augment-rewards.ts` that dynamically enriches quest augment descriptions at app startup. It detects quest augments (name starts with "Quest:"), finds the reward item name after "Reward:" in the description, looks it up in the DDragon items database, and appends a human-readable stat block. No hardcoded stats — if Riot changes item stats next patch, we pick up new values automatically.
 
-3. **Audit all 202 augments** — check for other augments where the description is incomplete or misleading after markup fixes. Look for patterns where we need to dig deeper.
+**Design decision:** Initially hardcoded reward stats, but user correctly identified this as fragile. Rewrote to be fully dynamic. When multiple items share a name (e.g., 4 variants of "The Golden Spatula" across game modes), we pick the variant with the highest total stat value (Mayhem rewards are the beefiest).
 
-4. **Implement prompt enrichments** — we identified 5 enrichments and started walking through them one by one to evaluate each before implementing. Only discussed #1 (augment role tags) in depth before pivoting to the data quality issue. Need to continue the evaluation of #2-#5 after data fixes:
-   - #1 Augment role tags from set membership — discussed, question was whether model needs tags or can infer from descriptions. Deferred pending data quality fix.
-   - #2 Champion role summary — tested, biggest single improvement. Need to discuss implementation.
-   - #3 Game phase awareness — not yet tested individually. Need to discuss.
-   - #4 Team composition analysis — tested in variant B, helped. Need to discuss.
-   - #5 Context compression (item/ability tags) — not yet tested. Need to discuss.
+**Result:** All 5 Mayhem quest augments now show reward item stats. Model can reason about whether Golden Spatula's massive stats justify the 18-takedown quest.
 
-5. **Context compression** — replace verbose item/ability descriptions with concise tags. Test showed enriched prompt used FEWER tokens (1088 vs 1198) despite adding more structured knowledge.
+**Files:** `src/lib/data-ingest/sources/quest-augment-rewards.ts`, `quest-augment-rewards.test.ts` (8 tests)
 
-### Data Quality Analysis
+### Improvement 3: Chosen Augment Description Re-injection
 
-Raw wiki data (`Module:MayhemAugmentData/data`):
+**Problem:** After choosing an augment, subsequent coaching queries only showed the augment name in the prompt — not its description. If you chose "Quest: Icathia's Fall" and later asked "what should I build?", the model didn't see the build constraint ("must buy Hollow Radiance and Sunfire Aegis") unless it happened to scroll back through conversation history.
 
-- 202 Mayhem augments total
-- 9 quest augments with `{{ii|ItemName}}` reward references
-- 126 total item references across all augments via `{{ii|...}}` templates
-- Wiki templates not fully handled: `{{sbc|...}}`, `{{cai|Ability|Champ}}`, `{{ii|Item}}`, `{{nie|...}}`, `{{fd|...}}`, `{{g|...}}`
-- After current markup fixes: 3/202 still have artifacts
+**Fix:** Changed `currentAugments` from `string[]` to `CoachingItem[]` (name + description + sets). When you say "I chose X", the component looks up the full augment description (including quest reward stats) from gameData. Every subsequent prompt includes the full description under "Current Augments."
 
-### Brainstorm Context
+**Design principle:** Structured, always-present context beats hoping the model remembers something from conversation history. The model is a reasoning engine, not a memory system.
 
-`docs/champ-sage-coaching-brainstorm.md` — core insight: "LLM should be reasoning engine, not knowledge base. Move knowledge into structured data."
+**Result:** Build constraints, reward stats, and mechanical details for chosen augments are visible in every coaching request, not buried in history.
 
-The prompt enrichment test validated this. When given champion role ("melee DPS carry, auto-attack focused") and augment role tags ("sustain/scaling", "high-risk DPS", "ability spam/CDR"), the model made better decisions even without perfect augment data.
+**Files:** `src/lib/ai/types.ts`, `src/lib/ai/prompts.ts`, `src/components/CoachingInput.tsx`, `prompts.test.ts`
+
+### Improvement 4: Augment Set Bonus Context
+
+**Problem:** The model saw set names on augments (e.g., "Sets: Snowday") but had no idea what set bonuses existed or how close the player was to unlocking one. If you had 1 Snowday augment and a second was offered, the model couldn't factor in that picking it would unlock "Mark deals 30% increased damage."
+
+**Fix:** Added `augmentSets` to `CoachingContext` (the set bonus definitions). The prompt builder now:
+
+1. Shows a "Set Progress" section listing active bonuses and next thresholds for sets the player has augments in
+2. Annotates offered augments with set bonus impact — "UNLOCKS: [bonus description]" when picking would hit a threshold, or "2/4" progress when it wouldn't
+
+**Result:** Model can reason about set stacking. A mediocre augment that completes a strong set bonus can now correctly beat a standalone better augment.
+
+**Files:** `src/lib/ai/prompts.ts`, `src/lib/ai/types.ts`, `src/lib/ai/context-assembler.ts`, `prompts.test.ts` (24 tests)
+
+### Improvement 5: Champion Stat Profile
+
+**Problem:** Model recommended Protein Shake (sustain) over Glass Cannon for Bel'Veth because it didn't know Bel'Veth is an auto-attack carry. Champion abilities were in the prompt, but the model had to infer playstyle from ability descriptions.
+
+**Deeper problem:** A static role label ("DPS carry") would be wrong in many cases. Bel'Veth CAN pivot to tank with the right augments (e.g., Goliath) and the right team comp (no frontline). Sona cannot. The model needs to know what a champion is CAPABLE of, not what it SHOULD do.
+
+**Fix:** Added a champion stat profile to `CoachingContext.champion.statProfile`, derived entirely from DDragon data at runtime:
+
+- Range type (Melee vs Ranged with distance)
+- DDragon tags (Fighter, Mage, Tank, etc.)
+- Key base stats with per-level growth: HP, AD, AS, Armor, MR
+- Resource type (Mana, Energy, None)
+
+The model sees `Bel'Veth: Melee | Fighter | HP: 610 (+105/lvl) | Armor: 32 (+4.7/lvl)` and can reason: high defensive base stats + melee = viable tank pivot. It sees `Sona: Ranged (550) | Support, Mage | HP: 550 (+91/lvl) | Armor: 26 (+4.2/lvl)` and knows tank build is inefficient.
+
+**Design principle:** Provide capabilities, not role prescriptions. The model derives the optimal playstyle from stat profile + current items + augments + team comp + what's being offered.
+
+**Result:** Model can distinguish "Bel'Veth with Goliath and no team tanks → lean into tank" from "Sona with Goliath → still not a tank." No static role labels that would fight against contextual adaptation.
+
+**Files:** `src/lib/ai/context-assembler.ts`, `src/lib/ai/types.ts`, `src/lib/ai/prompts.ts`, `context-assembler.test.ts` (16 tests), `prompts.test.ts`
+
+## Prompt Enrichment Evaluation Status
+
+| #   | Enrichment                            | Status             | Outcome                                                                                                                          |
+| --- | ------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Augment role tags from set membership | Evaluated, skipped | Clean descriptions + set bonus context make explicit role tags redundant. Model can infer augment roles from descriptions.       |
+| 2   | Champion stat profile                 | Implemented        | Stat profile provides capabilities without prescribing role. Model reasons about build viability from base stats + game context. |
+| 3   | Game phase awareness                  | Not yet evaluated  | Could derive early/mid/late from gameTime. Need to discuss.                                                                      |
+| 4   | Team composition analysis             | Not yet evaluated  | Tested in variant B prompt, helped. Need to discuss implementation.                                                              |
+| 5   | Context compression                   | Not yet evaluated  | Enriched prompt used fewer tokens despite more structured knowledge. Need to discuss.                                            |
 
 ## What's Built (complete list)
 
 ### AI Pipeline (src/lib/ai/)
 
 - model-config.ts — GPT-5.4 mini via Vercel AI SDK v6
-- context-assembler.ts — builds CoachingContext from LiveGameState + LoadedGameData
-- prompts.ts — mode-aware system prompt (KIWI detection), strict length rules, per-card re-roll mechanic (3 rounds, independent per card)
+- context-assembler.ts — builds CoachingContext from LiveGameState + LoadedGameData, includes champion stat profile
+- prompts.ts — mode-aware system prompt (KIWI detection), strict length rules, per-card re-roll mechanic, set bonus progress, chosen augment re-injection
 - recommendation-engine.ts — generateText with Output.object, logs to data-dump/coaching-{timestamp}.log
 - schemas.ts — CoachingResponse structured output schema
-- types.ts — CoachingContext, CoachingQuery, CoachingResponse, CoachingExchange
+- types.ts — CoachingContext (with augmentSets, CoachingItem with sets), CoachingQuery, CoachingResponse, CoachingExchange
 
 ### Voice Integration
 
@@ -76,8 +111,12 @@ The prompt enrichment test validated this. When given champion role ("melee DPS 
 - ensureAbilities() — fetches champion abilities from DDragon on game start
 - Item descriptions with stats in coaching context
 - lcuGameMode — KIWI detection for Mayhem-specific prompts
-- Wiki markup cleanup (pipes, meta-references stripped)
+- Wiki markup parser — inside-out iterative template resolution, 15+ template types, handles arbitrary nesting
 - findInText() for augment name extraction with prefix-stripped matching
+- Dynamic quest augment reward stat injection from DDragon items database
+- Chosen augment descriptions re-injected into every prompt (not just names)
+- Augment set bonus definitions and progress tracking in prompt
+- Champion stat profile (range, tags, base stats, growth rates) in prompt
 
 ### UI
 
@@ -91,6 +130,7 @@ The prompt enrichment test validated this. When given champion role ("melee DPS 
 - Mode detection logging
 - discover-candidates.ts — PickAI model selection
 - test-prompt-quality.ts — A/B prompt comparison script
+- audit-augments.ts — checks all 202 augments for markup artifacts
 
 ## ARAM Mayhem Testing Results
 
@@ -110,8 +150,8 @@ The prompt enrichment test validated this. When given champion role ("melee DPS 
 ### What didn't work
 
 - Model recommended "Upgrade Collector" augment when player didn't have/wasn't building Collector (item-upgrade augment confusion — now addressed in prompt)
-- Model recommended Urf's Champion based on "CDR/mana removal" without knowing the reward is The Golden Spatula with massive stats (data gap — quest reward stats not in description)
-- Model recommended Protein Shake for Bel'Veth over Glass Cannon/Urf's Champion because it didn't know Bel'Veth is an auto-attack DPS carry (champion role not in prompt — enrichment tested, proven effective)
+- Model recommended Urf's Champion based on "CDR/mana removal" without knowing the reward is The Golden Spatula with massive stats (FIXED — dynamic quest reward stats)
+- Model recommended Protein Shake for Bel'Veth over Glass Cannon/Urf's Champion because it didn't know Bel'Veth is an auto-attack DPS carry (FIXED — champion stat profile)
 - Re-roll advice initially said "re-roll" in Phase 2 when no re-rolls were left (fixed with per-card re-roll rules)
 - Augment picker UI disappeared because mode detection didn't match "KIWI" (fixed)
 - Some augments not matched by fuzzy search ("Quest: Urf's Champion" prefix issue — fixed)
@@ -123,7 +163,7 @@ The prompt enrichment test validated this. When given champion role ("melee DPS 
 - Response verbosity was too high initially — strict length rules in prompt helped
 - Player wants to just say augment names without explaining they're augments — the system should infer this from context
 
-## Fixes Applied This Session
+## Fixes Applied (all sessions)
 
 1. KIWI mode detection — aramMayhemMode.matches() accepts "KIWI"
 2. Prefix matching — "Urf's Champion" matches "Quest: Urf's Champion"
@@ -139,17 +179,18 @@ The prompt enrichment test validated this. When given champion role ("melee DPS 
 12. Hotkey state recovery — auto-reset stale recording state
 13. Coaching display simplified — latest exchange only, no text input, voice-first
 14. Augment selection tracking from voice — "I chose X" pattern detection
-15. findInText() — new entity extraction method (scans text for known names vs old search which matched query against names)
+15. findInText() — new entity extraction method (scans text for known names)
+16. Wiki markup parser rewrite — inside-out iterative resolution, 15+ template types, 0/202 artifacts
+17. Dynamic quest augment reward stats — looked up from DDragon items database, no hardcoded stats
+18. Chosen augment description re-injection — full descriptions in every prompt, not just names
+19. Augment set bonus progress — active bonuses, next thresholds, UNLOCKS annotations on offered augments
+20. Champion stat profile — melee/ranged, tags, base stats with growth rates for build viability reasoning
 
 ## Known Issues
 
-- 3/202 augments still have garbled descriptions (wiki template edge cases)
-- 9 quest augments missing reward stats (e.g., Golden Spatula stats not in description)
 - Voice-selected augments not synced with augment picker UI (two tracking mechanisms)
-- No augment set bonus tracking (model doesn't see set progress)
 - Accidental voice triggers (no minimum duration filter)
 - Model relies on training data for augment synergies and meta knowledge
-- Champion role not included in prompt (model guesses from abilities)
 - No game phase awareness in prompt
 - No team composition analysis in prompt
 
@@ -166,5 +207,6 @@ Key files to read:
 - docs/coaching-engine.md — technical design
 - docs/champ-sage-coaching-brainstorm.md — brainstorm on knowledge vs reasoning
 - scripts/test-prompt-quality.ts — prompt comparison test script
+- scripts/audit-augments.ts — augment data quality checker
 
-Start with: fixing wiki markup templates ({{ii}}, {{sbc}}, {{cai}}, etc.) in src/lib/data-ingest/parsers/wiki-markup.ts, then hardcode the 9 quest augment rewards.
+Continue with: evaluating prompt enrichments #3 (game phase awareness), #4 (team composition analysis), #5 (context compression).

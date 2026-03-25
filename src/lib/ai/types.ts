@@ -24,6 +24,8 @@ export interface CoachingContext {
     name: string;
     level: number;
     abilities: string;
+    /** Compact stat profile for build viability reasoning (melee/ranged, tags, key growth rates) */
+    statProfile: string | null;
   };
   currentItems: CoachingItem[];
   currentAugments: CoachingItem[];

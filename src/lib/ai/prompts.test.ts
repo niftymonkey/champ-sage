@@ -10,6 +10,8 @@ function createContext(
       name: "Ahri",
       level: 10,
       abilities: "Passive: Essence Theft. Q: Orb of Deception.",
+      statProfile:
+        "Ranged (550) | Mage, Assassin | HP: 590 (+96/lvl) | AD: 53 (+3/lvl) | AS: 0.668 (+2%/lvl) | Armor: 23 (+4.7/lvl) | MR: 30 (+1.3/lvl) | Mana",
     },
     currentItems: [
       {
@@ -166,6 +168,23 @@ describe("buildUserPrompt", () => {
     it("includes champion abilities", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Orb of Deception");
+    });
+
+    it("includes champion stat profile when present", () => {
+      const ctx = createContext({
+        champion: {
+          name: "Bel'Veth",
+          level: 6,
+          abilities: "Passive: Death in Lavender.",
+          statProfile:
+            "Melee | Fighter | HP: 610 (+104/lvl) | AD: 60 (+1.5/lvl) | AS: 0.85 (+3.5%/lvl) | Armor: 32 (+4.7/lvl) | MR: 32 (+2.05/lvl) | Mana",
+        },
+      });
+      const prompt = buildUserPrompt(ctx, generalQuery);
+      expect(prompt).toContain("Stat Profile");
+      expect(prompt).toContain("Melee");
+      expect(prompt).toContain("Fighter");
+      expect(prompt).toContain("+104/lvl");
     });
 
     it("includes ally team", () => {
