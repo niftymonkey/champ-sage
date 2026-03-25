@@ -759,4 +759,34 @@ mod tests {
             base64::engine::general_purpose::STANDARD.encode("riot:mytoken");
         assert_eq!(auth, format!("Basic {expected_encoded}"));
     }
+
+    #[test]
+    fn coaching_log_dir_created_in_app_data() {
+        let tmp = std::env::temp_dir().join("champ-sage-test-log-dir");
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        init_coaching_log_dir(tmp.clone());
+
+        let log_dir = tmp.join("coaching-logs");
+        assert!(log_dir.exists(), "coaching-logs directory should be created");
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn coaching_log_fallback_uses_data_dump() {
+        // get_coaching_log_path falls back to data-dump/ when OnceLock is
+        // already set (from the test above) or not initialized.
+        // We can at least verify it returns a path containing "coaching-"
+        let path = get_coaching_log_path();
+        let filename = path.file_name().unwrap().to_str().unwrap();
+        assert!(
+            filename.starts_with("coaching-"),
+            "log filename should start with 'coaching-', got: {filename}"
+        );
+        assert!(
+            filename.ends_with(".log"),
+            "log filename should end with '.log', got: {filename}"
+        );
+    }
 }
