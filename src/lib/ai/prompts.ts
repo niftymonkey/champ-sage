@@ -1,6 +1,6 @@
 import type { CoachingContext, CoachingQuery } from "./types";
 import { formatGameTime } from "../format";
-import { LCU_MODE_MAYHEM } from "../mode/types";
+import { GAME_MODE_MAYHEM, GAME_MODE_ARAM } from "../mode/types";
 
 export function buildSystemPrompt(context: {
   gameMode: string;
@@ -27,7 +27,9 @@ export function buildSystemPrompt(context: {
   ];
 
   const isMayhem =
-    context.lcuGameMode === LCU_MODE_MAYHEM || context.gameMode === "ARAM";
+    context.lcuGameMode === GAME_MODE_MAYHEM ||
+    context.gameMode === GAME_MODE_MAYHEM ||
+    context.gameMode === GAME_MODE_ARAM;
   if (isMayhem) {
     sections.push(
       "",
@@ -61,7 +63,7 @@ export function buildUserPrompt(
 
   const modeLabel =
     context.lcuGameMode && context.lcuGameMode !== context.gameMode
-      ? `${context.gameMode} — ${context.lcuGameMode === LCU_MODE_MAYHEM ? "Mayhem (KIWI)" : context.lcuGameMode}`
+      ? `${context.gameMode} — ${context.lcuGameMode === GAME_MODE_MAYHEM ? "Mayhem (KIWI)" : context.lcuGameMode}`
       : context.gameMode;
   sections.push(`## Game Mode: ${modeLabel}`);
   sections.push(`## Game Time: ${formatGameTime(context.gameTime)}`);

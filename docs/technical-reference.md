@@ -116,13 +116,14 @@ Available at the `PreEndOfGame` phase transition (immediately when the nexus die
 
 ### Game mode internal names
 
-| Display name    | Live Client Data API `gameMode` | LCU `gameMode` |
-| --------------- | ------------------------------- | -------------- |
-| ARAM Mayhem     | `ARAM`                          | `KIWI`         |
-| Summoner's Rift | `CLASSIC`                       | `CLASSIC`      |
-| Arena           | `CHERRY`                        | `CHERRY`       |
+| Display name    | Live Client Data API `gameMode` | LCU `gameMode` | Constant           |
+| --------------- | ------------------------------- | -------------- | ------------------ |
+| ARAM Mayhem     | `KIWI`                          | `KIWI`         | `GAME_MODE_MAYHEM` |
+| Regular ARAM    | `ARAM` (assumed, untested)      | `ARAM`         | `GAME_MODE_ARAM`   |
+| Summoner's Rift | `CLASSIC`                       | `CLASSIC`      | —                  |
+| Arena           | `CHERRY`                        | `CHERRY`       | `GAME_MODE_ARENA`  |
 
-The Live Client Data API and LCU use different mode strings for ARAM Mayhem. Mode detection must handle both: `ARAM` for live game state, `KIWI` for LCU/post-game data.
+Both sources return the same mode string for all tested modes. Regular ARAM has not been tested in-game yet — the `GAME_MODE_ARAM` ("ARAM") value is assumed from documentation and used as a fallback in mode detection. ARAM Mayhem consistently returns "KIWI" (tested patch 15.6). Constants are defined in `src/lib/mode/types.ts`.
 
 ### WebSocket (real-time events)
 

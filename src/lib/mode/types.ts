@@ -6,8 +6,23 @@ import type {
   Item,
 } from "../data-ingest/types";
 
-/** LCU game mode string for ARAM Mayhem (Live Client API returns this instead of "ARAM") */
-export const LCU_MODE_MAYHEM = "KIWI";
+/**
+ * Game mode constants.
+ *
+ * Mode strings come from two sources:
+ * - **Live Client Data API** (`gameData.gameMode` via port 2999): returns the
+ *   internal mode string. For ARAM Mayhem this is "KIWI", not "ARAM".
+ * - **LCU WebSocket** (`gameData.queue.gameMode` in session events): returns
+ *   the same internal mode string ("KIWI" for Mayhem, "CHERRY" for Arena).
+ *
+ * The `lcuGameMode` field in LiveGameState is set from the LCU WebSocket
+ * session, while `gameMode` comes from the Live Client Data API. For Mayhem
+ * games, both return "KIWI". The "ARAM" fallback in mode detection exists
+ * for defensive compatibility in case Riot changes the string in a future patch.
+ */
+export const GAME_MODE_MAYHEM = "KIWI";
+export const GAME_MODE_ARAM = "ARAM";
+export const GAME_MODE_ARENA = "CHERRY";
 import type {
   ActivePlayerRunes,
   ActivePlayerStats,
