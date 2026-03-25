@@ -109,6 +109,9 @@ export class ReactiveEngine {
   // LCU game mode (KIWI for Mayhem, CLASSIC for SR, CHERRY for Arena)
   private lcuGameMode = "";
 
+  // Incremented on WebSocket failure to force discovery re-emit
+  private wsRetrySeq = 0;
+
   // Error recovery state for Live Client Data polling
   private consecutiveFailures = 0;
   private lastPollStatus: string | null = null;
@@ -127,12 +130,22 @@ export class ReactiveEngine {
       startWith(0),
       switchMap(() =>
         this.bridge.discoverLcu().then(
-          (creds) => ({ connected: true as const, ...creds }),
-          () => ({ connected: false as const, port: 0, token: "" })
+          (creds) => ({
+            connected: true as const,
+            ...creds,
+            seq: this.wsRetrySeq,
+          }),
+          () => ({
+            connected: false as const,
+            port: 0,
+            token: "",
+            seq: this.wsRetrySeq,
+          })
         )
       ),
       distinctUntilChanged(
-        (a, b) => a.connected === b.connected && a.port === b.port
+        (a, b) =>
+          a.connected === b.connected && a.port === b.port && a.seq === b.seq
       ),
       share()
     );
@@ -210,7 +223,9 @@ export class ReactiveEngine {
                     source: "websocket",
                     summary: `WebSocket connection FAILED: ${err instanceof Error ? err.message : String(err)}`,
                   });
-                  // Don't error the subscriber — let discovery retry
+                  // Bump retry seq so the next discovery tick re-emits
+                  // and triggers a new connection attempt
+                  this.wsRetrySeq++;
                 });
 
               return () => {
