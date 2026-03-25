@@ -29,6 +29,11 @@ import { normalizeGameState } from "../game-state/normalize";
 import type { TauriBridge, LcuEventPayload } from "./tauri-bridge";
 import type { GameflowPhase, LiveGameState, EogStats } from "./types";
 import { formatGameTime } from "../format";
+import {
+  isDebugWorthy,
+  shouldLogPollStatus,
+  describeEvent,
+} from "./debug-filters";
 
 const DISCOVERY_INTERVAL_MS = 3000;
 const POLL_INTERVAL_MS = 2000;
@@ -106,6 +111,7 @@ export class ReactiveEngine {
 
   // Error recovery state for Live Client Data polling
   private consecutiveFailures = 0;
+  private lastPollStatus: string | null = null;
   private backoffMs = POLL_INTERVAL_MS;
   private notified = false;
 
@@ -218,16 +224,12 @@ export class ReactiveEngine {
     );
 
     // Layer 3: WebSocket event splits
-    // Log non-noise WebSocket events only
     this.subscription.add(
       this.wsEvents$.subscribe((evt) => {
-        const isNoise = NOISE_PREFIXES.some((prefix) =>
-          evt.uri.startsWith(prefix)
-        );
-        if (!isNoise) {
+        if (isDebugWorthy(evt.uri)) {
           debugInput$.next({
             source: "websocket",
-            summary: `${evt.event_type} ${evt.uri}`,
+            summary: describeEvent(evt.event_type, evt.uri),
           });
         }
       })
@@ -314,6 +316,7 @@ export class ReactiveEngine {
             if (phase !== "InProgress") {
               liveGameState$.next(createDefaultLiveGameState());
               this.lcuGameMode = "";
+              this.lastPollStatus = null;
 
               // Clear any active error notification when leaving InProgress
               if (this.notified) {
@@ -479,17 +482,28 @@ export class ReactiveEngine {
             (json) => {
               const raw: unknown = JSON.parse(json);
               const normalized = normalizeGameState(raw);
-              debugInput$.next({
-                source: "riot-api",
-                summary: `Poll OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`,
-              });
+              const status = `OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`;
+              if (shouldLogPollStatus("OK", this.lastPollStatus)) {
+                debugInput$.next({
+                  source: "riot-api",
+                  summary: `Poll ${status}`,
+                });
+              }
+              this.lastPollStatus = "OK";
               return { success: true as const, data: normalized };
             },
             (err) => {
-              debugInput$.next({
-                source: "riot-api",
-                summary: `Poll failed — ${err instanceof Error ? err.message : String(err)}`,
-              });
+              const errMsg = err instanceof Error ? err.message : String(err);
+              const status = errMsg.includes("LOADING")
+                ? "LOADING"
+                : "CONNECTION_FAILED";
+              if (shouldLogPollStatus(status, this.lastPollStatus)) {
+                debugInput$.next({
+                  source: "riot-api",
+                  summary: `Poll failed — ${errMsg}`,
+                });
+              }
+              this.lastPollStatus = status;
               return { success: false as const, data: null };
             }
           )

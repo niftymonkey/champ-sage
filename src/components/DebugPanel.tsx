@@ -149,7 +149,7 @@ const OUTPUT_COLORS: Record<string, string> = {
   notification: "#f87171",
 };
 
-const MAX_LOG_ENTRIES = 100;
+const MAX_LOG_ENTRIES = 200;
 
 function formatBufferAsText(entries: LogEntry[]): string {
   return entries
