@@ -6,7 +6,11 @@ import { useLiveGameState } from "./hooks/useLiveGameState";
 import { useUserInput } from "./hooks/useUserInput";
 import { useVoiceInput } from "./hooks/useVoiceInput";
 import { useZoom } from "./hooks/useZoom";
-import { initializeReactiveEngine, debugInput$ } from "./lib/reactive";
+import {
+  initializeReactiveEngine,
+  debugInput$,
+  userInput$,
+} from "./lib/reactive";
 import type { ReactiveEngine } from "./lib/reactive";
 import { WhisperProvider } from "./lib/voice/stt-provider";
 import { DataBrowser } from "./components/DataBrowser";
@@ -86,9 +90,25 @@ function App() {
     }
   }, [lifecycle]);
 
+  // Listen for voice-triggered augment selections (pushed to manualInput$ → userInput$)
+  useEffect(() => {
+    const sub = userInput$.subscribe((event) => {
+      if (event.type === "augment") {
+        setSelectedAugments((prev) => {
+          // Deduplicate: don't add if already selected (by name)
+          if (prev.some((a) => a.name === event.augment.name)) return prev;
+          return [...prev, event.augment];
+        });
+      }
+    });
+    return () => sub.unsubscribe();
+  }, []);
+
   const selectAugment = useCallback(
     (augment: Augment) => {
-      setSelectedAugments((prev) => [...prev, augment]);
+      // Push to manualInput$ → userInput$ — the subscription above handles
+      // adding to selectedAugments (deduped). This path is used by both UI
+      // clicks and voice "I chose X" detection.
       submit({ type: "augment", augment });
     },
     [submit]
