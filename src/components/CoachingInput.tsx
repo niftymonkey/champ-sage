@@ -8,7 +8,7 @@ import type {
 } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import { getCoachingResponse } from "../lib/ai/recommendation-engine";
-import { playerIntent$, debugInput$ } from "../lib/reactive";
+import { playerIntent$, manualInput$, debugInput$ } from "../lib/reactive";
 
 interface CoachingInputProps {
   context: CoachingContext | null;
@@ -94,6 +94,10 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
               ? prev
               : [...prev, newAugment]
           );
+          // Sync with augment picker UI so the slot updates without alt-tabbing
+          if (augmentData) {
+            manualInput$.next({ type: "augment", augment: augmentData });
+          }
           debugInput$.next({
             source: "llm",
             summary: `Augment selected: ${newAugmentName} (total: ${chosenAugmentsRef.current.length + 1})`,
