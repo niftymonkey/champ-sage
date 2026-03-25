@@ -180,19 +180,30 @@ The model sees `Bel'Veth: Melee | Fighter | HP: 610 (+105/lvl) | Armor: 32 (+4.7
 13. Coaching display simplified — latest exchange only, no text input, voice-first
 14. Augment selection tracking from voice — "I chose X" pattern detection
 15. findInText() — new entity extraction method (scans text for known names)
-16. Wiki markup parser rewrite — inside-out iterative resolution, 15+ template types, 0/202 artifacts
-17. Dynamic quest augment reward stats — looked up from DDragon items database, no hardcoded stats
-18. Chosen augment description re-injection — full descriptions in every prompt, not just names
-19. Augment set bonus progress — active bonuses, next thresholds, UNLOCKS annotations on offered augments
-20. Champion stat profile — melee/ranged, tags, base stats with growth rates for build viability reasoning
+
+## Coaching Quality Improvements
+
+Each improvement below was motivated by a specific failure observed during live ARAM Mayhem testing. The core principle: the LLM is a reasoning engine, not a knowledge base — we provide structured knowledge, it provides contextual decisions. See the "Prompt Enrichment Improvements" section above for full details on each.
+
+1. **Wiki markup parser rewrite** — Inside-out iterative template resolution with 15+ explicit template types. Reduced garbled augment descriptions from 43/202 to 0/202. The model can't reason about augments if it can't read their descriptions.
+
+2. **Dynamic quest augment reward stats** — Quest augments say "you receive The Golden Spatula" but don't say what it gives. Reward item stats are now looked up from the DDragon items database at startup and appended to the description. Fully dynamic — no hardcoded stats that go stale between patches.
+
+3. **Chosen augment description re-injection** — Previously, after choosing an augment, the model only saw the name in subsequent prompts. Now the full description (including quest reward stats and build constraints) is re-injected into every coaching request. Structured, always-present context beats hoping the model remembers something from conversation history.
+
+4. **Augment set bonus context** — The model saw set names on augments but had no idea what the set bonuses were or how close you were to unlocking one. Now shows: active set bonuses, progress toward next threshold, and "UNLOCKS: [bonus]" annotations on offered augments that would complete a set.
+
+5. **Champion stat profile** — Instead of a static role label ("DPS carry") that would bias the model, we inject the champion's raw capabilities: melee/ranged, DDragon tags, base HP/AD/AS/Armor/MR with per-level growth rates. The model sees that Bel'Veth _can_ tank (melee, Fighter, 610 HP, +105/lvl, +4.7 armor/lvl) without being told she _should_. The role decision comes from the model reasoning about stat profile + current items + augments + team comp.
+
+6. **Team composition analysis** — Ally team role breakdown with gap detection ("no Marksman, Support") and enemy damage profile with resistance guidance ("all AD — stack armor", "heavily AP — favor magic resist", "mixed"). The model knows when your team needs a tank before you ask.
+
+7. **Context compression** — (not yet evaluated, pending)
 
 ## Known Issues
 
 - Voice-selected augments not synced with augment picker UI (two tracking mechanisms)
 - Accidental voice triggers (no minimum duration filter)
 - Model relies on training data for augment synergies and meta knowledge
-- No game phase awareness in prompt
-- No team composition analysis in prompt
 
 ## How to Resume
 
