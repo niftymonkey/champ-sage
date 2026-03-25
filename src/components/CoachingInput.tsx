@@ -71,7 +71,6 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
         return;
       }
 
-      // Detect augment selection
       const selectionPattern =
         /i (?:chose|picked|took|selected|went with)\s+(.+)/i;
       const selectionMatch = question.match(selectionPattern);
@@ -94,7 +93,6 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
               ? prev
               : [...prev, newAugment]
           );
-          // Sync with augment picker UI so the slot updates without alt-tabbing
           if (augmentData) {
             manualInput$.next({ type: "augment", augment: augmentData });
           }
@@ -161,7 +159,6 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     [apiKey]
   );
 
-  // Subscribe to voice transcripts
   useEffect(() => {
     const sub = playerIntent$.subscribe((event) => {
       if (event.type === "query" && event.text.trim()) {

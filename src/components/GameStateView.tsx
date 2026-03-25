@@ -3,6 +3,7 @@ import type { EffectiveGameState, EffectivePlayer } from "../lib/mode";
 import type { Augment, AramOverrides } from "../lib/data-ingest/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import { checkAugmentAvailability } from "../lib/mode/augment-availability";
+import { formatGameTime, formatModifier } from "../lib/format";
 import { AugmentSlots } from "./AugmentSlots";
 import { CoachingInput } from "./CoachingInput";
 import { assembleContext } from "../lib/ai/context-assembler";
@@ -48,9 +49,7 @@ export function GameStateView({
     );
   }
 
-  const minutes = Math.floor(state.gameTime / 60);
-  const seconds = Math.floor(state.gameTime % 60);
-  const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  const timeStr = formatGameTime(state.gameTime);
   const active = state.activePlayer;
   const modeCtx = state.modeContext;
 
@@ -308,11 +307,6 @@ function hasNonNeutralOverrides(o: AramOverrides): boolean {
     (o.totalAs != null && o.totalAs !== 1) ||
     (o.abilityHaste != null && o.abilityHaste !== 0)
   );
-}
-
-function formatModifier(value: number): string {
-  const pct = Math.round((value - 1) * 100);
-  return pct >= 0 ? `+${pct}%` : `${pct}%`;
 }
 
 const POSITION_LABELS: Record<string, string> = {

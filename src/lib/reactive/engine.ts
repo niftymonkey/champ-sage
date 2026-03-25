@@ -28,6 +28,7 @@ import {
 import { normalizeGameState } from "../game-state/normalize";
 import type { TauriBridge, LcuEventPayload } from "./tauri-bridge";
 import type { GameflowPhase, LiveGameState, EogStats } from "./types";
+import { formatGameTime } from "../format";
 
 const DISCOVERY_INTERVAL_MS = 3000;
 const POLL_INTERVAL_MS = 2000;
@@ -480,11 +481,7 @@ export class ReactiveEngine {
               const normalized = normalizeGameState(raw);
               debugInput$.next({
                 source: "riot-api",
-                summary: `Poll OK — ${normalized.gameMode} ${Math.floor(normalized.gameTime / 60)}:${Math.floor(
-                  normalized.gameTime % 60
-                )
-                  .toString()
-                  .padStart(2, "0")} ${normalized.players.length}p`,
+                summary: `Poll OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`,
               });
               return { success: true as const, data: normalized };
             },

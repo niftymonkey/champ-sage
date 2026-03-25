@@ -90,7 +90,6 @@ function App() {
     }
   }, [lifecycle]);
 
-  // Listen for voice-triggered augment selections (pushed to manualInput$ → userInput$)
   useEffect(() => {
     const sub = userInput$.subscribe((event) => {
       if (event.type === "augment") {
@@ -106,9 +105,6 @@ function App() {
 
   const selectAugment = useCallback(
     (augment: Augment) => {
-      // Push to manualInput$ → userInput$ — the subscription above handles
-      // adding to selectedAugments (deduped). This path is used by both UI
-      // clicks and voice "I chose X" detection.
       submit({ type: "augment", augment });
     },
     [submit]

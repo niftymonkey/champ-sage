@@ -1,4 +1,6 @@
 import type { CoachingContext, CoachingQuery } from "./types";
+import { formatGameTime } from "../format";
+import { LCU_MODE_MAYHEM } from "../mode/types";
 
 export function buildSystemPrompt(context: {
   gameMode: string;
@@ -25,7 +27,7 @@ export function buildSystemPrompt(context: {
   ];
 
   const isMayhem =
-    context.lcuGameMode === "KIWI" || context.gameMode === "ARAM";
+    context.lcuGameMode === LCU_MODE_MAYHEM || context.gameMode === "ARAM";
   if (isMayhem) {
     sections.push(
       "",
@@ -59,12 +61,10 @@ export function buildUserPrompt(
 
   const modeLabel =
     context.lcuGameMode && context.lcuGameMode !== context.gameMode
-      ? `${context.gameMode} — ${context.lcuGameMode === "KIWI" ? "Mayhem (KIWI)" : context.lcuGameMode}`
+      ? `${context.gameMode} — ${context.lcuGameMode === LCU_MODE_MAYHEM ? "Mayhem (KIWI)" : context.lcuGameMode}`
       : context.gameMode;
   sections.push(`## Game Mode: ${modeLabel}`);
-  sections.push(
-    `## Game Time: ${Math.floor(context.gameTime / 60)}:${String(Math.floor(context.gameTime % 60)).padStart(2, "0")}`
-  );
+  sections.push(`## Game Time: ${formatGameTime(context.gameTime)}`);
 
   sections.push(
     `## Your Champion: ${context.champion.name} (Level ${context.champion.level})`
@@ -98,7 +98,6 @@ export function buildUserPrompt(
     );
     sections.push(`### Current Augments\n${augmentLines.join("\n")}`);
 
-    // Show set progress if the player has augments in any set
     const setProgress = computeSetProgress(
       context.currentAugments,
       context.augmentSets
@@ -127,7 +126,6 @@ export function buildUserPrompt(
     sections.push(`### Enemy Team\n${enemies}`);
   }
 
-  // Conversation history
   if (query.history && query.history.length > 0) {
     sections.push("## Recent Conversation");
     for (const exchange of query.history) {
@@ -136,12 +134,10 @@ export function buildUserPrompt(
     }
   }
 
-  // Augment options if detected
   if (query.augmentOptions && query.augmentOptions.length > 0) {
     sections.push("## Augment Options Being Offered");
     sections.push("The player is choosing between these augments (NOT items):");
 
-    // Count current set membership for bonus progress annotations
     const setCounts = countSets(context.currentAugments);
 
     for (const option of query.augmentOptions) {

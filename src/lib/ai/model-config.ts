@@ -6,6 +6,12 @@ export const MODEL_CONFIG = {
   provider: "openai",
 } as const;
 
+let cachedModel: ReturnType<ReturnType<typeof createOpenAI>> | null = null;
+let cachedApiKey: string | null = null;
+
 export function createCoachingModel(apiKey: string) {
-  return createOpenAI({ apiKey })(MODEL_CONFIG.id);
+  if (cachedModel && cachedApiKey === apiKey) return cachedModel;
+  cachedModel = createOpenAI({ apiKey })(MODEL_CONFIG.id);
+  cachedApiKey = apiKey;
+  return cachedModel;
 }

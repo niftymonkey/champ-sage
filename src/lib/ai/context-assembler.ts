@@ -3,6 +3,7 @@ import type { PlayerInfo } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
 import type { CoachingContext } from "./types";
 import type { AramOverrides } from "../data-ingest/types";
+import { formatModifier } from "../format";
 
 export function assembleContext(
   gameState: LiveGameState,
@@ -94,30 +95,25 @@ function formatAbilities(
 function formatBalanceOverrides(overrides: AramOverrides): string | null {
   const parts: string[] = [];
   if (overrides.dmgDealt !== 1) {
-    parts.push(`Damage dealt: ${formatPct(overrides.dmgDealt)}`);
+    parts.push(`Damage dealt: ${formatModifier(overrides.dmgDealt)}`);
   }
   if (overrides.dmgTaken !== 1) {
-    parts.push(`Damage taken: ${formatPct(overrides.dmgTaken)}`);
+    parts.push(`Damage taken: ${formatModifier(overrides.dmgTaken)}`);
   }
   if (overrides.healing != null && overrides.healing !== 1) {
-    parts.push(`Healing: ${formatPct(overrides.healing)}`);
+    parts.push(`Healing: ${formatModifier(overrides.healing)}`);
   }
   if (overrides.shielding != null && overrides.shielding !== 1) {
-    parts.push(`Shielding: ${formatPct(overrides.shielding)}`);
+    parts.push(`Shielding: ${formatModifier(overrides.shielding)}`);
   }
   if (overrides.tenacity != null && overrides.tenacity !== 1) {
-    parts.push(`Tenacity: ${formatPct(overrides.tenacity)}`);
+    parts.push(`Tenacity: ${formatModifier(overrides.tenacity)}`);
   }
   if (overrides.abilityHaste != null && overrides.abilityHaste !== 0) {
     parts.push(`Ability Haste: +${overrides.abilityHaste}`);
   }
   if (parts.length === 0) return null;
   return parts.join(", ");
-}
-
-function formatPct(value: number): string {
-  const pct = Math.round((value - 1) * 100);
-  return pct >= 0 ? `+${pct}%` : `${pct}%`;
 }
 
 /**

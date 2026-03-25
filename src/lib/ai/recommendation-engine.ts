@@ -47,7 +47,7 @@ export async function getCoachingResponse(
     const result = await generateText({
       model,
       system: systemPrompt,
-      prompt: buildUserPrompt(context, query),
+      prompt: userPrompt,
       output: Output.object({ schema: coachingResponseSchema }),
       maxOutputTokens: 1024,
     });

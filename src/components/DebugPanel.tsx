@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { skip } from "rxjs/operators";
 import { detailedDiff } from "deep-object-diff";
+import { formatGameTime } from "../lib/format";
 import {
   gameLifecycle$,
   liveGameState$,
@@ -118,9 +119,7 @@ function summarizeLiveGameState(state: LiveGameState): string {
   const parts = [
     state.activePlayer.championName,
     `Lv${state.activePlayer.level}`,
-    `${Math.floor(state.gameTime / 60)}:${Math.floor(state.gameTime % 60)
-      .toString()
-      .padStart(2, "0")}`,
+    formatGameTime(state.gameTime),
   ];
   if (state.gameMode) parts.push(state.gameMode);
   if (state.players.length > 0) parts.push(`${state.players.length}p`);
