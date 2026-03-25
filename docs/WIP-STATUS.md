@@ -1,97 +1,104 @@
 # WIP Status — Coaching Engine (Issue #11)
 
 **Branch:** feat/11-coaching-engine
-**Last updated:** 2026-03-23
+**Last updated:** 2026-03-24
 
-## What's built
+## Current Focus: Augment Data Quality
+
+Testing revealed that poor coaching recommendations stem from incomplete/garbled augment data, not model reasoning. The model reasons correctly when given correct data.
+
+### Key Finding
+
+The "Quest: Urf's Champion" augment description says "Complete a quest, receive The Golden Spatula" but doesn't include what The Golden Spatula actually gives (+90 AD, +60% AS, +25% crit, +15% omnivamp, +40 armor/MR, +350 HP, etc.). Without these stats, the model reasoned "CDR/mana removal is low value on Bel'Veth" — correct reasoning, wrong data.
+
+### Prompt Enrichment Test Results
+
+Script: `scripts/test-prompt-quality.ts` — runs same scenario 3x with current vs enriched prompts.
+
+**Current prompt:** Inconsistent (2/3 Protein Shake, 1/3 Urf's Champion). Model admitted "no augment text provided" for Urf's Champion. Guessed wrong.
+
+**Enriched prompt (champion role + team analysis + augment role tags):** Consistent reasoning. All 3 runs correctly identified Urf's Champion as bad for auto-attack champions. But still wrong answer because the augment description didn't reveal the actual reward stats.
+
+**Conclusion:** Both prompt quality AND data quality need fixing. Enrichment improves consistency but can't fix missing data.
+
+### Next Steps (in order)
+
+1. **Fix augment descriptions** — better wiki markup stripping to preserve mechanical details already in the raw data. Most augments have good info, we're just garbling it with bad template handling.
+
+2. **Hardcode quest augment rewards** — only 9 quest augments exist. Manually add reward item stats (e.g., Golden Spatula's full stat block). These rarely change.
+
+3. **Audit all 202 augments** — check for other augments where the description is incomplete or misleading after markup fixes. Look for patterns where we need to dig deeper.
+
+4. **Implement prompt enrichments** — champion role summary, game phase, team composition analysis, augment role tags. Test script proved these improve consistency. ~188 extra tokens, negligible cost.
+
+5. **Context compression** — replace verbose item/ability descriptions with concise tags. Test showed enriched prompt used FEWER tokens (1088 vs 1198) despite adding more structured knowledge.
+
+### Data Quality Analysis
+
+Raw wiki data (`Module:MayhemAugmentData/data`):
+
+- 202 Mayhem augments total
+- 9 quest augments with `{{ii|ItemName}}` reward references
+- 126 total item references across all augments via `{{ii|...}}` templates
+- Wiki templates not fully handled: `{{sbc|...}}`, `{{cai|Ability|Champ}}`, `{{ii|Item}}`, `{{nie|...}}`, `{{fd|...}}`, `{{g|...}}`
+- After current markup fixes: 3/202 still have artifacts
+
+### Brainstorm Context
+
+`docs/champ-sage-coaching-brainstorm.md` — core insight: "LLM should be reasoning engine, not knowledge base. Move knowledge into structured data."
+
+The prompt enrichment test validated this. When given champion role ("melee DPS carry, auto-attack focused") and augment role tags ("sustain/scaling", "high-risk DPS", "ability spam/CDR"), the model made better decisions even without perfect augment data.
+
+## What's Built (complete list)
 
 ### AI Pipeline (src/lib/ai/)
 
-- **model-config.ts** — GPT-5.4 mini selected via PickAI discovery (reasoning=3, speed=3, quality=2, IF=2, cost=1, recency=1)
-- **context-assembler.ts** — Builds CoachingContext from LiveGameState + LoadedGameData. Includes champion abilities, item descriptions with stats, ARAM balance overrides, enemy/ally teams with items.
-- **prompts.ts** — Mode-aware system prompt. Detects Mayhem via `lcuGameMode === "KIWI"` and adds augment mechanic rules (3 choices, re-rolls, augment ≠ item). Strict response length rules.
-- **recommendation-engine.ts** — Calls LLM via Vercel AI SDK v6 `generateText` with `Output.object` for structured responses. Logs to `data-dump/coaching.log` via Rust command.
-- **schemas.ts** — `CoachingResponse` with `answer` string + `recommendations[]` array
-- **types.ts** — `CoachingContext`, `CoachingQuery` (with history + augmentOptions), `CoachingResponse`, `CoachingExchange`
+- model-config.ts — GPT-5.4 mini via Vercel AI SDK v6
+- context-assembler.ts — builds CoachingContext from LiveGameState + LoadedGameData
+- prompts.ts — mode-aware system prompt (KIWI detection), strict length rules, per-card re-roll mechanic (3 rounds, independent per card)
+- recommendation-engine.ts — generateText with Output.object, logs to data-dump/coaching-{timestamp}.log
+- schemas.ts — CoachingResponse structured output schema
+- types.ts — CoachingContext, CoachingQuery, CoachingResponse, CoachingExchange
+
+### Voice Integration
+
+- Low-level keyboard hook (WH_KEYBOARD_LL) on Windows for in-game hotkey
+- Voice transcripts trigger coaching pipeline via playerIntent$ subscription
+- Whisper API with vocab hints from in-game champion names
 
 ### Data Enrichment
 
-- **ensure-abilities.ts** — Fetches champion abilities from DDragon for in-game champions (10 parallel requests) on game start. Called from App.tsx when players first appear.
-- **Item descriptions** — Context assembler looks up full item descriptions from gameData by item ID, not just names.
-- **lcuGameMode** — Added to LiveGameState, extracted from LCU session WebSocket events. Distinguishes KIWI (Mayhem) from regular ARAM.
+- ensureAbilities() — fetches champion abilities from DDragon on game start
+- Item descriptions with stats in coaching context
+- lcuGameMode — KIWI detection for Mayhem-specific prompts
+- Wiki markup cleanup (pipes, meta-references stripped)
+- findInText() for augment name extraction with prefix-stripped matching
 
-### UI (src/components/)
+### UI
 
-- **CoachingInput.tsx** — Text input on Game tab. Conversation history displayed as chat log. Fuzzy-matches augment names from user's question against catalog and injects descriptions as structured augment options. Clears on submit.
-- **GameStateView.tsx** — Uses `assembleContext()` instead of inline context building. Passes `gameData` to CoachingInput.
+- Game tab: top (game info + augment slots), middle (coaching display), bottom (team details)
+- Coaching display: latest question/answer only, voice-first (no text input)
+- Debug panel with per-session log buffers, copy-all
 
-### Supporting
+### Infrastructure
 
-- **discover-candidates.ts** script — PickAI + AA benchmarks for model selection (`pnpm discover-candidates`)
-- **Coaching log** — `data-dump/coaching.log` written via `append_coaching_log` Rust command
-- **Debug panel noise filtering** — Chat, loot, honor, clash, cosmetics events excluded from buffer
+- Per-session coaching log files
+- Mode detection logging
+- discover-candidates.ts — PickAI model selection
+- test-prompt-quality.ts — A/B prompt comparison script
 
-## Test results from gameplay
-
-### Practice Tool SR (worked well)
-
-- Item recommendations are contextual and build-path coherent
-- Conversation history carries through naturally
-- Response times 2.2-2.7s
-- Tactical advice (when to roam) is useful
-- Champion abilities and item descriptions flowing into prompts correctly
-
-### ARAM Mayhem (issues found)
-
-1. **Augment/item name confusion** — "Upgrade Infinity Edge" (an augment) was interpreted as "buy/upgrade the item Infinity Edge". System prompt now has Mayhem rules explaining augments ≠ items, but this is UNTESTED.
-2. **Verbosity** — Responses still too long despite strict length rules in system prompt. Needs further prompt iteration.
-3. **Alt-tab is unusable** — Computer is too slow for alt-tab workflow during real games. Voice mode is the #1 blocker for further testing.
-
-## What to do next
-
-### Immediate: Voice mode (STT)
-
-The user cannot test coaching during real games without voice input. This is the top priority. Check issue #4 for STT engine selection requirements. Key criteria: speed and League-specific vocabulary support.
-
-### After voice: Return here and iterate
-
-- Test augment recommendations in real Mayhem games
-- Verify augment fuzzy matching works with real augment names
-- Iterate on prompt verbosity
-- Test re-roll advice flow
-
-## How to resume this branch
+## How to Resume
 
 ```bash
 git checkout feat/11-coaching-engine
-# Pop the WIP commit to get changes as unstaged
-git reset HEAD~1
-# Delete this file before the real commit
-rm docs/WIP-STATUS.md
+git pull
 ```
 
-## Files changed since last real commit
+Key files to read:
 
-### New files
+- This file (docs/WIP-STATUS.md)
+- docs/coaching-engine.md — technical design
+- docs/champ-sage-coaching-brainstorm.md — brainstorm on knowledge vs reasoning
+- scripts/test-prompt-quality.ts — prompt comparison test script
 
-- src/lib/data-ingest/ensure-abilities.ts
-- src/lib/data-ingest/ensure-abilities.test.ts
-
-### Modified files
-
-- src-tauri/src/lib.rs (append_coaching_log command, expanded noise prefixes)
-- src/App.tsx (ensureAbilities call on game start)
-- src/components/CoachingInput.tsx (gameData prop, augment fuzzy matching, conversation history UI)
-- src/components/DataBrowser.tsx (passes gameData to GameStateView)
-- src/components/DebugPanel.tsx (copy all buttons, llm source color)
-- src/components/GameStateView.tsx (uses assembleContext, passes gameData to CoachingInput)
-- src/hooks/**tests**/useLiveGameState.test.ts (lcuGameMode field)
-- src/lib/ai/context-assembler.ts (item descriptions, lcuGameMode)
-- src/lib/ai/context-assembler.test.ts (updated for CoachingItem shape, lcuGameMode)
-- src/lib/ai/prompts.ts (mode-aware system prompt, Mayhem rules, response length rules)
-- src/lib/ai/prompts.test.ts (updated for new prompt API, Mayhem tests)
-- src/lib/ai/recommendation-engine.ts (log file via Tauri invoke, generalized from augment-specific)
-- src/lib/ai/types.ts (CoachingItem, lcuGameMode, CoachingExchange, generalized types)
-- src/lib/reactive/engine.ts (lcuGameMode extraction from session, noise filtering)
-- src/lib/reactive/streams.ts (lcuGameMode in default state, llm debug source)
-- src/lib/reactive/types.ts (lcuGameMode on LiveGameState)
+Start with: fixing wiki markup templates ({{ii}}, {{sbc}}, {{cai}}, etc.) in src/lib/data-ingest/parsers/wiki-markup.ts, then hardcode the 9 quest augment rewards.
