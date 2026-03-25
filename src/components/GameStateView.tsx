@@ -29,6 +29,13 @@ export function GameStateView({
   modeAugments,
   augmentSelection,
 }: GameStateViewProps) {
+  const liveGame = useLiveGameState();
+
+  const coachingContext = useMemo(
+    () => assembleContext(liveGame, gameData),
+    [liveGame, gameData]
+  );
+
   if (state.status === "disconnected") {
     return (
       <div className="game-status">
@@ -52,13 +59,6 @@ export function GameStateView({
   const timeStr = formatGameTime(state.gameTime);
   const active = state.activePlayer;
   const modeCtx = state.modeContext;
-
-  const liveGame = useLiveGameState();
-
-  const coachingContext = useMemo(
-    () => assembleContext(liveGame, gameData),
-    [liveGame, gameData]
-  );
 
   return (
     <div className="game-view-layout">

@@ -1,5 +1,4 @@
 import { fetchWikiAugments } from "../src/lib/data-ingest/sources/wiki-augments";
-import { fetchArenaAugments } from "../src/lib/data-ingest/sources/wiki-arena-augments";
 
 async function main() {
   console.log("Fetching Mayhem augments...");

@@ -44,7 +44,7 @@ Before creating a commit, review `docs/technical-reference.md` and update it wit
 
 ## Project Structure
 
-```
+```text
 src/lib/           — Core business logic modules (data-ingest, game-state, etc.)
 src/components/    — React components
 src/hooks/         — React hooks

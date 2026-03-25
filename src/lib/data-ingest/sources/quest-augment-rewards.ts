@@ -37,6 +37,7 @@ export function enrichQuestAugments(
 
   for (const augment of augments.values()) {
     if (!augment.name.startsWith("Quest:")) continue;
+    if (augment.description.includes(" stats: ")) continue;
 
     const rewardIndex = augment.description.toLowerCase().indexOf("reward:");
     if (rewardIndex === -1) continue;

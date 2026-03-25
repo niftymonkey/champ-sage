@@ -312,8 +312,8 @@ export class ReactiveEngine {
         .pipe(
           switchMap((phase) => {
             if (phase !== "InProgress") {
-              // Reset live game state when leaving InProgress
               liveGameState$.next(createDefaultLiveGameState());
+              this.lcuGameMode = "";
 
               // Clear any active error notification when leaving InProgress
               if (this.notified) {

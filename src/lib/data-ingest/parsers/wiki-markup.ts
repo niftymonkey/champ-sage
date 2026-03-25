@@ -37,7 +37,7 @@ export function stripWikiMarkup(text: string): string {
   result = result.replace(/<!--[\s\S]*?-->/g, "");
 
   // Strip HTML block/list tags with space to preserve word boundaries
-  result = result.replace(/<\/?(ul|ol|li|br|p|div)\s*\/?>/gi, " ");
+  result = result.replace(/<\/?(ul|ol|li|br|p|div)\b[^>]*\/?>/gi, " ");
 
   // Strip remaining HTML tags
   result = result.replace(/<[^>]+>/g, "");

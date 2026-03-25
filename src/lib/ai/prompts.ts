@@ -189,6 +189,7 @@ function countSets(
 
 /** Get the highest bonus threshold for a set */
 function maxThreshold(set: CoachingContext["augmentSets"][number]): number {
+  if (set.bonuses.length === 0) return 0;
   return Math.max(...set.bonuses.map((b) => b.threshold));
 }
 

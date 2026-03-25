@@ -131,6 +131,19 @@ function App() {
     gameTime: liveGame.gameTime,
   };
 
+  const prevGameModeRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!data || gameState.status !== "connected") return;
+    const mode = gameState.gameMode;
+    if (mode === prevGameModeRef.current) return;
+    prevGameModeRef.current = mode;
+    const detectedMode = registry.detect(mode);
+    debugInput$.next({
+      source: "discovery",
+      summary: `Mode detection: gameMode="${mode}" → ${detectedMode ? detectedMode.displayName : "none"} | augments: ${detectedMode ? (detectedMode.buildContext(gameState, data).modeAugments?.size ?? 0) : 0}`,
+    });
+  }, [data, gameState]);
+
   const effectiveState = useMemo(() => {
     if (!data || gameState.status !== "connected") {
       return buildEffectiveGameState(gameState, null);
@@ -139,11 +152,6 @@ function App() {
     let modeContext = detectedMode
       ? detectedMode.buildContext(gameState, data)
       : null;
-
-    debugInput$.next({
-      source: "discovery",
-      summary: `Mode detection: gameMode="${gameState.gameMode}" → ${detectedMode ? detectedMode.displayName : "none"} | augments: ${modeContext?.modeAugments?.size ?? 0}`,
-    });
 
     if (modeContext && selectedAugments.length > 0) {
       const activePlayer = gameState.players.find((p) => p.isActivePlayer);

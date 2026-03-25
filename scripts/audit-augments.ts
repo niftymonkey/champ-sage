@@ -16,7 +16,7 @@ const ARTIFACT_PATTERNS = [
   { pattern: /\[\[/, label: "residual [[ link" },
   { pattern: /\]\]/, label: "residual ]] link" },
   { pattern: /'''/, label: "residual ''' bold" },
-  { pattern: /<[a-z]+[^>]*>/i, label: "residual HTML tag" },
+  { pattern: /<\/?[a-z]+[^>]*>/i, label: "residual HTML tag" },
   { pattern: /\|/, label: "residual pipe character" },
 ];
 
