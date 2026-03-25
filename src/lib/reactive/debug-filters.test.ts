@@ -3,7 +3,10 @@ import {
   isDebugWorthy,
   shouldLogPollStatus,
   describeEvent,
+  hasGameStateChangedMeaningfully,
 } from "./debug-filters";
+import type { LiveGameState } from "./types";
+import { createDefaultLiveGameState } from "./streams";
 
 describe("isDebugWorthy", () => {
   it("allows gameflow phase events", () => {
@@ -118,5 +121,84 @@ describe("shouldLogPollStatus", () => {
 
   it("logs when status changes from CONNECTION_FAILED to LOADING", () => {
     expect(shouldLogPollStatus("LOADING", "CONNECTION_FAILED")).toBe(true);
+  });
+});
+
+describe("hasGameStateChangedMeaningfully", () => {
+  function makeState(overrides: Partial<LiveGameState> = {}): LiveGameState {
+    return { ...createDefaultLiveGameState(), ...overrides };
+  }
+
+  it("detects champion change", () => {
+    const a = makeState({
+      activePlayer: { championName: "Ahri" } as LiveGameState["activePlayer"],
+    });
+    const b = makeState({
+      activePlayer: { championName: "Jinx" } as LiveGameState["activePlayer"],
+    });
+    expect(hasGameStateChangedMeaningfully(a, b)).toBe(true);
+  });
+
+  it("detects level change", () => {
+    const a = makeState({
+      activePlayer: {
+        championName: "Ahri",
+        level: 5,
+      } as LiveGameState["activePlayer"],
+    });
+    const b = makeState({
+      activePlayer: {
+        championName: "Ahri",
+        level: 6,
+      } as LiveGameState["activePlayer"],
+    });
+    expect(hasGameStateChangedMeaningfully(a, b)).toBe(true);
+  });
+
+  it("detects player count change", () => {
+    const a = makeState({
+      players: [{ championName: "Ahri" }] as LiveGameState["players"],
+    });
+    const b = makeState({ players: [] });
+    expect(hasGameStateChangedMeaningfully(a, b)).toBe(true);
+  });
+
+  it("detects game mode change", () => {
+    const a = makeState({ gameMode: "ARAM" });
+    const b = makeState({ gameMode: "KIWI" });
+    expect(hasGameStateChangedMeaningfully(a, b)).toBe(true);
+  });
+
+  it("detects champ select appearing", () => {
+    const a = makeState({ champSelect: null });
+    const b = makeState({ champSelect: { some: "data" } as unknown });
+    expect(hasGameStateChangedMeaningfully(a, b)).toBe(true);
+  });
+
+  it("detects end-of-game stats appearing", () => {
+    const a = makeState({ eogStats: null });
+    const b = makeState({
+      eogStats: {
+        gameId: "1",
+        gameLength: 600,
+        gameMode: "ARAM",
+        isWin: true,
+        championId: 1,
+        items: [],
+      },
+    });
+    expect(hasGameStateChangedMeaningfully(a, b)).toBe(true);
+  });
+
+  it("ignores game time changes", () => {
+    const a = makeState({ gameTime: 100 });
+    const b = makeState({ gameTime: 102 });
+    expect(hasGameStateChangedMeaningfully(a, b)).toBe(false);
+  });
+
+  it("ignores identical states", () => {
+    const a = makeState();
+    const b = makeState();
+    expect(hasGameStateChangedMeaningfully(a, b)).toBe(false);
   });
 });

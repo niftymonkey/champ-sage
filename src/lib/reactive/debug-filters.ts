@@ -3,6 +3,7 @@
  * Controls which events show up in the debug panel to reduce noise,
  * and translates raw URIs into human-readable descriptions.
  */
+import type { LiveGameState } from "./types";
 
 /**
  * Allowlist of WebSocket URI prefixes worth showing in the debug panel.
@@ -66,4 +67,32 @@ export function shouldLogWebSocketEvent(uri: string): boolean {
   lastLoggedUri = uri;
   lastLoggedTime = now;
   return true;
+}
+
+/**
+ * Extract a fingerprint of the game state fields worth logging about.
+ * Changes to fields NOT in this fingerprint (like gameTime) are ignored.
+ *
+ * To add a new meaningful field, just add it to the fingerprint string.
+ */
+function gameStateFingerprint(state: LiveGameState): string {
+  return [
+    state.activePlayer?.championName ?? "",
+    state.activePlayer?.level ?? 0,
+    state.players.length,
+    state.gameMode,
+    state.champSelect != null ? "cs" : "",
+    state.eogStats != null ? "eog" : "",
+  ].join("|");
+}
+
+/**
+ * Check if two LiveGameState snapshots differ in a way worth logging.
+ * Ignores high-frequency changes like game time ticking every 2 seconds.
+ */
+export function hasGameStateChangedMeaningfully(
+  prev: LiveGameState,
+  next: LiveGameState
+): boolean {
+  return gameStateFingerprint(prev) !== gameStateFingerprint(next);
 }

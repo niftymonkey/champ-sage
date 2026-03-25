@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { skip, distinctUntilChanged, map } from "rxjs/operators";
 import { detailedDiff } from "deep-object-diff";
 import { formatGameTime } from "../lib/format";
+import { hasGameStateChangedMeaningfully } from "../lib/reactive/debug-filters";
 import {
   gameLifecycle$,
   liveGameState$,
@@ -261,17 +262,7 @@ function startSubscriptions(): void {
   liveGameState$
     .pipe(
       skip(1),
-      // Deduplicate on meaningful state changes (not game time ticking)
-      distinctUntilChanged((a, b) => {
-        if (a.activePlayer?.championName !== b.activePlayer?.championName)
-          return false;
-        if (a.activePlayer?.level !== b.activePlayer?.level) return false;
-        if (a.players.length !== b.players.length) return false;
-        if (a.gameMode !== b.gameMode) return false;
-        if ((a.champSelect != null) !== (b.champSelect != null)) return false;
-        if ((a.eogStats != null) !== (b.eogStats != null)) return false;
-        return true;
-      }),
+      distinctUntilChanged((a, b) => !hasGameStateChangedMeaningfully(a, b)),
       map((state) => summarizeLiveGameState(state))
     )
     .subscribe((summary) => {
