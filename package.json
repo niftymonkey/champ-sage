@@ -10,6 +10,8 @@
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "test:all": "vitest run && cargo test --manifest-path src-tauri/Cargo.toml",
     "check-game": "tsx scripts/check-game.ts",
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
     "discover-candidates": "tsx scripts/discover-candidates.ts",
