@@ -29,6 +29,8 @@ function createContext(
         description: "Your abilities can critically strike.",
       },
     ],
+    teamAnalysis:
+      "Your team roles: 1 Mage, 1 Assassin, 1 Fighter, 1 Tank — no Marksman, no Support. Enemy damage: heavily AD (2 AD, 1 AP — favor armor).",
     augmentSets: [],
     enemyTeam: [
       {
@@ -190,6 +192,13 @@ describe("buildUserPrompt", () => {
     it("includes ally team", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Garen");
+    });
+
+    it("includes team analysis when present", () => {
+      const prompt = buildUserPrompt(createContext(), generalQuery);
+      expect(prompt).toContain("Team Analysis");
+      expect(prompt).toContain("no Marksman");
+      expect(prompt).toContain("favor armor");
     });
 
     it("does not include augment options section when none provided", () => {

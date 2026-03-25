@@ -104,6 +104,10 @@ export function buildUserPrompt(
     }
   }
 
+  if (context.teamAnalysis) {
+    sections.push(`### Team Analysis\n${context.teamAnalysis}`);
+  }
+
   if (context.allyTeam.length > 0) {
     const allies = context.allyTeam.map((a) => `- ${a.champion}`).join("\n");
     sections.push(`### Ally Team\n${allies}`);

@@ -130,7 +130,71 @@ function createGameData(): LoadedGameData {
     },
   };
 
-  const champions = new Map<string, Champion>([["ahri", ahri]]);
+  const garen: Champion = {
+    id: "Garen",
+    key: 86,
+    name: "Garen",
+    title: "the Might of Demacia",
+    tags: ["Fighter", "Tank"],
+    partype: "None",
+    stats: {
+      hp: 690,
+      hpperlevel: 98,
+      mp: 0,
+      mpperlevel: 0,
+      movespeed: 340,
+      armor: 38,
+      armorperlevel: 4.2,
+      spellblock: 32,
+      spellblockperlevel: 1.55,
+      attackrange: 175,
+      hpregen: 8,
+      hpregenperlevel: 0.5,
+      mpregen: 0,
+      mpregenperlevel: 0,
+      attackdamage: 69,
+      attackdamageperlevel: 4.5,
+      attackspeed: 0.625,
+      attackspeedperlevel: 3.65,
+    },
+    image: "",
+  };
+
+  const vayne: Champion = {
+    id: "Vayne",
+    key: 67,
+    name: "Vayne",
+    title: "the Night Hunter",
+    tags: ["Marksman", "Assassin"],
+    partype: "Mana",
+    stats: {
+      hp: 550,
+      hpperlevel: 103,
+      mp: 232,
+      mpperlevel: 35,
+      movespeed: 330,
+      armor: 23,
+      armorperlevel: 4.6,
+      spellblock: 30,
+      spellblockperlevel: 1.3,
+      attackrange: 550,
+      hpregen: 3.5,
+      hpregenperlevel: 0.55,
+      mpregen: 8,
+      mpregenperlevel: 0.7,
+      attackdamage: 60,
+      attackdamageperlevel: 2.35,
+      attackspeed: 0.658,
+      attackspeedperlevel: 3.3,
+    },
+    image: "",
+  };
+
+  const champions = new Map<string, Champion>([
+    ["ahri", ahri],
+    ["garen", garen],
+    ["vayne", vayne],
+  ]);
 
   const items = new Map<number, Item>([
     [
@@ -340,6 +404,42 @@ describe("assembleContext", () => {
       const result = assembleContext(gameState, createGameData());
       expect(result).not.toBeNull();
       expect(result!.champion.statProfile).toBeNull();
+    });
+  });
+
+  describe("team analysis", () => {
+    it("includes ally team role breakdown without player count", () => {
+      const result = assembleContext(createLiveGameState(), createGameData());
+      // Ally team has Ahri (Mage, Assassin) + Garen (Fighter, Tank)
+      expect(result!.teamAnalysis).toContain("Fighter");
+      expect(result!.teamAnalysis).toContain("Tank");
+      expect(result!.teamAnalysis).toContain("Mage");
+      // Should say "Your team roles:" not "Your team (2 players):"
+      expect(result!.teamAnalysis).toContain("Your team roles:");
+      expect(result!.teamAnalysis).not.toContain("players");
+    });
+
+    it("shows missing roles as gaps", () => {
+      const result = assembleContext(createLiveGameState(), createGameData());
+      // Team has Mage, Assassin, Fighter, Tank — missing Marksman and Support
+      expect(result!.teamAnalysis).toContain("no Marksman");
+      expect(result!.teamAnalysis).toContain("Support");
+    });
+
+    it("classifies enemy damage profile with resistance guidance", () => {
+      const result = assembleContext(createLiveGameState(), createGameData());
+      // Enemy has Vayne (Marksman, Assassin) — only AD, no AP
+      // With 1 enemy who is AD only, should say "all AD" + "stack armor"
+      expect(result!.teamAnalysis).toContain("AD");
+      expect(result!.teamAnalysis).toContain("armor");
+    });
+
+    it("returns null when no champion data is available for team members", () => {
+      const gameData = createGameData();
+      gameData.champions.clear();
+
+      const result = assembleContext(createLiveGameState(), gameData);
+      expect(result!.teamAnalysis).toBeNull();
     });
   });
 });

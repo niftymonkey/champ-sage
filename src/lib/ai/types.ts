@@ -36,6 +36,8 @@ export interface CoachingContext {
   allyTeam: Array<{
     champion: string;
   }>;
+  /** Team composition analysis — role breakdown, damage profile, gaps */
+  teamAnalysis: string | null;
   /** Set bonus definitions for the current game mode */
   augmentSets: Array<{
     name: string;
