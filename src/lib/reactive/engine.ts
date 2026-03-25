@@ -29,6 +29,12 @@ import { normalizeGameState } from "../game-state/normalize";
 import type { TauriBridge, LcuEventPayload } from "./tauri-bridge";
 import type { GameflowPhase, LiveGameState, EogStats } from "./types";
 import { formatGameTime } from "../format";
+import {
+  isDebugWorthy,
+  shouldLogPollStatus,
+  shouldLogWebSocketEvent,
+  describeEvent,
+} from "./debug-filters";
 
 const DISCOVERY_INTERVAL_MS = 3000;
 const POLL_INTERVAL_MS = 2000;
@@ -104,8 +110,12 @@ export class ReactiveEngine {
   // LCU game mode (KIWI for Mayhem, CLASSIC for SR, CHERRY for Arena)
   private lcuGameMode = "";
 
+  // Incremented on WebSocket failure to force discovery re-emit
+  private wsRetrySeq = 0;
+
   // Error recovery state for Live Client Data polling
   private consecutiveFailures = 0;
+  private lastPollStatus: string | null = null;
   private backoffMs = POLL_INTERVAL_MS;
   private notified = false;
 
@@ -121,12 +131,22 @@ export class ReactiveEngine {
       startWith(0),
       switchMap(() =>
         this.bridge.discoverLcu().then(
-          (creds) => ({ connected: true as const, ...creds }),
-          () => ({ connected: false as const, port: 0, token: "" })
+          (creds) => ({
+            connected: true as const,
+            ...creds,
+            seq: this.wsRetrySeq,
+          }),
+          () => ({
+            connected: false as const,
+            port: 0,
+            token: "",
+            seq: this.wsRetrySeq,
+          })
         )
       ),
       distinctUntilChanged(
-        (a, b) => a.connected === b.connected && a.port === b.port
+        (a, b) =>
+          a.connected === b.connected && a.port === b.port && a.seq === b.seq
       ),
       share()
     );
@@ -134,12 +154,19 @@ export class ReactiveEngine {
     // Push connection events to gameLifecycle$ and track credentials
     this.subscription.add(
       lcuConnection$.subscribe((status) => {
-        debugInput$.next({
-          source: "discovery",
-          summary: status.connected
-            ? `LCU found — port ${status.port}`
-            : "LCU not found",
-        });
+        // Only log discovery when connection status or port actually changes
+        // (not on retry seq bumps — those just re-trigger WebSocket connection)
+        const isNewDiscovery =
+          this.currentPort !== status.port ||
+          (status.connected && this.currentPort === 0);
+        if (isNewDiscovery || !status.connected) {
+          debugInput$.next({
+            source: "discovery",
+            summary: status.connected
+              ? `LCU found — port ${status.port}`
+              : "LCU not found",
+          });
+        }
         if (status.connected) {
           this.currentPort = status.port;
           this.currentToken = status.token;
@@ -169,9 +196,12 @@ export class ReactiveEngine {
               let unlisten: (() => void) | null = null;
               let unlistenDisconnect: (() => void) | null = null;
 
+              const isRetry = this.wsRetrySeq > 0;
               debugInput$.next({
                 source: "websocket",
-                summary: `Connecting WebSocket to port ${creds.port}...`,
+                summary: isRetry
+                  ? `Retrying WebSocket connection... (attempt ${this.wsRetrySeq + 1})`
+                  : `Connecting WebSocket to port ${creds.port}...`,
               });
 
               Promise.all([
@@ -183,6 +213,7 @@ export class ReactiveEngine {
                     source: "websocket",
                     summary: `WebSocket disconnected: ${event.reason}`,
                   });
+                  this.wsRetrySeq++;
                 }),
                 this.bridge.connectLcuWebSocket(creds.port, creds.token),
               ])
@@ -204,7 +235,9 @@ export class ReactiveEngine {
                     source: "websocket",
                     summary: `WebSocket connection FAILED: ${err instanceof Error ? err.message : String(err)}`,
                   });
-                  // Don't error the subscriber — let discovery retry
+                  // Bump retry seq so the next discovery tick re-emits
+                  // and triggers a new connection attempt
+                  this.wsRetrySeq++;
                 });
 
               return () => {
@@ -218,16 +251,12 @@ export class ReactiveEngine {
     );
 
     // Layer 3: WebSocket event splits
-    // Log non-noise WebSocket events only
     this.subscription.add(
       this.wsEvents$.subscribe((evt) => {
-        const isNoise = NOISE_PREFIXES.some((prefix) =>
-          evt.uri.startsWith(prefix)
-        );
-        if (!isNoise) {
+        if (isDebugWorthy(evt.uri) && shouldLogWebSocketEvent(evt.uri)) {
           debugInput$.next({
             source: "websocket",
-            summary: `${evt.event_type} ${evt.uri}`,
+            summary: describeEvent(evt.event_type, evt.uri),
           });
         }
       })
@@ -314,6 +343,7 @@ export class ReactiveEngine {
             if (phase !== "InProgress") {
               liveGameState$.next(createDefaultLiveGameState());
               this.lcuGameMode = "";
+              this.lastPollStatus = null;
 
               // Clear any active error notification when leaving InProgress
               if (this.notified) {
@@ -479,17 +509,28 @@ export class ReactiveEngine {
             (json) => {
               const raw: unknown = JSON.parse(json);
               const normalized = normalizeGameState(raw);
-              debugInput$.next({
-                source: "riot-api",
-                summary: `Poll OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`,
-              });
+              const status = `OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`;
+              if (shouldLogPollStatus("OK", this.lastPollStatus)) {
+                debugInput$.next({
+                  source: "riot-api",
+                  summary: `Poll ${status}`,
+                });
+              }
+              this.lastPollStatus = "OK";
               return { success: true as const, data: normalized };
             },
             (err) => {
-              debugInput$.next({
-                source: "riot-api",
-                summary: `Poll failed — ${err instanceof Error ? err.message : String(err)}`,
-              });
+              const errMsg = err instanceof Error ? err.message : String(err);
+              const status = errMsg.includes("LOADING")
+                ? "LOADING"
+                : "CONNECTION_FAILED";
+              if (shouldLogPollStatus(status, this.lastPollStatus)) {
+                debugInput$.next({
+                  source: "riot-api",
+                  summary: `Poll failed — ${errMsg}`,
+                });
+              }
+              this.lastPollStatus = status;
               return { success: false as const, data: null };
             }
           )

@@ -287,6 +287,25 @@ describe("ReactiveEngine", () => {
       expect(bridge.connectLcuWebSocket).toHaveBeenCalledWith(12345, "secret");
     });
 
+    it("retries WebSocket connection after failure", async () => {
+      bridge.setLcuAvailable(12345, "secret");
+
+      // First connection attempt fails
+      (bridge.connectLcuWebSocket as Mock).mockRejectedValueOnce(
+        new Error("Connection refused")
+      );
+
+      engine.start();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(bridge.connectLcuWebSocket).toHaveBeenCalledTimes(1);
+
+      // After retry delay (3s = next discovery tick), should retry
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(bridge.connectLcuWebSocket).toHaveBeenCalledTimes(2);
+    });
+
     it("fetches initial phase via REST on connect", async () => {
       bridge.setLcuAvailable(12345, "secret");
       bridge.setFetchLcuResponse("None");

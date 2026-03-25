@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { skip } from "rxjs/operators";
+import { skip, distinctUntilChanged, map } from "rxjs/operators";
 import { detailedDiff } from "deep-object-diff";
 import { formatGameTime } from "../lib/format";
+import { hasGameStateChangedMeaningfully } from "../lib/reactive/debug-filters";
 import {
   gameLifecycle$,
   liveGameState$,
@@ -149,7 +150,7 @@ const OUTPUT_COLORS: Record<string, string> = {
   notification: "#f87171",
 };
 
-const MAX_LOG_ENTRIES = 100;
+const MAX_LOG_ENTRIES = 200;
 
 function formatBufferAsText(entries: LogEntry[]): string {
   return entries
@@ -239,17 +240,39 @@ function startSubscriptions(): void {
         event.data != null && typeof event.data === "object"
           ? (event.data as Record<string, unknown>)
           : null;
+
+      // Suppress matchmaking ticks that only update timeInQueue
+      if (
+        event.type === "matchmaking" &&
+        detail &&
+        /^~updated:\n\s+timeInQueue: \d+$/.test(detail.trim())
+      ) {
+        return;
+      }
+
+      // Truncate JWT tokens in diffs — they're unreadable noise
+      if (detail) {
+        detail = detail.replace(
+          /\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+          "[JWT token]"
+        );
+      }
     }
 
     pushOutput("lifecycle", summary, detail);
   });
 
-  liveGameState$.pipe(skip(1)).subscribe((state) => {
-    const summary = summarizeLiveGameState(state);
-    if (summary !== "Default (no data)") {
-      pushOutput("liveGame", summary);
-    }
-  });
+  liveGameState$
+    .pipe(
+      skip(1),
+      distinctUntilChanged((a, b) => !hasGameStateChangedMeaningfully(a, b)),
+      map((state) => summarizeLiveGameState(state))
+    )
+    .subscribe((summary) => {
+      if (summary !== "Default (no data)") {
+        pushOutput("liveGame", summary);
+      }
+    });
 
   userInput$.subscribe((event) => {
     pushOutput("userInput", summarizeUserInput(event));
