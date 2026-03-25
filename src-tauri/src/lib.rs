@@ -3,7 +3,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use futures_util::{SinkExt, StreamExt};
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 use std::sync::{Arc, Mutex};
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tokio_tungstenite::tungstenite;
 
 /// Resolve the League Client lockfile path for the current platform.
@@ -615,9 +615,23 @@ mod keyboard_hook {
     }
 }
 
-/// Append a line to a per-session coaching log file in data-dump/.
-/// Each app launch gets its own timestamped log file.
+/// Append a line to a per-session coaching log file.
+/// Log files are stored in the Tauri app data directory (platform-specific):
+/// - Windows: %APPDATA%/com.champ-sage.app/coaching-logs/
+/// - macOS: ~/Library/Application Support/com.champ-sage.app/coaching-logs/
+/// - Linux: ~/.local/share/com.champ-sage.app/coaching-logs/
+///
+/// The path is initialized in setup() via `init_coaching_log_dir()`.
+/// Falls back to a relative `data-dump/` if not initialized (e.g., tests).
 static COACHING_LOG_PATH: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+
+fn init_coaching_log_dir(app_data_dir: std::path::PathBuf) {
+    let dir = app_data_dir.join("coaching-logs");
+    let _ = std::fs::create_dir_all(&dir);
+    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    let path = dir.join(format!("coaching-{timestamp}.log"));
+    let _ = COACHING_LOG_PATH.set(path);
+}
 
 fn get_coaching_log_path() -> &'static std::path::PathBuf {
     COACHING_LOG_PATH.get_or_init(|| {
@@ -639,6 +653,11 @@ async fn append_coaching_log(text: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to open log file: {e}"))?;
     writeln!(file, "{text}").map_err(|e| format!("Failed to write log: {e}"))?;
     Ok(())
+}
+
+#[tauri::command]
+fn get_coaching_log_location() -> String {
+    get_coaching_log_path().display().to_string()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -663,8 +682,10 @@ pub fn run() {
             app.handle()
                 .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
 
-            // Start low-level keyboard hook on Windows for in-game hotkeys.
-            // This works even when DirectInput games have focus.
+            if let Ok(data_dir) = app.path().app_data_dir() {
+                init_coaching_log_dir(data_dir);
+            }
+
             #[cfg(windows)]
             keyboard_hook::start(app.handle().clone());
 
@@ -678,7 +699,8 @@ pub fn run() {
             connect_lcu_websocket,
             start_recording,
             stop_recording,
-            append_coaching_log
+            append_coaching_log,
+            get_coaching_log_location
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
