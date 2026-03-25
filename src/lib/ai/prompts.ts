@@ -89,6 +89,15 @@ export function buildUserPrompt(
       aug.description ? `- ${aug.name}: ${aug.description}` : `- ${aug.name}`
     );
     sections.push(`### Current Augments\n${augmentLines.join("\n")}`);
+
+    // Show set progress if the player has augments in any set
+    const setProgress = computeSetProgress(
+      context.currentAugments,
+      context.augmentSets
+    );
+    if (setProgress) {
+      sections.push(`### Augment Set Progress\n${setProgress}`);
+    }
   }
 
   if (context.allyTeam.length > 0) {
@@ -119,10 +128,32 @@ export function buildUserPrompt(
   if (query.augmentOptions && query.augmentOptions.length > 0) {
     sections.push("## Augment Options Being Offered");
     sections.push("The player is choosing between these augments (NOT items):");
+
+    // Count current set membership for bonus progress annotations
+    const setCounts = countSets(context.currentAugments);
+
     for (const option of query.augmentOptions) {
       let line = `- **${option.name}** [${option.tier}]: ${option.description}`;
       if (option.sets && option.sets.length > 0) {
-        line += ` (Sets: ${option.sets.join(", ")})`;
+        const setAnnotations = option.sets.map((setName) => {
+          const current = setCounts.get(setName) ?? 0;
+          const wouldHave = current + 1;
+          const setDef = context.augmentSets.find((s) => s.name === setName);
+          const activatedBonus = setDef?.bonuses.find(
+            (b) => b.threshold === wouldHave
+          );
+          if (activatedBonus) {
+            return `${setName} ${wouldHave}/${maxThreshold(setDef!)} — UNLOCKS: ${activatedBonus.description}`;
+          }
+          const nextBonus = setDef?.bonuses.find(
+            (b) => b.threshold > wouldHave
+          );
+          if (nextBonus) {
+            return `${setName} ${wouldHave}/${nextBonus.threshold}`;
+          }
+          return setName;
+        });
+        line += ` (${setAnnotations.join("; ")})`;
       }
       sections.push(line);
     }
@@ -131,4 +162,60 @@ export function buildUserPrompt(
   sections.push(`## Question\n${query.question}`);
 
   return sections.join("\n\n");
+}
+
+/** Count how many chosen augments the player has in each set */
+function countSets(
+  augments: CoachingContext["currentAugments"]
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const aug of augments) {
+    if (aug.sets) {
+      for (const setName of aug.sets) {
+        counts.set(setName, (counts.get(setName) ?? 0) + 1);
+      }
+    }
+  }
+  return counts;
+}
+
+/** Get the highest bonus threshold for a set */
+function maxThreshold(set: CoachingContext["augmentSets"][number]): number {
+  return Math.max(...set.bonuses.map((b) => b.threshold));
+}
+
+/**
+ * Build a set progress summary showing active bonuses and next thresholds.
+ * Returns null if the player has no augments in any tracked set.
+ */
+function computeSetProgress(
+  augments: CoachingContext["currentAugments"],
+  augmentSets: CoachingContext["augmentSets"]
+): string | null {
+  const setCounts = countSets(augments);
+  if (setCounts.size === 0) return null;
+
+  const lines: string[] = [];
+  for (const [setName, count] of setCounts) {
+    const setDef = augmentSets.find((s) => s.name === setName);
+    if (!setDef) continue;
+
+    const max = maxThreshold(setDef);
+    // Find active bonuses (thresholds met)
+    const active = setDef.bonuses.filter((b) => b.threshold <= count);
+    // Find next bonus threshold
+    const next = setDef.bonuses.find((b) => b.threshold > count);
+
+    let line = `- ${setName} (${count}/${next?.threshold ?? max})`;
+    if (active.length > 0) {
+      const latest = active[active.length - 1];
+      line += ` — Active: ${latest.description}`;
+    }
+    if (next) {
+      line += ` — Next at ${next.threshold}: ${next.description}`;
+    }
+    lines.push(line);
+  }
+
+  return lines.length > 0 ? lines.join("\n") : null;
 }

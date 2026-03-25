@@ -15,6 +15,8 @@ export interface Recommendation {
 export interface CoachingItem {
   name: string;
   description: string;
+  /** Augment set memberships (only relevant for augments, not items) */
+  sets?: string[];
 }
 
 export interface CoachingContext {
@@ -31,6 +33,11 @@ export interface CoachingContext {
   }>;
   allyTeam: Array<{
     champion: string;
+  }>;
+  /** Set bonus definitions for the current game mode */
+  augmentSets: Array<{
+    name: string;
+    bonuses: Array<{ threshold: number; description: string }>;
   }>;
   gameMode: string;
   /** LCU game mode — more specific (KIWI for Mayhem, CHERRY for Arena) */

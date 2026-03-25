@@ -27,6 +27,7 @@ function createContext(
         description: "Your abilities can critically strike.",
       },
     ],
+    augmentSets: [],
     enemyTeam: [
       {
         champion: "Vayne",
@@ -217,6 +218,116 @@ describe("buildUserPrompt", () => {
     it("includes the augment options section heading", () => {
       const prompt = buildUserPrompt(createContext(), augmentQuery);
       expect(prompt).toContain("## Augment Options");
+    });
+
+    it("annotates offered augments with set bonus progress", () => {
+      const ctx = createContext({
+        currentAugments: [
+          {
+            name: "Snowball Upgrade",
+            description: "Mark deals bonus true damage on arrival.",
+            sets: ["Snowday"],
+          },
+        ],
+        augmentSets: [
+          {
+            name: "Snowday",
+            bonuses: [
+              {
+                threshold: 2,
+                description:
+                  "Mark deals 30% increased damage, 50 summoner spell haste",
+              },
+            ],
+          },
+        ],
+      });
+      const query: CoachingQuery = {
+        question: "Which augment?",
+        augmentOptions: [
+          {
+            name: "Biggest Snowball Ever",
+            description: "Mark grows as it travels.",
+            tier: "Silver",
+            sets: ["Snowday"],
+          },
+          {
+            name: "Blunt Force",
+            description: "Increases attack damage by 20%.",
+            tier: "Silver",
+          },
+        ],
+      };
+
+      const prompt = buildUserPrompt(ctx, query);
+      // Should indicate picking Biggest Snowball Ever completes the 2-piece bonus
+      expect(prompt).toContain("Snowday");
+      expect(prompt).toContain("2/2");
+      expect(prompt).toContain("Mark deals 30% increased damage");
+    });
+  });
+
+  describe("with augment set progress", () => {
+    it("shows set progress when player has augments in a set", () => {
+      const ctx = createContext({
+        currentAugments: [
+          {
+            name: "Snowball Upgrade",
+            description: "Mark deals bonus true damage on arrival.",
+            sets: ["Snowday"],
+          },
+          {
+            name: "Biggest Snowball Ever",
+            description: "Mark grows as it travels.",
+            sets: ["Snowday"],
+          },
+        ],
+        augmentSets: [
+          {
+            name: "Snowday",
+            bonuses: [
+              {
+                threshold: 2,
+                description:
+                  "Mark deals 30% increased damage, 50 summoner spell haste",
+              },
+              {
+                threshold: 3,
+                description:
+                  "Mark deals 50% increased damage, 100 summoner spell haste",
+              },
+            ],
+          },
+        ],
+      });
+
+      const prompt = buildUserPrompt(ctx, { question: "What should I do?" });
+      // Should show active bonus and next threshold
+      expect(prompt).toContain("Snowday");
+      expect(prompt).toContain("2/3");
+      expect(prompt).toContain("Mark deals 30% increased damage");
+    });
+
+    it("does not show set progress section when no sets are active", () => {
+      const ctx = createContext({
+        currentAugments: [
+          {
+            name: "Blunt Force",
+            description: "Increases attack damage by 20%.",
+          },
+        ],
+        augmentSets: [
+          {
+            name: "Snowday",
+            bonuses: [
+              { threshold: 2, description: "Mark deals 30% increased damage" },
+            ],
+          },
+        ],
+      });
+
+      const prompt = buildUserPrompt(ctx, { question: "What should I do?" });
+      expect(prompt).not.toContain("Set Progress");
     });
   });
 });

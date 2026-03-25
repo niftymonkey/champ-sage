@@ -87,6 +87,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           const newAugment: CoachingItem = {
             name: newAugmentName,
             description: augmentData?.description ?? "",
+            sets: augmentData?.sets,
           };
           setChosenAugments((prev) =>
             prev.some((a) => a.name === newAugment.name)

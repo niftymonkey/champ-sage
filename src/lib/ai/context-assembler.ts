@@ -58,6 +58,7 @@ export function assembleContext(
     },
     currentItems,
     currentAugments: [],
+    augmentSets: gameData.augmentSets,
     enemyTeam,
     allyTeam,
     gameMode: gameState.gameMode,
