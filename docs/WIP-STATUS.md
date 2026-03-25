@@ -87,6 +87,36 @@ The prompt enrichment test validated this. When given champion role ("melee DPS 
 - discover-candidates.ts — PickAI model selection
 - test-prompt-quality.ts — A/B prompt comparison script
 
+## Fixes Applied This Session
+
+1. KIWI mode detection — aramMayhemMode.matches() accepts "KIWI"
+2. Prefix matching — "Urf's Champion" matches "Quest: Urf's Champion"
+3. Wiki markup cleanup — 43 garbled descriptions down to 3 (bare pipes, meta-references)
+4. Per-card re-roll rules — three rounds with independent re-rolls per card
+5. Game tab layout — three fixed sections (top/coaching/bottom)
+6. Voice-to-coaching wiring — playerIntent$ subscription in CoachingInput
+7. Auto-scroll — instant instead of smooth in debug panel
+8. Debug panel status cards — scan output buffer for latest connection/phase
+9. Per-session log files — timestamped instead of append-only
+10. Mode/augment debug indicators — visible on game status line
+11. Low-level keyboard hook (WH_KEYBOARD_LL) — works during fullscreen games
+12. Hotkey state recovery — auto-reset stale recording state
+13. Coaching display simplified — latest exchange only, no text input, voice-first
+14. Augment selection tracking from voice — "I chose X" pattern detection
+15. findInText() — new entity extraction method (scans text for known names vs old search which matched query against names)
+
+## Known Issues
+
+- 3/202 augments still have garbled descriptions (wiki template edge cases)
+- 9 quest augments missing reward stats (e.g., Golden Spatula stats not in description)
+- Voice-selected augments not synced with augment picker UI (two tracking mechanisms)
+- No augment set bonus tracking (model doesn't see set progress)
+- Accidental voice triggers (no minimum duration filter)
+- Model relies on training data for augment synergies and meta knowledge
+- Champion role not included in prompt (model guesses from abilities)
+- No game phase awareness in prompt
+- No team composition analysis in prompt
+
 ## How to Resume
 
 ```bash
