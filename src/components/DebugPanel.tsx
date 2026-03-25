@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { skip } from "rxjs/operators";
+import { skip, distinctUntilChanged, map } from "rxjs/operators";
 import { detailedDiff } from "deep-object-diff";
 import { formatGameTime } from "../lib/format";
 import {
@@ -239,17 +239,36 @@ function startSubscriptions(): void {
         event.data != null && typeof event.data === "object"
           ? (event.data as Record<string, unknown>)
           : null;
+
+      // Suppress matchmaking ticks that only update timeInQueue
+      if (
+        event.type === "matchmaking" &&
+        detail &&
+        /^~updated:\n\s+timeInQueue: \d+$/.test(detail.trim())
+      ) {
+        return;
+      }
+
+      // Truncate JWT tokens in diffs — they're unreadable noise
+      if (detail) {
+        detail = detail.replace(/eyJ[A-Za-z0-9_-]{50,}/g, "[JWT token]");
+      }
     }
 
     pushOutput("lifecycle", summary, detail);
   });
 
-  liveGameState$.pipe(skip(1)).subscribe((state) => {
-    const summary = summarizeLiveGameState(state);
-    if (summary !== "Default (no data)") {
-      pushOutput("liveGame", summary);
-    }
-  });
+  liveGameState$
+    .pipe(
+      skip(1),
+      map((state) => summarizeLiveGameState(state)),
+      distinctUntilChanged()
+    )
+    .subscribe((summary) => {
+      if (summary !== "Default (no data)") {
+        pushOutput("liveGame", summary);
+      }
+    });
 
   userInput$.subscribe((event) => {
     pushOutput("userInput", summarizeUserInput(event));

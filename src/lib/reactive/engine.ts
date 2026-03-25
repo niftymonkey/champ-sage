@@ -32,6 +32,7 @@ import { formatGameTime } from "../format";
 import {
   isDebugWorthy,
   shouldLogPollStatus,
+  shouldLogWebSocketEvent,
   describeEvent,
 } from "./debug-filters";
 
@@ -153,12 +154,19 @@ export class ReactiveEngine {
     // Push connection events to gameLifecycle$ and track credentials
     this.subscription.add(
       lcuConnection$.subscribe((status) => {
-        debugInput$.next({
-          source: "discovery",
-          summary: status.connected
-            ? `LCU found — port ${status.port}`
-            : "LCU not found",
-        });
+        // Only log discovery when connection status or port actually changes
+        // (not on retry seq bumps — those just re-trigger WebSocket connection)
+        const isNewDiscovery =
+          this.currentPort !== status.port ||
+          (status.connected && this.currentPort === 0);
+        if (isNewDiscovery || !status.connected) {
+          debugInput$.next({
+            source: "discovery",
+            summary: status.connected
+              ? `LCU found — port ${status.port}`
+              : "LCU not found",
+          });
+        }
         if (status.connected) {
           this.currentPort = status.port;
           this.currentToken = status.token;
@@ -188,9 +196,12 @@ export class ReactiveEngine {
               let unlisten: (() => void) | null = null;
               let unlistenDisconnect: (() => void) | null = null;
 
+              const isRetry = this.wsRetrySeq > 0;
               debugInput$.next({
                 source: "websocket",
-                summary: `Connecting WebSocket to port ${creds.port}...`,
+                summary: isRetry
+                  ? `Retrying WebSocket connection... (attempt ${this.wsRetrySeq + 1})`
+                  : `Connecting WebSocket to port ${creds.port}...`,
               });
 
               Promise.all([
@@ -241,7 +252,7 @@ export class ReactiveEngine {
     // Layer 3: WebSocket event splits
     this.subscription.add(
       this.wsEvents$.subscribe((evt) => {
-        if (isDebugWorthy(evt.uri)) {
+        if (isDebugWorthy(evt.uri) && shouldLogWebSocketEvent(evt.uri)) {
           debugInput$.next({
             source: "websocket",
             summary: describeEvent(evt.event_type, evt.uri),

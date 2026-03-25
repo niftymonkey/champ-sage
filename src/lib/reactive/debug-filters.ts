@@ -47,3 +47,23 @@ export function shouldLogPollStatus(
 ): boolean {
   return current !== previous;
 }
+
+/**
+ * Deduplicate rapid-fire WebSocket debug events.
+ * The LCU often sends 3-4 events for the same URI within milliseconds.
+ * This tracks the last logged URI+timestamp and suppresses duplicates
+ * within a short window.
+ */
+const DEDUP_WINDOW_MS = 500;
+let lastLoggedUri = "";
+let lastLoggedTime = 0;
+
+export function shouldLogWebSocketEvent(uri: string): boolean {
+  const now = Date.now();
+  if (uri === lastLoggedUri && now - lastLoggedTime < DEDUP_WINDOW_MS) {
+    return false;
+  }
+  lastLoggedUri = uri;
+  lastLoggedTime = now;
+  return true;
+}
