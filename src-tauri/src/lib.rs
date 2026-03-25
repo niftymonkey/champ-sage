@@ -625,21 +625,25 @@ mod keyboard_hook {
 /// Falls back to a relative `data-dump/` if not initialized (e.g., tests).
 static COACHING_LOG_PATH: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
 
-fn init_coaching_log_dir(app_data_dir: std::path::PathBuf) {
+fn init_coaching_log_dir(app_data_dir: std::path::PathBuf) -> Result<(), String> {
     let dir = app_data_dir.join("coaching-logs");
-    let _ = std::fs::create_dir_all(&dir);
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("Failed to create coaching log directory '{}': {e}", dir.display()))?;
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
     let path = dir.join(format!("coaching-{timestamp}.log"));
     let _ = COACHING_LOG_PATH.set(path);
+    Ok(())
+}
+
+fn coaching_log_fallback_path() -> std::path::PathBuf {
+    let dir = std::path::PathBuf::from("data-dump");
+    let _ = std::fs::create_dir_all(&dir);
+    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    dir.join(format!("coaching-{timestamp}.log"))
 }
 
 fn get_coaching_log_path() -> &'static std::path::PathBuf {
-    COACHING_LOG_PATH.get_or_init(|| {
-        let dir = std::path::PathBuf::from("data-dump");
-        let _ = std::fs::create_dir_all(&dir);
-        let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-        dir.join(format!("coaching-{timestamp}.log"))
-    })
+    COACHING_LOG_PATH.get_or_init(coaching_log_fallback_path)
 }
 
 #[tauri::command]
@@ -683,7 +687,9 @@ pub fn run() {
                 .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
 
             if let Ok(data_dir) = app.path().app_data_dir() {
-                init_coaching_log_dir(data_dir);
+                if let Err(e) = init_coaching_log_dir(data_dir) {
+                    eprintln!("{e}");
+                }
             }
 
             #[cfg(windows)]
@@ -765,7 +771,8 @@ mod tests {
         let tmp = std::env::temp_dir().join("champ-sage-test-log-dir");
         let _ = std::fs::remove_dir_all(&tmp);
 
-        init_coaching_log_dir(tmp.clone());
+        let result = init_coaching_log_dir(tmp.clone());
+        assert!(result.is_ok(), "init_coaching_log_dir should succeed");
 
         let log_dir = tmp.join("coaching-logs");
         assert!(log_dir.exists(), "coaching-logs directory should be created");
@@ -774,19 +781,17 @@ mod tests {
     }
 
     #[test]
-    fn coaching_log_fallback_uses_data_dump() {
-        // get_coaching_log_path falls back to data-dump/ when OnceLock is
-        // already set (from the test above) or not initialized.
-        // We can at least verify it returns a path containing "coaching-"
-        let path = get_coaching_log_path();
+    fn coaching_log_fallback_path_uses_data_dump() {
+        let path = coaching_log_fallback_path();
+        assert!(
+            path.starts_with("data-dump"),
+            "fallback path should be in data-dump/, got: {}",
+            path.display()
+        );
         let filename = path.file_name().unwrap().to_str().unwrap();
         assert!(
-            filename.starts_with("coaching-"),
-            "log filename should start with 'coaching-', got: {filename}"
-        );
-        assert!(
-            filename.ends_with(".log"),
-            "log filename should end with '.log', got: {filename}"
+            filename.starts_with("coaching-") && filename.ends_with(".log"),
+            "fallback filename should be coaching-{{timestamp}}.log, got: {filename}"
         );
     }
 }
