@@ -29,7 +29,12 @@ Script: `scripts/test-prompt-quality.ts` — runs same scenario 3x with current 
 
 3. **Audit all 202 augments** — check for other augments where the description is incomplete or misleading after markup fixes. Look for patterns where we need to dig deeper.
 
-4. **Implement prompt enrichments** — champion role summary, game phase, team composition analysis, augment role tags. Test script proved these improve consistency. ~188 extra tokens, negligible cost.
+4. **Implement prompt enrichments** — we identified 5 enrichments and started walking through them one by one to evaluate each before implementing. Only discussed #1 (augment role tags) in depth before pivoting to the data quality issue. Need to continue the evaluation of #2-#5 after data fixes:
+   - #1 Augment role tags from set membership — discussed, question was whether model needs tags or can infer from descriptions. Deferred pending data quality fix.
+   - #2 Champion role summary — tested, biggest single improvement. Need to discuss implementation.
+   - #3 Game phase awareness — not yet tested individually. Need to discuss.
+   - #4 Team composition analysis — tested in variant B, helped. Need to discuss.
+   - #5 Context compression (item/ability tags) — not yet tested. Need to discuss.
 
 5. **Context compression** — replace verbose item/ability descriptions with concise tags. Test showed enriched prompt used FEWER tokens (1088 vs 1198) despite adding more structured knowledge.
 
