@@ -14,6 +14,7 @@ function createContext(
         "Ranged (550) | Mage, Assassin | HP: 590 (+96/lvl) | AD: 53 (+3/lvl) | AS: 0.668 (+2%/lvl) | Armor: 23 (+4.7/lvl) | MR: 30 (+1.3/lvl) | Mana",
     },
     currentGold: 2500,
+    kda: { kills: 5, deaths: 2, assists: 8 },
     currentItems: [
       {
         name: "Rabadon's Deathcap",
@@ -147,9 +148,16 @@ describe("buildUserPrompt", () => {
       expect(prompt).toContain("Massively increases Ability Power.");
     });
 
-    it("includes current gold in items section", () => {
+    it("includes current gold as a whole number", () => {
+      const ctx = createContext({ currentGold: 712.17431640625 });
+      const prompt = buildUserPrompt(ctx, generalQuery);
+      expect(prompt).toContain("712 gold available");
+      expect(prompt).not.toContain("712.17");
+    });
+
+    it("includes KDA in champion header", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
-      expect(prompt).toContain("2500 gold available");
+      expect(prompt).toContain("5/2/8");
     });
 
     it("includes enemy items as names only", () => {
@@ -176,6 +184,31 @@ describe("buildUserPrompt", () => {
     it("includes champion abilities", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Orb of Deception");
+    });
+
+    it("excludes 'I chose' confirmation exchanges from history", () => {
+      const query: CoachingQuery = {
+        question: "What should I build?",
+        history: [
+          {
+            question: "Goliath, Deft, or Escape Plan?",
+            answer: "Take Deft.",
+          },
+          {
+            question: "I chose Deft.",
+            answer: "Good. Lock it in.",
+          },
+          {
+            question: "What items next?",
+            answer: "Build Kraken Slayer.",
+          },
+        ],
+      };
+      const prompt = buildUserPrompt(createContext(), query);
+      expect(prompt).toContain("Take Deft");
+      expect(prompt).toContain("Build Kraken Slayer");
+      expect(prompt).not.toContain("I chose Deft");
+      expect(prompt).not.toContain("Good. Lock it in");
     });
 
     it("includes champion stat profile when present", () => {

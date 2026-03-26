@@ -192,7 +192,11 @@ function cleanItemName(raw: string): string {
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, "").trim();
+  return html
+    .replace(/<br\s*\/?>/gi, " | ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/ {2,}/g, " ")
+    .trim();
 }
 
 // Raw DDragon response types

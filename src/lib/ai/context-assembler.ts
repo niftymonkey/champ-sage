@@ -24,10 +24,12 @@ export function assembleContext(
     : `${activePlayer.championName} (no ability data available)`;
 
   const currentItems = activePlayerInfo
-    ? activePlayerInfo.items.map((item) => ({
-        name: item.name,
-        description: gameData.items.get(item.id)?.description ?? "",
-      }))
+    ? activePlayerInfo.items
+        .filter((item) => !isNoiseItem(item.name))
+        .map((item) => ({
+          name: item.name,
+          description: gameData.items.get(item.id)?.description ?? "",
+        }))
     : [];
 
   const activeTeam = activePlayerInfo?.team ?? "ORDER";
@@ -36,10 +38,12 @@ export function assembleContext(
     .filter((p) => p.team !== activeTeam)
     .map((p) => ({
       champion: p.championName,
-      items: p.items.map((item) => ({
-        name: item.name,
-        description: gameData.items.get(item.id)?.description ?? "",
-      })),
+      items: p.items
+        .filter((item) => !isNoiseItem(item.name))
+        .map((item) => ({
+          name: item.name,
+          description: gameData.items.get(item.id)?.description ?? "",
+        })),
     }));
 
   const allyTeam = gameState.players
@@ -68,6 +72,11 @@ export function assembleContext(
     },
     currentItems,
     currentGold: activePlayer.currentGold,
+    kda: {
+      kills: activePlayerInfo?.kills ?? 0,
+      deaths: activePlayerInfo?.deaths ?? 0,
+      assists: activePlayerInfo?.assists ?? 0,
+    },
     currentAugments: [],
     teamAnalysis,
     augmentSets: gameData.augmentSets,
@@ -78,6 +87,18 @@ export function assembleContext(
     gameTime: gameState.gameTime,
     balanceOverrides,
   };
+}
+
+/** Items that add no information to the coaching context */
+const NOISE_ITEMS = new Set([
+  "poro-snax",
+  "health potion",
+  "refillable potion",
+  "corrupting potion",
+]);
+
+function isNoiseItem(name: string): boolean {
+  return NOISE_ITEMS.has(name.toLowerCase());
 }
 
 function formatAbilities(

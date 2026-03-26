@@ -298,6 +298,52 @@ describe("assembleContext", () => {
     expect(result!.currentGold).toBe(2500);
   });
 
+  it("includes kills, deaths, and assists from active player", () => {
+    const result = assembleContext(createLiveGameState(), createGameData());
+    expect(result).not.toBeNull();
+    expect(result!.kda).toEqual({ kills: 5, deaths: 2, assists: 8 });
+  });
+
+  it("filters Poro-Snax from player items", () => {
+    const gameState = createLiveGameState();
+    gameState.players[0].items = [
+      { id: 3089, name: "Rabadon's Deathcap" },
+      { id: 0, name: "Poro-Snax" },
+    ];
+    const result = assembleContext(gameState, createGameData());
+    expect(result).not.toBeNull();
+    expect(result!.currentItems.map((i) => i.name)).toEqual([
+      "Rabadon's Deathcap",
+    ]);
+  });
+
+  it("filters Poro-Snax from enemy items", () => {
+    const gameState = createLiveGameState();
+    gameState.players[2].items = [
+      { id: 3153, name: "Blade of the Ruined King" },
+      { id: 0, name: "Poro-Snax" },
+    ];
+    const result = assembleContext(gameState, createGameData());
+    expect(result).not.toBeNull();
+    const vayne = result!.enemyTeam.find((e) => e.champion === "Vayne");
+    expect(vayne!.items.map((i) => i.name)).toEqual([
+      "Blade of the Ruined King",
+    ]);
+  });
+
+  it("filters consumable items", () => {
+    const gameState = createLiveGameState();
+    gameState.players[0].items = [
+      { id: 3089, name: "Rabadon's Deathcap" },
+      { id: 2003, name: "Health Potion" },
+      { id: 2031, name: "Refillable Potion" },
+    ];
+    const result = assembleContext(gameState, createGameData());
+    expect(result!.currentItems.map((i) => i.name)).toEqual([
+      "Rabadon's Deathcap",
+    ]);
+  });
+
   it("falls back to empty description when item not in gameData", () => {
     const gameData = createGameData();
     gameData.items.clear();
