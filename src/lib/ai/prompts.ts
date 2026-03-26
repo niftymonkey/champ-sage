@@ -69,7 +69,7 @@ export function buildUserPrompt(
   sections.push(`## Game Time: ${formatGameTime(context.gameTime)}`);
 
   sections.push(
-    `## Your Champion: ${context.champion.name} (Level ${context.champion.level})`
+    `## Your Champion: ${context.champion.name} (Level ${context.champion.level}, ${context.kda.kills}/${context.kda.deaths}/${context.kda.assists} KDA)`
   );
   if (context.champion.statProfile) {
     sections.push(`### Stat Profile\n${context.champion.statProfile}`);

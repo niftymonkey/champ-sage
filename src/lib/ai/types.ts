@@ -29,6 +29,7 @@ export interface CoachingContext {
   };
   currentItems: CoachingItem[];
   currentGold: number;
+  kda: { kills: number; deaths: number; assists: number };
   currentAugments: CoachingItem[];
   enemyTeam: Array<{
     champion: string;

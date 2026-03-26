@@ -298,6 +298,12 @@ describe("assembleContext", () => {
     expect(result!.currentGold).toBe(2500);
   });
 
+  it("includes kills, deaths, and assists from active player", () => {
+    const result = assembleContext(createLiveGameState(), createGameData());
+    expect(result).not.toBeNull();
+    expect(result!.kda).toEqual({ kills: 5, deaths: 2, assists: 8 });
+  });
+
   it("falls back to empty description when item not in gameData", () => {
     const gameData = createGameData();
     gameData.items.clear();

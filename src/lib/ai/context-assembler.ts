@@ -68,6 +68,11 @@ export function assembleContext(
     },
     currentItems,
     currentGold: activePlayer.currentGold,
+    kda: {
+      kills: activePlayerInfo?.kills ?? 0,
+      deaths: activePlayerInfo?.deaths ?? 0,
+      assists: activePlayerInfo?.assists ?? 0,
+    },
     currentAugments: [],
     teamAnalysis,
     augmentSets: gameData.augmentSets,
