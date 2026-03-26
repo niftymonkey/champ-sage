@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { skip, distinctUntilChanged, map } from "rxjs/operators";
 import { detailedDiff } from "deep-object-diff";
-import { formatGameTime } from "../lib/format";
 import { hasGameStateChangedMeaningfully } from "../lib/reactive/debug-filters";
+import {
+  summarizeLifecycleEvent,
+  summarizeLiveGameState,
+  summarizeUserInput,
+} from "../lib/reactive/debug-summarizers";
 import {
   gameLifecycle$,
   liveGameState$,
@@ -10,12 +14,7 @@ import {
   notifications$,
   debugInput$,
 } from "../lib/reactive";
-import type {
-  GameLifecycleEvent,
-  LiveGameState,
-  UserInputEvent,
-  DebugInputEvent,
-} from "../lib/reactive";
+import type { DebugInputEvent, LiveGameState } from "../lib/reactive";
 
 interface LogEntry {
   id: number;
@@ -29,23 +28,6 @@ let nextId = 0;
 
 function formatTime(): string {
   return new Date().toLocaleTimeString("en-US", { hour12: false });
-}
-
-function summarizeLifecycleEvent(event: GameLifecycleEvent): {
-  summary: string;
-} {
-  switch (event.type) {
-    case "connection":
-      return { summary: event.connected ? "Connected" : "Disconnected" };
-    case "phase":
-      return { summary: `Phase: ${event.phase}` };
-    case "lobby":
-      return { summary: "Lobby update" };
-    case "matchmaking":
-      return { summary: "Matchmaking update" };
-    case "session":
-      return { summary: "Session update" };
-  }
 }
 
 /** Compute a compact diff string between two objects. Returns undefined if empty. */
@@ -109,27 +91,6 @@ function computeDiff(
   formatObj("~updated", d.updated);
 
   return parts.length > 0 ? parts.join("\n") : undefined;
-}
-
-function summarizeLiveGameState(state: LiveGameState): string {
-  if (!state.activePlayer) {
-    if (state.champSelect != null) return "Champ select active";
-    if (state.eogStats) return `EOG: ${state.eogStats.isWin ? "WIN" : "LOSS"}`;
-    return "Default (no data)";
-  }
-  const parts = [
-    state.activePlayer.championName,
-    `Lv${state.activePlayer.level}`,
-    formatGameTime(state.gameTime),
-  ];
-  if (state.gameMode) parts.push(state.gameMode);
-  if (state.players.length > 0) parts.push(`${state.players.length}p`);
-  return parts.join(" | ");
-}
-
-function summarizeUserInput(event: UserInputEvent): string {
-  if (event.type === "augment") return `Augment: ${event.augment.name}`;
-  return `Query: "${event.text}"`;
 }
 
 const INPUT_COLORS: Record<string, string> = {
@@ -226,7 +187,7 @@ function startSubscriptions(): void {
 
   // Output log entries — skip(1) to avoid BehaviorSubject replay
   gameLifecycle$.pipe(skip(1)).subscribe((event) => {
-    const { summary } = summarizeLifecycleEvent(event);
+    const summary = summarizeLifecycleEvent(event);
     let detail: string | undefined;
 
     if (
