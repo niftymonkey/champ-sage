@@ -90,11 +90,11 @@ export function buildUserPrompt(
         : `- ${item.name}`
     );
     sections.push(
-      `### Current Items (${context.currentGold} gold available)\n${itemLines.join("\n")}`
+      `### Current Items (${Math.floor(context.currentGold)} gold available)\n${itemLines.join("\n")}`
     );
   } else {
     sections.push(
-      `### Current Items (${context.currentGold} gold available)\nNone`
+      `### Current Items (${Math.floor(context.currentGold)} gold available)\nNone`
     );
   }
 
@@ -133,10 +133,15 @@ export function buildUserPrompt(
   }
 
   if (query.history && query.history.length > 0) {
-    sections.push("## Recent Conversation");
-    for (const exchange of query.history) {
-      sections.push(`**Player:** ${exchange.question}`);
-      sections.push(`**Coach:** ${exchange.answer}`);
+    const meaningful = query.history.filter(
+      (e) => !/^i (?:chose|picked|took|selected|went with) /i.test(e.question)
+    );
+    if (meaningful.length > 0) {
+      sections.push("## Recent Conversation");
+      for (const exchange of meaningful) {
+        sections.push(`**Player:** ${exchange.question}`);
+        sections.push(`**Coach:** ${exchange.answer}`);
+      }
     }
   }
 
