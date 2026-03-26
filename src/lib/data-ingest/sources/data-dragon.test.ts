@@ -142,6 +142,28 @@ describe("fetchItems", () => {
     expect(boots!.image).toContain("1001.png");
   });
 
+  it("inserts separators between stats in item descriptions", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse({
+        data: {
+          "6672": {
+            name: "Kraken Slayer",
+            description:
+              "<mainText><stats><attention>30</attention> Attack Damage<br><attention>40%</attention> Attack Speed<br><attention>20%</attention> Critical Strike Chance</stats></mainText>",
+            gold: { base: 800, total: 3000, sell: 2100, purchasable: true },
+            image: { full: "6672.png" },
+          },
+        },
+      })
+    );
+
+    const items = await fetchItems("15.6.1");
+    const kraken = items.get(6672);
+    expect(kraken!.description).toContain("30 Attack Damage");
+    expect(kraken!.description).toContain("40% Attack Speed");
+    expect(kraken!.description).not.toMatch(/Damage\d/);
+  });
+
   it("handles items without from/into arrays", async () => {
     mockFetch.mockResolvedValue(
       jsonResponse({

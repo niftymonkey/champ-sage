@@ -148,9 +148,11 @@ describe("buildUserPrompt", () => {
       expect(prompt).toContain("Massively increases Ability Power.");
     });
 
-    it("includes current gold in items section", () => {
-      const prompt = buildUserPrompt(createContext(), generalQuery);
-      expect(prompt).toContain("2500 gold available");
+    it("includes current gold as a whole number", () => {
+      const ctx = createContext({ currentGold: 712.17431640625 });
+      const prompt = buildUserPrompt(ctx, generalQuery);
+      expect(prompt).toContain("712 gold available");
+      expect(prompt).not.toContain("712.17");
     });
 
     it("includes KDA in champion header", () => {
@@ -182,6 +184,31 @@ describe("buildUserPrompt", () => {
     it("includes champion abilities", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Orb of Deception");
+    });
+
+    it("excludes 'I chose' confirmation exchanges from history", () => {
+      const query: CoachingQuery = {
+        question: "What should I build?",
+        history: [
+          {
+            question: "Goliath, Deft, or Escape Plan?",
+            answer: "Take Deft.",
+          },
+          {
+            question: "I chose Deft.",
+            answer: "Good. Lock it in.",
+          },
+          {
+            question: "What items next?",
+            answer: "Build Kraken Slayer.",
+          },
+        ],
+      };
+      const prompt = buildUserPrompt(createContext(), query);
+      expect(prompt).toContain("Take Deft");
+      expect(prompt).toContain("Build Kraken Slayer");
+      expect(prompt).not.toContain("I chose Deft");
+      expect(prompt).not.toContain("Good. Lock it in");
     });
 
     it("includes champion stat profile when present", () => {

@@ -195,11 +195,6 @@ function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, " | ")
     .replace(/<[^>]+>/g, " ")
-    .replace(
-      /\b0%? (?:Attack Damage|Ability Power|Attack Speed|Critical Strike Chance|Health|Armor|Magic Resist|Mana|Move Speed|Ability Haste)\b/g,
-      ""
-    )
-    .replace(/ *\| *\| */g, " | ")
     .replace(/ {2,}/g, " ")
     .trim();
 }
