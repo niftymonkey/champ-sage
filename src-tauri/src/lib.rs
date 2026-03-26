@@ -3,7 +3,7 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use futures_util::{SinkExt, StreamExt};
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 use std::sync::{Arc, Mutex};
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 use tokio_tungstenite::tungstenite;
 
 /// Resolve the League Client lockfile path for the current platform.
@@ -615,17 +615,35 @@ mod keyboard_hook {
     }
 }
 
-/// Append a line to a per-session coaching log file in data-dump/.
-/// Each app launch gets its own timestamped log file.
+/// Append a line to a per-session coaching log file.
+/// Log files are stored in the Tauri app data directory (platform-specific):
+/// - Windows: %APPDATA%/com.champ-sage.app/coaching-logs/
+/// - macOS: ~/Library/Application Support/com.champ-sage.app/coaching-logs/
+/// - Linux: ~/.local/share/com.champ-sage.app/coaching-logs/
+///
+/// The path is initialized in setup() via `init_coaching_log_dir()`.
+/// Falls back to a relative `data-dump/` if not initialized (e.g., tests).
 static COACHING_LOG_PATH: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
 
+fn init_coaching_log_dir(app_data_dir: std::path::PathBuf) -> Result<(), String> {
+    let dir = app_data_dir.join("coaching-logs");
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("Failed to create coaching log directory '{}': {e}", dir.display()))?;
+    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    let path = dir.join(format!("coaching-{timestamp}.log"));
+    let _ = COACHING_LOG_PATH.set(path);
+    Ok(())
+}
+
+fn coaching_log_fallback_path() -> std::path::PathBuf {
+    let dir = std::path::PathBuf::from("data-dump");
+    let _ = std::fs::create_dir_all(&dir);
+    let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+    dir.join(format!("coaching-{timestamp}.log"))
+}
+
 fn get_coaching_log_path() -> &'static std::path::PathBuf {
-    COACHING_LOG_PATH.get_or_init(|| {
-        let dir = std::path::PathBuf::from("data-dump");
-        let _ = std::fs::create_dir_all(&dir);
-        let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-        dir.join(format!("coaching-{timestamp}.log"))
-    })
+    COACHING_LOG_PATH.get_or_init(coaching_log_fallback_path)
 }
 
 #[tauri::command]
@@ -639,6 +657,11 @@ async fn append_coaching_log(text: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to open log file: {e}"))?;
     writeln!(file, "{text}").map_err(|e| format!("Failed to write log: {e}"))?;
     Ok(())
+}
+
+#[tauri::command]
+fn get_coaching_log_location() -> String {
+    get_coaching_log_path().display().to_string()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -663,8 +686,12 @@ pub fn run() {
             app.handle()
                 .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
 
-            // Start low-level keyboard hook on Windows for in-game hotkeys.
-            // This works even when DirectInput games have focus.
+            if let Ok(data_dir) = app.path().app_data_dir() {
+                if let Err(e) = init_coaching_log_dir(data_dir) {
+                    eprintln!("{e}");
+                }
+            }
+
             #[cfg(windows)]
             keyboard_hook::start(app.handle().clone());
 
@@ -678,7 +705,8 @@ pub fn run() {
             connect_lcu_websocket,
             start_recording,
             stop_recording,
-            append_coaching_log
+            append_coaching_log,
+            get_coaching_log_location
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -736,5 +764,34 @@ mod tests {
         let expected_encoded =
             base64::engine::general_purpose::STANDARD.encode("riot:mytoken");
         assert_eq!(auth, format!("Basic {expected_encoded}"));
+    }
+
+    #[test]
+    fn coaching_log_dir_created_in_app_data() {
+        let tmp = std::env::temp_dir().join("champ-sage-test-log-dir");
+        let _ = std::fs::remove_dir_all(&tmp);
+
+        let result = init_coaching_log_dir(tmp.clone());
+        assert!(result.is_ok(), "init_coaching_log_dir should succeed");
+
+        let log_dir = tmp.join("coaching-logs");
+        assert!(log_dir.exists(), "coaching-logs directory should be created");
+
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn coaching_log_fallback_path_uses_data_dump() {
+        let path = coaching_log_fallback_path();
+        assert!(
+            path.starts_with("data-dump"),
+            "fallback path should be in data-dump/, got: {}",
+            path.display()
+        );
+        let filename = path.file_name().unwrap().to_str().unwrap();
+        assert!(
+            filename.starts_with("coaching-") && filename.ends_with(".log"),
+            "fallback filename should be coaching-{{timestamp}}.log, got: {filename}"
+        );
     }
 }
