@@ -218,7 +218,7 @@ function parseContext(
   const level = champMatch ? parseInt(champMatch[2]) : 0;
 
   // KDA from user prompt
-  const kdaMatch = userPrompt.match(/(\d+)\/(\d+)\/(\d+)\s*KDA/);
+  const kdaMatch = userPrompt.match(/KDA:\s*(\d+)\/(\d+)\/(\d+)/i);
   const kda = kdaMatch
     ? {
         kills: parseInt(kdaMatch[1]),

@@ -96,8 +96,7 @@ When advising on augment re-rolls, the model MUST follow the actual game mechani
 
 - Primary source: coaching log from 2026-03-26 game session (Warwick, ARAM Mayhem)
 - Contains 20+ exchanges including multiple context awareness failures
-- Located at: `C:\Users\markd\AppData\Roaming\com.niftymonkey.champ-sage\coaching-logs\coaching-2026-03-26_16-45-40.log`
-- Should be extracted into structured fixtures in `fixtures/coaching-sessions/`
+- Original log extracted using `pnpm extract-fixtures <path-to-log>`
 
 ### Deterministic vs LLM-as-Judge
 

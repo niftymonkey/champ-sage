@@ -344,7 +344,7 @@ function cmdResults() {
       let question = "?";
       try {
         const input = JSON.parse(entry.input_json);
-        question = input.fixture?.question?.substring(0, 55) ?? "?";
+        question = input.question?.substring(0, 55) ?? "?";
       } catch {
         /* ignore */
       }
@@ -410,8 +410,8 @@ function cmdFailures() {
     let items = "?";
     try {
       const input = JSON.parse(f.input_json);
-      question = input.fixture?.question ?? "?";
-      items = input.fixture?.gameState?.items?.join(", ") ?? "none";
+      question = input.question ?? "?";
+      items = input.items?.join(", ") ?? "none";
     } catch {
       /* ignore */
     }
@@ -538,7 +538,7 @@ function cmdReport() {
       let question = "?";
       try {
         const input = JSON.parse(f.input_json);
-        question = input.fixture?.question ?? "?";
+        question = input.question ?? "?";
       } catch {
         /* ignore */
       }
@@ -599,13 +599,13 @@ function cmdRuns() {
   }
 
   const suiteW = 28;
-  const fixW = 5;
+  const fixW = 9;
   const scoreW = 7;
-  const gateW = 7;
+  const gateW = 13;
 
   console.log(`\n=== ALL RUNS (last ${limit}) ===\n`);
   console.log(
-    `${"Timestamp".padEnd(20)} ${"Suite".padEnd(suiteW)} ${"Fix".padStart(fixW)} ${"Score".padStart(scoreW)} ${"Fails".padStart(gateW)}`
+    `${"Timestamp".padEnd(20)} ${"Suite".padEnd(suiteW)} ${"Fixtures".padStart(fixW)} ${"Score".padStart(scoreW)} ${"Gate Failures".padStart(gateW)}`
   );
   console.log("-".repeat(20 + suiteW + fixW + scoreW + gateW + 4));
 

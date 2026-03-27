@@ -48,6 +48,7 @@ export class LocalWhisperProvider implements SttProvider {
     const response = await fetch(`${this.baseUrl}/transcribe`, {
       method: "POST",
       body: formData,
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!response.ok) {

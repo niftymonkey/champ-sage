@@ -14,7 +14,7 @@ describe("scoreBrevity", () => {
     ).toBe(1);
   });
 
-  it("scores 0.5 for a 4-sentence response", () => {
+  it("scores 0.5 for a 5-sentence response", () => {
     expect(
       scoreBrevity(
         "Buy Thornmail next. It gives armor. It also has grievous wounds. " +
