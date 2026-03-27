@@ -63,12 +63,29 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     import.meta.env.VITE_OPENROUTER_API_KEY ??
     import.meta.env.VITE_OPENAI_API_KEY;
 
+  console.log(
+    "[coaching] Component render. context:",
+    !!context,
+    "apiKey:",
+    !!apiKey
+  );
+
   const submitQuestion = useCallback(
     async (question: string) => {
+      console.log("[coaching] submitQuestion called:", question);
+      console.log("[coaching] contextRef.current:", !!contextRef.current);
+      console.log("[coaching] apiKey:", !!apiKey);
+
       if (!contextRef.current || !apiKey || !question.trim()) {
+        const reason = !contextRef.current
+          ? "no context"
+          : !apiKey
+            ? "no API key"
+            : "empty question";
+        console.log("[coaching] SKIPPED:", reason);
         debugInput$.next({
           source: "llm",
-          summary: `Coaching skipped: ${!contextRef.current ? "no context" : !apiKey ? "no API key" : "empty question"}`,
+          summary: `Coaching skipped: ${reason}`,
         });
         return;
       }
@@ -138,6 +155,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
       });
 
       try {
+        console.log("[coaching] Calling getCoachingResponse...");
         const response = await getCoachingResponse(
           contextWithAugments,
           {
@@ -147,13 +165,19 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           },
           apiKey
         );
+        console.log(
+          "[coaching] Response received:",
+          response.answer.substring(0, 80)
+        );
         setLatestExchange({ question, response });
         setExchanges((prev) => [
           ...prev,
           { question, answer: response.answer },
         ]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Request failed");
+        const msg = err instanceof Error ? err.message : "Request failed";
+        console.error("[coaching] ERROR:", msg);
+        setError(msg);
       } finally {
         setLoading(false);
       }
@@ -162,7 +186,13 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   );
 
   useEffect(() => {
+    console.log("[coaching] Subscribing to playerIntent$");
     const sub = playerIntent$.subscribe((event) => {
+      console.log(
+        "[coaching] playerIntent$ event:",
+        event.type,
+        event.type === "query" ? event.text : ""
+      );
       if (event.type === "query" && event.text.trim()) {
         debugInput$.next({
           source: "voice",
@@ -175,16 +205,19 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   }, [submitQuestion]);
 
   if (!apiKey) {
+    console.log("[coaching] No API key, showing setup message");
     return (
       <div className="coaching-display">
         <p className="entity-meta">
-          Set VITE_OPENAI_API_KEY in .env to enable AI coaching.
+          Set VITE_OPENAI_API_KEY or VITE_OPENROUTER_API_KEY in .env to enable
+          AI coaching.
         </p>
       </div>
     );
   }
 
   if (!context) {
+    console.log("[coaching] No context, rendering null");
     return null;
   }
 
