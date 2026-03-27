@@ -59,7 +59,9 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   gameDataRef.current = gameData;
   chosenAugmentsRef.current = chosenAugments;
 
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  const apiKey =
+    import.meta.env.VITE_OPENROUTER_API_KEY ??
+    import.meta.env.VITE_OPENAI_API_KEY;
 
   const submitQuestion = useCallback(
     async (question: string) => {
