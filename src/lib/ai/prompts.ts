@@ -10,6 +10,8 @@ export function buildSystemPrompt(context: {
   const sections = [
     "You are an expert League of Legends coaching AI. Prioritize the game data provided in this prompt over your general knowledge — item stats, augment effects, and champion abilities change frequently.",
     "",
+    "ITEM AWARENESS: The Current Items section lists COMPLETED items the player already owns. Never recommend buying or finishing an item that is already listed there.",
+    "",
     "RESPONSE RULES:",
     "- Be extremely concise. Sacrifice grammar for concision.",
     "- Lead with your top recommendation. Mention alternatives only when the situation genuinely supports different playstyles.",
@@ -71,21 +73,6 @@ export function buildUserPrompt(
     sections.push(`### Balance Overrides\n${context.balanceOverrides}`);
   }
 
-  if (context.currentItems.length > 0) {
-    const itemLines = context.currentItems.map((item) =>
-      item.description
-        ? `- ${item.name}: ${item.description}`
-        : `- ${item.name}`
-    );
-    sections.push(
-      `### Current Items (${Math.floor(context.currentGold)} gold available)\n${itemLines.join("\n")}`
-    );
-  } else {
-    sections.push(
-      `### Current Items (${Math.floor(context.currentGold)} gold available)\nNone`
-    );
-  }
-
   if (context.currentAugments.length > 0) {
     const augmentLines = context.currentAugments.map((aug) =>
       aug.description ? `- ${aug.name}: ${aug.description}` : `- ${aug.name}`
@@ -125,10 +112,11 @@ export function buildUserPrompt(
       (e) => !/^i (?:chose|picked|took|selected|went with) /i.test(e.question)
     );
     if (meaningful.length > 0) {
+      const recent = meaningful.slice(-4);
       sections.push("## Recent Conversation");
-      for (const exchange of meaningful) {
-        sections.push(`**Player:** ${exchange.question}`);
-        sections.push(`**Coach:** ${exchange.answer}`);
+      for (const exchange of recent) {
+        sections.push(`Q: ${exchange.question}`);
+        sections.push(`A: ${exchange.answer}`);
       }
     }
   }
@@ -166,7 +154,17 @@ export function buildUserPrompt(
     }
   }
 
-  sections.push(`## Question\n${query.question}`);
+  // Items co-located with the question so the model can't miss them
+  if (context.currentItems.length > 0) {
+    const itemNames = context.currentItems.map((i) => i.name).join(", ");
+    sections.push(
+      `## Question\nItems you own: ${itemNames} (${Math.floor(context.currentGold)} gold available)\n${query.question}`
+    );
+  } else {
+    sections.push(
+      `## Question\n${Math.floor(context.currentGold)} gold available, no items yet.\n${query.question}`
+    );
+  }
 
   return sections.join("\n\n");
 }

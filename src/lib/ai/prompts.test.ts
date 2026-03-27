@@ -133,10 +133,11 @@ describe("buildUserPrompt", () => {
       expect(prompt).toContain("Sona");
     });
 
-    it("includes current items with descriptions", () => {
+    it("includes current item names near the question", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Rabadon's Deathcap");
-      expect(prompt).toContain("Massively increases Ability Power.");
+      // Items should appear near the question, not as a separate section
+      expect(prompt).toContain("Items you own:");
     });
 
     it("includes current gold as a whole number", () => {

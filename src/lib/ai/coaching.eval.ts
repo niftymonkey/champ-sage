@@ -242,6 +242,69 @@ function extractHistory(
   return history;
 }
 
+/**
+ * Apply current prompt optimizations to a captured (old-format) user prompt:
+ * - Remove the Current Items section from its original position
+ * - Cap conversation history to last 4 exchanges, use Q:/A: format
+ * - Append item names directly next to the question
+ * - Condense game mode/time and champion lines
+ */
+function optimizeCapturedPrompt(input: EvalInput): string {
+  let prompt = input.userPrompt;
+  const items = input.fixture.gameState.items;
+
+  // Extract and remove the Current Items section
+  prompt = prompt.replace(/### Current Items[^\n]*\n(?:- [^\n]*\n?)*/, "");
+
+  // Condense game mode + time into one line
+  prompt = prompt.replace(
+    /## Game Mode: ([^\n]+)\n\n## Game Time: ([^\n]+)/,
+    "Game Mode: $1 | Game Time: $2"
+  );
+
+  // Condense champion + stat profile
+  prompt = prompt.replace(
+    /## Your Champion: ([^\n]+)\n\n### Stat Profile\n([^\n]+)/,
+    "Champion: $1 | $2"
+  );
+
+  // Cap history to last 4 and use Q:/A: format
+  const historyMatch = prompt.match(
+    /## Recent Conversation\n\n([\s\S]*?)(?=\n\n## )/
+  );
+  if (historyMatch) {
+    const exchanges: Array<{ q: string; a: string }> = [];
+    const lines = historyMatch[1].split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const pm = lines[i].match(/^\*\*Player:\*\*\s*(.+)/);
+      if (pm) {
+        const cm = lines[i + 1]?.match(/^\*\*Coach:\*\*\s*(.+)/);
+        if (cm) {
+          exchanges.push({ q: pm[1], a: cm[1] });
+          i++;
+        }
+      }
+    }
+    const recent = exchanges.slice(-4);
+    const newHistory = recent.map((e) => `Q: ${e.q}\nA: ${e.a}`).join("\n\n");
+    prompt = prompt.replace(
+      /## Recent Conversation\n\n[\s\S]*?(?=\n\n## )/,
+      `## Recent Conversation\n\n${newHistory}`
+    );
+  }
+
+  // Move item names to be right next to the question
+  if (items.length > 0) {
+    const itemList = items.join(", ");
+    prompt = prompt.replace(
+      /## Question\n(.+)/,
+      `## Question\nItems you own: ${itemList}\n$1`
+    );
+  }
+
+  return prompt;
+}
+
 // --- Register evals ---
 
 for (const model of models) {
@@ -256,7 +319,6 @@ for (const model of models) {
       })),
 
     task: async (input: EvalInput): Promise<EvalOutput> => {
-      // Use live system prompt (reflects current code) with captured user prompt
       const hasAugmentOptions = input.userPrompt.includes(
         "## Augment Options Being Offered"
       );
@@ -266,10 +328,13 @@ for (const model of models) {
         hasAugmentOptions,
       });
 
+      // Apply current prompt optimizations to captured user prompt
+      const userPrompt = optimizeCapturedPrompt(input);
+
       const result = await generateText({
         model: getModel(model),
         system: systemPrompt,
-        prompt: input.userPrompt,
+        prompt: userPrompt,
         output: Output.object({ schema: coachingResponseSchema }),
         maxOutputTokens: 1024,
       });
