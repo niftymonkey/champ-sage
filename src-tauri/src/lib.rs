@@ -631,7 +631,9 @@ fn init_coaching_log_dir(app_data_dir: std::path::PathBuf) -> Result<(), String>
         .map_err(|e| format!("Failed to create coaching log directory '{}': {e}", dir.display()))?;
     let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
     let path = dir.join(format!("coaching-{timestamp}.log"));
+    println!("[champ-sage] Coaching log path: {}", path.display());
     let _ = COACHING_LOG_PATH.set(path);
+    println!("[champ-sage] Coaching log directory initialized");
     Ok(())
 }
 
@@ -686,9 +688,15 @@ pub fn run() {
             app.handle()
                 .plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
 
-            if let Ok(data_dir) = app.path().app_data_dir() {
-                if let Err(e) = init_coaching_log_dir(data_dir) {
-                    eprintln!("{e}");
+            match app.path().app_data_dir() {
+                Ok(data_dir) => {
+                    println!("[champ-sage] App data dir: {}", data_dir.display());
+                    if let Err(e) = init_coaching_log_dir(data_dir) {
+                        eprintln!("[champ-sage] ERROR: {e}");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[champ-sage] ERROR: Failed to get app data dir: {e}");
                 }
             }
 
