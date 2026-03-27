@@ -78,6 +78,8 @@ interface ContinuityFixture {
 interface EvalInput {
   label: string;
   question: string;
+  champion: string;
+  gameTime: string;
   items: string[];
   gold: number;
   systemPrompt: string;
@@ -120,9 +122,14 @@ function gameFixtureToInput(f: GameFixture): EvalInput {
   });
   const userPrompt = buildUserPrompt(f.context, f.query);
 
+  const mins = Math.floor(f.context.gameTime / 60);
+  const secs = f.context.gameTime % 60;
+
   return {
     label: f.label,
     question: f.query.question,
+    champion: f.context.champion.name,
+    gameTime: `${mins}:${String(secs).padStart(2, "0")}`,
     items: f.context.currentItems.map((i) => i.name),
     gold: f.context.currentGold,
     systemPrompt,
@@ -146,6 +153,8 @@ function continuityFixtureToInput(f: ContinuityFixture): EvalInput {
   return {
     label: f.label,
     question: f.question,
+    champion: f.gameState.champion,
+    gameTime: f.gameState.gameTime,
     items: f.gameState.items,
     gold: f.gameState.gold,
     systemPrompt,
@@ -353,12 +362,19 @@ for (const model of models) {
 
       columns: (result) => [
         {
+          label: "Champion",
+          value: `${result.input.champion} @${result.input.gameTime}`,
+        },
+        {
           label: "Question",
           value: result.input.question.substring(0, 50),
         },
         {
-          label: "Items",
-          value: String(result.input.items.length),
+          label: "Context",
+          value:
+            result.input.items.length > 0
+              ? `${result.input.items.length} items, ${result.input.gold}g`
+              : `${result.input.gold}g, no items`,
         },
       ],
     });

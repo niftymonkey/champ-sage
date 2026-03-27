@@ -145,6 +145,31 @@ function getFixtureCount(evalId: number): number {
 
 // --- Subcommand: summary ---
 
+// Short labels for scorers (column headers)
+const SCORER_LABELS: Record<string, string> = {
+  "Item Awareness": "Items",
+  "Structured Output": "StrOut",
+  "Augment Re-Roll Accuracy": "ReRoll",
+  Brevity: "Brief",
+  Decisiveness: "Decisv",
+  "Conversational Continuity": "Contin",
+  "Gold Awareness": "Gold",
+  "Unnecessary Warnings": "NoWarn",
+};
+
+function label(scorer: string): string {
+  return SCORER_LABELS[scorer] ?? scorer.substring(0, 6);
+}
+
+function formatGateCell(gr: GateRanking): string {
+  if (gr.gatesPassed) return "PASS";
+  const failed = [...gr.gates.entries()]
+    .filter(([, v]) => v < GATE_THRESHOLD)
+    .map(([k, v]) => `${label(k)} ${pct(v)}`)
+    .join(", ");
+  return `FAIL: ${failed}`;
+}
+
 function cmdSummary() {
   const evals = getEvals();
   if (evals.length === 0) {
@@ -152,7 +177,7 @@ function cmdSummary() {
     return;
   }
 
-  // Build model summaries
+  // Build summaries
   const summaries: Array<{
     name: string;
     fixtures: number;
@@ -173,39 +198,94 @@ function cmdSummary() {
     return b.gr.rankingAvg - a.gr.rankingAvg;
   });
 
-  // Collect all scorers present
-  const allGates = new Set<string>();
+  // Collect all ranking scorers present
   const allRanking = new Set<string>();
   for (const s of summaries) {
-    for (const k of s.gr.gates.keys()) allGates.add(k);
     for (const k of s.gr.ranking.keys()) allRanking.add(k);
   }
+  const rankKeys = [...allRanking];
 
-  // Print header
-  const gateHeaders = [...allGates].map((g) => g.substring(0, 10).padEnd(10));
-  const rankHeaders = [...allRanking].map((r) => r.substring(0, 10).padEnd(10));
+  // Column widths
+  const nameW = 30;
+  const fixW = 5;
+  const gateW = 22;
+  const rankColW = 8;
 
+  // Header
+  const rankHeaders = rankKeys.map((k) => label(k).padStart(rankColW)).join("");
   console.log("\n=== EVAL SUMMARY ===\n");
   console.log(
-    `${"Model".padEnd(32)} ${"Fix".padStart(4)} ${"Gates".padEnd(6)} ${gateHeaders.join(" ")} ${rankHeaders.join(" ")} ${"Rank".padStart(5)}`
+    `${"Suite".padEnd(nameW)} ${"Fix".padStart(fixW)} ${"Gates".padEnd(gateW)}${rankHeaders} ${"Rank".padStart(rankColW)}`
   );
   console.log(
-    "-".repeat(32 + 4 + 6 + (allGates.size + allRanking.size) * 11 + 6)
+    "-".repeat(nameW + fixW + gateW + rankKeys.length * rankColW + rankColW + 2)
   );
 
   for (const s of summaries) {
-    const gateLabel = s.gr.gatesPassed ? "PASS" : "FAIL";
-    const gateCols = [...allGates]
-      .map((g) => pct(s.gr.gates.get(g) ?? 0).padStart(10))
-      .join(" ");
-    const rankCols = [...allRanking]
-      .map((r) => pct(s.gr.ranking.get(r) ?? 0).padStart(10))
-      .join(" ");
+    const gateCell = formatGateCell(s.gr).padEnd(gateW);
+    const rankCols = rankKeys
+      .map((k) => pct(s.gr.ranking.get(k) ?? 0).padStart(rankColW))
+      .join("");
 
     console.log(
-      `${s.name.padEnd(32)} ${String(s.fixtures).padStart(4)} ${gateLabel.padEnd(6)} ${gateCols} ${rankCols} ${pct(s.gr.rankingAvg).padStart(5)}`
+      `${s.name.padEnd(nameW)} ${String(s.fixtures).padStart(fixW)} ${gateCell}${rankCols} ${pct(s.gr.rankingAvg).padStart(rankColW)}`
     );
   }
+
+  // Show failures below the table
+  const failQuery = db.prepare(`
+    SELECT
+      e.name as suite,
+      s.name as scorer_name,
+      r.input as input_json,
+      r.output as output_json
+    FROM scores s
+    JOIN results r ON s.result_id = r.id
+    JOIN evals e ON r.eval_id = e.id
+    WHERE e.id IN (${evals.map(() => "?").join(",")})
+      AND s.name IN (${GATE_SCORERS.map(() => "?").join(",")})
+      AND s.score < ${GATE_THRESHOLD}
+    ORDER BY e.name, s.name
+  `);
+
+  const failures = failQuery.all(
+    ...evals.map((e) => e.eval_id),
+    ...GATE_SCORERS
+  ) as Array<{
+    suite: string;
+    scorer_name: string;
+    input_json: string;
+    output_json: string;
+  }>;
+
+  if (failures.length > 0) {
+    console.log(`\nGate Failures (${failures.length}):\n`);
+    for (const f of failures) {
+      let question = "?";
+      let items = "";
+      let champion = "";
+      let gameTime = "";
+      try {
+        const input = JSON.parse(f.input_json);
+        question = input.question ?? "?";
+        champion = input.champion ?? "";
+        gameTime = input.gameTime ?? "";
+        items = input.items?.join(", ") ?? "";
+      } catch {
+        /* ignore */
+      }
+
+      const context = [champion, gameTime ? `@${gameTime}` : ""]
+        .filter(Boolean)
+        .join(" ");
+      const itemsStr = items ? `, owns: ${items}` : "";
+
+      console.log(
+        `  [${label(f.scorer_name)}] "${question}" (${context}${itemsStr})`
+      );
+    }
+  }
+
   console.log();
 }
 
