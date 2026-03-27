@@ -10,14 +10,22 @@
  *   npx evalite watch src/lib/ai/coaching.eval.ts
  */
 
+import { config } from "dotenv";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(__dirname, "../../../.env"), override: true });
+
 import { evalite } from "evalite";
 import { createScorer } from "evalite";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
 import { readFileSync } from "fs";
-import { resolve } from "path";
 import { coachingResponseSchema } from "./schemas";
 import { scoreItemAwareness } from "./scorers/item-awareness";
+import { scoreAugmentRerollAccuracy } from "./scorers/augment-reroll-accuracy";
+import { scoreBrevity, scoreDecisiveness } from "./scorers/response-format";
 
 // --- Types ---
 
@@ -75,17 +83,65 @@ const fixtures = allFixtures.filter(
 
 // --- Model setup ---
 
-const apiKey = process.env.OPENAI_API_KEY;
-if (!apiKey) {
-  throw new Error("OPENAI_API_KEY required in .env");
+const openaiKey = process.env.VITE_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
+const openrouterKey = process.env.OPENROUTER_API_KEY;
+
+if (!openaiKey && !openrouterKey) {
+  throw new Error(
+    "At least one API key required in .env: VITE_OPENAI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY"
+  );
 }
 
-const openai = createOpenAI({ apiKey });
+const openai = openaiKey ? createOpenAI({ apiKey: openaiKey }) : null;
+const openrouter = openrouterKey
+  ? createOpenAI({
+      apiKey: openrouterKey,
+      baseURL: "https://openrouter.ai/api/v1",
+    })
+  : null;
 
-// Models to evaluate. Start with the current model; add candidates later.
-const models = [{ name: "gpt-5.4-mini", id: "gpt-5.4-mini" }];
+interface ModelCandidate {
+  name: string;
+  id: string;
+  provider: "openai" | "openrouter";
+}
+
+// Models to evaluate across providers and tiers.
+const models: ModelCandidate[] = [
+  // Current model (baseline)
+  { name: "GPT 5.4 mini", id: "gpt-5.4-mini", provider: "openai" },
+  // Same provider, higher quality
+  { name: "GPT 5.4", id: "gpt-5.4", provider: "openai" },
+  // Different providers via OpenRouter
+  ...(openrouterKey
+    ? [
+        {
+          name: "Gemini 2.5 Pro",
+          id: "google/gemini-2.5-pro",
+          provider: "openrouter" as const,
+        },
+        {
+          name: "Claude Sonnet 4.6",
+          id: "anthropic/claude-sonnet-4.6",
+          provider: "openrouter" as const,
+        },
+      ]
+    : []),
+];
+
+function getModel(candidate: ModelCandidate) {
+  if (candidate.provider === "openai") {
+    if (!openai) throw new Error(`OpenAI key required for ${candidate.name}`);
+    return openai(candidate.id);
+  }
+  if (!openrouter)
+    throw new Error(`OpenRouter key required for ${candidate.name}`);
+  return openrouter(candidate.id);
+}
 
 // --- Scorers ---
+
+// --- Gate Scorers ---
 
 const itemAwareness = createScorer<EvalInput, EvalOutput>({
   name: "Item Awareness",
@@ -93,19 +149,6 @@ const itemAwareness = createScorer<EvalInput, EvalOutput>({
     "Checks that the model does not recommend items the player already owns",
   scorer: ({ input, output }) => {
     return scoreItemAwareness(output.answer, input.fixture.gameState.items);
-  },
-});
-
-const responseLength = createScorer<EvalInput, EvalOutput>({
-  name: "Response Length",
-  description:
-    "Checks that responses are concise (under 3 sentences for simple questions)",
-  scorer: ({ output }) => {
-    const sentences = output.answer.split(/[.!?]+/).filter((s) => s.trim());
-    // Allow up to 4 sentences; degrade linearly after that
-    if (sentences.length <= 4) return 1;
-    if (sentences.length <= 6) return 0.5;
-    return 0;
   },
 });
 
@@ -119,9 +162,74 @@ const structuredOutput = createScorer<EvalInput, EvalOutput>({
   },
 });
 
-const GATE_SCORERS = [itemAwareness, structuredOutput];
-const RANKING_SCORERS = [responseLength];
+const augmentRerollAccuracy = createScorer<EvalInput, EvalOutput>({
+  name: "Augment Re-Roll Accuracy",
+  description:
+    "Checks that the model follows actual re-roll mechanics when advising on augments",
+  scorer: ({ input, output }) => {
+    const history = extractHistory(input.fixture.userPrompt);
+    return scoreAugmentRerollAccuracy(
+      output.answer,
+      input.fixture.question,
+      history
+    );
+  },
+});
+
+// --- Ranking Scorers ---
+
+const brevity = createScorer<EvalInput, EvalOutput>({
+  name: "Brevity",
+  description: "Checks that responses are concise",
+  scorer: ({ output }) => {
+    return scoreBrevity(output.answer);
+  },
+});
+
+const decisiveness = createScorer<EvalInput, EvalOutput>({
+  name: "Decisiveness",
+  description:
+    "Checks that responses give a clear recommendation without hedging",
+  scorer: ({ output }) => {
+    return scoreDecisiveness(output.answer);
+  },
+});
+
+const GATE_SCORERS = [itemAwareness, structuredOutput, augmentRerollAccuracy];
+const RANKING_SCORERS = [brevity, decisiveness];
 const ALL_SCORERS = [...GATE_SCORERS, ...RANKING_SCORERS];
+
+// --- Helpers ---
+
+/** Extract conversation history from the user prompt's Recent Conversation section */
+function extractHistory(
+  userPrompt: string
+): Array<{ question: string; answer: string }> {
+  const history: Array<{ question: string; answer: string }> = [];
+  const lines = userPrompt.split("\n");
+  let i = 0;
+
+  // Find the Recent Conversation section
+  while (i < lines.length && !lines[i].includes("## Recent Conversation")) {
+    i++;
+  }
+  i++; // skip the header
+
+  while (i < lines.length && !lines[i].startsWith("## ")) {
+    const playerMatch = lines[i].match(/^\*\*Player:\*\*\s*(.+)/);
+    if (playerMatch) {
+      const question = playerMatch[1];
+      i++;
+      const coachMatch = lines[i]?.match(/^\*\*Coach:\*\*\s*(.+)/);
+      if (coachMatch) {
+        history.push({ question, answer: coachMatch[1] });
+      }
+    }
+    i++;
+  }
+
+  return history;
+}
 
 // --- Register evals ---
 
@@ -138,7 +246,7 @@ for (const model of models) {
 
     task: async (input: EvalInput): Promise<EvalOutput> => {
       const result = await generateText({
-        model: openai(model.id),
+        model: getModel(model),
         system: input.systemPrompt,
         prompt: input.userPrompt,
         output: Output.object({ schema: coachingResponseSchema }),
