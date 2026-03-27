@@ -43,8 +43,25 @@ The API uses a self-signed HTTPS certificate. The Tauri webview can't fetch it d
 
 **Not exposed:**
 
-- Augments (any mode) — requires voice/manual input. In ARAM Mayhem, augment selection happens at levels 1, 7, 11, and 15 (4 total per game), but only after the player returns to the Nexus at that level. The API exposes player level but not whether they're at the Nexus or have an augment offer pending.
+- Augments (any mode) — requires voice/manual input. In ARAM Mayhem, augment selection happens at levels 1, 7, 11, and 15 (4 total per game), but only after the player returns to the Nexus at that level. The API exposes player level but not whether they're at the Nexus or have an augment offer pending. Note: your.gg appears to detect augment offers in real-time via an overlay — mechanism unknown (image recognition, undocumented API, game memory). Worth investigating.
 - Some augments auto-select a follow-up (e.g., Transmute: Chaos grants two random augments instead of one). This can happen once per game, meaning a player can end up with 5 augments total (4 chosen + 1 granted). The API doesn't expose these auto-selections, so the app needs a way to record the granted augment. The UI should distinguish between "chosen" slots (4 max) and a "granted" slot that appears as a result of choosing certain augments. With voice input, the user can report all augments received in one utterance.
+
+### ARAM Mayhem augment re-roll mechanics
+
+When augment selection is triggered, the player sees 3 augment cards. Each card has its own single-use re-roll button.
+
+- **Round 1:** 3 cards shown, each with a re-roll button. Best strategy: identify the best card, re-roll the other two.
+- **Round 2:** 2 new cards replace the re-rolled ones. The kept card still has its re-roll available; the 2 new cards do not (their re-rolls were already used). Three possible outcomes:
+  - A new card is better than the kept card: re-roll the kept card (its re-roll hasn't been used yet). Proceed to round 3.
+  - The kept card is still best: take it. No more re-rolls available on the other two cards.
+- **Round 3** (only if the kept card was re-rolled in round 2): 1 new card replaces it. All 3 cards now have no re-rolls remaining. Pick the best of the 3 final cards.
+
+Key rules:
+
+- Maximum 3 re-rolls per augment selection, tied to card positions (not free-floating)
+- A card whose re-roll has been used cannot be re-rolled again, even if it was replaced by a new card
+- The player may only report the NEW cards after re-rolling; the system must remember which card was kept from prior rounds
+
 - Enemy gold (only active player's gold)
 - Ability cooldowns (Riot policy)
 - Detailed stats for other players

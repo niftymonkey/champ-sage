@@ -19,7 +19,7 @@
  * - No webview permission issues (macOS/Linux getUserMedia bugs)
  * - Global hotkey fires from Rust, keeping the pipeline in one process
  *
- * See docs/voice-input-research.md for the full architecture rationale.
+ * See docs/research/voice-input-research.md for the full architecture rationale.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";

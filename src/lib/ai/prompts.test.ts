@@ -72,48 +72,39 @@ describe("buildSystemPrompt", () => {
     expect(prompt.toLowerCase()).toContain("coach");
   });
 
-  it("establishes blunt decisive tone", () => {
+  it("establishes concise tone", () => {
     const prompt = buildSystemPrompt({
       gameMode: "CLASSIC",
       lcuGameMode: "CLASSIC",
     }).toLowerCase();
-    expect(prompt).toMatch(/blunt|decisive|direct/);
+    expect(prompt).toMatch(/concise|concision/);
   });
 
-  it("covers general coaching topics", () => {
-    const prompt = buildSystemPrompt({
-      gameMode: "CLASSIC",
-      lcuGameMode: "CLASSIC",
-    }).toLowerCase();
-    expect(prompt).toContain("champion");
-    expect(prompt).toContain("items");
-    expect(prompt).toContain("enemy");
-  });
-
-  it("includes Mayhem augment rules when lcuGameMode is KIWI", () => {
+  it("includes augment rules only when augment options are present", () => {
     const prompt = buildSystemPrompt({
       gameMode: "ARAM",
       lcuGameMode: "KIWI",
+      hasAugmentOptions: true,
     }).toLowerCase();
     expect(prompt).toContain("augment");
     expect(prompt).toContain("re-roll");
     expect(prompt).toContain("not items");
-    expect(prompt).toContain("mayhem");
   });
 
-  it("includes Mayhem augment rules when gameMode is ARAM (fallback)", () => {
+  it("excludes augment rules when no augment options even in Mayhem", () => {
     const prompt = buildSystemPrompt({
       gameMode: "ARAM",
-      lcuGameMode: "",
+      lcuGameMode: "KIWI",
+      hasAugmentOptions: false,
     }).toLowerCase();
-    expect(prompt).toContain("augment");
-    expect(prompt).toContain("re-roll");
+    expect(prompt).not.toContain("re-roll");
   });
 
-  it("does not include augment rules for non-ARAM modes", () => {
+  it("excludes augment rules for non-ARAM modes", () => {
     const prompt = buildSystemPrompt({
       gameMode: "CLASSIC",
       lcuGameMode: "CLASSIC",
+      hasAugmentOptions: true,
     }).toLowerCase();
     expect(prompt).not.toContain("re-roll");
   });
@@ -142,10 +133,11 @@ describe("buildUserPrompt", () => {
       expect(prompt).toContain("Sona");
     });
 
-    it("includes current items with descriptions", () => {
+    it("includes current item names near the question", () => {
       const prompt = buildUserPrompt(createContext(), generalQuery);
       expect(prompt).toContain("Rabadon's Deathcap");
-      expect(prompt).toContain("Massively increases Ability Power.");
+      // Items should appear near the question, not as a separate section
+      expect(prompt).toContain("Items you own:");
     });
 
     it("includes current gold as a whole number", () => {
@@ -222,7 +214,6 @@ describe("buildUserPrompt", () => {
         },
       });
       const prompt = buildUserPrompt(ctx, generalQuery);
-      expect(prompt).toContain("Stat Profile");
       expect(prompt).toContain("Melee");
       expect(prompt).toContain("Fighter");
       expect(prompt).toContain("+104/lvl");

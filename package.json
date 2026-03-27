@@ -15,11 +15,17 @@
     "discover-candidates": "tsx scripts/discover-candidates.ts",
     "audit-augments": "tsx scripts/audit-augments.ts",
     "preview-prompts": "tsx scripts/preview-prompts.ts",
+    "extract-fixtures": "tsx scripts/extract-fixtures.ts",
+    "inspect-evals": "tsx scripts/inspect-evals.ts",
+    "eval": "evalite src/lib/ai/coaching.eval.ts",
+    "eval:watch": "evalite watch src/lib/ai/coaching.eval.ts",
+    "eval:serve": "evalite serve",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.47",
+    "@openrouter/ai-sdk-provider": "^2.3.3",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-global-shortcut": "^2",
     "@tauri-apps/plugin-opener": "^2",
@@ -33,19 +39,23 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "better-sqlite3"
     ]
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/luaparse": "^0.2.13",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.6.0",
+    "better-sqlite3": "^12.8.0",
     "dotenv": "^17.3.1",
+    "evalite": "^0.19.0",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.4.0",
@@ -54,7 +64,7 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.2",
     "ws": "^8.19.0"
   }
 }

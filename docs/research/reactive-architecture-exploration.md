@@ -92,11 +92,11 @@ The streams are mode-agnostic containers. What gets emitted and how it's interpr
 
 The Riot Messaging Service (RMS) fires events via the LCU WebSocket at URIs like `/riot-messaging-service/v1/message/lol-gsm-server/v1/gsm/game-update/IN_PROGRESS` and `TERMINATED`. During our ARAM monitoring session, we only observed generic game state events. In Summoner's Rift, there may be additional event types for objectives (dragon, baron, tower, inhibitor kills), jungle camps, or other game events that would be valuable for proactive coaching.
 
-**Action needed:** Run the LCU monitor during a Summoner's Rift game and document any additional RMS or game-update events. Update `docs/technical-reference.md` with findings.
+**Action needed:** Run the LCU monitor during a Summoner's Rift game and document any additional RMS or game-update events. Update `docs/reference/technical-reference.md` with findings.
 
 ## Reference
 
 - Prototype visualization: `data-dump/rx/champ-sage-reactive-architecture.md`
 - Prototype TypeScript: `data-dump/rx/champ-sage-reactive.rx.ts`
-- LCU API documentation: `docs/technical-reference.md` (LCU section)
+- LCU API documentation: `docs/reference/technical-reference.md` (LCU section)
 - LCU monitor script (spike): `scripts/lcu-monitor.ts`

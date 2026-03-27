@@ -1,0 +1,5165 @@
+[
+  {
+    "label": "Warwick @0:13: augment choice",
+    "index": 0,
+    "timestamp": "2026-03-26T22:48:19.017Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 3,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Anvil Voucher",
+          "description": "| | Redeem during a Shopping Phase to gain a Stat Anvil!"
+        }
+      ],
+      "currentGold": 1400,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": []
+        },
+        {
+          "champion": "Malphite",
+          "items": []
+        },
+        {
+          "champion": "Viego",
+          "items": []
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": []
+        },
+        {
+          "champion": "Caitlyn",
+          "items": []
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 13,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Pinball, Outlaw's Grit, and Big Brain.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Outlaw's Grit",
+          "tier": "Gold",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        },
+        {
+          "name": "Big Brain",
+          "tier": "Gold",
+          "description": "Gain a shield that absorbs damage equal to 300% AP and lasts until destroyed. Shield is replenished upon respawn."
+        },
+        {
+          "name": "Pinball",
+          "tier": "Gold",
+          "description": "Your Mark is empowered to instead throw a pinball, which deals 100 to 500 bonus true damage and ricochets off of terrain that it collides with. Each time the pinball ricochets, its remaining travel distance is reset, it increases in radius by 25%, deals 20% increased damage, and reduces Mark remaining cooldown by 30% of its total. The pinball can ricochet up to 4 times, for a maximum radius increase of 100% and a damage increase of 80%. Additionally, your Mark cooldown is reduced equivalent to 50 ability haste. If Mark is not equipped, the summoner spell in the slot not occupied by Flash is replaced with Mark. If you also did not equip Flash, then you will be prompted to replace one of your summoner spells with Mark."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Outlaw's Grit**. Warwick can stack it fast with R, and the raw resists are always useful into this mixed-damage comp. Skip Pinball and Big Brain.",
+      "latencyMs": 3062,
+      "tokensIn": 1456,
+      "tokensOut": 163
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @0:30: augment choice",
+    "index": 1,
+    "timestamp": "2026-03-26T22:48:36.785Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 3,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Anvil Voucher",
+          "description": "| | Redeem during a Shopping Phase to gain a Stat Anvil!"
+        }
+      ],
+      "currentGold": 1400,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": []
+        },
+        {
+          "champion": "Malphite",
+          "items": []
+        },
+        {
+          "champion": "Viego",
+          "items": []
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": []
+        },
+        {
+          "champion": "Caitlyn",
+          "items": []
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 30,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Rabble Rousing, Outlaw's Grit, and Searing Dawn.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Rabble Rousing",
+          "tier": "Gold",
+          "description": "Casting an ability heals you for 5 to 60 (+ 1% maximum health)."
+        },
+        {
+          "name": "Outlaw's Grit",
+          "tier": "Gold",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        },
+        {
+          "name": "Searing Dawn",
+          "tier": "Gold",
+          "description": "Gain Sunlight. Sunlight: Your damaging abilities mark enemies, causing them to take 40 to 200 bonus magic damage from your ally's next basic attack or ability hit against them (0.75-second cooldown per target)."
+        }
+      ]
+    },
+    "response": null,
+    "error": "Failed to fetch",
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @0:46: augment choice",
+    "index": 2,
+    "timestamp": "2026-03-26T22:48:51.589Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 3,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Anvil Voucher",
+          "description": "| | Redeem during a Shopping Phase to gain a Stat Anvil!"
+        }
+      ],
+      "currentGold": 1400,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Lost Chapter",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": []
+        },
+        {
+          "champion": "Viego",
+          "items": []
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": []
+        },
+        {
+          "champion": "Caitlyn",
+          "items": []
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 46,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Rabble Rousing, Outlaw's Grit, and Searing Dawn",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Rabble Rousing",
+          "tier": "Gold",
+          "description": "Casting an ability heals you for 5 to 60 (+ 1% maximum health)."
+        },
+        {
+          "name": "Outlaw's Grit",
+          "tier": "Gold",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        },
+        {
+          "name": "Searing Dawn",
+          "tier": "Gold",
+          "description": "Gain Sunlight. Sunlight: Your damaging abilities mark enemies, causing them to take 40 to 200 bonus magic damage from your ally's next basic attack or ability hit against them (0.75-second cooldown per target)."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Outlaw's Grit**. Warwick gets full value off **R** instantly, and the stacked armor/MR is the best fit into this mixed-damage enemy team.",
+      "latencyMs": 2219,
+      "tokensIn": 1386,
+      "tokensOut": 163
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @1:00: item question",
+    "index": 3,
+    "timestamp": "2026-03-26T22:49:05.402Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 3,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Anvil Voucher",
+          "description": "| | Redeem during a Shopping Phase to gain a Stat Anvil!"
+        }
+      ],
+      "currentGold": 1404,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Lost Chapter",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Sheen",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "B. F. Sword",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": []
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 60,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "What should I buy with my first 1400 gold?",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Transmute: Gold",
+          "tier": "Silver",
+          "description": "Gain one random Gold augment, excluding the other two offerings in your current assortment."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Use the **Anvil Voucher** and take the **best Stat Anvil for Warwick**. With only 1400g and no shop item power spike this early, the anvil is the highest-value first buy.",
+      "latencyMs": 2302,
+      "tokensIn": 1354,
+      "tokensOut": 130
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @1:16: augment choice",
+    "index": 4,
+    "timestamp": "2026-03-26T22:49:21.299Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 3,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [],
+      "currentGold": 1544,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Lost Chapter",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Sheen",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "B. F. Sword",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 76,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "No, I mean like an actual item. What should I start building first as my first item?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy **Bami's Cinder** first, then build **Titanic Hydra**. Warwick needs the early health and wavefight damage, and it fits your bruiser/tank path way better than rushing pure damage.",
+      "latencyMs": 2975,
+      "tokensIn": 1354,
+      "tokensOut": 135
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @5:26: general question",
+    "index": 5,
+    "timestamp": "2026-03-26T22:53:31.219Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 7,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Boots",
+          "description": "25 Move Speed | |"
+        },
+        {
+          "name": "Tiamat",
+          "description": "20 Attack Damage | | Cleave | Attacks deal physical damage to nearby enemies. | Crescent | Deal physical damage to enemies around you."
+        },
+        {
+          "name": "Tunneler",
+          "description": "15 Attack Damage | 250 Health | |"
+        },
+        {
+          "name": "Ruby Crystal",
+          "description": "150 Health | |"
+        }
+      ],
+      "currentGold": 1190,
+      "kda": {
+        "kills": 1,
+        "deaths": 3,
+        "assists": 3
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Warwick",
+          "items": [
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Tiamat",
+              "description": ""
+            },
+            {
+              "name": "Tunneler",
+              "description": ""
+            },
+            {
+              "name": "Ruby Crystal",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Pickaxe",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Pickaxe",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 326,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Witt...",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Finish **Bami's Cinder** first. It’s the best immediate power spike for Warwick here, then keep building into **Titanic Hydra** after that.",
+      "latencyMs": 2483,
+      "tokensIn": 1498,
+      "tokensOut": 126
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @5:37: general question",
+    "index": 6,
+    "timestamp": "2026-03-26T22:53:44.594Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 7,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Boots",
+          "description": "25 Move Speed | |"
+        },
+        {
+          "name": "Tiamat",
+          "description": "20 Attack Damage | | Cleave | Attacks deal physical damage to nearby enemies. | Crescent | Deal physical damage to enemies around you."
+        },
+        {
+          "name": "Tunneler",
+          "description": "15 Attack Damage | 250 Health | |"
+        },
+        {
+          "name": "Ruby Crystal",
+          "description": "150 Health | |"
+        }
+      ],
+      "currentGold": 1292,
+      "kda": {
+        "kills": 1,
+        "deaths": 3,
+        "assists": 3
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Pickaxe",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 337,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "I choose...",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Take **Bami's Cinder**. It’s your best first spike on Warwick here—cheap, tanky, and it makes your all-ins and wavefights much stronger. ",
+      "latencyMs": 1299,
+      "tokensIn": 1537,
+      "tokensOut": 92
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @5:44: augment confirmation",
+    "index": 7,
+    "timestamp": "2026-03-26T22:53:50.229Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 7,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Boots",
+          "description": "25 Move Speed | |"
+        },
+        {
+          "name": "Tiamat",
+          "description": "20 Attack Damage | | Cleave | Attacks deal physical damage to nearby enemies. | Crescent | Deal physical damage to enemies around you."
+        },
+        {
+          "name": "Tunneler",
+          "description": "15 Attack Damage | 250 Health | |"
+        },
+        {
+          "name": "Ruby Crystal",
+          "description": "150 Health | |"
+        }
+      ],
+      "currentGold": 1352,
+      "kda": {
+        "kills": 1,
+        "deaths": 3,
+        "assists": 3
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Pickaxe",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 344,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "I chose Outlaw's Grit",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Outlaw's Grit",
+          "tier": "Gold",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Good. Keep playing for all-in windows and use R aggressively to stack it fast; the bonus resists are huge for Warwick into this mixed-damage comp.",
+      "latencyMs": 1060,
+      "tokensIn": 1661,
+      "tokensOut": 46
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @5:51: augment choice",
+    "index": 8,
+    "timestamp": "2026-03-26T22:53:58.324Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 8,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Boots",
+          "description": "25 Move Speed | |"
+        },
+        {
+          "name": "Tiamat",
+          "description": "20 Attack Damage | | Cleave | Attacks deal physical damage to nearby enemies. | Crescent | Deal physical damage to enemies around you."
+        },
+        {
+          "name": "Tunneler",
+          "description": "15 Attack Damage | 250 Health | |"
+        },
+        {
+          "name": "Ruby Crystal",
+          "description": "150 Health | |"
+        }
+      ],
+      "currentGold": 1411,
+      "kda": {
+        "kills": 1,
+        "deaths": 3,
+        "assists": 3
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Pickaxe",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 351,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Recursion, Overflow, Bread and Cheese",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Bread And Cheese",
+          "tier": "Gold",
+          "description": "Your champion's third basic ability (E) gains 100 ability haste."
+        },
+        {
+          "name": "Recursion",
+          "tier": "Gold",
+          "description": "Grants 60 ability haste."
+        },
+        {
+          "name": "Overflow",
+          "tier": "Gold",
+          "description": "Your abilities' mana costs are doubled, but you also gain 10%"
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Overflow**. Warwick gets real value from the damage amp and healing amp, and he doesn’t care much about the mana cost downside in this mode. Re-roll **Recursion** and **Bread and Cheese**.",
+      "latencyMs": 2412,
+      "tokensIn": 1755,
+      "tokensOut": 151
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @6:12: augment choice",
+    "index": 9,
+    "timestamp": "2026-03-26T22:54:19.364Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 8,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Boots",
+          "description": "25 Move Speed | |"
+        },
+        {
+          "name": "Tiamat",
+          "description": "20 Attack Damage | | Cleave | Attacks deal physical damage to nearby enemies. | Crescent | Deal physical damage to enemies around you."
+        },
+        {
+          "name": "Tunneler",
+          "description": "15 Attack Damage | 250 Health | |"
+        },
+        {
+          "name": "Ruby Crystal",
+          "description": "150 Health | |"
+        }
+      ],
+      "currentGold": 1590,
+      "kda": {
+        "kills": 1,
+        "deaths": 3,
+        "assists": 3
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Pickaxe",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 372,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Scopier Weapons, Overflow, Divine Intervention",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Divine Intervention",
+          "tier": "Gold",
+          "description": "Automatically cast Cosmic Radiance, calling down a protective star upon you that descends over 2.5 seconds. Afterwards, you and all allied champions within icononly=true 400 units become invulnerable for 2.5 seconds"
+        },
+        {
+          "name": "Scopier Weapons",
+          "tier": "Gold",
+          "description": "Gain 200 bonus attack range."
+        },
+        {
+          "name": "Overflow",
+          "tier": "Gold",
+          "description": "Your abilities' mana costs are doubled, but you also gain 10%"
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Overflow**. Warwick doesn’t care about the mana tax nearly as much as he loves the free damage + healing amp, and it supercharges your bite, ult, and sustain. Re-roll **Scopier Weapons** and **Divine Intervention**.",
+      "latencyMs": 2290,
+      "tokensIn": 1864,
+      "tokensOut": 162
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @7:16: item question",
+    "index": 10,
+    "timestamp": "2026-03-26T22:55:21.087Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 8,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        }
+      ],
+      "currentGold": 765,
+      "kda": {
+        "kills": 1,
+        "deaths": 4,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Iron",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Pickaxe",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 436,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "What item should I build next?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Build **Bami's Cinder** next. It’s the best immediate spike for Warwick here: cheap, tanky, and it massively improves your skirmish and waveclear before you finish Titanic Hydra.",
+      "latencyMs": 1323,
+      "tokensIn": 1803,
+      "tokensOut": 92
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @7:37: item question",
+    "index": 11,
+    "timestamp": "2026-03-26T22:55:43.982Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 9,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Elixir of Iron",
+          "description": "| | Consume | Grants 300 Health , 25% Tenacity and increased size for 3 minutes. While active, you leave a path behind that boosts allied champions' Move Speed by 15% ."
+        },
+        {
+          "name": "Bami's Cinder",
+          "description": "150 Health | 5 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 44,
+      "kda": {
+        "kills": 1,
+        "deaths": 4,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Iron",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Pickaxe",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 457,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "What item should I buy next?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy **Bami’s Cinder** now. It’s the best immediate spike on Warwick here: cheap HP, strong wavefight damage, and it keeps you on track to finish **Titanic Hydra**.",
+      "latencyMs": 1894,
+      "tokensIn": 1944,
+      "tokensOut": 91
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @7:48: augment choice",
+    "index": 12,
+    "timestamp": "2026-03-26T22:55:54.095Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 9,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Elixir of Iron",
+          "description": "| | Consume | Grants 300 Health , 25% Tenacity and increased size for 3 minutes. While active, you leave a path behind that boosts allied champions' Move Speed by 15% ."
+        },
+        {
+          "name": "Bami's Cinder",
+          "description": "150 Health | 5 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 142,
+      "kda": {
+        "kills": 1,
+        "deaths": 4,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Iron",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "Pickaxe",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 468,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "I already bought that one, what item should I buy next?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Build **Titanic Hydra** next. You already have Bami’s, and Titanic is your real damage spike with HP scaling, waveclear, and better all-in pressure on Warwick.",
+      "latencyMs": 1110,
+      "tokensIn": 2005,
+      "tokensOut": 90
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @7:58: augment choice",
+    "index": 13,
+    "timestamp": "2026-03-26T22:56:03.258Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 9,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Elixir of Iron",
+          "description": "| | Consume | Grants 300 Health , 25% Tenacity and increased size for 3 minutes. While active, you leave a path behind that boosts allied champions' Move Speed by 15% ."
+        },
+        {
+          "name": "Bami's Cinder",
+          "description": "150 Health | 5 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 222,
+      "kda": {
+        "kills": 1,
+        "deaths": 4,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 478,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "I have a titanic hydra, do you not see what items I have?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Yes — you already have **Titanic Hydra**. Your next buy should be **finish Bami’s Cinder into Sunfire/Abyssal path only if that’s available in KIWI; otherwise buy the best HP+resist item you can from shop right now**. Your current core is Titanic + Mercs + Outlaw’s Grit, so you need **tank stats next**, not another damage item.",
+      "latencyMs": 1750,
+      "tokensIn": 2063,
+      "tokensOut": 182
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @8:23: item question",
+    "index": 14,
+    "timestamp": "2026-03-26T22:56:28.864Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 9,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Bami's Cinder",
+          "description": "150 Health | 5 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage to nearby enemies for 3 seconds."
+        },
+        {
+          "name": "Cloth Armor",
+          "description": "15 Armor | |"
+        }
+      ],
+      "currentGold": 339,
+      "kda": {
+        "kills": 1,
+        "deaths": 4,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Sorcery",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 503,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Please look at my items and tell me what I should buy next.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy **Chain Vest** next. You’re into 3 AD threats, and Warwick already has enough damage from Titanic; you need armor to stop getting deleted by MF/Cait/Viego while you frontload with R.",
+      "latencyMs": 1843,
+      "tokensIn": 2133,
+      "tokensOut": 121
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @9:17: item question",
+    "index": 15,
+    "timestamp": "2026-03-26T22:57:24.052Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 10,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Chain Vest",
+          "description": "40 Armor | |"
+        },
+        {
+          "name": "Bami's Cinder",
+          "description": "150 Health | 5 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage to nearby enemies for 3 seconds."
+        },
+        {
+          "name": "Ruby Crystal",
+          "description": "150 Health | |"
+        }
+      ],
+      "currentGold": 342,
+      "kda": {
+        "kills": 2,
+        "deaths": 5,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Hearthbound Axe",
+              "description": ""
+            },
+            {
+              "name": "Rectrix",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Wrath",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 557,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Now what items should I buy next?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy **Chain Vest** now, then turn your **Ruby Crystal + Bami’s Cinder + Chain Vest** into your next tank item path. You already have enough damage from Titanic; into MF/Cait/Viego, armor is the best immediate value.",
+      "latencyMs": 1583,
+      "tokensIn": 2225,
+      "tokensOut": 149
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @9:31: item question",
+    "index": 16,
+    "timestamp": "2026-03-26T22:57:36.778Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 10,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Chain Vest",
+          "description": "40 Armor | |"
+        },
+        {
+          "name": "Bami's Cinder",
+          "description": "150 Health | 5 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage to nearby enemies for 3 seconds."
+        },
+        {
+          "name": "Ruby Crystal",
+          "description": "150 Health | |"
+        }
+      ],
+      "currentGold": 461,
+      "kda": {
+        "kills": 2,
+        "deaths": 5,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Hearthbound Axe",
+              "description": ""
+            },
+            {
+              "name": "Rectrix",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 571,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "I literally just bought that. What item should I buy next?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy **another Chain Vest / armor component** if the shop lets you. You’re still getting hit by 3 AD carries, and Warwick already has enough damage from Titanic—stack armor before anything else.",
+      "latencyMs": 1663,
+      "tokensIn": 2290,
+      "tokensOut": 123
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @9:45: item question",
+    "index": 17,
+    "timestamp": "2026-03-26T22:57:50.264Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 10,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Chain Vest",
+          "description": "40 Armor | |"
+        },
+        {
+          "name": "Bami's Cinder",
+          "description": "150 Health | 5 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage to nearby enemies for 3 seconds."
+        },
+        {
+          "name": "Ruby Crystal",
+          "description": "150 Health | |"
+        }
+      ],
+      "currentGold": 580,
+      "kda": {
+        "kills": 2,
+        "deaths": 5,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Hearthbound Axe",
+              "description": ""
+            },
+            {
+              "name": "Rectrix",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 585,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "I mean the next main item. What are these items building into? What's the next main item?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Your next main item is **whatever the shop lets you finish from Bami’s + Chain Vest + Ruby Crystal** — in KIWI that should be your **armor/HP tank upgrade**, not another damage item. **Prioritize the Bami’s/Chain Vest tank completion first**, then go back for more armor/MR after that.",
+      "latencyMs": 2000,
+      "tokensIn": 2357,
+      "tokensOut": 173
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @10:11: augment choice",
+    "index": 18,
+    "timestamp": "2026-03-26T22:58:17.383Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 10,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 201,
+      "kda": {
+        "kills": 2,
+        "deaths": 5,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Iron",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 611,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "I have Bomby's, I have those other things, is it Sunfire Aegis I should be getting?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Yes — if you already have Bami’s and the armor/HP components, finish **Sunfire Aegis** next. It’s your best immediate tank spike here into 3 AD threats, and you already have enough damage from Titanic.",
+      "latencyMs": 1585,
+      "tokensIn": 2443,
+      "tokensOut": 152
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @11:07: augment choice",
+    "index": 19,
+    "timestamp": "2026-03-26T22:59:12.865Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 11,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 766,
+      "kda": {
+        "kills": 2,
+        "deaths": 6,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Iron",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Akshan",
+          "items": [
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Statikk Shiv",
+              "description": ""
+            },
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "B. F. Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 667,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Juiced, Goredrink, or ADAPT?",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Goredrink",
+          "tier": "Silver",
+          "description": "Gain 15% omnivamp."
+        },
+        {
+          "name": "Juiced",
+          "tier": "Silver",
+          "description": "Basic attacks on-hit against enemy champions consume 2.5% of your maximum mana to deal bonus magic damage equal to 4.5% of your maximum mana. This damage can critically strike for 100 bonus damage."
+        },
+        {
+          "name": "ADAPt",
+          "tier": "Silver",
+          "description": "Convert all of your bonus attack damage into ability power at a rate of 1 ability power per 0.6 bonus attack damage. Additionally, increase your ability power by 15%."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Goredrink**. Warwick gets way more value from 15% omnivamp than from mana-scaling auto damage or converting your AD into AP. Re-roll **Juiced** and **ADAPT**.",
+      "latencyMs": 2393,
+      "tokensIn": 2668,
+      "tokensOut": 159
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @11:26: augment choice",
+    "index": 20,
+    "timestamp": "2026-03-26T22:59:31.552Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 11,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 923,
+      "kda": {
+        "kills": 2,
+        "deaths": 6,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Needlessly Large Rod",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Iron",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 686,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Upgrade Immolate, Goredrink, or Mighty Shield.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Upgrade Immolate",
+          "tier": "Silver",
+          "description": "Upgrades Bami's Cinder, Hollow Radiance, Sunfire Aegis, and Void Immolation, empowering Immolate to additionally grant you 12 gold per tick for each enemy champion afflicted by its effect. Additionally, gain 250 gold."
+        },
+        {
+          "name": "Mighty Shield",
+          "tier": "Silver",
+          "description": "Gain 40 to 100 adaptive force for 3 seconds upon gaining a shield (5 second cooldown)."
+        },
+        {
+          "name": "Goredrink",
+          "tier": "Silver",
+          "description": "Gain 15% omnivamp."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Goredrink**. You’re Warwick with Titanic/Sunfire path, so 15% omnivamp is huge and always live; **Upgrade Immolate** is good only if you’re already on the Bami/Sunfire line, but Goredrink is the stronger combat spike right now. Skip **Mighty Shield**.",
+      "latencyMs": 1805,
+      "tokensIn": 2721,
+      "tokensOut": 192
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @11:40: general question",
+    "index": 21,
+    "timestamp": "2026-03-26T22:59:46.595Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 11,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 1046,
+      "kda": {
+        "kills": 2,
+        "deaths": 6,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Needlessly Large Rod",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Iron",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Kalista",
+          "items": [
+            {
+              "name": "Blade of The Ruined King",
+              "description": ""
+            },
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Runaan's Hurricane",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Kalista's Black Spear",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 700,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "I am already on the balmy Sunfire line. I have a Sunfire Aegis. How do you not know that?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "You’re right — I should be tracking your current items better. If you’re already on **Sunfire Aegis**, then **Upgrade Immolate** is the better take; it directly amps your current item and is the cleanest fit for Warwick’s frontlining. ",
+      "latencyMs": 1651,
+      "tokensIn": 2712,
+      "tokensOut": 192
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @12:01: item question",
+    "index": 22,
+    "timestamp": "2026-03-26T23:00:07.805Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 11,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 1475,
+      "kda": {
+        "kills": 2,
+        "deaths": 6,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Needlessly Large Rod",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Elixir of Iron",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 721,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Does this mean I should buy the other Bommi's Cinder item now?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "No. If you already have **Sunfire Aegis**, don’t buy another Bami’s-style item — upgrade your next **armor/HP** slot instead and keep stacking tank stats for MF/Cait/Viego.",
+      "latencyMs": 2790,
+      "tokensIn": 2767,
+      "tokensOut": 106
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @12:15: item question",
+    "index": 23,
+    "timestamp": "2026-03-26T23:00:21.979Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 11,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 1594,
+      "kda": {
+        "kills": 2,
+        "deaths": 6,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Needlessly Large Rod",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Nashor's Tooth",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 735,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "What's my next item to buy?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy an **armor item next** — specifically **Chain Vest into a full armor tank item**. You’re already covered on damage with Titanic/Sunfire, and the enemy’s MF/Cait/Viego are the real threat right now.",
+      "latencyMs": 1406,
+      "tokensIn": 2820,
+      "tokensOut": 125
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @12:24: augment choice",
+    "index": 24,
+    "timestamp": "2026-03-26T23:00:29.547Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 11,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 1674,
+      "kda": {
+        "kills": 2,
+        "deaths": 6,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Needlessly Large Rod",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Nashor's Tooth",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Serylda's Grudge",
+              "description": ""
+            },
+            {
+              "name": "Tunneler",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 744,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Don't tell me the low level item, tell me the full item.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy **Randuin’s Omen** next. It’s the best full item into MF/Cait crit threat, and the armor + HP is exactly what Warwick needs right now.",
+      "latencyMs": 1015,
+      "tokensIn": 2889,
+      "tokensOut": 50
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @14:05: augment choice",
+    "index": 25,
+    "timestamp": "2026-03-26T23:02:10.057Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 12,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Randuin's Omen",
+          "description": "350 Health | 75 Armor | | Resilience | Receive 30% less damage from Critical Strikes. | Humility | Slow nearby enemies by 70% for 2 seconds."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        }
+      ],
+      "currentGold": 766,
+      "kda": {
+        "kills": 3,
+        "deaths": 7,
+        "assists": 4
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Amplifying Tome",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Needlessly Large Rod",
+              "description": ""
+            },
+            {
+              "name": "Amplifying Tome",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Nashor's Tooth",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Serylda's Grudge",
+              "description": ""
+            },
+            {
+              "name": "Tunneler",
+              "description": ""
+            },
+            {
+              "name": "Serrated Dirk",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Last Whisper",
+              "description": ""
+            },
+            {
+              "name": "Cloak of Agility",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 845,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Alright, now I have a Randuin's, what else do I get? What's my next big item, main item?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy **Spirit Visage** next. You already have enough armor, and Warwick gets huge value from the extra healing on Q/passive and the mixed-damage enemy comp means MR is your best next big spike.",
+      "latencyMs": 1726,
+      "tokensIn": 3009,
+      "tokensOut": 143
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @15:41: augment choice",
+    "index": 26,
+    "timestamp": "2026-03-26T23:03:46.603Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 13,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Randuin's Omen",
+          "description": "350 Health | 75 Armor | | Resilience | Receive 30% less damage from Critical Strikes. | Humility | Slow nearby enemies by 70% for 2 seconds."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        },
+        {
+          "name": "Spectre's Cowl",
+          "description": "200 Health | 35 Magic Resist | 100% Base Health Regen | |"
+        },
+        {
+          "name": "Kindlegem",
+          "description": "200 Health | 10 Ability Haste | |"
+        }
+      ],
+      "currentGold": 397,
+      "kda": {
+        "kills": 3,
+        "deaths": 8,
+        "assists": 6
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Zhonya's Hourglass",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots of Swiftness",
+              "description": ""
+            },
+            {
+              "name": "Nashor's Tooth",
+              "description": ""
+            },
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Vampiric Scepter",
+              "description": ""
+            },
+            {
+              "name": "Pickaxe",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Serylda's Grudge",
+              "description": ""
+            },
+            {
+              "name": "Edge of Night",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Lord Dominik's Regards",
+              "description": ""
+            },
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Vampiric Scepter",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 941,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Once I have Spirit Visage, I will only have room for one more item. What will that item be?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Your last item should be **Thornmail**. You need anti-heal and more armor for Viego plus the crit ADCs, and it finishes your tank profile better than any other option.",
+      "latencyMs": 1176,
+      "tokensIn": 3145,
+      "tokensOut": 91
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Warwick @16:42: augment choice",
+    "index": 27,
+    "timestamp": "2026-03-26T23:04:49.007Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 15,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Randuin's Omen",
+          "description": "350 Health | 75 Armor | | Resilience | Receive 30% less damage from Critical Strikes. | Humility | Slow nearby enemies by 70% for 2 seconds."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        },
+        {
+          "name": "Spectre's Cowl",
+          "description": "200 Health | 35 Magic Resist | 100% Base Health Regen | |"
+        },
+        {
+          "name": "Kindlegem",
+          "description": "200 Health | 10 Ability Haste | |"
+        }
+      ],
+      "currentGold": 1623,
+      "kda": {
+        "kills": 3,
+        "deaths": 9,
+        "assists": 10
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Zhonya's Hourglass",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots of Swiftness",
+              "description": ""
+            },
+            {
+              "name": "Nashor's Tooth",
+              "description": ""
+            },
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Blade of The Ruined King",
+              "description": ""
+            },
+            {
+              "name": "Null-Magic Mantle",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Serylda's Grudge",
+              "description": ""
+            },
+            {
+              "name": "Edge of Night",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Lord Dominik's Regards",
+              "description": ""
+            },
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Vampiric Scepter",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 1002,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Slow and steady, cheating and holy fire.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Slow and Steady",
+          "tier": "Gold",
+          "description": "Your base attack speed is set to a static amount of 0.625 and your attack rate no longer benefits from any source of attack speed bonuses. In return, you gain 25 bonus attack damage and convert every 1% bonus attack speed into 1 bonus attack damage."
+        },
+        {
+          "name": "Holy Fire",
+          "tier": "Gold",
+          "description": "Your heals and shields cause you to fire a missile to the nearest enemy unit within 650 units over 0.32 seconds, applying a Burn upon arrival that deals magic damage equal to 0.2% of the target's maximum health every second over 5 seconds, for a total of 1% (1.5-second cooldown). The Burn's per-tick damage increases to up to 0.8% of the target's maximum health based on the relative value of the triggering heal or shield against the maximum health of the ally recipient, for a total maximum damage of 4% of the target's maximum health."
+        },
+        {
+          "name": "Cheating",
+          "tier": "Gold",
+          "description": "Your Recall is now functional and is upgraded to Empowered Recall. Completing an Empowered Recall channel enables the shop. Additionally, the spawn platform will now provide healing and resource restoration for you."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Holy Fire**. Warwick constantly procs healing, so this turns your sustain into extra AoE damage and actually fits your build. Re-roll **Slow and Steady** and **Cheating**.",
+      "latencyMs": 2017,
+      "tokensIn": 3471,
+      "tokensOut": 159
+    },
+    "error": null,
+    "category": "mayhem"
+  },
+  {
+    "label": "Warwick @16:56: augment choice",
+    "index": 28,
+    "timestamp": "2026-03-26T23:05:01.946Z",
+    "model": "gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Warwick",
+        "level": 15,
+        "abilities": "Passive: Eternal Hunger - Warwick's basic attacks deal bonus magic damage. If Warwick is below 50% health, he heals the same amount. If Warwick is below 25% health, this healing triples.\nJaws of the Beast - Warwick lunges forward and bites his target, dealing damage based on their maximum health and healing for damage dealt.\nBlood Hunt - Warwick senses enemies below 50% health, gaining Move Speed toward and attack speed against them. When they fall below 25% health, he frenzies and these bonuses triple.\nPrimal Howl - Warwick gains damage reduction for 2.5 seconds. At the end, or if re-activated, he howls, causing nearby enemies to flee for 1 second.\nInfinite Duress - Warwick leaps in a direction (scaling with his bonus Move Speed), suppressing the first champion he collides with for 1.5 seconds.",
+        "statProfile": "Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | AS: 0.638 (+2%/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Mercury's Treads",
+          "description": "20 Magic Resist | 45 Move Speed | 30% Tenacity | |"
+        },
+        {
+          "name": "Titanic Hydra",
+          "description": "40 Attack Damage | 600 Health | | Cleave | Attacks deal physical damage on-hit and to enemies behind the target. | Titanic Crescent | Empower your next Cleave to deal bonus physical damage On-Hit and deal bonus physical damage to enemies behind the target."
+        },
+        {
+          "name": "Randuin's Omen",
+          "description": "350 Health | 75 Armor | | Resilience | Receive 30% less damage from Critical Strikes. | Humility | Slow nearby enemies by 70% for 2 seconds."
+        },
+        {
+          "name": "Sunfire Aegis",
+          "description": "350 Health | 50 Armor | 10 Ability Haste | | Immolate | After taking or dealing damage, deal magic damage per second to nearby enemies for 3 seconds."
+        },
+        {
+          "name": "Spectre's Cowl",
+          "description": "200 Health | 35 Magic Resist | 100% Base Health Regen | |"
+        },
+        {
+          "name": "Kindlegem",
+          "description": "200 Health | 10 Ability Haste | |"
+        }
+      ],
+      "currentGold": 1812,
+      "kda": {
+        "kills": 3,
+        "deaths": 9,
+        "assists": 10
+      },
+      "currentAugments": [
+        {
+          "name": "Outlaw's Grit",
+          "description": "Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times for a total of 60 bonus resistances. Stacks are reset every 60 seconds since acquiring the augment."
+        }
+      ],
+      "enemyTeam": [
+        {
+          "champion": "Vex",
+          "items": [
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            },
+            {
+              "name": "Zhonya's Hourglass",
+              "description": ""
+            },
+            {
+              "name": "Sorcerer's Shoes",
+              "description": ""
+            },
+            {
+              "name": "Stormsurge",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Malphite",
+          "items": [
+            {
+              "name": "Lich Bane",
+              "description": ""
+            },
+            {
+              "name": "Rabadon's Deathcap",
+              "description": ""
+            },
+            {
+              "name": "Tear of the Goddess",
+              "description": ""
+            },
+            {
+              "name": "Boots of Swiftness",
+              "description": ""
+            },
+            {
+              "name": "Nashor's Tooth",
+              "description": ""
+            },
+            {
+              "name": "Luden's Echo",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Viego",
+          "items": [
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Executioner's Calling",
+              "description": ""
+            },
+            {
+              "name": "Kraken Slayer",
+              "description": ""
+            },
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Blade of The Ruined King",
+              "description": ""
+            },
+            {
+              "name": "Null-Magic Mantle",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Miss Fortune",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "B. F. Sword",
+              "description": ""
+            },
+            {
+              "name": "Axiom Arc",
+              "description": ""
+            },
+            {
+              "name": "Serylda's Grudge",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Edge of Night",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Caitlyn",
+          "items": [
+            {
+              "name": "The Collector",
+              "description": ""
+            },
+            {
+              "name": "Berserker's Greaves",
+              "description": ""
+            },
+            {
+              "name": "Rapid Firecannon",
+              "description": ""
+            },
+            {
+              "name": "Lord Dominik's Regards",
+              "description": ""
+            },
+            {
+              "name": "Infinity Edge",
+              "description": ""
+            },
+            {
+              "name": "Blade of The Ruined King",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Twitch"
+        },
+        {
+          "champion": "Akshan"
+        },
+        {
+          "champion": "Aurora"
+        },
+        {
+          "champion": "Kalista"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Tank, 1 Mage, 3 Assassin, 3 Marksman — no Support. Enemy damage: mixed (3 AD, 3 AP).",
+      "augmentSets": [],
+      "gameMode": "KIWI",
+      "lcuGameMode": "KIWI",
+      "gameTime": 1016,
+      "balanceOverrides": "Damage dealt: +5%, Damage taken: -5%"
+    },
+    "query": {
+      "question": "Demon's Dance, Soul Eater, and Holy Fire",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Demon's Dance",
+          "tier": "Gold",
+          "description": "Gain the Fleet Footwork and Grasp of the Undying keystone runes."
+        },
+        {
+          "name": "Soul Eater",
+          "tier": "Gold",
+          "description": "Immobilizing or grounding an enemy champion grants you 20 bonus health, stacking infinitely"
+        },
+        {
+          "name": "Holy Fire",
+          "tier": "Gold",
+          "description": "Your heals and shields cause you to fire a missile to the nearest enemy unit within 650 units over 0.32 seconds, applying a Burn upon arrival that deals magic damage equal to 0.2% of the target's maximum health every second over 5 seconds, for a total of 1% (1.5-second cooldown). The Burn's per-tick damage increases to up to 0.8% of the target's maximum health based on the relative value of the triggering heal or shield against the maximum health of the ally recipient, for a total maximum damage of 4% of the target's maximum health."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Holy Fire**. Warwick constantly self-heals, so it gives you the most free damage in every fight. Re-roll **Demon's Dance** and **Soul Eater**.",
+      "latencyMs": 1750,
+      "tokensIn": 3496,
+      "tokensOut": 174
+    },
+    "error": null,
+    "category": "mayhem"
+  }
+]

@@ -59,14 +59,22 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   gameDataRef.current = gameData;
   chosenAugmentsRef.current = chosenAugments;
 
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  const apiKey =
+    import.meta.env.VITE_OPENROUTER_API_KEY ??
+    import.meta.env.VITE_OPENAI_API_KEY;
 
   const submitQuestion = useCallback(
     async (question: string) => {
       if (!contextRef.current || !apiKey || !question.trim()) {
+        const reason = !contextRef.current
+          ? "no context"
+          : !apiKey
+            ? "no API key"
+            : "empty question";
+        console.warn("[coaching] SKIPPED:", reason);
         debugInput$.next({
           source: "llm",
-          summary: `Coaching skipped: ${!contextRef.current ? "no context" : !apiKey ? "no API key" : "empty question"}`,
+          summary: `Coaching skipped: ${reason}`,
         });
         return;
       }
@@ -151,7 +159,9 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           { question, answer: response.answer },
         ]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Request failed");
+        const msg = err instanceof Error ? err.message : "Request failed";
+        console.error("[coaching] ERROR:", msg);
+        setError(msg);
       } finally {
         setLoading(false);
       }
@@ -173,10 +183,14 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   }, [submitQuestion]);
 
   if (!apiKey) {
+    console.warn(
+      "[coaching] No API key configured. Set VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY in .env"
+    );
     return (
       <div className="coaching-display">
         <p className="entity-meta">
-          Set VITE_OPENAI_API_KEY in .env to enable AI coaching.
+          Set VITE_OPENAI_API_KEY or VITE_OPENROUTER_API_KEY in .env to enable
+          AI coaching.
         </p>
       </div>
     );

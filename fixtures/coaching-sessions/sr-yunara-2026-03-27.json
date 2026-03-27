@@ -1,0 +1,903 @@
+[
+  {
+    "label": "Yunara @0:29: augment choice",
+    "index": 0,
+    "timestamp": "2026-03-27T19:24:44.139Z",
+    "model": "openai/gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Yunara",
+        "level": 1,
+        "abilities": "Passive: Vow of the First Lands - Yunara's Critical Strikes deal bonus magic damage.\nCultivation of Spirit - Yunara gains Attack Speed, bonus damage On-Hit, and her Attacks spread to nearby enemies.\nArc of Judgment | Arc of Ruin - Yunara fires a spinning prayer bead that deals damage and slows enemies. While in her Transcendent State she instead fires off a laser that deals damage and slows enemies.\nKanmei's Steps | Untouchable Shadow - Yunara gains Move Speed and becomes Ghosted. While in her Transcendent State she instead dashes in a direction.\nTranscend One's Self - Yunara enters a Transcendent State that upgrades her basic Abilities.",
+        "statProfile": null
+      },
+      "currentItems": [],
+      "currentGold": 50,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Darius",
+          "items": []
+        },
+        {
+          "champion": "Zyra",
+          "items": []
+        },
+        {
+          "champion": "Volibear",
+          "items": []
+        },
+        {
+          "champion": "Lucian",
+          "items": []
+        },
+        {
+          "champion": "Irelia",
+          "items": []
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Urgot"
+        },
+        {
+          "champion": "Janna"
+        },
+        {
+          "champion": "Diana"
+        },
+        {
+          "champion": "Miss Fortune"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 2 Fighter, 1 Tank, 2 Mage, 1 Assassin, 2 Marksman, 1 Support. Enemy damage: heavily AD (4 AD, 1 AP — favor armor).",
+      "augmentSets": [],
+      "gameMode": "PRACTICETOOL",
+      "lcuGameMode": "PRACTICETOOL",
+      "gameTime": 29,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "All right, talk to me about what my go-to combo is for this champ.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Go-to: auto pokes > Q when they step up > E to keep spacing > R when you need DPS spike or chase. In lane: auto-Q-auto, save E for disengage. If fighting all-in: E in, Q mid-kite, R ASAP, then keep autoing. Core rule: keep attacking to stack your on-hit/crit value; don’t waste E if you can just kite with autos.",
+      "latencyMs": 2660,
+      "tokensIn": 630,
+      "tokensOut": 101
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Yunara @3:54: item question",
+    "index": 1,
+    "timestamp": "2026-03-27T19:28:09.837Z",
+    "model": "openai/gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Yunara",
+        "level": 4,
+        "abilities": "Passive: Vow of the First Lands - Yunara's Critical Strikes deal bonus magic damage.\nCultivation of Spirit - Yunara gains Attack Speed, bonus damage On-Hit, and her Attacks spread to nearby enemies.\nArc of Judgment | Arc of Ruin - Yunara fires a spinning prayer bead that deals damage and slows enemies. While in her Transcendent State she instead fires off a laser that deals damage and slows enemies.\nKanmei's Steps | Untouchable Shadow - Yunara gains Move Speed and becomes Ghosted. While in her Transcendent State she instead dashes in a direction.\nTranscend One's Self - Yunara enters a Transcendent State that upgrades her basic Abilities.",
+        "statProfile": null
+      },
+      "currentItems": [],
+      "currentGold": 1033,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Darius",
+          "items": [
+            {
+              "name": "Scorchclaw Pup",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Zyra",
+          "items": [
+            {
+              "name": "World Atlas",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Volibear",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Lucian",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Irelia",
+          "items": [
+            {
+              "name": "Doran's Shield",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Urgot"
+        },
+        {
+          "champion": "Janna"
+        },
+        {
+          "champion": "Diana"
+        },
+        {
+          "champion": "Miss Fortune"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 2 Fighter, 1 Tank, 2 Mage, 1 Assassin, 2 Marksman, 1 Support. Enemy damage: heavily AD (4 AD, 1 AP — favor armor).",
+      "augmentSets": [],
+      "gameMode": "PRACTICETOOL",
+      "lcuGameMode": "PRACTICETOOL",
+      "gameTime": 234,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "That's my first item.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Best first buy: **Berserker’s Greaves** if you can buy now; otherwise **long sword + dagger** toward your core crit/on-hit start. Since enemy is mostly AD, if you need safety in lane, **Plated Steelcaps** is the defensive swap. Don’t buy Doran’s Blade again.",
+      "latencyMs": 1901,
+      "tokensIn": 777,
+      "tokensOut": 183
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Yunara @4:41: item question",
+    "index": 2,
+    "timestamp": "2026-03-27T19:28:56.703Z",
+    "model": "openai/gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Yunara",
+        "level": 4,
+        "abilities": "Passive: Vow of the First Lands - Yunara's Critical Strikes deal bonus magic damage.\nCultivation of Spirit - Yunara gains Attack Speed, bonus damage On-Hit, and her Attacks spread to nearby enemies.\nArc of Judgment | Arc of Ruin - Yunara fires a spinning prayer bead that deals damage and slows enemies. While in her Transcendent State she instead fires off a laser that deals damage and slows enemies.\nKanmei's Steps | Untouchable Shadow - Yunara gains Move Speed and becomes Ghosted. While in her Transcendent State she instead dashes in a direction.\nTranscend One's Self - Yunara enters a Transcendent State that upgrades her basic Abilities.",
+        "statProfile": null
+      },
+      "currentItems": [],
+      "currentGold": 29,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Darius",
+          "items": [
+            {
+              "name": "Scorchclaw Pup",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Zyra",
+          "items": [
+            {
+              "name": "World Atlas",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Volibear",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Lucian",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Irelia",
+          "items": [
+            {
+              "name": "Doran's Shield",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Urgot"
+        },
+        {
+          "champion": "Janna"
+        },
+        {
+          "champion": "Diana"
+        },
+        {
+          "champion": "Miss Fortune"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 2 Fighter, 1 Tank, 2 Mage, 1 Assassin, 2 Marksman, 1 Support. Enemy damage: heavily AD (4 AD, 1 AP — favor armor).",
+      "augmentSets": [],
+      "gameMode": "PRACTICETOOL",
+      "lcuGameMode": "PRACTICETOOL",
+      "gameTime": 281,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "Why did you say if you can buy now when you know exactly how much gold I have?",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Transmute: Gold",
+          "tier": "Silver",
+          "description": "Gain one random Gold augment, excluding the other two offerings in your current assortment."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Because I was answering from the shop-state as a general condition, not your exact gold. With 29g, you can’t buy anything relevant right now, so the correct call is: wait. Also you already own Berserker’s Greaves, so don’t re-buy them.",
+      "latencyMs": 2166,
+      "tokensIn": 928,
+      "tokensOut": 72
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Yunara @5:42: augment choice",
+    "index": 3,
+    "timestamp": "2026-03-27T19:29:56.980Z",
+    "model": "openai/gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Yunara",
+        "level": 5,
+        "abilities": "Passive: Vow of the First Lands - Yunara's Critical Strikes deal bonus magic damage.\nCultivation of Spirit - Yunara gains Attack Speed, bonus damage On-Hit, and her Attacks spread to nearby enemies.\nArc of Judgment | Arc of Ruin - Yunara fires a spinning prayer bead that deals damage and slows enemies. While in her Transcendent State she instead fires off a laser that deals damage and slows enemies.\nKanmei's Steps | Untouchable Shadow - Yunara gains Move Speed and becomes Ghosted. While in her Transcendent State she instead dashes in a direction.\nTranscend One's Self - Yunara enters a Transcendent State that upgrades her basic Abilities.",
+        "statProfile": null
+      },
+      "currentItems": [],
+      "currentGold": 726,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Darius",
+          "items": [
+            {
+              "name": "Scorchclaw Pup",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Boots of Swiftness",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Zyra",
+          "items": [
+            {
+              "name": "World Atlas",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Volibear",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Lucian",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Irelia",
+          "items": [
+            {
+              "name": "Doran's Shield",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Urgot"
+        },
+        {
+          "champion": "Janna"
+        },
+        {
+          "champion": "Diana"
+        },
+        {
+          "champion": "Miss Fortune"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 2 Fighter, 1 Tank, 2 Mage, 1 Assassin, 2 Marksman, 1 Support. Enemy damage: heavily AD (4 AD, 1 AP — favor armor).",
+      "augmentSets": [],
+      "gameMode": "PRACTICETOOL",
+      "lcuGameMode": "PRACTICETOOL",
+      "gameTime": 342,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "Well, that was my next item",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Next: **B. Fated Ashes** if you want best damage spike. If not, **Long Sword + Dagger** is the safe stat buy. You already have Berserker’s Greaves and Doran’s Blade, so don’t repeat those.",
+      "latencyMs": 2007,
+      "tokensIn": 964,
+      "tokensOut": 135
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Yunara @6:08: general question",
+    "index": 4,
+    "timestamp": "2026-03-27T19:30:22.896Z",
+    "model": "openai/gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Yunara",
+        "level": 5,
+        "abilities": "Passive: Vow of the First Lands - Yunara's Critical Strikes deal bonus magic damage.\nCultivation of Spirit - Yunara gains Attack Speed, bonus damage On-Hit, and her Attacks spread to nearby enemies.\nArc of Judgment | Arc of Ruin - Yunara fires a spinning prayer bead that deals damage and slows enemies. While in her Transcendent State she instead fires off a laser that deals damage and slows enemies.\nKanmei's Steps | Untouchable Shadow - Yunara gains Move Speed and becomes Ghosted. While in her Transcendent State she instead dashes in a direction.\nTranscend One's Self - Yunara enters a Transcendent State that upgrades her basic Abilities.",
+        "statProfile": null
+      },
+      "currentItems": [],
+      "currentGold": 779,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Darius",
+          "items": [
+            {
+              "name": "Scorchclaw Pup",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Boots of Swiftness",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Zyra",
+          "items": [
+            {
+              "name": "World Atlas",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Volibear",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Lucian",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Irelia",
+          "items": [
+            {
+              "name": "Doran's Shield",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Urgot"
+        },
+        {
+          "champion": "Janna"
+        },
+        {
+          "champion": "Diana"
+        },
+        {
+          "champion": "Miss Fortune"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 2 Fighter, 1 Tank, 2 Mage, 1 Assassin, 2 Marksman, 1 Support. Enemy damage: heavily AD (4 AD, 1 AP — favor armor).",
+      "augmentSets": [],
+      "gameMode": "PRACTICETOOL",
+      "lcuGameMode": "PRACTICETOOL",
+      "gameTime": 368,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "This isn't faded ashes for AP champs.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Next buy: **Long Sword + Dagger**. Best raw spike for Yunara; builds into your damage core and fits your crit/on-hit plan. If you want safer lane only, **pick up a Cloth Armor component instead of extra damage** against this AD-heavy team, but don’t sit on gold.",
+      "latencyMs": 1805,
+      "tokensIn": 1033,
+      "tokensOut": 139
+    },
+    "error": null,
+    "category": "common"
+  },
+  {
+    "label": "Yunara @6:29: item question",
+    "index": 5,
+    "timestamp": "2026-03-27T19:30:43.424Z",
+    "model": "openai/gpt-5.4-mini",
+    "context": {
+      "champion": {
+        "name": "Yunara",
+        "level": 5,
+        "abilities": "Passive: Vow of the First Lands - Yunara's Critical Strikes deal bonus magic damage.\nCultivation of Spirit - Yunara gains Attack Speed, bonus damage On-Hit, and her Attacks spread to nearby enemies.\nArc of Judgment | Arc of Ruin - Yunara fires a spinning prayer bead that deals damage and slows enemies. While in her Transcendent State she instead fires off a laser that deals damage and slows enemies.\nKanmei's Steps | Untouchable Shadow - Yunara gains Move Speed and becomes Ghosted. While in her Transcendent State she instead dashes in a direction.\nTranscend One's Self - Yunara enters a Transcendent State that upgrades her basic Abilities.",
+        "statProfile": null
+      },
+      "currentItems": [],
+      "currentGold": 222,
+      "kda": {
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0
+      },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Darius",
+          "items": [
+            {
+              "name": "Scorchclaw Pup",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Boots of Swiftness",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Zyra",
+          "items": [
+            {
+              "name": "World Atlas",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Volibear",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Glowing Mote",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Lucian",
+          "items": [
+            {
+              "name": "Doran's Blade",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        },
+        {
+          "champion": "Irelia",
+          "items": [
+            {
+              "name": "Doran's Shield",
+              "description": ""
+            },
+            {
+              "name": "Long Sword",
+              "description": ""
+            },
+            {
+              "name": "Dagger",
+              "description": ""
+            },
+            {
+              "name": "Boots",
+              "description": ""
+            },
+            {
+              "name": "Control Ward",
+              "description": ""
+            },
+            {
+              "name": "Stealth Ward",
+              "description": ""
+            }
+          ]
+        }
+      ],
+      "allyTeam": [
+        {
+          "champion": "Urgot"
+        },
+        {
+          "champion": "Janna"
+        },
+        {
+          "champion": "Diana"
+        },
+        {
+          "champion": "Miss Fortune"
+        }
+      ],
+      "teamAnalysis": "Your team roles: 2 Fighter, 1 Tank, 2 Mage, 1 Assassin, 2 Marksman, 1 Support. Enemy damage: heavily AD (4 AD, 1 AP — favor armor).",
+      "augmentSets": [],
+      "gameMode": "PRACTICETOOL",
+      "lcuGameMode": "PRACTICETOOL",
+      "gameTime": 389,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "I wanted to know what the next full item was. Not partial.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Next full item: **Kraken Slayer**. Best immediate completed spike for Yunara here: strong DPS, good vs this AD-heavy enemy, and fits your crit/on-hit style. Save gold for it; don’t buy a partial unless you must lane.",
+      "latencyMs": 1545,
+      "tokensIn": 1017,
+      "tokensOut": 149
+    },
+    "error": null,
+    "category": "common"
+  }
+]

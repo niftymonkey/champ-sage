@@ -1,0 +1,204 @@
+[
+  {
+    "label": "SYNTHETIC: SR lane vs roam decision",
+    "index": 0,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "synthetic",
+    "context": {
+      "champion": {
+        "name": "Ahri",
+        "level": 8,
+        "abilities": "Passive: Essence Theft. Q: Orb of Deception. W: Fox-Fire. E: Charm. R: Spirit Rush.",
+        "statProfile": "Ranged (550) | Mage, Assassin | HP: 590 (+96/lvl) | AD: 53 (+3/lvl) | AS: 0.668 (+2%/lvl) | Armor: 23 (+4.7/lvl) | MR: 30 (+1.3/lvl) | Mana"
+      },
+      "currentItems": [
+        {
+          "name": "Lost Chapter",
+          "description": "40 AP | 300 Mana | 10 Ability Haste"
+        },
+        { "name": "Boots", "description": "25 Move Speed" }
+      ],
+      "currentGold": 450,
+      "kda": { "kills": 2, "deaths": 1, "assists": 3 },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Zed",
+          "items": [{ "name": "Serrated Dirk", "description": "" }]
+        },
+        {
+          "champion": "Lee Sin",
+          "items": [{ "name": "Hearthbound Axe", "description": "" }]
+        },
+        {
+          "champion": "Jinx",
+          "items": [{ "name": "Pickaxe", "description": "" }]
+        },
+        { "champion": "Nautilus", "items": [] },
+        {
+          "champion": "Yone",
+          "items": [{ "name": "Berserker's Greaves", "description": "" }]
+        }
+      ],
+      "allyTeam": [
+        { "champion": "Vi" },
+        { "champion": "Kai'Sa" },
+        { "champion": "Thresh" },
+        { "champion": "Garen" }
+      ],
+      "teamAnalysis": "Your team roles: 1 Mage, 1 Fighter, 1 Marksman, 1 Support, 1 Tank. Enemy damage: mixed (3 AD, 2 AP).",
+      "augmentSets": [],
+      "gameMode": "CLASSIC",
+      "lcuGameMode": "CLASSIC",
+      "gameTime": 600,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "Should I keep farming mid or roam to help bot lane?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "category": "sr",
+    "expectedReferences": ["roam", "bot", "lane", "push", "wave", "priority"]
+  },
+  {
+    "label": "SYNTHETIC: SR objective timing decision",
+    "index": 1,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "synthetic",
+    "context": {
+      "champion": {
+        "name": "Vi",
+        "level": 7,
+        "abilities": "Passive: Blast Shield. Q: Vault Breaker. W: Denting Blows. E: Relentless Force. R: Cease and Desist.",
+        "statProfile": "Melee | Fighter, Diver | HP: 655 (+99/lvl) | AD: 63 (+3/lvl) | AS: 0.644 (+2%/lvl) | Armor: 30 (+4.7/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        { "name": "Gustwalker Hatchling", "description": "" },
+        { "name": "Long Sword", "description": "10 AD" },
+        { "name": "Boots", "description": "25 Move Speed" }
+      ],
+      "currentGold": 300,
+      "kda": { "kills": 1, "deaths": 2, "assists": 4 },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Ahri",
+          "items": [{ "name": "Lost Chapter", "description": "" }]
+        },
+        {
+          "champion": "Kayn",
+          "items": [{ "name": "Gustwalker Hatchling", "description": "" }]
+        },
+        {
+          "champion": "Draven",
+          "items": [{ "name": "B. F. Sword", "description": "" }]
+        },
+        { "champion": "Leona", "items": [] },
+        {
+          "champion": "Darius",
+          "items": [{ "name": "Phage", "description": "" }]
+        }
+      ],
+      "allyTeam": [
+        { "champion": "Ahri" },
+        { "champion": "Kai'Sa" },
+        { "champion": "Thresh" },
+        { "champion": "Garen" }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Mage, 1 Marksman, 1 Support, 1 Tank. Enemy damage: mixed (3 AD, 2 AP).",
+      "augmentSets": [],
+      "gameMode": "CLASSIC",
+      "lcuGameMode": "CLASSIC",
+      "gameTime": 480,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "Dragon spawns in 30 seconds. Should I set up or keep farming jungle?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "category": "sr",
+    "expectedReferences": [
+      "dragon",
+      "objective",
+      "jungle",
+      "gank",
+      "priority",
+      "bot",
+      "vision"
+    ]
+  },
+  {
+    "label": "SYNTHETIC: SR jungle invade decision",
+    "index": 2,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "synthetic",
+    "context": {
+      "champion": {
+        "name": "Vi",
+        "level": 6,
+        "abilities": "Passive: Blast Shield. Q: Vault Breaker. W: Denting Blows. E: Relentless Force. R: Cease and Desist.",
+        "statProfile": "Melee | Fighter, Diver | HP: 655 (+99/lvl) | AD: 63 (+3/lvl) | AS: 0.644 (+2%/lvl) | Armor: 30 (+4.7/lvl) | MR: 32 (+2.05/lvl) | Mana"
+      },
+      "currentItems": [
+        { "name": "Gustwalker Hatchling", "description": "" },
+        { "name": "Boots", "description": "25 Move Speed" }
+      ],
+      "currentGold": 150,
+      "kda": { "kills": 3, "deaths": 0, "assists": 2 },
+      "currentAugments": [],
+      "enemyTeam": [
+        {
+          "champion": "Ahri",
+          "items": [{ "name": "Lost Chapter", "description": "" }]
+        },
+        {
+          "champion": "Kayn",
+          "items": [{ "name": "Long Sword", "description": "" }]
+        },
+        {
+          "champion": "Draven",
+          "items": [{ "name": "B. F. Sword", "description": "" }]
+        },
+        { "champion": "Leona", "items": [] },
+        {
+          "champion": "Darius",
+          "items": [{ "name": "Phage", "description": "" }]
+        }
+      ],
+      "allyTeam": [
+        { "champion": "Ahri" },
+        { "champion": "Kai'Sa" },
+        { "champion": "Thresh" },
+        { "champion": "Garen" }
+      ],
+      "teamAnalysis": "Your team roles: 1 Fighter, 1 Mage, 1 Marksman, 1 Support, 1 Tank. Enemy damage: mixed (3 AD, 2 AP).",
+      "augmentSets": [],
+      "gameMode": "CLASSIC",
+      "lcuGameMode": "CLASSIC",
+      "gameTime": 420,
+      "balanceOverrides": null
+    },
+    "query": {
+      "question": "Their jungler is bot side. Should I invade their top jungle?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "category": "sr",
+    "expectedReferences": [
+      "invade",
+      "jungle",
+      "ward",
+      "vision",
+      "camp",
+      "counter"
+    ]
+  }
+]
