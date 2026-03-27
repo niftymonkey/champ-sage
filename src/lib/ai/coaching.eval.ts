@@ -23,9 +23,11 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
 import { readFileSync } from "fs";
 import { coachingResponseSchema } from "./schemas";
+import { buildSystemPrompt } from "./prompts";
 import { scoreItemAwareness } from "./scorers/item-awareness";
 import { scoreAugmentRerollAccuracy } from "./scorers/augment-reroll-accuracy";
 import { scoreBrevity, scoreDecisiveness } from "./scorers/response-format";
+import { scoreConversationalContinuity } from "./scorers/conversational-continuity";
 
 // --- Types ---
 
@@ -54,6 +56,7 @@ interface CoachingFixture {
     tokensOut: number;
   } | null;
   error: string | null;
+  expectedReferences?: string[];
 }
 
 interface EvalInput {
@@ -69,17 +72,27 @@ interface EvalOutput {
 
 // --- Load fixtures ---
 
-const fixturesPath = resolve(
-  "fixtures/coaching-sessions/2026-03-26-warwick-aram-mayhem.json"
-);
-const allFixtures: CoachingFixture[] = JSON.parse(
-  readFileSync(fixturesPath, "utf-8")
+const gameFixtures: CoachingFixture[] = JSON.parse(
+  readFileSync(
+    resolve("fixtures/coaching-sessions/2026-03-26-warwick-aram-mayhem.json"),
+    "utf-8"
+  )
 );
 
-// Filter to fixtures that got valid responses (skip errors and noise)
-const fixtures = allFixtures.filter(
-  (f) => f.response !== null && f.error === null && f.question.length > 5 // Skip truncated transcripts like "Witt..." and "I choose..."
+const continuityFixtures: CoachingFixture[] = JSON.parse(
+  readFileSync(
+    resolve("fixtures/coaching-sessions/continuity-tests.json"),
+    "utf-8"
+  )
 );
+
+// Filter game fixtures to valid responses (skip errors and noise)
+const fixtures = [
+  ...gameFixtures.filter(
+    (f) => f.response !== null && f.error === null && f.question.length > 5
+  ),
+  ...continuityFixtures,
+];
 
 // --- Model setup ---
 
@@ -107,26 +120,12 @@ interface ModelCandidate {
 }
 
 // Models to evaluate across providers and tiers.
+// Comment/uncomment to control which models run.
 const models: ModelCandidate[] = [
-  // Current model (baseline)
-  { name: "GPT 5.4 mini", id: "gpt-5.4-mini", provider: "openai" },
-  // Same provider, higher quality
-  { name: "GPT 5.4", id: "gpt-5.4", provider: "openai" },
-  // Different providers via OpenRouter
-  ...(openrouterKey
-    ? [
-        {
-          name: "Gemini 2.5 Pro",
-          id: "google/gemini-2.5-pro",
-          provider: "openrouter" as const,
-        },
-        {
-          name: "Claude Sonnet 4.6",
-          id: "anthropic/claude-sonnet-4.6",
-          provider: "openrouter" as const,
-        },
-      ]
-    : []),
+  { name: "GPT 5.4 mini", id: "openai/gpt-5.4-mini", provider: "openrouter" },
+  // { name: "GPT 5.4", id: "openai/gpt-5.4", provider: "openrouter" },
+  // { name: "Gemini 2.5 Pro", id: "google/gemini-2.5-pro", provider: "openrouter" },
+  // { name: "Claude Sonnet 4.6", id: "anthropic/claude-sonnet-4.6", provider: "openrouter" },
 ];
 
 function getModel(candidate: ModelCandidate) {
@@ -195,8 +194,20 @@ const decisiveness = createScorer<EvalInput, EvalOutput>({
   },
 });
 
+const conversationalContinuity = createScorer<EvalInput, EvalOutput>({
+  name: "Conversational Continuity",
+  description:
+    "Checks that the model can resolve references to earlier conversation",
+  scorer: ({ input, output }) => {
+    return scoreConversationalContinuity(
+      output.answer,
+      input.fixture.expectedReferences
+    );
+  },
+});
+
 const GATE_SCORERS = [itemAwareness, structuredOutput, augmentRerollAccuracy];
-const RANKING_SCORERS = [brevity, decisiveness];
+const RANKING_SCORERS = [brevity, decisiveness, conversationalContinuity];
 const ALL_SCORERS = [...GATE_SCORERS, ...RANKING_SCORERS];
 
 // --- Helpers ---
@@ -245,9 +256,19 @@ for (const model of models) {
       })),
 
     task: async (input: EvalInput): Promise<EvalOutput> => {
+      // Use live system prompt (reflects current code) with captured user prompt
+      const hasAugmentOptions = input.userPrompt.includes(
+        "## Augment Options Being Offered"
+      );
+      const systemPrompt = buildSystemPrompt({
+        gameMode: "KIWI",
+        lcuGameMode: "KIWI",
+        hasAugmentOptions,
+      });
+
       const result = await generateText({
         model: getModel(model),
-        system: input.systemPrompt,
+        system: systemPrompt,
         prompt: input.userPrompt,
         output: Output.object({ schema: coachingResponseSchema }),
         maxOutputTokens: 1024,

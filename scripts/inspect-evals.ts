@@ -24,7 +24,11 @@ const GATE_SCORERS = [
   "Structured Output",
   "Augment Re-Roll Accuracy",
 ];
-const RANKING_SCORERS = ["Brevity", "Decisiveness"];
+const RANKING_SCORERS = [
+  "Brevity",
+  "Decisiveness",
+  "Conversational Continuity",
+];
 const GATE_THRESHOLD = 0.8;
 
 // --- DB setup ---

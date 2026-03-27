@@ -1,0 +1,86 @@
+[
+  {
+    "label": "Reference to early tank recommendation after 6 exchanges",
+    "index": 0,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "test",
+    "question": "Earlier you told me to go tank. Is that still the right call?",
+    "systemPrompt": "",
+    "userPrompt": "Game Mode: KIWI | Game Time: 12:00\n\nChampion: Warwick | Level 11 | KDA: 3/5/7 | Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl)\n\n### Current Items (800 gold available)\n- Mercury's Treads: 20 Magic Resist | 45 Move Speed | 30% Tenacity\n- Titanic Hydra: 40 Attack Damage | 600 Health\n- Sunfire Aegis: 350 Health | 50 Armor | 10 Ability Haste\n\n### Current Augments\n- Outlaw's Grit: Dashing or blinking grants 12 bonus armor and bonus magic resistance, stacking up to 5 times.\n\n### Enemy Team\n- Vex: Luden's Echo, Sorcerer's Shoes\n- Malphite: Lich Bane, Rabadon's Deathcap\n- Viego: Infinity Edge, Executioner's Calling\n- Miss Fortune: The Collector, Axiom Arc\n- Caitlyn: The Collector, Berserker's Greaves\n\n## Recent Conversation\n\n**Player:** Pinball, Outlaw's Grit, and Big Brain.\n\n**Coach:** Take Outlaw's Grit. Go full tank build with your augment giving free resists on dashes.\n\n**Player:** Recursion, Overflow, Bread and Cheese\n\n**Coach:** Take Overflow. The healing amp synergizes with your tank sustain.\n\n**Player:** What item should I buy next?\n\n**Coach:** Build Sunfire Aegis for armor into this AD-heavy comp.\n\n**Player:** Scopier Weapons, Overflow, Divine Intervention\n\n**Coach:** Take Overflow again. Same reasoning as before.\n\n**Player:** Juiced, Goredrink, or ADAPT?\n\n**Coach:** Take Goredrink. 15% omnivamp is huge on Warwick tank.\n\n**Player:** What's my next item?\n\n**Coach:** Build Spirit Visage for MR and enhanced healing.\n\n## Question\nEarlier you told me to go tank. Is that still the right call?",
+    "gameState": {
+      "champion": "Warwick",
+      "level": 11,
+      "items": ["Mercury's Treads", "Titanic Hydra", "Sunfire Aegis"],
+      "augments": ["Outlaw's Grit"],
+      "enemies": ["Vex", "Malphite", "Viego", "Miss Fortune", "Caitlyn"],
+      "gold": 800,
+      "gameTime": "12:00",
+      "kda": "3/5/7"
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["tank"]
+  },
+  {
+    "label": "Reference to specific item recommendation after 7 exchanges",
+    "index": 1,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "test",
+    "question": "You mentioned Thornmail earlier. Should I still get that?",
+    "systemPrompt": "",
+    "userPrompt": "Game Mode: KIWI | Game Time: 14:00\n\nChampion: Warwick | Level 13 | KDA: 5/6/9 | Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl)\n\n### Current Items (1200 gold available)\n- Mercury's Treads: 20 Magic Resist | 45 Move Speed | 30% Tenacity\n- Titanic Hydra: 40 Attack Damage | 600 Health\n- Sunfire Aegis: 350 Health | 50 Armor | 10 Ability Haste\n- Randuin's Omen: 250 Health | 60 Armor\n\n### Current Augments\n- Outlaw's Grit: Dashing or blinking grants 12 bonus armor and bonus magic resistance.\n- Overflow: Damage and healing amplified, mana costs increased.\n\n### Enemy Team\n- Vex: Luden's Echo, Sorcerer's Shoes, Stormsurge\n- Malphite: Lich Bane, Rabadon's Deathcap\n- Viego: Infinity Edge, Executioner's Calling, Hearthbound Axe\n- Miss Fortune: The Collector, Axiom Arc, Last Whisper\n- Caitlyn: The Collector, Berserker's Greaves, Rapid Firecannon\n\n## Recent Conversation\n\n**Player:** What should I build after Sunfire?\n\n**Coach:** Get Thornmail next. You need anti-heal for Viego and more armor for the AD threats.\n\n**Player:** Slow and Steady, Cheating, and Holy Fire.\n\n**Coach:** Take Holy Fire. Your constant healing procs it for free AoE damage.\n\n**Player:** Demon's Dance, Soul Eater, and Holy Fire\n\n**Coach:** Take Holy Fire again. Same reasoning.\n\n**Player:** What augment set am I closest to completing?\n\n**Coach:** You're not close to any set bonus yet.\n\n**Player:** How should I play teamfights right now?\n\n**Coach:** R into their backline, pop Primal Howl for fear, then stick to the carry.\n\n**Player:** Should I focus Viego or the ADCs?\n\n**Coach:** Focus Caitlyn or MF first. Viego is harder to lock down.\n\n**Player:** I ended up getting Randuin's instead. What now?\n\n**Coach:** Good call. Build Spirit Visage next for MR.\n\n## Question\nYou mentioned Thornmail earlier. Should I still get that?",
+    "gameState": {
+      "champion": "Warwick",
+      "level": 13,
+      "items": [
+        "Mercury's Treads",
+        "Titanic Hydra",
+        "Sunfire Aegis",
+        "Randuin's Omen"
+      ],
+      "augments": ["Outlaw's Grit", "Overflow"],
+      "enemies": ["Vex", "Malphite", "Viego", "Miss Fortune", "Caitlyn"],
+      "gold": 1200,
+      "gameTime": "14:00",
+      "kda": "5/6/9"
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["Thornmail", "anti-heal", "grievous"]
+  },
+  {
+    "label": "Reference to playstyle choice after 6 exchanges",
+    "index": 2,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "test",
+    "question": "Remember when you said I should focus the backline? That's not working. What should I do instead?",
+    "systemPrompt": "",
+    "userPrompt": "Game Mode: KIWI | Game Time: 16:00\n\nChampion: Warwick | Level 15 | KDA: 6/8/11 | Melee | Fighter, Tank | HP: 620 (+99/lvl) | AD: 65 (+0/lvl) | Armor: 33 (+4.4/lvl) | MR: 32 (+2.05/lvl)\n\n### Current Items (500 gold available)\n- Mercury's Treads: 20 Magic Resist | 45 Move Speed | 30% Tenacity\n- Titanic Hydra: 40 Attack Damage | 600 Health\n- Sunfire Aegis: 350 Health | 50 Armor | 10 Ability Haste\n- Randuin's Omen: 250 Health | 60 Armor\n- Spirit Visage: 400 Health | 60 Magic Resist | 10 Ability Haste\n\n### Enemy Team\n- Vex: Luden's Echo, Sorcerer's Shoes, Stormsurge, Rabadon's Deathcap\n- Malphite: Lich Bane, Rabadon's Deathcap, Void Staff\n- Viego: Infinity Edge, Executioner's Calling, Hearthbound Axe, Blade of the Ruined King\n- Miss Fortune: The Collector, Axiom Arc, Last Whisper, Infinity Edge\n- Caitlyn: The Collector, Berserker's Greaves, Rapid Firecannon, Infinity Edge\n\n## Recent Conversation\n\n**Player:** How should I play teamfights?\n\n**Coach:** R into backline, Primal Howl for fear, stick to carries.\n\n**Player:** Demon's Dance, Soul Eater, and Holy Fire\n\n**Coach:** Take Holy Fire.\n\n**Player:** What's my last item?\n\n**Coach:** Thornmail. Anti-heal and armor.\n\n**Player:** Slow and Steady, Cheating, and Holy Fire\n\n**Coach:** Take Holy Fire.\n\n**Player:** Should I sell boots for another item?\n\n**Coach:** No. Keep Mercs for tenacity into Vex fear and Malphite knockup.\n\n**Player:** I keep dying before I reach the backline.\n\n**Coach:** Try flanking from the side instead of running in from the front.\n\n## Question\nRemember when you said I should focus the backline? That's not working. What should I do instead?",
+    "gameState": {
+      "champion": "Warwick",
+      "level": 15,
+      "items": [
+        "Mercury's Treads",
+        "Titanic Hydra",
+        "Sunfire Aegis",
+        "Randuin's Omen",
+        "Spirit Visage"
+      ],
+      "augments": ["Outlaw's Grit", "Overflow"],
+      "enemies": ["Vex", "Malphite", "Viego", "Miss Fortune", "Caitlyn"],
+      "gold": 500,
+      "gameTime": "16:00",
+      "kda": "6/8/11"
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": [
+      "backline",
+      "flank",
+      "peel",
+      "frontline",
+      "Viego",
+      "carry"
+    ]
+  }
+]

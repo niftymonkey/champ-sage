@@ -5,50 +5,37 @@ import { GAME_MODE_MAYHEM, GAME_MODE_ARAM } from "../mode/types";
 export function buildSystemPrompt(context: {
   gameMode: string;
   lcuGameMode: string;
+  hasAugmentOptions?: boolean;
 }): string {
   const sections = [
-    "You are a League of Legends coaching AI. The player is mid-game — they need answers FAST.",
+    "You are an expert League of Legends coaching AI. Prioritize the game data provided in this prompt over your general knowledge — item stats, augment effects, and champion abilities change frequently.",
     "",
-    "Consider the full game context when reasoning:",
-    "- Champion abilities and playstyle",
-    "- Current items and build path",
-    "- Existing augments and synergies (in augment modes)",
-    "- Enemy team composition and threats",
-    "- Ally team composition and synergies",
-    "- Game mode and its specific dynamics",
-    "- Game time and power spikes",
-    "",
-    "RESPONSE LENGTH RULES (strict):",
-    "- 1-2 sentences for simple questions (what to buy, which augment).",
-    "- 3-4 bullet points max for tactical questions (when to roam, how to play a matchup).",
-    "- Never write paragraphs. Never explain what the player already knows.",
-    "- Be blunt. Give THE answer, not a menu of options with hedging.",
-    "- Only list alternatives if the player specifically asks for options.",
+    "RESPONSE RULES:",
+    "- Be extremely concise. Sacrifice grammar for concision.",
+    "- Lead with your top recommendation. Mention alternatives only when the situation genuinely supports different playstyles.",
+    "- Never explain what the player already knows.",
   ];
 
   const isMayhem =
     context.lcuGameMode === GAME_MODE_MAYHEM ||
     context.gameMode === GAME_MODE_MAYHEM ||
     context.gameMode === GAME_MODE_ARAM;
-  if (isMayhem) {
+
+  // Only include augment rules when the player is actually choosing augments
+  if (isMayhem && context.hasAugmentOptions) {
     sections.push(
       "",
-      "ARAM MAYHEM AUGMENT RULES (this is ARAM Mayhem mode, not regular ARAM):",
-      "- In Mayhem, players are offered 3 augment choices at levels 1, 7, 11, and 15.",
-      "- Augments are NOT items. They are permanent passive bonuses chosen from a curated set.",
-      "- Augment names can overlap with item names. Always check the Augment Options section below for the actual augment descriptions before assuming the player is talking about an item.",
-      "- When the player lists 3 options separated by commas or 'or', they are asking you to choose between augment offers.",
-      "- RE-ROLL RULES: Each of the 3 augment cards has its own independent re-roll (one use each).",
-      "  ROUND 1: Player shows 3 augments. Pick the best, tell them to re-roll the other two.",
-      "  ROUND 2: Player reports 2 new augments. You now have 3 cards: the kept one + 2 new ones.",
-      "    - If a new one beats the kept one: tell them to re-roll the kept one (its re-roll is still unused).",
-      "    - If the kept one is still best: tell them to take it. No re-rolls left on the other two.",
-      "  ROUND 3 (only if Round 2 re-rolled the kept one): Player reports 1 new augment.",
-      "    - Now pick the best of the 3 final cards. No more re-rolls exist.",
-      "  KEY: The player may only report the NEW cards. Remember which one was kept from prior rounds.",
-      "- When recommending an augment, consider: champion synergy, current build path, existing augments, and enemy team.",
-      "- CRITICAL: If an augment upgrades a specific item (like 'Upgrade Collector'), only recommend it if the player already owns that item OR is planning to build it. If they don't have the item and aren't building it, the augment is wasted.",
-      "- If an Augment Options section with descriptions appears below, use those descriptions — they are the exact in-game effects."
+      "AUGMENT SELECTION RULES:",
+      "- Augments are NOT items. They are permanent passive bonuses.",
+      "- 3 cards shown, each with its own single-use re-roll button.",
+      "- Round 1: Recommend the best card. Tell player to re-roll the other two.",
+      "- Round 2: 2 new cards replace the re-rolled ones. Only the kept card still has its re-roll.",
+      "  - If a new card is better: re-roll the kept card (its re-roll is still unused).",
+      "  - If the kept card is still best: take it. No re-rolls remain on the others.",
+      "- Round 3 (only if kept card was re-rolled): Pick the best of the 3 final cards. No re-rolls remain.",
+      "- A card whose re-roll was used CANNOT be re-rolled again.",
+      "- If an augment upgrades a specific item, only recommend it if the player already owns that item.",
+      "- Use the augment descriptions provided in the prompt, not your general knowledge."
     );
   }
 
@@ -65,15 +52,16 @@ export function buildUserPrompt(
     context.lcuGameMode && context.lcuGameMode !== context.gameMode
       ? `${context.gameMode} — ${context.lcuGameMode === GAME_MODE_MAYHEM ? "Mayhem (KIWI)" : context.lcuGameMode}`
       : context.gameMode;
-  sections.push(`## Game Mode: ${modeLabel}`);
-  sections.push(`## Game Time: ${formatGameTime(context.gameTime)}`);
-
   sections.push(
-    `## Your Champion: ${context.champion.name} (Level ${context.champion.level}, ${context.kda.kills}/${context.kda.deaths}/${context.kda.assists} KDA)`
+    `Game Mode: ${modeLabel} | Game Time: ${formatGameTime(context.gameTime)}`
   );
-  if (context.champion.statProfile) {
-    sections.push(`### Stat Profile\n${context.champion.statProfile}`);
-  }
+
+  const statProfile = context.champion.statProfile
+    ? ` | ${context.champion.statProfile}`
+    : "";
+  sections.push(
+    `Champion: ${context.champion.name} | Level ${context.champion.level} | KDA: ${context.kda.kills}/${context.kda.deaths}/${context.kda.assists}${statProfile}`
+  );
 
   if (context.champion.abilities) {
     sections.push(`### Abilities\n${context.champion.abilities}`);

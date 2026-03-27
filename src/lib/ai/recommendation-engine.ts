@@ -17,7 +17,11 @@ export async function getCoachingResponse(
   query: CoachingQuery,
   apiKey: string
 ): Promise<CoachingResponse> {
-  const systemPrompt = buildSystemPrompt(context);
+  const systemPrompt = buildSystemPrompt({
+    ...context,
+    hasAugmentOptions:
+      query.augmentOptions != null && query.augmentOptions.length > 0,
+  });
   const userPrompt = buildUserPrompt(context, query);
 
   logToFile(
