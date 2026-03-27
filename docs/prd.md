@@ -45,6 +45,8 @@ The architecture is mode-agnostic — a shared recommendation engine handles any
 21. As a developer, I want the desktop shell to serve as a state machine visualizer during development so that I can see all data flowing through the app (Riot API data, parsed state, augments, context payloads, LLM responses) while playing my nightly games
 22. As a developer, I want each module to be independently testable so that I can validate behavior in isolation before integration
 23. As a developer, I want the model evaluation pipeline to borrow from the existing review-kit evaluation infrastructure so that I don't reinvent the funnel pattern
+24. As a player, I want the app to automatically detect which augments I'm being offered so that I get recommendations without having to speak or manually input my choices
+25. As a player, I want the app to work as an in-game overlay AND as a standalone window so that I can use it with or without a second monitor
 
 ## Implementation Decisions
 
@@ -71,10 +73,12 @@ The system is composed of the following modules. Dependencies are listed to clar
 **Desktop Shell**
 
 - Dependencies: none (can be built in parallel with data ingest)
-- The Tauri v2 wrapper providing global hotkey registration, always-on-top window management, system tray, and audio capture
+- Overwolf Electron (ow-electron) app providing global hotkey registration, in-game overlay, audio capture, and Overwolf GEP integration for augment detection
+- Originally built on Tauri v2; migrating to ow-electron for access to GEP (augment offer detection) and native in-game overlay rendering (see `docs/ow-electron-migration-plan.md`)
 - Built early as a development tool — starts as a state machine visualizer showing all data flowing through the app (Riot API data, parsed game state, augment entries, context payloads, LLM responses)
 - Each module's output becomes visible in the shell as it's built, enabling dogfooding during nightly games
 - The final UI is a polish layer over this foundation, not a separate build
+- Supports dual-build: ow-electron (full features) and vanilla Electron (degraded mode without GEP/overlay, for non-Windows platforms or users without Overwolf)
 
 **Mode Module (ARAM Mayhem first)**
 
@@ -139,20 +143,21 @@ The system is composed of the following modules. Dependencies are listed to clar
 ### Data Flow
 
 1. App launches → Data Ingest Pipeline serves from cache, kicks off background refresh
-2. Game detected → Game State Manager begins polling Riot Live Client Data API
-3. Player presses hotkey → Voice Input captures audio, transcribes, parses to structured intent
-4. Context Assembler pulls game state + intent + mode context + recent history → constructs payload
-5. Recommendation Engine builds prompt, calls LLM, parses response → structured recommendation
-6. Desktop Shell / UI displays recommendation
-7. Player confirms their choice via voice → Game State Manager updates tracked state (e.g., selected augment added)
+2. Game detected → Game State Manager begins polling Riot Live Client Data API; GEP registers for augment features
+3. Augment selection triggered → GEP fires `augments` event with the 3 offered augment names → coaching engine automatically provides recommendation via overlay
+4. Player presses hotkey → Voice Input captures audio, transcribes, parses to structured intent (for open-ended questions, item advice, or augment input when GEP unavailable)
+5. Context Assembler pulls game state + detected augments + intent + mode context + recent history → constructs payload
+6. Recommendation Engine builds prompt, calls LLM, parses response → structured recommendation
+7. In-game overlay displays recommendation (or desktop window if overlay unavailable)
+8. Player selects augment → GEP fires `picked_augment` event → Game State Manager updates tracked state automatically
 
 ### Key Technical Decisions
 
-- **TypeScript preferred** for all application code. Rust required only for the Tauri v2 backend surface (hotkeys, window management, audio capture).
-- **Desktop framework: Tauri v2.** Chosen for resource efficiency (~20-80MB idle vs Electron's ~100-300MB). Vite + React for the frontend webview.
+- **TypeScript preferred** for all application code. The Electron main process handles hotkeys (via `overlay.hotkeys`), window management, and audio capture (via `getUserMedia`).
+- **Desktop framework: Overwolf Electron (ow-electron).** Originally Tauri v2 (chosen for resource efficiency), migrating to ow-electron for access to Overwolf GEP (programmatic augment detection) and native in-game overlay rendering. The React/TypeScript frontend and RxJS reactive engine are unchanged. See `docs/research/augment-detection-research.md` for research findings and `docs/ow-electron-migration-plan.md` for the migration plan.
 - **pnpm** for package management. **Vitest** for unit/integration testing. **Vercel AI SDK** (`ai` package) for LLM calls.
 - **No throwaway infrastructure.** Modules are built with real data and real integrations from the start, not hardcoded placeholders that get replaced later.
-- **Riot Live Client Data API** is the primary source for game state. Voice input fills gaps (augments, any data not exposed by the API). The API uses HTTPS on localhost:2999 with a self-signed certificate.
+- **Riot Live Client Data API** is the primary source for game state. **Overwolf GEP** provides augment offer/selection detection during Mayhem and Arena modes. Voice input serves as a fallback when GEP is unavailable. The Live Client Data API uses HTTPS on localhost:2999 with a self-signed certificate.
 - **Local cache with background refresh** for game data. The app always has data immediately from the last fetch; new patch data is fetched on launch and merged in the background.
 - **App owns the conversation state**, not the LLM. Context is assembled fresh from tracked game state plus a rolling window of recent exchanges. This is abstracted behind an interface for future flexibility (persistent history, local LLMs).
 - **LLM model is determined by build-time evaluation**, not runtime selection. The evaluation pipeline borrows from review-kit's funnel pattern with Evalite integration.
@@ -192,7 +197,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 - **Enemy cooldown tracking** — Prohibited by Riot policy.
 - **Brawl mode** — Riot has declared Brawl data completely off-limits for third-party products.
 - **Hosted web service / multi-user backend** — The app is local-only for now.
-- **Mobile app** — The POC and initial product are desktop-only. Mobile may be revisited if the desktop shell framework (Tauri) supports it.
+- **Mobile app** — The POC and initial product are desktop-only (Windows, due to Overwolf GEP/overlay being Windows-only). Vanilla Electron builds can run on Mac/Linux with degraded features (no GEP, no overlay).
 
 ## Further Notes
 
@@ -213,7 +218,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 
 - Augment set tracking and set bonus progression in recommendations
 - TTS output for hands-free advice
-- In-game overlay via Overwolf or similar
+- In-game overlay via Overwolf Electron (ow-electron) — renders coaching UI directly on top of the game using standard mode (interactive cursor for MOBAs)
 - Cross-game memory (SQLite + FTS5 for structured game history, sqlite-vec or similar for semantic search if needed)
 - Multi-model evaluation with PickAI + Evalite pipeline
 - Additional mode modules (Arena, regular ARAM, Summoner's Rift)
