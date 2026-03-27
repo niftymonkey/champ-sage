@@ -357,6 +357,7 @@ struct RecordingState {
 /// than silently failing in the background.
 #[tauri::command]
 fn start_recording(state: tauri::State<'_, RecordingState>) -> Result<(), String> {
+    println!("[champ-sage] start_recording called");
     // If a previous recording is still active (e.g., missed key release event),
     // stop it cleanly before starting a new one rather than erroring out.
     if state
@@ -465,10 +466,12 @@ fn start_recording(state: tauri::State<'_, RecordingState>) -> Result<(), String
 /// WAV file as a byte vector for the frontend to send to the STT API.
 #[tauri::command]
 fn stop_recording(state: tauri::State<'_, RecordingState>) -> Result<Vec<u8>, String> {
+    println!("[champ-sage] stop_recording called");
     if !state
         .is_recording
         .load(std::sync::atomic::Ordering::SeqCst)
     {
+        println!("[champ-sage] stop_recording: not currently recording");
         return Err("Not currently recording".to_string());
     }
 
@@ -652,12 +655,20 @@ fn get_coaching_log_path() -> &'static std::path::PathBuf {
 async fn append_coaching_log(text: String) -> Result<(), String> {
     use std::io::Write;
     let path = get_coaching_log_path();
+    println!("[champ-sage] append_coaching_log called, writing to: {}", path.display());
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(path)
-        .map_err(|e| format!("Failed to open log file: {e}"))?;
-    writeln!(file, "{text}").map_err(|e| format!("Failed to write log: {e}"))?;
+        .map_err(|e| {
+            eprintln!("[champ-sage] ERROR opening log file: {e}");
+            format!("Failed to open log file: {e}")
+        })?;
+    writeln!(file, "{text}").map_err(|e| {
+        eprintln!("[champ-sage] ERROR writing log: {e}");
+        format!("Failed to write log: {e}")
+    })?;
+    println!("[champ-sage] Log entry written successfully");
     Ok(())
 }
 
