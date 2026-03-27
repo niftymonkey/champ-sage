@@ -561,11 +561,72 @@ function cmdReport() {
   console.log(`Report saved to ${filePath}`);
 }
 
+// --- Subcommand: runs ---
+
+function cmdRuns() {
+  const limit = Number(getArg("--limit")) || 30;
+
+  const rows = db
+    .prepare(
+      `
+    SELECT
+      e.id as eval_id,
+      e.name as suite,
+      e.created_at,
+      COUNT(DISTINCT r.id) as fixtures,
+      ROUND(AVG(s.score) * 100, 1) as avg_score,
+      SUM(CASE WHEN s.name IN (${GATE_SCORERS.map(() => "?").join(",")}) AND s.score < ${GATE_THRESHOLD} THEN 1 ELSE 0 END) as gate_failures
+    FROM evals e
+    JOIN results r ON r.eval_id = e.id
+    JOIN scores s ON s.result_id = r.id
+    GROUP BY e.id
+    ORDER BY e.created_at DESC
+    LIMIT ?
+  `
+    )
+    .all(...GATE_SCORERS, limit) as Array<{
+    eval_id: number;
+    suite: string;
+    created_at: string;
+    fixtures: number;
+    avg_score: number;
+    gate_failures: number;
+  }>;
+
+  if (rows.length === 0) {
+    console.log("No runs found.");
+    return;
+  }
+
+  const suiteW = 28;
+  const fixW = 5;
+  const scoreW = 7;
+  const gateW = 7;
+
+  console.log(`\n=== ALL RUNS (last ${limit}) ===\n`);
+  console.log(
+    `${"Timestamp".padEnd(20)} ${"Suite".padEnd(suiteW)} ${"Fix".padStart(fixW)} ${"Score".padStart(scoreW)} ${"Fails".padStart(gateW)}`
+  );
+  console.log("-".repeat(20 + suiteW + fixW + scoreW + gateW + 4));
+
+  for (const r of rows) {
+    const time = r.created_at.substring(0, 19);
+    const fails = r.gate_failures > 0 ? String(r.gate_failures) : "";
+    console.log(
+      `${time.padEnd(20)} ${r.suite.padEnd(suiteW)} ${String(r.fixtures).padStart(fixW)} ${(r.avg_score + "%").padStart(scoreW)} ${fails.padStart(gateW)}`
+    );
+  }
+  console.log();
+}
+
 // --- Dispatch ---
 
 switch (subcommand) {
   case "summary":
     cmdSummary();
+    break;
+  case "runs":
+    cmdRuns();
     break;
   case "results":
     cmdResults();
@@ -578,7 +639,7 @@ switch (subcommand) {
     break;
   default:
     console.error(`Unknown subcommand: ${subcommand}`);
-    console.error("Available: summary, results, failures, report");
+    console.error("Available: summary, runs, results, failures, report");
     process.exit(1);
 }
 
