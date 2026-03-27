@@ -12,7 +12,10 @@ import {
   userInput$,
 } from "./lib/reactive";
 import type { ReactiveEngine } from "./lib/reactive";
-import { WhisperProvider } from "./lib/voice/stt-provider";
+import {
+  WhisperProvider,
+  LocalWhisperProvider,
+} from "./lib/voice/stt-provider";
 import { DataBrowser } from "./components/DataBrowser";
 import {
   createModeRegistry,
@@ -44,14 +47,25 @@ function App() {
   const { submit } = useUserInput();
   const { zoom, resetZoom } = useZoom();
 
-  // Voice input — Whisper STT provider uses the same OpenAI API key as the coaching LLM.
-  // The provider is created once and persists for the app lifetime.
+  // Voice input STT provider. Prefers local Whisper container when available,
+  // falls back to OpenAI Whisper API.
   const whisperProvider = useMemo(() => {
+    const localUrl = import.meta.env.VITE_LOCAL_WHISPER_URL as
+      | string
+      | undefined;
+    if (localUrl) {
+      console.log("[app] Using local Whisper provider:", localUrl);
+      return new LocalWhisperProvider(localUrl);
+    }
+
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
     if (!apiKey) {
-      console.warn("VITE_OPENAI_API_KEY not set — voice input disabled");
+      console.warn(
+        "[app] No STT provider available (no VITE_LOCAL_WHISPER_URL or VITE_OPENAI_API_KEY)"
+      );
       return null;
     }
+    console.log("[app] Using OpenAI Whisper provider");
     return new WhisperProvider(apiKey);
   }, []);
 

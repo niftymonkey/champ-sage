@@ -25,6 +25,47 @@ export interface SttProvider {
 }
 
 /**
+ * Local Whisper provider that calls a whisper-api Docker container.
+ *
+ * Uses the Mnemo project's whisper-api service running locally.
+ * Expects the container to be running on the specified URL (default: http://localhost:8080).
+ * Falls back to whisper.cpp locally (no OpenAI key needed).
+ */
+export class LocalWhisperProvider implements SttProvider {
+  private baseUrl: string;
+
+  constructor(baseUrl = "http://localhost:8080") {
+    this.baseUrl = baseUrl;
+  }
+
+  async transcribe(audio: Blob, _vocabHints: string[]): Promise<SttResult> {
+    const formData = new FormData();
+    formData.append("audio", audio, "recording.wav");
+    formData.append("mode", "local");
+
+    const start = performance.now();
+
+    const response = await fetch(`${this.baseUrl}/transcribe`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Local Whisper failed: ${response.status} ${error}`);
+    }
+
+    const result = await response.json();
+    const latencyMs = Math.round(performance.now() - start);
+
+    return {
+      transcript: result.text,
+      latencyMs,
+    };
+  }
+}
+
+/**
  * OpenAI Whisper API implementation.
  *
  * Uses the same API key as the coaching LLM (GPT-5.4 mini), so no additional
