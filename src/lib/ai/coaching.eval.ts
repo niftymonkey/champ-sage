@@ -93,18 +93,20 @@ interface EvalOutput {
 
 // --- Load fixtures ---
 
-const gameFixtures: GameFixture[] = JSON.parse(
-  readFileSync(
-    resolve("fixtures/coaching-sessions/2026-03-26-warwick-aram-mayhem.json"),
-    "utf-8"
-  )
+// Load all game fixture files (coaching-*.json) and the continuity tests
+import { readdirSync } from "fs";
+
+const fixturesDir = resolve("fixtures/coaching-sessions");
+const gameFixtureFiles = readdirSync(fixturesDir).filter(
+  (f) => f.startsWith("coaching-") && f.endsWith(".json")
+);
+
+const gameFixtures: GameFixture[] = gameFixtureFiles.flatMap((file) =>
+  JSON.parse(readFileSync(resolve(fixturesDir, file), "utf-8"))
 );
 
 const continuityFixtures: ContinuityFixture[] = JSON.parse(
-  readFileSync(
-    resolve("fixtures/coaching-sessions/continuity-tests.json"),
-    "utf-8"
-  )
+  readFileSync(resolve(fixturesDir, "continuity-tests.json"), "utf-8")
 );
 
 // Build eval inputs from game fixtures using real app functions

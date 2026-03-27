@@ -173,9 +173,12 @@ while (i < lines.length) {
   i++;
 }
 
-const outPath = resolve(
-  "fixtures/coaching-sessions/2026-03-26-warwick-aram-mayhem.json"
-);
+// Derive output filename from input log filename
+const logBasename = resolve(logPath)
+  .split(/[/\\]/)
+  .pop()!
+  .replace(/\.log$/, ".json");
+const outPath = resolve(`fixtures/coaching-sessions/${logBasename}`);
 writeFileSync(outPath, JSON.stringify(fixtures, null, 2));
 console.log(`Extracted ${fixtures.length} fixtures to ${outPath}`);
 
