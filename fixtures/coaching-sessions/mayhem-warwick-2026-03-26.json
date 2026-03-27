@@ -94,7 +94,8 @@
       "tokensIn": 1456,
       "tokensOut": 163
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @0:30: augment choice",
@@ -186,7 +187,8 @@
       ]
     },
     "response": null,
-    "error": "Failed to fetch"
+    "error": "Failed to fetch",
+    "category": "mayhem"
   },
   {
     "label": "Warwick @0:46: augment choice",
@@ -288,7 +290,8 @@
       "tokensIn": 1386,
       "tokensOut": 163
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @1:00: item question",
@@ -403,7 +406,8 @@
       "tokensIn": 1354,
       "tokensOut": 130
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @1:16: augment choice",
@@ -512,7 +516,8 @@
       "tokensIn": 1354,
       "tokensOut": 135
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @5:26: general question",
@@ -670,7 +675,8 @@
       "tokensIn": 1498,
       "tokensOut": 126
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @5:37: general question",
@@ -824,7 +830,8 @@
       "tokensIn": 1537,
       "tokensOut": 92
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @5:44: augment confirmation",
@@ -984,7 +991,8 @@
       "tokensIn": 1661,
       "tokensOut": 46
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @5:51: augment choice",
@@ -1159,7 +1167,8 @@
       "tokensIn": 1755,
       "tokensOut": 151
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @6:12: augment choice",
@@ -1334,7 +1343,8 @@
       "tokensIn": 1864,
       "tokensOut": 162
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @7:16: item question",
@@ -1497,7 +1507,8 @@
       "tokensIn": 1803,
       "tokensOut": 92
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @7:37: item question",
@@ -1668,7 +1679,8 @@
       "tokensIn": 1944,
       "tokensOut": 91
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @7:48: augment choice",
@@ -1839,7 +1851,8 @@
       "tokensIn": 2005,
       "tokensOut": 90
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @7:58: augment choice",
@@ -2010,7 +2023,8 @@
       "tokensIn": 2063,
       "tokensOut": 182
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @8:23: item question",
@@ -2185,7 +2199,8 @@
       "tokensIn": 2133,
       "tokensOut": 121
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @9:17: item question",
@@ -2388,7 +2403,8 @@
       "tokensIn": 2225,
       "tokensOut": 149
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @9:31: item question",
@@ -2587,7 +2603,8 @@
       "tokensIn": 2290,
       "tokensOut": 123
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @9:45: item question",
@@ -2786,7 +2803,8 @@
       "tokensIn": 2357,
       "tokensOut": 173
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @10:11: augment choice",
@@ -2977,7 +2995,8 @@
       "tokensIn": 2443,
       "tokensOut": 152
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @11:07: augment choice",
@@ -3192,7 +3211,8 @@
       "tokensIn": 2668,
       "tokensOut": 159
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @11:26: augment choice",
@@ -3411,7 +3431,8 @@
       "tokensIn": 2721,
       "tokensOut": 192
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @11:40: general question",
@@ -3622,7 +3643,8 @@
       "tokensIn": 2712,
       "tokensOut": 192
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @12:01: item question",
@@ -3825,7 +3847,8 @@
       "tokensIn": 2767,
       "tokensOut": 106
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @12:15: item question",
@@ -4024,7 +4047,8 @@
       "tokensIn": 2820,
       "tokensOut": 125
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @12:24: augment choice",
@@ -4219,7 +4243,8 @@
       "tokensIn": 2889,
       "tokensOut": 50
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @14:05: augment choice",
@@ -4426,7 +4451,8 @@
       "tokensIn": 3009,
       "tokensOut": 143
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @15:41: augment choice",
@@ -4649,7 +4675,8 @@
       "tokensIn": 3145,
       "tokensOut": 91
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Warwick @16:42: augment choice",
@@ -4888,7 +4915,8 @@
       "tokensIn": 3471,
       "tokensOut": 159
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Warwick @16:56: augment choice",
@@ -5131,6 +5159,7 @@
       "tokensIn": 3496,
       "tokensOut": 174
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   }
 ]

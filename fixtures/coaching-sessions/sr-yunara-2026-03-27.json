@@ -73,7 +73,8 @@
       "tokensIn": 630,
       "tokensOut": 101
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Yunara @3:54: item question",
@@ -218,7 +219,8 @@
       "tokensIn": 777,
       "tokensOut": 183
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Yunara @4:41: item question",
@@ -373,7 +375,8 @@
       "tokensIn": 928,
       "tokensOut": 72
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Yunara @5:42: augment choice",
@@ -542,7 +545,8 @@
       "tokensIn": 964,
       "tokensOut": 135
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Yunara @6:08: general question",
@@ -715,7 +719,8 @@
       "tokensIn": 1033,
       "tokensOut": 139
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Yunara @6:29: item question",
@@ -892,6 +897,7 @@
       "tokensIn": 1017,
       "tokensOut": 149
     },
-    "error": null
+    "error": null,
+    "category": "common"
   }
 ]

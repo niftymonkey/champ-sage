@@ -84,7 +84,8 @@
       "tokensIn": 926,
       "tokensOut": 179
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @0:34: general question",
@@ -176,7 +177,8 @@
       "tokensIn": 1085,
       "tokensOut": 146
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @0:44: augment confirmation",
@@ -276,7 +278,8 @@
       "tokensIn": 1052,
       "tokensOut": 80
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @4:05: item question",
@@ -410,7 +413,8 @@
       "tokensIn": 855,
       "tokensOut": 139
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Volibear @4:24: general question",
@@ -556,7 +560,8 @@
       "tokensIn": 909,
       "tokensOut": 116
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Volibear @4:38: augment choice",
@@ -706,7 +711,8 @@
       "tokensIn": 989,
       "tokensOut": 97
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Volibear @5:15: augment choice",
@@ -867,7 +873,8 @@
       "tokensIn": 1253,
       "tokensOut": 108
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @5:36: item question",
@@ -1017,7 +1024,8 @@
       "tokensIn": 979,
       "tokensOut": 188
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Volibear @6:07: augment confirmation",
@@ -1173,7 +1181,8 @@
       "tokensIn": 1354,
       "tokensOut": 153
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @8:20: item question",
@@ -1351,7 +1360,8 @@
       "tokensIn": 1204,
       "tokensOut": 205
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Volibear @8:51: augment choice",
@@ -1525,7 +1535,8 @@
       "tokensIn": 1285,
       "tokensOut": 124
     },
-    "error": null
+    "error": null,
+    "category": "common"
   },
   {
     "label": "Volibear @10:55: augment choice",
@@ -1731,7 +1742,8 @@
       "tokensIn": 1760,
       "tokensOut": 137
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @11:12: augment choice",
@@ -1941,7 +1953,8 @@
       "tokensIn": 1726,
       "tokensOut": 162
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @17:31: augment choice",
@@ -2162,7 +2175,8 @@
       "tokensIn": 1685,
       "tokensOut": 158
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @17:54: augment choice",
@@ -2383,7 +2397,8 @@
       "tokensIn": 1487,
       "tokensOut": 116
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @19:45: augment confirmation",
@@ -2603,7 +2618,8 @@
       "tokensIn": 1427,
       "tokensOut": 35
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   },
   {
     "label": "Volibear @19:49: augment confirmation",
@@ -2827,6 +2843,7 @@
       "tokensIn": 1475,
       "tokensOut": 135
     },
-    "error": null
+    "error": null,
+    "category": "mayhem"
   }
 ]

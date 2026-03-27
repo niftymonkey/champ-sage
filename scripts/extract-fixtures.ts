@@ -60,6 +60,8 @@ interface ExtractedFixture {
   } | null;
   error: string | null;
   expectedReferences?: string[];
+  /** Test category: common (all modes), mayhem, sr, arena */
+  category: "common" | "mayhem" | "sr" | "arena";
 }
 
 const logPath = process.argv[2];
@@ -168,6 +170,7 @@ while (i < lines.length) {
     query,
     response,
     error,
+    category: categorizeFixture(query, userPrompt),
   });
 
   i++;
@@ -200,7 +203,7 @@ console.log(`Extracted ${fixtures.length} fixtures to ${outPath}`);
 for (const f of fixtures) {
   const status = f.error ? "ERROR" : `${f.response?.latencyMs}ms`;
   console.log(
-    `  [${f.index}] ${status} | ${f.query.question.substring(0, 60)}`
+    `  [${f.index}] ${f.category.padEnd(7)} ${status.padEnd(8)} | ${f.query.question.substring(0, 55)}`
   );
 }
 
@@ -389,6 +392,30 @@ function parseItems(
       }
       return { name: content.trim(), description: "" };
     });
+}
+
+/**
+ * Best-guess categorization of a fixture. The most reliable signal is whether
+ * augment options are present in the user prompt (means the player was choosing
+ * augments, which is mode-specific). Everything else is common.
+ *
+ * Augment confirmations ("I chose X") are also mode-specific since they only
+ * happen after augment selection.
+ */
+function categorizeFixture(
+  query: ExtractedFixture["query"],
+  _userPrompt: string
+): ExtractedFixture["category"] {
+  // Has augment options in the structured query = augment selection
+  if (query.augmentOptions && query.augmentOptions.length > 0) return "mayhem";
+
+  // Augment confirmation ("I chose X")
+  if (/^i (?:chose|picked|took|selected|went with)\s+/i.test(query.question)) {
+    return "mayhem";
+  }
+
+  // Everything else is common: item questions, general questions, follow-ups
+  return "common";
 }
 
 function buildLabel(

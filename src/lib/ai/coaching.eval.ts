@@ -49,6 +49,7 @@ interface GameFixture {
   } | null;
   error: string | null;
   expectedReferences?: string[];
+  category?: "common" | "mayhem" | "sr" | "arena";
 }
 
 // Continuity fixtures use a simpler format with pre-baked prompts
@@ -77,6 +78,7 @@ interface ContinuityFixture {
 
 interface EvalInput {
   label: string;
+  category: string;
   question: string;
   champion: string;
   gameTime: string;
@@ -127,6 +129,7 @@ function gameFixtureToInput(f: GameFixture): EvalInput {
 
   return {
     label: f.label,
+    category: f.category ?? "common",
     question: f.query.question,
     champion: f.context.champion.name,
     gameTime: `${mins}:${String(secs).padStart(2, "0")}`,
@@ -152,6 +155,7 @@ function continuityFixtureToInput(f: ContinuityFixture): EvalInput {
 
   return {
     label: f.label,
+    category: "common",
     question: f.question,
     champion: f.gameState.champion,
     gameTime: f.gameState.gameTime,
@@ -172,25 +176,17 @@ const validGameInputs = gameFixtures
   )
   .map(gameFixtureToInput);
 
-// Categorize by game mode
-const MODE_LABELS: Record<string, string> = {
-  KIWI: "Mayhem",
-  CLASSIC: "SR",
-  PRACTICETOOL: "SR",
-  ARAM: "ARAM",
-  CHERRY: "Arena",
+// Categorize using the fixture's category field
+const CATEGORY_LABELS: Record<string, string> = {
+  common: "Common",
+  mayhem: "Mayhem",
+  sr: "SR",
+  arena: "Arena",
 };
-
-function getModeCategory(input: EvalInput): string {
-  // Extract mode from the user prompt's first line
-  const modeMatch = input.userPrompt.match(/Game Mode:\s*(\w+)/);
-  const mode = modeMatch?.[1] ?? "Unknown";
-  return MODE_LABELS[mode] ?? mode;
-}
 
 const inputsByCategory = new Map<string, EvalInput[]>();
 for (const input of validGameInputs) {
-  const category = getModeCategory(input);
+  const category = CATEGORY_LABELS[input.category] ?? "Common";
   const list = inputsByCategory.get(category) ?? [];
   list.push(input);
   inputsByCategory.set(category, list);
@@ -361,7 +357,7 @@ for (const model of models) {
       scorers: ALL_SCORERS,
 
       columns: (result) => [
-        { label: "Mode", value: category },
+        { label: "Category", value: category },
         {
           label: "Champion",
           value: `${result.input.champion} @${result.input.gameTime}`,
