@@ -69,7 +69,6 @@ export function useVoiceInput(
 
   const stopAndTranscribe = useCallback(async () => {
     try {
-      console.log("[voice] stopAndTranscribe called");
       isRecordingRef.current = false;
       setState((s) => ({ ...s, isRecording: false, isTranscribing: true }));
 
@@ -79,9 +78,7 @@ export function useVoiceInput(
       });
 
       // Get WAV bytes from Rust
-      console.log("[voice] Calling stop_recording...");
       const wavBytes: number[] = await invoke("stop_recording");
-      console.log("[voice] Got WAV bytes:", wavBytes.length);
       const blob = new Blob([new Uint8Array(wavBytes)], { type: "audio/wav" });
 
       // Parse the WAV header to get the actual sample rate and channel count.
@@ -118,12 +115,10 @@ export function useVoiceInput(
       });
 
       // Transcribe
-      console.log("[voice] Calling STT provider.transcribe...");
       const result: SttResult = await providerRef.current.transcribe(
         blob,
         hints
       );
-      console.log("[voice] Transcript result:", result.transcript);
 
       debugInput$.next({
         source: "voice",
@@ -141,10 +136,7 @@ export function useVoiceInput(
 
       // Feed transcript into the coaching pipeline
       if (result.transcript.trim()) {
-        console.log("[voice] Pushing to playerIntent$:", result.transcript);
         playerIntent$.next({ type: "query", text: result.transcript });
-      } else {
-        console.log("[voice] Empty transcript, not pushing to playerIntent$");
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

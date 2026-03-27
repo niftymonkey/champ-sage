@@ -63,26 +63,15 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     import.meta.env.VITE_OPENROUTER_API_KEY ??
     import.meta.env.VITE_OPENAI_API_KEY;
 
-  console.log(
-    "[coaching] Component render. context:",
-    !!context,
-    "apiKey:",
-    !!apiKey
-  );
-
   const submitQuestion = useCallback(
     async (question: string) => {
-      console.log("[coaching] submitQuestion called:", question);
-      console.log("[coaching] contextRef.current:", !!contextRef.current);
-      console.log("[coaching] apiKey:", !!apiKey);
-
       if (!contextRef.current || !apiKey || !question.trim()) {
         const reason = !contextRef.current
           ? "no context"
           : !apiKey
             ? "no API key"
             : "empty question";
-        console.log("[coaching] SKIPPED:", reason);
+        console.warn("[coaching] SKIPPED:", reason);
         debugInput$.next({
           source: "llm",
           summary: `Coaching skipped: ${reason}`,
@@ -155,7 +144,6 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
       });
 
       try {
-        console.log("[coaching] Calling getCoachingResponse...");
         const response = await getCoachingResponse(
           contextWithAugments,
           {
@@ -164,10 +152,6 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
             augmentOptions,
           },
           apiKey
-        );
-        console.log(
-          "[coaching] Response received:",
-          response.answer.substring(0, 80)
         );
         setLatestExchange({ question, response });
         setExchanges((prev) => [
@@ -186,13 +170,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   );
 
   useEffect(() => {
-    console.log("[coaching] Subscribing to playerIntent$");
     const sub = playerIntent$.subscribe((event) => {
-      console.log(
-        "[coaching] playerIntent$ event:",
-        event.type,
-        event.type === "query" ? event.text : ""
-      );
       if (event.type === "query" && event.text.trim()) {
         debugInput$.next({
           source: "voice",
@@ -205,7 +183,9 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   }, [submitQuestion]);
 
   if (!apiKey) {
-    console.log("[coaching] No API key, showing setup message");
+    console.warn(
+      "[coaching] No API key configured. Set VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY in .env"
+    );
     return (
       <div className="coaching-display">
         <p className="entity-meta">
@@ -217,7 +197,6 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   }
 
   if (!context) {
-    console.log("[coaching] No context, rendering null");
     return null;
   }
 
