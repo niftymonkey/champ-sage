@@ -2,8 +2,8 @@
  * Coaching evaluation pipeline.
  *
  * Replays real coaching prompts from game sessions against model candidates
- * and scores the responses for context awareness, recommendation quality,
- * and response format.
+ * and scores the responses using the same buildSystemPrompt/buildUserPrompt
+ * functions the app uses in production.
  *
  * Usage:
  *   npx evalite src/lib/ai/coaching.eval.ts
@@ -23,7 +23,8 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
 import { readFileSync } from "fs";
 import { coachingResponseSchema } from "./schemas";
-import { buildSystemPrompt } from "./prompts";
+import { buildSystemPrompt, buildUserPrompt } from "./prompts";
+import type { CoachingContext, CoachingQuery } from "./types";
 import { scoreItemAwareness } from "./scorers/item-awareness";
 import { scoreAugmentRerollAccuracy } from "./scorers/augment-reroll-accuracy";
 import { scoreBrevity, scoreDecisiveness } from "./scorers/response-format";
@@ -31,7 +32,25 @@ import { scoreConversationalContinuity } from "./scorers/conversational-continui
 
 // --- Types ---
 
-interface CoachingFixture {
+interface GameFixture {
+  label: string;
+  index: number;
+  timestamp: string;
+  model: string;
+  context: CoachingContext;
+  query: CoachingQuery;
+  response: {
+    answer: string;
+    latencyMs: number;
+    tokensIn: number;
+    tokensOut: number;
+  } | null;
+  error: string | null;
+  expectedReferences?: string[];
+}
+
+// Continuity fixtures use a simpler format with pre-baked prompts
+interface ContinuityFixture {
   label: string;
   index: number;
   timestamp: string;
@@ -49,20 +68,19 @@ interface CoachingFixture {
     gameTime: string;
     kda: string;
   };
-  response: {
-    answer: string;
-    latencyMs: number;
-    tokensIn: number;
-    tokensOut: number;
-  } | null;
-  error: string | null;
+  response: null;
+  error: null;
   expectedReferences?: string[];
 }
 
 interface EvalInput {
-  fixture: CoachingFixture;
+  label: string;
+  question: string;
+  items: string[];
   systemPrompt: string;
   userPrompt: string;
+  history: Array<{ question: string; answer: string }>;
+  expectedReferences?: string[];
 }
 
 interface EvalOutput {
@@ -72,26 +90,73 @@ interface EvalOutput {
 
 // --- Load fixtures ---
 
-const gameFixtures: CoachingFixture[] = JSON.parse(
+const gameFixtures: GameFixture[] = JSON.parse(
   readFileSync(
     resolve("fixtures/coaching-sessions/2026-03-26-warwick-aram-mayhem.json"),
     "utf-8"
   )
 );
 
-const continuityFixtures: CoachingFixture[] = JSON.parse(
+const continuityFixtures: ContinuityFixture[] = JSON.parse(
   readFileSync(
     resolve("fixtures/coaching-sessions/continuity-tests.json"),
     "utf-8"
   )
 );
 
+// Build eval inputs from game fixtures using real app functions
+function gameFixtureToInput(f: GameFixture): EvalInput {
+  const hasAugmentOptions =
+    f.query.augmentOptions != null && f.query.augmentOptions.length > 0;
+  const systemPrompt = buildSystemPrompt({
+    gameMode: f.context.gameMode,
+    lcuGameMode: f.context.lcuGameMode,
+    hasAugmentOptions,
+  });
+  const userPrompt = buildUserPrompt(f.context, f.query);
+
+  return {
+    label: f.label,
+    question: f.query.question,
+    items: f.context.currentItems.map((i) => i.name),
+    systemPrompt,
+    userPrompt,
+    history: f.query.history ?? [],
+    expectedReferences: f.expectedReferences,
+  };
+}
+
+// Build eval inputs from continuity fixtures (pre-baked prompts)
+function continuityFixtureToInput(f: ContinuityFixture): EvalInput {
+  const hasAugmentOptions = f.userPrompt.includes(
+    "## Augment Options Being Offered"
+  );
+  const systemPrompt = buildSystemPrompt({
+    gameMode: "KIWI",
+    lcuGameMode: "KIWI",
+    hasAugmentOptions,
+  });
+
+  return {
+    label: f.label,
+    question: f.question,
+    items: f.gameState.items,
+    systemPrompt,
+    userPrompt: f.userPrompt,
+    history: [],
+    expectedReferences: f.expectedReferences,
+  };
+}
+
 // Filter game fixtures to valid responses (skip errors and noise)
-const fixtures = [
-  ...gameFixtures.filter(
-    (f) => f.response !== null && f.error === null && f.question.length > 5
-  ),
-  ...continuityFixtures,
+const evalInputs: EvalInput[] = [
+  ...gameFixtures
+    .filter(
+      (f) =>
+        f.response !== null && f.error === null && f.query.question.length > 5
+    )
+    .map(gameFixtureToInput),
+  ...continuityFixtures.map(continuityFixtureToInput),
 ];
 
 // --- Model setup ---
@@ -140,14 +205,12 @@ function getModel(candidate: ModelCandidate) {
 
 // --- Scorers ---
 
-// --- Gate Scorers ---
-
 const itemAwareness = createScorer<EvalInput, EvalOutput>({
   name: "Item Awareness",
   description:
     "Checks that the model does not recommend items the player already owns",
   scorer: ({ input, output }) => {
-    return scoreItemAwareness(output.answer, input.fixture.gameState.items);
+    return scoreItemAwareness(output.answer, input.items);
   },
 });
 
@@ -166,16 +229,13 @@ const augmentRerollAccuracy = createScorer<EvalInput, EvalOutput>({
   description:
     "Checks that the model follows actual re-roll mechanics when advising on augments",
   scorer: ({ input, output }) => {
-    const history = extractHistory(input.fixture.userPrompt);
     return scoreAugmentRerollAccuracy(
       output.answer,
-      input.fixture.question,
-      history
+      input.question,
+      input.history
     );
   },
 });
-
-// --- Ranking Scorers ---
 
 const brevity = createScorer<EvalInput, EvalOutput>({
   name: "Brevity",
@@ -201,7 +261,7 @@ const conversationalContinuity = createScorer<EvalInput, EvalOutput>({
   scorer: ({ input, output }) => {
     return scoreConversationalContinuity(
       output.answer,
-      input.fixture.expectedReferences
+      input.expectedReferences
     );
   },
 });
@@ -210,131 +270,17 @@ const GATE_SCORERS = [itemAwareness, structuredOutput, augmentRerollAccuracy];
 const RANKING_SCORERS = [brevity, decisiveness, conversationalContinuity];
 const ALL_SCORERS = [...GATE_SCORERS, ...RANKING_SCORERS];
 
-// --- Helpers ---
-
-/** Extract conversation history from the user prompt's Recent Conversation section */
-function extractHistory(
-  userPrompt: string
-): Array<{ question: string; answer: string }> {
-  const history: Array<{ question: string; answer: string }> = [];
-  const lines = userPrompt.split("\n");
-  let i = 0;
-
-  // Find the Recent Conversation section
-  while (i < lines.length && !lines[i].includes("## Recent Conversation")) {
-    i++;
-  }
-  i++; // skip the header
-
-  while (i < lines.length && !lines[i].startsWith("## ")) {
-    const playerMatch = lines[i].match(/^\*\*Player:\*\*\s*(.+)/);
-    if (playerMatch) {
-      const question = playerMatch[1];
-      i++;
-      const coachMatch = lines[i]?.match(/^\*\*Coach:\*\*\s*(.+)/);
-      if (coachMatch) {
-        history.push({ question, answer: coachMatch[1] });
-      }
-    }
-    i++;
-  }
-
-  return history;
-}
-
-/**
- * Apply current prompt optimizations to a captured (old-format) user prompt:
- * - Remove the Current Items section from its original position
- * - Cap conversation history to last 4 exchanges, use Q:/A: format
- * - Append item names directly next to the question
- * - Condense game mode/time and champion lines
- */
-function optimizeCapturedPrompt(input: EvalInput): string {
-  let prompt = input.userPrompt;
-  const items = input.fixture.gameState.items;
-
-  // Extract and remove the Current Items section
-  prompt = prompt.replace(/### Current Items[^\n]*\n(?:- [^\n]*\n?)*/, "");
-
-  // Condense game mode + time into one line
-  prompt = prompt.replace(
-    /## Game Mode: ([^\n]+)\n\n## Game Time: ([^\n]+)/,
-    "Game Mode: $1 | Game Time: $2"
-  );
-
-  // Condense champion + stat profile
-  prompt = prompt.replace(
-    /## Your Champion: ([^\n]+)\n\n### Stat Profile\n([^\n]+)/,
-    "Champion: $1 | $2"
-  );
-
-  // Cap history to last 4 and use Q:/A: format
-  const historyMatch = prompt.match(
-    /## Recent Conversation\n\n([\s\S]*?)(?=\n\n## )/
-  );
-  if (historyMatch) {
-    const exchanges: Array<{ q: string; a: string }> = [];
-    const lines = historyMatch[1].split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      const pm = lines[i].match(/^\*\*Player:\*\*\s*(.+)/);
-      if (pm) {
-        const cm = lines[i + 1]?.match(/^\*\*Coach:\*\*\s*(.+)/);
-        if (cm) {
-          exchanges.push({ q: pm[1], a: cm[1] });
-          i++;
-        }
-      }
-    }
-    const recent = exchanges.slice(-4);
-    const newHistory = recent.map((e) => `Q: ${e.q}\nA: ${e.a}`).join("\n\n");
-    prompt = prompt.replace(
-      /## Recent Conversation\n\n[\s\S]*?(?=\n\n## )/,
-      `## Recent Conversation\n\n${newHistory}`
-    );
-  }
-
-  // Move item names to be right next to the question
-  if (items.length > 0) {
-    const itemList = items.join(", ");
-    prompt = prompt.replace(
-      /## Question\n(.+)/,
-      `## Question\nItems you own: ${itemList}\n$1`
-    );
-  }
-
-  return prompt;
-}
-
 // --- Register evals ---
 
 for (const model of models) {
   evalite(`Coaching / ${model.name}`, {
-    data: () =>
-      fixtures.map((fixture) => ({
-        input: {
-          fixture,
-          systemPrompt: fixture.systemPrompt,
-          userPrompt: fixture.userPrompt,
-        },
-      })),
+    data: () => evalInputs.map((input) => ({ input })),
 
     task: async (input: EvalInput): Promise<EvalOutput> => {
-      const hasAugmentOptions = input.userPrompt.includes(
-        "## Augment Options Being Offered"
-      );
-      const systemPrompt = buildSystemPrompt({
-        gameMode: "KIWI",
-        lcuGameMode: "KIWI",
-        hasAugmentOptions,
-      });
-
-      // Apply current prompt optimizations to captured user prompt
-      const userPrompt = optimizeCapturedPrompt(input);
-
       const result = await generateText({
         model: getModel(model),
-        system: systemPrompt,
-        prompt: userPrompt,
+        system: input.systemPrompt,
+        prompt: input.userPrompt,
         output: Output.object({ schema: coachingResponseSchema }),
         maxOutputTokens: 1024,
       });
@@ -347,14 +293,12 @@ for (const model of models) {
     columns: (result) => [
       {
         label: "Question",
-        value: result.input.fixture.question.substring(0, 50),
+        value: result.input.question.substring(0, 50),
       },
-      { label: "Champion", value: result.input.fixture.gameState.champion },
       {
         label: "Items",
-        value: String(result.input.fixture.gameState.items.length),
+        value: String(result.input.items.length),
       },
-      { label: "Time", value: result.input.fixture.gameState.gameTime },
     ],
   });
 }
