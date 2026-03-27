@@ -29,6 +29,8 @@ import { scoreItemAwareness } from "./scorers/item-awareness";
 import { scoreAugmentRerollAccuracy } from "./scorers/augment-reroll-accuracy";
 import { scoreBrevity, scoreDecisiveness } from "./scorers/response-format";
 import { scoreConversationalContinuity } from "./scorers/conversational-continuity";
+import { scoreGoldAwareness } from "./scorers/gold-awareness";
+import { scoreUnnecessaryWarnings } from "./scorers/unnecessary-warnings";
 
 // --- Types ---
 
@@ -77,6 +79,7 @@ interface EvalInput {
   label: string;
   question: string;
   items: string[];
+  gold: number;
   systemPrompt: string;
   userPrompt: string;
   history: Array<{ question: string; answer: string }>;
@@ -119,6 +122,7 @@ function gameFixtureToInput(f: GameFixture): EvalInput {
     label: f.label,
     question: f.query.question,
     items: f.context.currentItems.map((i) => i.name),
+    gold: f.context.currentGold,
     systemPrompt,
     userPrompt,
     history: f.query.history ?? [],
@@ -141,6 +145,7 @@ function continuityFixtureToInput(f: ContinuityFixture): EvalInput {
     label: f.label,
     question: f.question,
     items: f.gameState.items,
+    gold: f.gameState.gold,
     systemPrompt,
     userPrompt: f.userPrompt,
     history: [],
@@ -266,8 +271,32 @@ const conversationalContinuity = createScorer<EvalInput, EvalOutput>({
   },
 });
 
+const goldAwareness = createScorer<EvalInput, EvalOutput>({
+  name: "Gold Awareness",
+  description:
+    "Checks that the model uses exact gold amount instead of hedging",
+  scorer: ({ input, output }) => {
+    return scoreGoldAwareness(output.answer, input.gold, input.question);
+  },
+});
+
+const unnecessaryWarnings = createScorer<EvalInput, EvalOutput>({
+  name: "Unnecessary Warnings",
+  description:
+    "Checks that the model doesn't warn about not re-buying owned items unprompted",
+  scorer: ({ input, output }) => {
+    return scoreUnnecessaryWarnings(output.answer, input.question);
+  },
+});
+
 const GATE_SCORERS = [itemAwareness, structuredOutput, augmentRerollAccuracy];
-const RANKING_SCORERS = [brevity, decisiveness, conversationalContinuity];
+const RANKING_SCORERS = [
+  brevity,
+  decisiveness,
+  conversationalContinuity,
+  goldAwareness,
+  unnecessaryWarnings,
+];
 const ALL_SCORERS = [...GATE_SCORERS, ...RANKING_SCORERS];
 
 // --- Register evals ---

@@ -28,6 +28,8 @@ const RANKING_SCORERS = [
   "Brevity",
   "Decisiveness",
   "Conversational Continuity",
+  "Gold Awareness",
+  "Unnecessary Warnings",
 ];
 const GATE_THRESHOLD = 0.8;
 
