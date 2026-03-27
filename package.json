@@ -15,6 +15,10 @@
     "discover-candidates": "tsx scripts/discover-candidates.ts",
     "audit-augments": "tsx scripts/audit-augments.ts",
     "preview-prompts": "tsx scripts/preview-prompts.ts",
+    "extract-fixtures": "tsx scripts/extract-fixtures.ts",
+    "eval": "evalite src/lib/ai/coaching.eval.ts",
+    "eval:watch": "evalite watch src/lib/ai/coaching.eval.ts",
+    "eval:serve": "evalite serve",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
@@ -33,7 +37,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "better-sqlite3"
     ]
   },
   "devDependencies": {
@@ -46,6 +51,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.6.0",
     "dotenv": "^17.3.1",
+    "evalite": "^0.19.0",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^16.4.0",
