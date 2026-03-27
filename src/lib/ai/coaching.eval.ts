@@ -282,7 +282,7 @@ for (const model of models) {
         system: input.systemPrompt,
         prompt: input.userPrompt,
         output: Output.object({ schema: coachingResponseSchema }),
-        maxOutputTokens: 1024,
+        maxOutputTokens: 4096,
       });
 
       return result.output;
