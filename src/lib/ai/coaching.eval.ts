@@ -371,10 +371,7 @@ for (const model of models) {
         },
         {
           label: "Context",
-          value:
-            result.input.items.length > 0
-              ? `${result.input.items.length} items, ${result.input.gold}g`
-              : `${result.input.gold}g, no items`,
+          value: `${result.input.items.length} items, ${result.input.gold}g`,
         },
       ],
     });
