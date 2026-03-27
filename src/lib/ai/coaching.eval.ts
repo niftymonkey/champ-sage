@@ -52,30 +52,6 @@ interface GameFixture {
   category?: "common" | "mayhem" | "sr" | "arena";
 }
 
-// Continuity fixtures use a simpler format with pre-baked prompts
-interface ContinuityFixture {
-  label: string;
-  index: number;
-  timestamp: string;
-  model: string;
-  question: string;
-  systemPrompt: string;
-  userPrompt: string;
-  gameState: {
-    champion: string;
-    level: number;
-    items: string[];
-    augments: string[];
-    enemies: string[];
-    gold: number;
-    gameTime: string;
-    kda: string;
-  };
-  response: null;
-  error: null;
-  expectedReferences?: string[];
-}
-
 interface EvalInput {
   label: string;
   category: string;
@@ -101,16 +77,12 @@ interface EvalOutput {
 import { readdirSync } from "fs";
 
 const fixturesDir = resolve("fixtures/coaching-sessions");
-const gameFixtureFiles = readdirSync(fixturesDir).filter(
-  (f) => f.endsWith(".json") && f !== "continuity-tests.json"
+const gameFixtureFiles = readdirSync(fixturesDir).filter((f) =>
+  f.endsWith(".json")
 );
 
 const gameFixtures: GameFixture[] = gameFixtureFiles.flatMap((file) =>
   JSON.parse(readFileSync(resolve(fixturesDir, file), "utf-8"))
-);
-
-const continuityFixtures: ContinuityFixture[] = JSON.parse(
-  readFileSync(resolve(fixturesDir, "continuity-tests.json"), "utf-8")
 );
 
 // Build eval inputs from game fixtures using real app functions
@@ -142,38 +114,9 @@ function gameFixtureToInput(f: GameFixture): EvalInput {
   };
 }
 
-// Build eval inputs from continuity fixtures (pre-baked prompts)
-function continuityFixtureToInput(f: ContinuityFixture): EvalInput {
-  const hasAugmentOptions = f.userPrompt.includes(
-    "## Augment Options Being Offered"
-  );
-  const systemPrompt = buildSystemPrompt({
-    gameMode: "KIWI",
-    lcuGameMode: "KIWI",
-    hasAugmentOptions,
-  });
-
-  return {
-    label: f.label,
-    category: "common",
-    question: f.question,
-    champion: f.gameState.champion,
-    gameTime: f.gameState.gameTime,
-    items: f.gameState.items,
-    gold: f.gameState.gold,
-    systemPrompt,
-    userPrompt: f.userPrompt,
-    history: [],
-    expectedReferences: f.expectedReferences,
-  };
-}
-
-// Filter game fixtures to valid responses (skip errors and noise)
+// Filter out errors and noise, but keep synthetic fixtures (response === null is OK)
 const validGameInputs = gameFixtures
-  .filter(
-    (f) =>
-      f.response !== null && f.error === null && f.query.question.length > 5
-  )
+  .filter((f) => f.error === null && f.query.question.length > 5)
   .map(gameFixtureToInput);
 
 // Categorize using the fixture's category field
@@ -191,12 +134,6 @@ for (const input of validGameInputs) {
   list.push(input);
   inputsByCategory.set(category, list);
 }
-
-// Continuity tests are "Common" category
-const continuityInputs = continuityFixtures.map(continuityFixtureToInput);
-const commonInputs = inputsByCategory.get("Common") ?? [];
-commonInputs.push(...continuityInputs);
-inputsByCategory.set("Common", commonInputs);
 
 // --- Model setup ---
 
