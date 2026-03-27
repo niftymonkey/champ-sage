@@ -361,13 +361,14 @@ for (const model of models) {
       scorers: ALL_SCORERS,
 
       columns: (result) => [
+        { label: "Mode", value: category },
         {
           label: "Champion",
           value: `${result.input.champion} @${result.input.gameTime}`,
         },
         {
           label: "Question",
-          value: result.input.question.substring(0, 50),
+          value: result.input.question.substring(0, 45),
         },
         {
           label: "Context",
