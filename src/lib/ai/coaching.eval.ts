@@ -98,7 +98,7 @@ import { readdirSync } from "fs";
 
 const fixturesDir = resolve("fixtures/coaching-sessions");
 const gameFixtureFiles = readdirSync(fixturesDir).filter(
-  (f) => f.startsWith("coaching-") && f.endsWith(".json")
+  (f) => f.endsWith(".json") && f !== "continuity-tests.json"
 );
 
 const gameFixtures: GameFixture[] = gameFixtureFiles.flatMap((file) =>
@@ -156,15 +156,42 @@ function continuityFixtureToInput(f: ContinuityFixture): EvalInput {
 }
 
 // Filter game fixtures to valid responses (skip errors and noise)
-const evalInputs: EvalInput[] = [
-  ...gameFixtures
-    .filter(
-      (f) =>
-        f.response !== null && f.error === null && f.query.question.length > 5
-    )
-    .map(gameFixtureToInput),
-  ...continuityFixtures.map(continuityFixtureToInput),
-];
+const validGameInputs = gameFixtures
+  .filter(
+    (f) =>
+      f.response !== null && f.error === null && f.query.question.length > 5
+  )
+  .map(gameFixtureToInput);
+
+// Categorize by game mode
+const MODE_LABELS: Record<string, string> = {
+  KIWI: "Mayhem",
+  CLASSIC: "SR",
+  PRACTICETOOL: "SR",
+  ARAM: "ARAM",
+  CHERRY: "Arena",
+};
+
+function getModeCategory(input: EvalInput): string {
+  // Extract mode from the user prompt's first line
+  const modeMatch = input.userPrompt.match(/Game Mode:\s*(\w+)/);
+  const mode = modeMatch?.[1] ?? "Unknown";
+  return MODE_LABELS[mode] ?? mode;
+}
+
+const inputsByCategory = new Map<string, EvalInput[]>();
+for (const input of validGameInputs) {
+  const category = getModeCategory(input);
+  const list = inputsByCategory.get(category) ?? [];
+  list.push(input);
+  inputsByCategory.set(category, list);
+}
+
+// Continuity tests are "Common" category
+const continuityInputs = continuityFixtures.map(continuityFixtureToInput);
+const commonInputs = inputsByCategory.get("Common") ?? [];
+commonInputs.push(...continuityInputs);
+inputsByCategory.set("Common", commonInputs);
 
 // --- Model setup ---
 
@@ -304,32 +331,36 @@ const ALL_SCORERS = [...GATE_SCORERS, ...RANKING_SCORERS];
 // --- Register evals ---
 
 for (const model of models) {
-  evalite(`Coaching / ${model.name}`, {
-    data: () => evalInputs.map((input) => ({ input })),
+  for (const [category, inputs] of inputsByCategory) {
+    if (inputs.length === 0) continue;
 
-    task: async (input: EvalInput): Promise<EvalOutput> => {
-      const result = await generateText({
-        model: getModel(model),
-        system: input.systemPrompt,
-        prompt: input.userPrompt,
-        output: Output.object({ schema: coachingResponseSchema }),
-        maxOutputTokens: 4096,
-      });
+    evalite(`${model.name} / ${category}`, {
+      data: () => inputs.map((input) => ({ input })),
 
-      return result.output;
-    },
+      task: async (input: EvalInput): Promise<EvalOutput> => {
+        const result = await generateText({
+          model: getModel(model),
+          system: input.systemPrompt,
+          prompt: input.userPrompt,
+          output: Output.object({ schema: coachingResponseSchema }),
+          maxOutputTokens: 4096,
+        });
 
-    scorers: ALL_SCORERS,
-
-    columns: (result) => [
-      {
-        label: "Question",
-        value: result.input.question.substring(0, 50),
+        return result.output;
       },
-      {
-        label: "Items",
-        value: String(result.input.items.length),
-      },
-    ],
-  });
+
+      scorers: ALL_SCORERS,
+
+      columns: (result) => [
+        {
+          label: "Question",
+          value: result.input.question.substring(0, 50),
+        },
+        {
+          label: "Items",
+          value: String(result.input.items.length),
+        },
+      ],
+    });
+  }
 }

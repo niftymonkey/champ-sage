@@ -173,12 +173,27 @@ while (i < lines.length) {
   i++;
 }
 
-// Derive output filename from input log filename
-const logBasename = resolve(logPath)
-  .split(/[/\\]/)
-  .pop()!
-  .replace(/\.log$/, ".json");
-const outPath = resolve(`fixtures/coaching-sessions/${logBasename}`);
+// Derive output filename: mode-champion-date.json
+// e.g., kiwi-warwick-2026-03-26.json or pt-volibear-2026-03-27.json
+const firstValid = fixtures.find((f) => !f.error);
+const mode = firstValid?.context.gameMode ?? "unknown";
+const modeLabel =
+  mode === "KIWI"
+    ? "mayhem"
+    : mode === "CLASSIC"
+      ? "sr"
+      : mode === "PRACTICETOOL"
+        ? "sr"
+        : mode === "ARAM"
+          ? "aram"
+          : mode === "CHERRY"
+            ? "arena"
+            : mode.toLowerCase();
+const champion = (firstValid?.context.champion.name ?? "unknown").toLowerCase();
+const dateMatch = logPath.match(/(\d{4}-\d{2}-\d{2})/);
+const dateStr = dateMatch?.[1] ?? "unknown";
+const outFilename = `${modeLabel}-${champion}-${dateStr}.json`;
+const outPath = resolve(`fixtures/coaching-sessions/${outFilename}`);
 writeFileSync(outPath, JSON.stringify(fixtures, null, 2));
 console.log(`Extracted ${fixtures.length} fixtures to ${outPath}`);
 
