@@ -2,7 +2,7 @@
 
 ## Before Committing
 
-Before creating a commit, review `docs/technical-reference.md` and update it with any new discoveries from this session: new API behaviors, data source quirks, parsing gotchas, or architectural insights that took effort to learn and would be painful to rediscover.
+Before creating a commit, review `docs/reference/technical-reference.md` and update it with any new discoveries from this session: new API behaviors, data source quirks, parsing gotchas, or architectural insights that took effort to learn and would be painful to rediscover.
 
 ## Code Quality
 

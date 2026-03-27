@@ -22,7 +22,7 @@
  *
  * The combined output is ~188 tokens — fits Whisper's 224-token limit with margin.
  *
- * See docs/voice-input-research.md for the full analysis and word lists.
+ * See docs/research/voice-input-research.md for the full analysis and word lists.
  */
 
 /**
