@@ -39,7 +39,14 @@ Scaffold an ow-electron project alongside the existing Vite + React frontend. Cr
 | `append_coaching_log`       | `fs.appendFileSync` via IPC                                                    |
 | `get_coaching_log_location` | `app.getPath('userData')` via IPC                                              |
 
-Reimplement `tauri-bridge.ts` as an `electron-bridge.ts` that uses `ipcRenderer.invoke` instead of Tauri `invoke`, exposing the same `TauriBridge` interface. The reactive engine, coaching engine, and all business logic remain untouched.
+Also preserve Tauri push-event semantics used by the bridge:
+
+| Tauri event channel | Electron equivalent                                                                |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `lcu-event`         | Main process forwards parsed WebSocket payloads to renderer via `webContents.send` |
+| `lcu-disconnect`    | Main process emits disconnect reason to renderer via `webContents.send`            |
+
+Reimplement `tauri-bridge.ts` as an `electron-bridge.ts` that uses `ipcRenderer.invoke` for request/response commands and `ipcRenderer.on` for push events, exposing the same `TauriBridge` interface. The reactive engine, coaching engine, and all business logic remain untouched.
 
 Wire up the Vite dev server to serve the renderer content in development (Electron loads `http://localhost:5173` in dev, built files in production).
 
@@ -47,6 +54,7 @@ Wire up the Vite dev server to serve the renderer content in development (Electr
 
 - [ ] ow-electron app scaffolded with `@overwolf/ow-electron` and project structure (main process, renderer, IPC handlers)
 - [ ] All 8 Tauri commands reimplemented and working through Electron IPC
+- [ ] `lcu-event` and `lcu-disconnect` push-event behavior preserved with Electron IPC
 - [ ] `TauriBridge` interface preserved — `electron-bridge.ts` is a drop-in replacement
 - [ ] LCU discovery, WebSocket connection, and Live Client Data polling work during a live game
 - [ ] Voice input works via `getUserMedia` while the app is unfocused and a game is running

@@ -153,7 +153,7 @@ The system is composed of the following modules. Dependencies are listed to clar
 
 ### Key Technical Decisions
 
-- **TypeScript preferred** for all application code. The Electron main process handles hotkeys (via `overlay.hotkeys`), window management, and audio capture (via `getUserMedia`).
+- **TypeScript preferred** for all application code. The Electron main process handles hotkeys (via `overlay.hotkeys`) and window management; audio capture (`getUserMedia`) runs in the renderer process.
 - **Desktop framework: Overwolf Electron (ow-electron).** Originally Tauri v2 (chosen for resource efficiency), migrating to ow-electron for access to Overwolf GEP (programmatic augment detection) and native in-game overlay rendering. The React/TypeScript frontend and RxJS reactive engine are unchanged. See `docs/research/augment-detection-research.md` for research findings and `docs/ow-electron-migration-plan.md` for the migration plan.
 - **pnpm** for package management. **Vitest** for unit/integration testing. **Vercel AI SDK** (`ai` package) for LLM calls.
 - **No throwaway infrastructure.** Modules are built with real data and real integrations from the start, not hardcoded placeholders that get replaced later.
