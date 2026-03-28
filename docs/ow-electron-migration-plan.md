@@ -94,11 +94,13 @@ The existing desktop BrowserWindow remains available as a configuration/dashboar
 
 ### What to build
 
-Subscribe to Overwolf GEP `augments` and `picked_augment` events for League of Legends. Create a new observable in the reactive engine that emits augment offer data (the 3 offered augment names) and augment selection data (which augment the player picked, which slot).
+Subscribe to Overwolf GEP `augments` and `picked_augment` events for League of Legends. Create a dedicated GEP observable that emits augment offer data (the 3 offered augment names) and augment selection data (which augment the player picked, which slot). This GEP observable merges into the existing `manualInput$` stream using events shaped identically to manual augment events (type: `"augment"`), so all downstream logic (augment selection tracking, context assembly) works unchanged.
+
+When both GEP and voice/manual input are active, GEP takes precedence — if a GEP augment event arrives within a short time window of a voice input for the same augment offer, the voice input is deduplicated to avoid double-processing.
 
 Map GEP augment internal names (e.g., `TFT8_Augment_DefenderTrait`) to the app's augment data model (display names, descriptions, tiers, set membership). Update the coaching context assembler to include detected augment offers, enabling the coaching engine to recommend among the specific 3 options rather than giving generic tier advice.
 
-The manual augment picker and voice input ("I chose X") remain as fallback inputs. When GEP data is available, it takes precedence. When unavailable (vanilla Electron build, or GEP not reporting), the app falls back to manual methods.
+The manual augment picker and voice input ("I chose X") remain as fallback inputs. When GEP data is unavailable (vanilla Electron build, or GEP not reporting), the app falls back to manual methods.
 
 ### Acceptance criteria
 
