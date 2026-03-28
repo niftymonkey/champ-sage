@@ -43,7 +43,7 @@ The API uses a self-signed HTTPS certificate. The Tauri webview can't fetch it d
 
 **Not exposed:**
 
-- Augments (any mode) — requires voice/manual input. In ARAM Mayhem, augment selection happens at levels 1, 7, 11, and 15 (4 total per game), but only after the player returns to the Nexus at that level. The API exposes player level but not whether they're at the Nexus or have an augment offer pending. Note: your.gg appears to detect augment offers in real-time via an overlay — mechanism unknown (image recognition, undocumented API, game memory). Worth investigating.
+- Augments (any mode) — the Live Client Data API does not expose augment offers or selections. In ARAM Mayhem, augment selection happens at levels 1, 7, 11, and 15 (4 total per game), but only after the player returns to the Nexus at that level. The API exposes player level but not whether they're at the Nexus or have an augment offer pending. **Programmatic detection is possible via Overwolf GEP** — see `docs/research/augment-detection-research.md` for full findings. The app currently uses voice/manual input as a fallback; the migration to ow-electron (see `docs/ow-electron-migration-plan.md`) will add GEP-based detection.
 - Some augments auto-select a follow-up (e.g., Transmute: Chaos grants two random augments instead of one). This can happen once per game, meaning a player can end up with 5 augments total (4 chosen + 1 granted). The API doesn't expose these auto-selections, so the app needs a way to record the granted augment. The UI should distinguish between "chosen" slots (4 max) and a "granted" slot that appears as a result of choosing certain augments. With voice input, the user can report all augments received in one utterance.
 
 ### ARAM Mayhem augment re-roll mechanics
@@ -379,9 +379,11 @@ Events observed during a full ARAM Mayhem game session that don't fall into the 
 - `/riot-messaging-service/v1/message/teambuilder/v1/rerollInfoV1` — ARAM reroll info
 - `/riot-messaging-service/v1/message/teambuilder/v1/tbdGameDtoV1` — team builder game data
 
-#### Key finding: No in-game augment data from any source
+#### Key finding: No in-game augment data from LCU or Live Client Data API
 
-Confirmed by monitoring a full ARAM Mayhem game: no WebSocket event, REST endpoint, or inventory update exposes which augments a player selects during gameplay. The `AUGMENT` inventory type (`/lol-inventory/v2/inventory/AUGMENT`) contains cosmetic augment ownership (Arena augment skins), not in-game selections. In-game augment tracking requires manual input (UI picker or voice).
+Confirmed by monitoring a full ARAM Mayhem game: no LCU WebSocket event, LCU REST endpoint, or Live Client Data API endpoint exposes which augments a player is offered or selects during gameplay. The `AUGMENT` inventory type (`/lol-inventory/v2/inventory/AUGMENT`) contains cosmetic augment ownership (Arena augment skins), not in-game selections. The LCU WebSocket subscribes to `OnJsonApiEvent` (the broadest possible subscription) — augment events simply do not exist in this API. This is a fundamental limitation: the LCU is the client/launcher process, while augment selection happens in the game process.
+
+**However, Overwolf's Game Events Provider (GEP) does expose augment data** — see `docs/research/augment-detection-research.md` for the full investigation. GEP hooks into the game process via a Vanguard-whitelisted DLL and provides `augments` (the 3 offered choices) and `picked_augment` (which one was selected) events for both ARAM Mayhem and Arena modes.
 
 ### WSL2 access
 
