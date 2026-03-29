@@ -25,6 +25,9 @@ beforeEach(() => {
     onLcuEvent: vi.fn(() => () => {}),
     onLcuDisconnect: vi.fn(() => () => {}),
     onHotkeyEvent: mockOnHotkeyEvent,
+    onGepInfoUpdate: vi.fn(() => () => {}),
+    onGepGameEvent: vi.fn(() => () => {}),
+    onOverlayStatus: vi.fn(() => () => {}),
   };
 });
 
@@ -50,6 +53,9 @@ describe("useVoiceInput", () => {
       onLcuEvent: vi.fn(() => () => {}),
       onLcuDisconnect: vi.fn(() => () => {}),
       onHotkeyEvent: mockOnHotkeyEvent,
+      onGepInfoUpdate: vi.fn(() => () => {}),
+      onGepGameEvent: vi.fn(() => () => {}),
+      onOverlayStatus: vi.fn(() => () => {}),
     };
   });
 

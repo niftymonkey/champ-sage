@@ -84,5 +84,9 @@ export function summarizeLiveGameState(state: LiveGameState): string {
 /** Summarize a user input event. */
 export function summarizeUserInput(event: UserInputEvent): string {
   if (event.type === "augment") return `Augment: ${event.augment.name}`;
+  if (event.type === "augment-offer")
+    return `Augment offer (${event.source}): ${event.augments.join(", ")}`;
+  if (event.type === "augment-picked")
+    return `Augment picked (${event.source}): ${event.name}`;
   return `Query: "${event.text}"`;
 }

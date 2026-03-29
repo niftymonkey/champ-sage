@@ -13,6 +13,9 @@ interface ElectronAPI {
   onLcuEvent(callback: (event: unknown) => void): () => void;
   onLcuDisconnect(callback: (event: unknown) => void): () => void;
   onHotkeyEvent(callback: (event: unknown) => void): () => void;
+  onGepInfoUpdate(callback: (event: unknown) => void): () => void;
+  onGepGameEvent(callback: (event: unknown) => void): () => void;
+  onOverlayStatus(callback: (event: unknown) => void): () => void;
 }
 
 declare global {

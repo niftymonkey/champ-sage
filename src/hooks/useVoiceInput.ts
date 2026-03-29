@@ -188,13 +188,14 @@ export function useVoiceInput(
   stopRef.current = stopAndTranscribe;
 
   useEffect(() => {
-    // Phase 1: renderer-side keydown/keyup for hold-to-talk.
-    // Works when the Electron window has focus. Real hold-to-talk behavior:
-    // hold key = record, release key = stop and transcribe.
-    // Phase 2: overlay.hotkeys will replace this for in-game support.
+    // Two hotkey paths that work together:
+    // 1. Renderer keydown/keyup — works when app window has focus (desktop use)
+    // 2. Overlay hotkey events from main process — works during gameplay (ow-electron)
+    // Both emit the same start/stop actions, so they're additive.
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code !== PUSH_TO_TALK_HOTKEY) return;
-      if (e.repeat) return; // Ignore key-repeat events
+      if (e.repeat) return;
       if (isRecordingRef.current) return;
       debugInput$.next({
         source: "voice",
@@ -216,14 +217,38 @@ export function useVoiceInput(
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
 
+    // Overlay hotkey — fires from ow-electron's overlay.hotkeys API when
+    // the game has focus. Provides real press/release events.
+    let unlistenOverlayHotkey: (() => void) | null = null;
+    const api = window.electronAPI;
+    if (api?.onHotkeyEvent) {
+      unlistenOverlayHotkey = api.onHotkeyEvent((payload) => {
+        const { state } = payload as { state: string };
+        if (state === "Pressed" && !isRecordingRef.current) {
+          debugInput$.next({
+            source: "voice",
+            summary: "Overlay hotkey pressed",
+          });
+          startRef.current();
+        } else if (state === "Released" && isRecordingRef.current) {
+          debugInput$.next({
+            source: "voice",
+            summary: "Overlay hotkey released",
+          });
+          stopRef.current();
+        }
+      });
+    }
+
     debugInput$.next({
       source: "voice",
-      summary: `Push-to-talk listening: ${PUSH_TO_TALK_HOTKEY} (hold to talk, window focus required)`,
+      summary: `Push-to-talk: ${PUSH_TO_TALK_HOTKEY} (keyboard + overlay hotkey)`,
     });
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      unlistenOverlayHotkey?.();
     };
   }, []);
 

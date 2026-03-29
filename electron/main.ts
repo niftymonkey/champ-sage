@@ -1,7 +1,25 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app as electronApp, BrowserWindow, ipcMain } from "electron";
 import { readFileSync, appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import WebSocket from "ws";
+
+// ow-electron types — cast the app to access Overwolf APIs
+let owApp: import("@overwolf/ow-electron").overwolf.OverwolfApp | null = null;
+
+try {
+  const { overwolf } = require("@overwolf/ow-electron");
+  owApp = electronApp as import("@overwolf/ow-electron").overwolf.OverwolfApp;
+} catch {
+  // Running as vanilla Electron — Overwolf features disabled
+  console.log(
+    "[champ-sage] Running as vanilla Electron (no Overwolf features)"
+  );
+}
+
+const app = electronApp;
+
+// League of Legends game IDs
+const LOL_GAME_ID = 5426;
 
 // ---------------------------------------------------------------------------
 // Lockfile discovery
@@ -12,12 +30,10 @@ function resolveLockfilePath(): string {
     return process.env.LCU_LOCKFILE_PATH;
   }
 
-  // Electron runs on the host OS. Detect platform natively.
   if (process.platform === "darwin") {
     return "/Applications/League of Legends.app/Contents/LoL/lockfile";
   }
 
-  // Windows (including when launched from WSL2 — Electron still runs as a Windows process)
   return String.raw`C:\Riot Games\League of Legends\lockfile`;
 }
 
@@ -51,20 +67,30 @@ function lcuBasicAuth(token: string): string {
 // ---------------------------------------------------------------------------
 
 let coachingLogPath: string | null = null;
+let gepLogPath: string | null = null;
 
-function initCoachingLog(): void {
+function initLogs(): void {
   const logsDir = join(app.getPath("userData"), "coaching-logs");
   mkdirSync(logsDir, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   coachingLogPath = join(logsDir, `coaching-${timestamp}.log`);
+  gepLogPath = join(logsDir, `gep-${timestamp}.log`);
   console.log(`[champ-sage] Coaching log: ${coachingLogPath}`);
+  console.log(`[champ-sage] GEP log: ${gepLogPath}`);
 }
 
 function getCoachingLogPath(): string {
   if (!coachingLogPath) {
-    initCoachingLog();
+    initLogs();
   }
   return coachingLogPath!;
+}
+
+function getGepLogPath(): string {
+  if (!gepLogPath) {
+    initLogs();
+  }
+  return gepLogPath!;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,16 +110,9 @@ function cleanupWebSocket(): void {
 }
 
 // ---------------------------------------------------------------------------
-// IPC handlers — these replace the Tauri invoke commands
+// IPC handlers
 // ---------------------------------------------------------------------------
 
-/**
- * Wrap an IPC handler so errors are returned as { __error: message } instead
- * of throwing. Electron logs "Error occurred in handler for '...'" for any
- * rejected IPC handler, which is noisy for expected failures (lockfile not
- * found, game not running, API loading). Returning an error result avoids
- * this entirely — the renderer-side bridge re-throws the error.
- */
 function quietHandler<T extends unknown[]>(
   fn: (...args: T) => Promise<unknown>
 ): (...args: T) => Promise<unknown> {
@@ -107,8 +126,13 @@ function quietHandler<T extends unknown[]>(
   };
 }
 
+function sendToAllWindows(channel: string, data: unknown): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(channel, data);
+  }
+}
+
 function registerIpcHandlers(): void {
-  // discover_lcu → read lockfile, return { port, token }
   ipcMain.handle(
     "discover_lcu",
     quietHandler(async () => {
@@ -118,7 +142,6 @@ function registerIpcHandlers(): void {
     })
   );
 
-  // fetch_lcu → proxy HTTPS request to LCU with Basic auth + TLS skip
   ipcMain.handle(
     "fetch_lcu",
     quietHandler(
@@ -133,31 +156,31 @@ function registerIpcHandlers(): void {
         const agent = new https.Agent({ rejectUnauthorized: false });
 
         return new Promise<string>((resolve, reject) => {
-          const req = https.get(
-            url,
-            { agent, headers: { Authorization: lcuBasicAuth(token) } },
-            (res) => {
-              if (
-                res.statusCode &&
-                (res.statusCode < 200 || res.statusCode >= 300)
-              ) {
-                reject(new Error(`HTTP_${res.statusCode}`));
-                return;
+          https
+            .get(
+              url,
+              { agent, headers: { Authorization: lcuBasicAuth(token) } },
+              (res) => {
+                if (
+                  res.statusCode &&
+                  (res.statusCode < 200 || res.statusCode >= 300)
+                ) {
+                  reject(new Error(`HTTP_${res.statusCode}`));
+                  return;
+                }
+                let data = "";
+                res.on("data", (chunk: string) => (data += chunk));
+                res.on("end", () => resolve(data));
               }
-              let data = "";
-              res.on("data", (chunk) => (data += chunk));
-              res.on("end", () => resolve(data));
-            }
-          );
-          req.on("error", (err) =>
-            reject(new Error(`CONNECTION_FAILED:${err.message}`))
-          );
+            )
+            .on("error", (err: Error) =>
+              reject(new Error(`CONNECTION_FAILED:${err.message}`))
+            );
         });
       }
     )
   );
 
-  // fetch_riot_api → proxy HTTPS request to Live Client Data API (self-signed cert)
   ipcMain.handle(
     "fetch_riot_api",
     quietHandler(async (_event: unknown, endpoint: string) => {
@@ -180,17 +203,16 @@ function registerIpcHandlers(): void {
               return;
             }
             let data = "";
-            res.on("data", (chunk) => (data += chunk));
+            res.on("data", (chunk: string) => (data += chunk));
             res.on("end", () => resolve(data));
           })
-          .on("error", (err) =>
+          .on("error", (err: Error) =>
             reject(new Error(`CONNECTION_FAILED:${err.message}`))
           );
       });
     })
   );
 
-  // connect_lcu_websocket → open WAMP WebSocket, forward events to renderer
   ipcMain.handle(
     "connect_lcu_websocket",
     quietHandler(async (_event: unknown, port: number, token: string) => {
@@ -204,7 +226,6 @@ function registerIpcHandlers(): void {
 
       return new Promise<void>((resolve, reject) => {
         ws.on("open", () => {
-          // Subscribe to all LCU events (WAMP 1.0 subscribe = opcode 5)
           ws.send(JSON.stringify([5, "OnJsonApiEvent"]));
           resolve();
         });
@@ -219,39 +240,30 @@ function registerIpcHandlers(): void {
               eventType: string;
               data: unknown;
             };
-            const event = {
+            sendToAllWindows("lcu-event", {
               uri: payload.uri ?? "",
               event_type: payload.eventType ?? "",
               data: payload.data ?? null,
-            };
-
-            // Forward to all renderer windows
-            for (const win of BrowserWindow.getAllWindows()) {
-              win.webContents.send("lcu-event", event);
-            }
+            });
           } catch {
-            // Non-JSON message, ignore
+            // Non-JSON message
           }
         });
 
         ws.on("close", () => {
-          for (const win of BrowserWindow.getAllWindows()) {
-            win.webContents.send("lcu-disconnect", {
-              reason: "Server closed connection",
-            });
-          }
+          sendToAllWindows("lcu-disconnect", {
+            reason: "Server closed connection",
+          });
           activeWs = null;
         });
 
-        ws.on("error", (err) => {
+        ws.on("error", (err: Error) => {
           if (ws.readyState === WebSocket.CONNECTING) {
             reject(new Error(`WebSocket connection failed: ${err.message}`));
           } else {
-            for (const win of BrowserWindow.getAllWindows()) {
-              win.webContents.send("lcu-disconnect", {
-                reason: `WebSocket error: ${err.message}`,
-              });
-            }
+            sendToAllWindows("lcu-disconnect", {
+              reason: `WebSocket error: ${err.message}`,
+            });
           }
           activeWs = null;
         });
@@ -259,21 +271,39 @@ function registerIpcHandlers(): void {
     })
   );
 
-  // append_coaching_log → write to log file
   ipcMain.handle("append_coaching_log", async (_event, text: string) => {
     const path = getCoachingLogPath();
     appendFileSync(path, text + "\n");
   });
 
-  // get_coaching_log_location → return log file path
   ipcMain.handle("get_coaching_log_location", async () => {
     return getCoachingLogPath();
+  });
+
+  // GEP event logging — separate log file for raw GEP data
+  ipcMain.handle("append_gep_log", async (_event, text: string) => {
+    const path = getGepLogPath();
+    appendFileSync(path, text + "\n");
+  });
+
+  ipcMain.handle("get_gep_log_location", async () => {
+    return getGepLogPath();
   });
 }
 
 // ---------------------------------------------------------------------------
 // Window creation
 // ---------------------------------------------------------------------------
+
+let mainWindow: BrowserWindow | null = null;
+
+function loadRendererContent(win: BrowserWindow): void {
+  if (process.env.VITE_DEV_SERVER_URL) {
+    win.loadURL(process.env.VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(join(__dirname, "../dist/index.html"));
+  }
+}
 
 function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -287,28 +317,205 @@ function createMainWindow(): BrowserWindow {
     },
   });
 
-  // Dev mode: load Vite dev server. Prod: load built files.
-  if (process.env.VITE_DEV_SERVER_URL) {
-    win.loadURL(process.env.VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(join(__dirname, "../dist/index.html"));
-  }
+  loadRendererContent(win);
+  mainWindow = win;
+  win.on("closed", () => {
+    mainWindow = null;
+  });
 
   return win;
 }
 
 // ---------------------------------------------------------------------------
-// App lifecycle
+// Overwolf: Overlay + GEP + Hotkeys
+//
+// These only initialize when running under ow-electron (owApp !== null).
+// Vanilla Electron skips all of this — the app works with voice input
+// and the separate desktop window only.
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Hotkey handling
-//
-// Phase 1: keydown/keyup events handled in the renderer via preload bridge.
-// This gives real hold-to-talk (hold = record, release = stop) but only
-// works when the Electron window has focus.
-// Phase 2: overlay.hotkeys replaces this with in-game hotkey support.
-// ---------------------------------------------------------------------------
+function initOverwolfFeatures(): void {
+  if (!owApp) return;
+
+  const packages = owApp.overwolf.packages;
+
+  // Wait for each package to be ready
+  packages.on("ready", (e, packageName: string, version: string) => {
+    console.log(
+      `[champ-sage] Overwolf package ready: ${packageName} v${version}`
+    );
+
+    if (packageName === "overlay") {
+      initOverlay();
+    }
+    if (packageName === "gep") {
+      initGep();
+    }
+  });
+}
+
+// --- Overlay ---
+
+function initOverlay(): void {
+  if (!owApp) return;
+
+  const overlayApi = (owApp.overwolf.packages as any).overlay;
+  if (!overlayApi) {
+    console.warn("[champ-sage] Overlay API not available");
+    return;
+  }
+
+  // Register League of Legends for overlay injection
+  overlayApi.registerGames({ gamesIds: [LOL_GAME_ID] });
+  console.log("[champ-sage] Overlay registered for League of Legends");
+
+  // When League launches, inject the overlay
+  overlayApi.on("game-launched", (event: any, gameInfo: any) => {
+    console.log(
+      `[champ-sage] Game launched: ${gameInfo.name} (id: ${gameInfo.id})`
+    );
+
+    if (gameInfo.processInfo?.isElevated) {
+      console.warn("[champ-sage] Game is elevated — cannot inject overlay");
+      event.dismiss();
+      return;
+    }
+
+    event.inject();
+    console.log("[champ-sage] Overlay injected");
+  });
+
+  overlayApi.on("game-injected", (gameInfo: any) => {
+    console.log(`[champ-sage] Overlay active in ${gameInfo.name}`);
+    sendToAllWindows("overlay-status", { active: true, game: gameInfo.name });
+
+    // Register push-to-talk hotkey now that overlay is active
+    registerOverlayHotkey(overlayApi);
+  });
+
+  overlayApi.on("game-exit", (gameInfo: any, wasInjected: boolean) => {
+    console.log(
+      `[champ-sage] Game exited: ${gameInfo.name} (was injected: ${wasInjected})`
+    );
+    sendToAllWindows("overlay-status", { active: false, game: gameInfo.name });
+  });
+
+  overlayApi.on("game-injection-error", (gameInfo: any, error: string) => {
+    console.error(`[champ-sage] Overlay injection error: ${error}`);
+  });
+}
+
+function registerOverlayHotkey(overlayApi: any): void {
+  // NumpadSubtract (keyCode 109) — hold-to-talk
+  // passthrough: true so the key also reaches the game (numpad minus isn't
+  // used by League, so this is safe)
+  overlayApi.hotkeys.register(
+    {
+      name: "push-to-talk",
+      keyCode: 109, // VK_SUBTRACT (numpad minus)
+      passthrough: true,
+    },
+    (hotkey: any, state: "pressed" | "released") => {
+      sendToAllWindows("hotkey-event", {
+        state: state === "pressed" ? "Pressed" : "Released",
+      });
+    }
+  );
+
+  console.log(
+    "[champ-sage] Overlay hotkey registered: NumpadSubtract (hold-to-talk)"
+  );
+}
+
+// --- GEP (Game Events Provider) ---
+
+function initGep(): void {
+  if (!owApp) return;
+
+  const gepApi = owApp.overwolf.packages.gep;
+  if (!gepApi) {
+    console.warn("[champ-sage] GEP API not available");
+    return;
+  }
+
+  // When League is detected, enable GEP and subscribe to augment features
+  gepApi.on(
+    "game-detected",
+    (e: any, gameId: number, name: string, gameInfo: any) => {
+      if (gameId !== LOL_GAME_ID) return;
+
+      console.log(`[champ-sage] GEP: League detected (pid: ${gameInfo.pid})`);
+      e.enable();
+
+      // Subscribe to augment features (and live_client_data for completeness)
+      gepApi
+        .setRequiredFeatures(gameId, [
+          "augments",
+          "live_client_data",
+          "match_info",
+        ])
+        .then(() => {
+          console.log(
+            "[champ-sage] GEP: Required features set (augments, live_client_data, match_info)"
+          );
+        })
+        .catch((err: Error) => {
+          console.error(
+            "[champ-sage] GEP: Failed to set required features:",
+            err.message
+          );
+          // Retry after a delay — GEP docs say this can fail initially
+          setTimeout(() => {
+            gepApi
+              .setRequiredFeatures(gameId, [
+                "augments",
+                "live_client_data",
+                "match_info",
+              ])
+              .then(() =>
+                console.log("[champ-sage] GEP: Features set on retry")
+              )
+              .catch((err2: Error) =>
+                console.error(
+                  "[champ-sage] GEP: Retry also failed:",
+                  err2.message
+                )
+              );
+          }, 3000);
+        });
+    }
+  );
+
+  // Forward augment info updates to the renderer
+  gepApi.on("new-info-update", (e: any, gameId: number, ...args: any[]) => {
+    if (gameId !== LOL_GAME_ID) return;
+
+    const update = args[0];
+    if (!update) return;
+
+    // Forward all GEP info updates — the renderer filters for augments
+    sendToAllWindows("gep-info-update", update);
+  });
+
+  // Forward game events to the renderer
+  gepApi.on("new-game-event", (e: any, gameId: number, ...args: any[]) => {
+    if (gameId !== LOL_GAME_ID) return;
+    sendToAllWindows("gep-game-event", args[0]);
+  });
+
+  // @ts-ignore — game-exit is undocumented but works
+  gepApi.on("game-exit", (e: any, gameId: number) => {
+    if (gameId !== LOL_GAME_ID) return;
+    console.log("[champ-sage] GEP: League exited");
+  });
+
+  gepApi.on("error", (e: any, gameId: number, error: any) => {
+    if (gameId !== LOL_GAME_ID) return;
+    console.error("[champ-sage] GEP error:", error);
+  });
+
+  console.log("[champ-sage] GEP initialized, waiting for League to launch...");
+}
 
 // ---------------------------------------------------------------------------
 // App lifecycle
@@ -316,8 +523,9 @@ function createMainWindow(): BrowserWindow {
 
 app.whenReady().then(() => {
   registerIpcHandlers();
-  initCoachingLog();
+  initLogs();
   createMainWindow();
+  initOverwolfFeatures();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

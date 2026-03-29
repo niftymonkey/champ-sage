@@ -16,4 +16,4 @@ while ! curl -s http://localhost:1420 > /dev/null 2>&1; do
 done
 echo "[launch-electron] Vite is ready. Launching Electron..."
 
-powershell.exe -ExecutionPolicy Bypass -Command "\$env:VITE_DEV_SERVER_URL='http://localhost:1420'; electron '${PROJECT_WIN}'"
+powershell.exe -ExecutionPolicy Bypass -Command "\$env:VITE_DEV_SERVER_URL='http://localhost:1420'; ow-electron '${PROJECT_WIN}'"
