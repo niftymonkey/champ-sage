@@ -104,12 +104,16 @@ function getGepLogPath(): string {
 let activeWs: WebSocket | null = null;
 
 function cleanupWebSocket(): void {
-  if (activeWs) {
-    activeWs.removeAllListeners();
-    if (activeWs.readyState === WebSocket.OPEN) {
-      activeWs.close();
-    }
-    activeWs = null;
+  if (!activeWs) return;
+
+  const ws = activeWs;
+  activeWs = null;
+  ws.removeAllListeners();
+
+  if (ws.readyState === WebSocket.CONNECTING) {
+    ws.terminate();
+  } else if (ws.readyState === WebSocket.OPEN) {
+    ws.close();
   }
 }
 

@@ -8,7 +8,9 @@ import {
 describe("augment coaching controller", () => {
   let offer$: Subject<string[]>;
   let picked$: Subject<string>;
-  let submitQuery: ReturnType<typeof vi.fn<(names: string[]) => Promise<void>>>;
+  let submitQuery: ReturnType<
+    typeof vi.fn<(names: string[], signal: AbortSignal) => Promise<void>>
+  >;
   let onPicked: ReturnType<typeof vi.fn<(name: string) => void>>;
 
   beforeEach(() => {
@@ -16,7 +18,7 @@ describe("augment coaching controller", () => {
     offer$ = new Subject();
     picked$ = new Subject();
     submitQuery = vi
-      .fn<(names: string[]) => Promise<void>>()
+      .fn<(names: string[], signal: AbortSignal) => Promise<void>>()
       .mockResolvedValue(undefined);
     onPicked = vi.fn<(name: string) => void>();
   });
@@ -42,11 +44,10 @@ describe("augment coaching controller", () => {
     vi.advanceTimersByTime(DEBOUNCE_MS);
 
     expect(submitQuery).toHaveBeenCalledOnce();
-    expect(submitQuery).toHaveBeenCalledWith([
-      "Cerberus",
-      "Protein Shake",
-      "Empyrean Promise",
-    ]);
+    expect(submitQuery).toHaveBeenCalledWith(
+      ["Cerberus", "Protein Shake", "Empyrean Promise"],
+      expect.any(AbortSignal)
+    );
 
     ctrl.dispose();
   });
@@ -66,11 +67,10 @@ describe("augment coaching controller", () => {
     vi.advanceTimersByTime(500); // 2s since re-roll — fires now
 
     expect(submitQuery).toHaveBeenCalledOnce();
-    expect(submitQuery).toHaveBeenCalledWith([
-      "Circle of Death",
-      "Protein Shake",
-      "Empyrean Promise",
-    ]);
+    expect(submitQuery).toHaveBeenCalledWith(
+      ["Circle of Death", "Protein Shake", "Empyrean Promise"],
+      expect.any(AbortSignal)
+    );
 
     ctrl.dispose();
   });
@@ -95,8 +95,9 @@ describe("augment coaching controller", () => {
 
   // Scenario 2: Pick while LLM is in flight aborts the request
   it("aborts in-flight LLM request when player picks an augment", () => {
-    // submitQuery that never resolves (simulates in-flight request)
-    submitQuery.mockImplementation(async () => {
+    let capturedSignal: AbortSignal | undefined;
+    submitQuery.mockImplementation(async (_names, signal) => {
+      capturedSignal = signal;
       await new Promise(() => {}); // never resolves
     });
 
@@ -106,10 +107,12 @@ describe("augment coaching controller", () => {
     vi.advanceTimersByTime(DEBOUNCE_MS); // query submitted
 
     expect(submitQuery).toHaveBeenCalledOnce();
+    expect(capturedSignal?.aborted).toBe(false);
 
     // Player picks while LLM is still thinking
     picked$.next("Cerberus");
 
+    expect(capturedSignal?.aborted).toBe(true);
     expect(onPicked).toHaveBeenCalledWith("Cerberus");
 
     ctrl.dispose();
@@ -117,7 +120,9 @@ describe("augment coaching controller", () => {
 
   // Scenario 3: Re-roll while LLM is in flight cancels and restarts
   it("aborts in-flight request and restarts debounce on re-roll", () => {
-    submitQuery.mockImplementation(async () => {
+    let firstSignal: AbortSignal | undefined;
+    submitQuery.mockImplementation(async (_names, signal) => {
+      if (!firstSignal) firstSignal = signal;
       await new Promise(() => {}); // never resolves
     });
 
@@ -127,19 +132,21 @@ describe("augment coaching controller", () => {
     vi.advanceTimersByTime(DEBOUNCE_MS); // first query submitted
 
     expect(submitQuery).toHaveBeenCalledOnce();
+    expect(firstSignal?.aborted).toBe(false);
 
     // Re-roll changes options while first query is in flight
     offer$.next(["Cerberus", "Witchful Thinking", "Empyrean Promise"]);
+
+    expect(firstSignal?.aborted).toBe(true);
 
     // First query should be aborted, new debounce started
     vi.advanceTimersByTime(DEBOUNCE_MS);
 
     expect(submitQuery).toHaveBeenCalledTimes(2);
-    expect(submitQuery).toHaveBeenLastCalledWith([
-      "Cerberus",
-      "Witchful Thinking",
-      "Empyrean Promise",
-    ]);
+    expect(submitQuery).toHaveBeenLastCalledWith(
+      ["Cerberus", "Witchful Thinking", "Empyrean Promise"],
+      expect.any(AbortSignal)
+    );
 
     ctrl.dispose();
   });

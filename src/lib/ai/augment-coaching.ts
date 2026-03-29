@@ -25,8 +25,10 @@
 import { Subject, Subscription } from "rxjs";
 
 export interface AugmentCoachingCallbacks {
-  /** Called after the debounce with the augment names to query about. */
-  submitQuery: (augmentNames: string[]) => Promise<void>;
+  /** Called after the debounce with the augment names and an abort signal.
+   *  The signal should be threaded through to the LLM request so that
+   *  cancellation actually stops the in-flight HTTP call. */
+  submitQuery: (augmentNames: string[], signal: AbortSignal) => Promise<void>;
   /** Called when an augment is picked (update tracked build). */
   onPicked: (name: string) => void;
 }
@@ -71,7 +73,7 @@ export function createAugmentCoachingController(
         debounceTimer = null;
         abortController = new AbortController();
 
-        callbacks.submitQuery(names).catch(() => {
+        callbacks.submitQuery(names, abortController.signal).catch(() => {
           // Aborted or failed — either way, nothing to do
         });
       }, DEBOUNCE_MS);

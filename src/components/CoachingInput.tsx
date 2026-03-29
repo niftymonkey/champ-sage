@@ -66,7 +66,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     import.meta.env.VITE_OPENAI_API_KEY;
 
   const submitQuestion = useCallback(
-    async (question: string) => {
+    async (question: string, options?: { signal?: AbortSignal }) => {
       if (!contextRef.current || !apiKey || !question.trim()) {
         const reason = !contextRef.current
           ? "no context"
@@ -153,7 +153,8 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
             history: exchangesRef.current,
             augmentOptions,
           },
-          apiKey
+          apiKey,
+          { signal: options?.signal }
         );
         setLatestExchange({ question, response });
         setExchanges((prev) => [
@@ -191,13 +192,13 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
       augmentOffer$,
       augmentPicked$,
       {
-        submitQuery: async (names) => {
+        submitQuery: async (names, signal) => {
           const question = `I'm being offered these augments: ${names.join(", ")}. Which should I pick and which should I re-roll?`;
           debugInput$.next({
             source: "gep",
             summary: `Auto-querying coaching for augment offer: ${names.join(", ")}`,
           });
-          await submitQuestion(question);
+          await submitQuestion(question, { signal });
         },
         onPicked: (name) => {
           const augmentData = gameDataRef.current.augments.get(
