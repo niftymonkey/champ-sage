@@ -1,5 +1,4 @@
 import { generateText, Output } from "ai";
-import { invoke } from "@tauri-apps/api/core";
 import type { CoachingContext, CoachingQuery, CoachingResponse } from "./types";
 import { createCoachingModel, MODEL_CONFIG } from "./model-config";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
@@ -7,9 +6,10 @@ import { coachingResponseSchema } from "./schemas";
 
 function logToFile(text: string): void {
   const timestamp = new Date().toISOString();
-  invoke("append_coaching_log", { text: `[${timestamp}] ${text}` }).catch(
-    () => {}
-  );
+  const line = `[${timestamp}] ${text}`;
+  if (window.electronAPI) {
+    window.electronAPI.invoke("append_coaching_log", line).catch(() => {});
+  }
 }
 
 export async function getCoachingResponse(

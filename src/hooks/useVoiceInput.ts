@@ -1,37 +1,34 @@
 /**
  * Voice input hook — orchestrates the push-to-talk pipeline.
  *
- * Wires together: global hotkey registration, Rust audio capture (via Tauri
- * commands), vocabulary hint assembly, and STT transcription. The resulting
- * transcript is pushed into the coaching pipeline as a query event.
+ * Wires together: global hotkey registration, audio capture (via Electron
+ * IPC to main process), vocabulary hint assembly, and STT transcription.
+ * The resulting transcript is pushed into the coaching pipeline as a query event.
  *
  * Flow:
- * 1. On mount, registers a global hotkey for push-to-talk
- * 2. Keydown → calls Rust `start_recording` command
- * 3. Keyup → calls Rust `stop_recording` to get WAV bytes
+ * 1. On mount, listens for hotkey-event from Electron main process
+ * 2. Keydown → calls main process `start_recording` command
+ * 3. Keyup → calls main process `stop_recording` to get WAV bytes
  * 4. Assembles vocab hints from current game state (match champions + static hard words)
  * 5. Sends audio + hints to STT provider (Whisper API)
  * 6. Pushes transcript into playerIntent$ as { type: "query", text }
  * 7. Emits debug events at each stage for the debug panel
- *
- * Audio capture happens in Rust (via cpal) rather than the webview because:
- * - It works regardless of window focus (game can be fullscreen)
- * - No webview permission issues (macOS/Linux getUserMedia bugs)
- * - Global hotkey fires from Rust, keeping the pipeline in one process
- *
- * See docs/research/voice-input-research.md for the full architecture rationale.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import type { SttProvider, SttResult } from "../lib/voice/stt-provider";
 import { buildVocabHints } from "../lib/voice/vocab-hints";
 import { playerIntent$, debugInput$, liveGameState$ } from "../lib/reactive";
+import {
+  startRecording as startAudioCapture,
+  stopRecording as stopAudioCapture,
+} from "../lib/audio/recorder";
 
 /** Default hotkey for push-to-talk.
  *
  * Numpad minus: easy to reach with the right hand, not used by League.
- * Note: This only works on native Windows — WSL2 global hotkeys don't fire.
+ * In ow-electron Phase 2, this will move to overlay.hotkeys which works
+ * during gameplay. For now, the main process handles it.
  */
 const PUSH_TO_TALK_HOTKEY = "NumpadSubtract";
 
@@ -63,8 +60,8 @@ export function useVoiceInput(
   providerRef.current = provider;
 
   // Track recording state in a ref so the hotkey callback always sees current value.
-  // React state updates are async, but the hotkey handler fires synchronously
-  // from the Tauri plugin — without a ref we'd get stale closure values.
+  // React state updates are async, but the hotkey handler fires synchronously —
+  // without a ref we'd get stale closure values.
   const isRecordingRef = useRef(false);
 
   const stopAndTranscribe = useCallback(async () => {
@@ -77,8 +74,8 @@ export function useVoiceInput(
         summary: "Recording stopped, transcribing...",
       });
 
-      // Get WAV bytes from Rust
-      const wavBytes: number[] = await invoke("stop_recording");
+      // Get WAV bytes from renderer-side audio capture
+      const wavBytes = await stopAudioCapture();
       const blob = new Blob([new Uint8Array(wavBytes)], { type: "audio/wav" });
 
       // Parse the WAV header to get the actual sample rate and channel count.
@@ -160,7 +157,7 @@ export function useVoiceInput(
       if (isRecordingRef.current) {
         isRecordingRef.current = false;
         try {
-          await invoke("stop_recording");
+          await stopAudioCapture();
         } catch {
           // Ignore — just cleaning up stale state
         }
@@ -172,7 +169,7 @@ export function useVoiceInput(
         source: "voice",
         summary: "Recording started (hotkey held)",
       });
-      await invoke("start_recording");
+      await startAudioCapture();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       isRecordingRef.current = false;
@@ -191,86 +188,38 @@ export function useVoiceInput(
   stopRef.current = stopAndTranscribe;
 
   useEffect(() => {
-    let cancelled = false;
-    let unlistenLowLevel: (() => void) | null = null;
-
-    async function registerHotkey() {
-      try {
-        // Primary: low-level keyboard hook via Tauri events.
-        // On Windows, the Rust backend installs a WH_KEYBOARD_LL hook that
-        // works even when DirectInput games have focus. It emits "hotkey-event"
-        // Tauri events for the configured key.
-        const { listen } = await import("@tauri-apps/api/event");
-
-        if (cancelled) return;
-
-        unlistenLowLevel = await listen<{ state: string }>(
-          "hotkey-event",
-          (event) => {
-            const state = event.payload.state;
-            debugInput$.next({
-              source: "voice",
-              summary: `Hotkey event: ${state} (isRecording=${isRecordingRef.current})`,
-            });
-            if (state === "Pressed" && !isRecordingRef.current) {
-              startRef.current();
-            } else if (state === "Released" && isRecordingRef.current) {
-              stopRef.current();
-            }
-          }
-        );
-
-        debugInput$.next({
-          source: "voice",
-          summary: `Push-to-talk listening via low-level hook: ${PUSH_TO_TALK_HOTKEY}`,
-        });
-      } catch (err) {
-        // Fallback: Tauri global-shortcut plugin (works on non-Windows,
-        // and when games aren't capturing input)
-        try {
-          const { register, unregister, isRegistered } =
-            await import("@tauri-apps/plugin-global-shortcut");
-
-          if (await isRegistered(PUSH_TO_TALK_HOTKEY)) {
-            await unregister(PUSH_TO_TALK_HOTKEY);
-          }
-
-          if (cancelled) return;
-
-          await register(PUSH_TO_TALK_HOTKEY, (event) => {
-            debugInput$.next({
-              source: "voice",
-              summary: `Hotkey event (fallback): ${event.state} (isRecording=${isRecordingRef.current})`,
-            });
-            if (event.state === "Pressed" && !isRecordingRef.current) {
-              startRef.current();
-            } else if (event.state === "Released" && isRecordingRef.current) {
-              stopRef.current();
-            }
-          });
-
-          debugInput$.next({
-            source: "voice",
-            summary: `Push-to-talk registered (fallback): ${PUSH_TO_TALK_HOTKEY}`,
-          });
-        } catch (fallbackErr) {
-          console.warn("Global shortcut registration failed:", fallbackErr);
-          debugInput$.next({
-            source: "voice",
-            summary: `Hotkey registration failed: ${err instanceof Error ? err.message : String(err)}`,
-          });
-        }
-      }
+    const api = window.electronAPI;
+    if (!api) {
+      debugInput$.next({
+        source: "voice",
+        summary: "Electron API not available — hotkey registration skipped",
+      });
+      return;
     }
 
-    registerHotkey();
+    // Listen for hotkey events from the Electron main process.
+    // Phase 1: globalShortcut in main process (doesn't work during fullscreen game).
+    // Phase 2: overlay.hotkeys (works during gameplay).
+    const unlisten = api.onHotkeyEvent((payload) => {
+      const { state } = payload as { state: string };
+      debugInput$.next({
+        source: "voice",
+        summary: `Hotkey event: ${state} (isRecording=${isRecordingRef.current})`,
+      });
+      if (state === "Pressed" && !isRecordingRef.current) {
+        startRef.current();
+      } else if (state === "Released" && isRecordingRef.current) {
+        stopRef.current();
+      }
+    });
+
+    debugInput$.next({
+      source: "voice",
+      summary: `Push-to-talk listening: ${PUSH_TO_TALK_HOTKEY}`,
+    });
 
     return () => {
-      cancelled = true;
-      unlistenLowLevel?.();
-      import("@tauri-apps/plugin-global-shortcut")
-        .then(({ unregister }) => unregister(PUSH_TO_TALK_HOTKEY))
-        .catch(() => {});
+      unlisten();
     };
   }, []);
 

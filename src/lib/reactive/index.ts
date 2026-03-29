@@ -24,15 +24,17 @@ export {
 export type { DebugInputEvent } from "./streams";
 
 export { ReactiveEngine } from "./engine";
-export type { TauriBridge } from "./tauri-bridge";
-export { createRealTauriBridge } from "./tauri-bridge";
+export type { PlatformBridge } from "./platform-bridge";
+export { createElectronBridge, isElectron } from "./electron-bridge";
 
 import { ReactiveEngine } from "./engine";
-import type { TauriBridge } from "./tauri-bridge";
-import { createRealTauriBridge } from "./tauri-bridge";
+import type { PlatformBridge } from "./platform-bridge";
+import { createElectronBridge } from "./electron-bridge";
 
-export function initializeReactiveEngine(bridge?: TauriBridge): ReactiveEngine {
-  const b = bridge ?? createRealTauriBridge();
+export function initializeReactiveEngine(
+  bridge?: PlatformBridge
+): ReactiveEngine {
+  const b = bridge ?? createElectronBridge();
   const engine = new ReactiveEngine(b);
   engine.start();
   return engine;

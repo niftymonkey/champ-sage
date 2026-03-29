@@ -18,10 +18,10 @@ import {
   playerIntent$,
 } from "./streams";
 import type {
-  TauriBridge,
+  PlatformBridge,
   LcuEventPayload,
   LcuDisconnectPayload,
-} from "./tauri-bridge";
+} from "./platform-bridge";
 import type {
   GameLifecycleEvent,
   AppNotification,
@@ -32,7 +32,7 @@ import type {
 // Mock bridge factory
 // ---------------------------------------------------------------------------
 
-interface MockBridge extends TauriBridge {
+interface MockBridge extends PlatformBridge {
   simulateLcuEvent(event: LcuEventPayload): void;
   simulateDisconnect(reason: string): void;
   setLcuAvailable(port: number, token: string): void;

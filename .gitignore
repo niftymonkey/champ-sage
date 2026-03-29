@@ -3,9 +3,10 @@ node_modules/
 
 # Build output
 dist/
+dist-electron/
 out/
 
-# Tauri build output
+# Tauri build output (legacy, will be removed)
 src-tauri/target/
 
 # TypeScript

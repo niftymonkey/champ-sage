@@ -26,7 +26,7 @@ import {
   debugInput$,
 } from "./streams";
 import { normalizeGameState } from "../game-state/normalize";
-import type { TauriBridge, LcuEventPayload } from "./tauri-bridge";
+import type { PlatformBridge, LcuEventPayload } from "./platform-bridge";
 import type { GameflowPhase, LiveGameState, EogStats } from "./types";
 import { formatGameTime } from "../format";
 import {
@@ -101,7 +101,7 @@ function parseEogStats(raw: Record<string, unknown>): EogStats {
 export class ReactiveEngine {
   private subscription = new Subscription();
   private wsEvents$ = new Subject<LcuEventPayload>();
-  private bridge: TauriBridge;
+  private bridge: PlatformBridge;
 
   // Track current LCU credentials for fetch_lcu calls (EOG stats)
   private currentPort = 0;
@@ -119,7 +119,7 @@ export class ReactiveEngine {
   private backoffMs = POLL_INTERVAL_MS;
   private notified = false;
 
-  constructor(bridge: TauriBridge) {
+  constructor(bridge: PlatformBridge) {
     this.bridge = bridge;
   }
 
