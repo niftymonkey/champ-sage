@@ -40,3 +40,4 @@ data-dump/
 
 # "Current status" files
 **/STATUS.md
+*.pdf

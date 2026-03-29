@@ -188,38 +188,42 @@ export function useVoiceInput(
   stopRef.current = stopAndTranscribe;
 
   useEffect(() => {
-    const api = window.electronAPI;
-    if (!api) {
+    // Phase 1: renderer-side keydown/keyup for hold-to-talk.
+    // Works when the Electron window has focus. Real hold-to-talk behavior:
+    // hold key = record, release key = stop and transcribe.
+    // Phase 2: overlay.hotkeys will replace this for in-game support.
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== PUSH_TO_TALK_HOTKEY) return;
+      if (e.repeat) return; // Ignore key-repeat events
+      if (isRecordingRef.current) return;
       debugInput$.next({
         source: "voice",
-        summary: "Electron API not available — hotkey registration skipped",
+        summary: `Hotkey pressed: ${PUSH_TO_TALK_HOTKEY}`,
       });
-      return;
-    }
+      startRef.current();
+    };
 
-    // Listen for hotkey events from the Electron main process.
-    // Phase 1: globalShortcut in main process (doesn't work during fullscreen game).
-    // Phase 2: overlay.hotkeys (works during gameplay).
-    const unlisten = api.onHotkeyEvent((payload) => {
-      const { state } = payload as { state: string };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== PUSH_TO_TALK_HOTKEY) return;
+      if (!isRecordingRef.current) return;
       debugInput$.next({
         source: "voice",
-        summary: `Hotkey event: ${state} (isRecording=${isRecordingRef.current})`,
+        summary: `Hotkey released: ${PUSH_TO_TALK_HOTKEY}`,
       });
-      if (state === "Pressed" && !isRecordingRef.current) {
-        startRef.current();
-      } else if (state === "Released" && isRecordingRef.current) {
-        stopRef.current();
-      }
-    });
+      stopRef.current();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     debugInput$.next({
       source: "voice",
-      summary: `Push-to-talk listening: ${PUSH_TO_TALK_HOTKEY}`,
+      summary: `Push-to-talk listening: ${PUSH_TO_TALK_HOTKEY} (hold to talk, window focus required)`,
     });
 
     return () => {
-      unlisten();
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, []);
 

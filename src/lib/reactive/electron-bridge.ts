@@ -26,6 +26,21 @@ function getElectronAPI(): ElectronAPI | null {
 }
 
 /**
+ * Unwrap IPC results — the main process returns { __error: msg } instead of
+ * throwing to avoid Electron's noisy "Error occurred in handler" logging.
+ */
+function unwrap<T>(result: unknown): T {
+  if (
+    result &&
+    typeof result === "object" &&
+    "__error" in (result as Record<string, unknown>)
+  ) {
+    throw new Error((result as { __error: string }).__error);
+  }
+  return result as T;
+}
+
+/**
  * Electron implementation of PlatformBridge.
  *
  * Backed by Electron IPC (preload contextBridge). The reactive engine
@@ -54,23 +69,26 @@ export function createElectronBridge(): PlatformBridge {
   }
 
   return {
-    discoverLcu() {
-      return api.invoke("discover_lcu") as Promise<{
-        port: number;
-        token: string;
-      }>;
+    async discoverLcu() {
+      return unwrap<{ port: number; token: string }>(
+        await api.invoke("discover_lcu")
+      );
     },
 
-    fetchLcu(port: number, token: string, endpoint: string) {
-      return api.invoke("fetch_lcu", port, token, endpoint) as Promise<string>;
+    async fetchLcu(port: number, token: string, endpoint: string) {
+      return unwrap<string>(
+        await api.invoke("fetch_lcu", port, token, endpoint)
+      );
     },
 
-    fetchRiotApi(endpoint: string) {
-      return api.invoke("fetch_riot_api", endpoint) as Promise<string>;
+    async fetchRiotApi(endpoint: string) {
+      return unwrap<string>(await api.invoke("fetch_riot_api", endpoint));
     },
 
-    connectLcuWebSocket(port: number, token: string) {
-      return api.invoke("connect_lcu_websocket", port, token) as Promise<void>;
+    async connectLcuWebSocket(port: number, token: string) {
+      return unwrap<void>(
+        await api.invoke("connect_lcu_websocket", port, token)
+      );
     },
 
     async listenLcuEvent(handler: (event: LcuEventPayload) => void) {
