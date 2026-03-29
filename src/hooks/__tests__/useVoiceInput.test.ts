@@ -4,13 +4,32 @@ import { useVoiceInput } from "../useVoiceInput";
 import type { SttProvider, SttResult } from "../../lib/voice/stt-provider";
 import { playerIntent$, debugInput$ } from "../../lib/reactive";
 
-// Mock Tauri invoke
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
+// Mock the renderer-side audio recorder
+vi.mock("../../lib/audio/recorder", () => ({
+  startRecording: vi.fn().mockResolvedValue(undefined),
+  stopRecording: vi.fn(),
+  isRecording: vi.fn(() => false),
 }));
 
-import { invoke } from "@tauri-apps/api/core";
-const mockInvoke = vi.mocked(invoke);
+import {
+  startRecording as mockStartRecording,
+  stopRecording as mockStopRecording,
+} from "../../lib/audio/recorder";
+
+// Mock window.electronAPI for hotkey events
+const mockOnHotkeyEvent = vi.fn(() => () => {});
+
+beforeEach(() => {
+  window.electronAPI = {
+    invoke: vi.fn(),
+    onLcuEvent: vi.fn(() => () => {}),
+    onLcuDisconnect: vi.fn(() => () => {}),
+    onHotkeyEvent: mockOnHotkeyEvent,
+    onGepInfoUpdate: vi.fn(() => () => {}),
+    onGepGameEvent: vi.fn(() => () => {}),
+    onOverlayStatus: vi.fn(() => () => {}),
+  };
+});
 
 function createMockProvider(
   result: SttResult = { transcript: "test transcript", latencyMs: 150 }
@@ -27,11 +46,17 @@ const fakeWavBytes = new Array(32000).fill(0); // ~1 second at 16kHz 16-bit mono
 describe("useVoiceInput", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockInvoke.mockImplementation(async (cmd: string) => {
-      if (cmd === "start_recording") return undefined;
-      if (cmd === "stop_recording") return fakeWavBytes;
-      throw new Error(`Unknown command: ${cmd}`);
-    });
+    vi.mocked(mockStopRecording).mockResolvedValue(fakeWavBytes);
+    // Re-assign after clearAllMocks
+    window.electronAPI = {
+      invoke: vi.fn(),
+      onLcuEvent: vi.fn(() => () => {}),
+      onLcuDisconnect: vi.fn(() => () => {}),
+      onHotkeyEvent: mockOnHotkeyEvent,
+      onGepInfoUpdate: vi.fn(() => () => {}),
+      onGepGameEvent: vi.fn(() => () => {}),
+      onOverlayStatus: vi.fn(() => () => {}),
+    };
   });
 
   it("starts in idle state", () => {
@@ -51,7 +76,7 @@ describe("useVoiceInput", () => {
     });
 
     expect(result.current.isRecording).toBe(true);
-    expect(mockInvoke).toHaveBeenCalledWith("start_recording");
+    expect(mockStartRecording).toHaveBeenCalled();
   });
 
   it("transcribes on stopAndTranscribe and updates state", async () => {
@@ -75,7 +100,7 @@ describe("useVoiceInput", () => {
     expect(result.current.isTranscribing).toBe(false);
     expect(result.current.lastTranscript).toBe("should I build Rabadon's");
     expect(result.current.lastLatencyMs).toBe(200);
-    expect(mockInvoke).toHaveBeenCalledWith("stop_recording");
+    expect(mockStopRecording).toHaveBeenCalled();
   });
 
   it("pushes transcript into playerIntent$", async () => {
@@ -162,11 +187,9 @@ describe("useVoiceInput", () => {
   });
 
   it("handles recording errors gracefully", async () => {
-    mockInvoke.mockImplementation(async (cmd: string) => {
-      if (cmd === "start_recording")
-        throw new Error("No input device available");
-      return undefined;
-    });
+    vi.mocked(mockStartRecording).mockRejectedValueOnce(
+      new Error("No input device available")
+    );
 
     const { result } = renderHook(() => useVoiceInput(createMockProvider()));
 

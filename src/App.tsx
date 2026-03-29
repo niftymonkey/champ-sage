@@ -33,11 +33,28 @@ registry.register(aramMayhemMode);
 function App() {
   const engineRef = useRef<ReactiveEngine | null>(null);
 
+  const gepCleanupRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
+    let disposed = false;
     engineRef.current = initializeReactiveEngine();
+
+    // Initialize GEP bridge for augment detection (no-op if not ow-electron)
+    import("./lib/reactive/gep-bridge")
+      .then(({ initGepBridge }) => {
+        if (disposed) return;
+        gepCleanupRef.current = initGepBridge();
+      })
+      .catch((err) => {
+        console.warn("[app] Failed to initialize GEP bridge", err);
+      });
+
     return () => {
+      disposed = true;
       engineRef.current?.stop();
       engineRef.current = null;
+      gepCleanupRef.current?.();
+      gepCleanupRef.current = null;
     };
   }, []);
 

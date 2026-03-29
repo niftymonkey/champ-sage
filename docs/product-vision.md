@@ -28,11 +28,12 @@ The app continuously monitors game state and surfaces recommendations at decisio
 - "You've died to Viego 3 times, consider building armor next back"
 - "Enemy team is all AP, prioritize MR"
 - "You have 2000 gold and haven't bought anything"
-- "Dragon spawns in 15 seconds and the enemy jungler is dead for 35"
+
+> **Design constraint (Riot compliance):** Passive observations must stay within the boundary of **build/purchase recommendations** (allowed) and not cross into **tactical map actions** (banned). Riot prohibits "notifications that dictate player action based on the current game state" — e.g., "go gank top lane" or "take dragon now." Observations like "Dragon spawns in 15s and their jungler is dead" imply a tactical action and would violate this policy. The line: telling players **what to buy or pick** is allowed; telling players **what to do on the map** is not. See `docs/research/augment-detection-research.md` (Riot policy compliance section) for the full policy breakdown.
 
 **UI hierarchy:**
 
-- Primary slot: the big, front-and-center recommendation (augment pick, next item, immediate tactical call)
+- Primary slot: the big, front-and-center recommendation (augment pick, next item, build adaptation)
 - Secondary strip: situational observations, less urgent but still useful
 
 ### Reactive Layer (overlay)

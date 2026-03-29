@@ -629,6 +629,7 @@ button.augment-card {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
+  max-width: 60%;
 }
 
 .augment-slots .augment-card {

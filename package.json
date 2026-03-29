@@ -1,14 +1,18 @@
 {
   "name": "champ-sage",
   "private": true,
+  "author": "Mark Lozano",
   "version": "0.1.0",
   "type": "module",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
+    "dev:electron": "tsup --config electron/tsup.config.ts && concurrently -k \"vite\" \"scripts/launch-electron.sh\"",
+    "build:electron": "tsup --config electron/tsup.config.ts && vite build",
+    "start:electron": "ow-electron .",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "test": "vitest run && cargo test --manifest-path src-tauri/Cargo.toml",
+    "test": "vitest run",
     "test:watch": "vitest",
     "check-game": "tsx scripts/check-game.ts",
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
@@ -26,9 +30,6 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.47",
     "@openrouter/ai-sdk-provider": "^2.3.3",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-global-shortcut": "^2",
-    "@tauri-apps/plugin-opener": "^2",
     "ai": "^6.0.134",
     "deep-object-diff": "^1.1.9",
     "luaparse": "^0.3.1",
@@ -37,6 +38,12 @@
     "react-dom": "^19.1.0",
     "rxjs": "^7.8.2"
   },
+  "overwolf": {
+    "packages": [
+      "gep",
+      "overlay"
+    ]
+  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
@@ -44,7 +51,9 @@
     ]
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
+    "@overwolf/ow-electron": "^39.6.1",
+    "@overwolf/ow-electron-builder": "^26.8.3",
+    "@overwolf/ow-electron-packages-types": "^1.0.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/better-sqlite3": "^7.6.13",
@@ -54,6 +63,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.6.0",
     "better-sqlite3": "^12.8.0",
+    "concurrently": "^9.2.1",
     "dotenv": "^17.3.1",
     "evalite": "^0.19.0",
     "husky": "^9.1.7",
@@ -61,6 +71,7 @@
     "lint-staged": "^16.4.0",
     "pickai": "^2.1.1",
     "prettier": "^3.8.1",
+    "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",

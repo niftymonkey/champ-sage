@@ -47,7 +47,8 @@ export interface DebugInputEvent {
     | "lcu-rest"
     | "initial-state"
     | "voice"
-    | "llm";
+    | "llm"
+    | "gep";
   summary: string;
   detail?: string;
 }

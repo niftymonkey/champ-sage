@@ -3,10 +3,8 @@ node_modules/
 
 # Build output
 dist/
+dist-electron/
 out/
-
-# Tauri build output
-src-tauri/target/
 
 # TypeScript
 *.tsbuildinfo
@@ -39,3 +37,4 @@ data-dump/
 
 # "Current status" files
 **/STATUS.md
+*.pdf

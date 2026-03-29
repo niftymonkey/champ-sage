@@ -9,6 +9,8 @@ import type {
 import type { LoadedGameData } from "../lib/data-ingest";
 import { getCoachingResponse } from "../lib/ai/recommendation-engine";
 import { playerIntent$, manualInput$, debugInput$ } from "../lib/reactive";
+import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
+import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
 
 interface CoachingInputProps {
   context: CoachingContext | null;
@@ -64,7 +66,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     import.meta.env.VITE_OPENAI_API_KEY;
 
   const submitQuestion = useCallback(
-    async (question: string) => {
+    async (question: string, options?: { signal?: AbortSignal }) => {
       if (!contextRef.current || !apiKey || !question.trim()) {
         const reason = !contextRef.current
           ? "no context"
@@ -151,7 +153,8 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
             history: exchangesRef.current,
             augmentOptions,
           },
-          apiKey
+          apiKey,
+          { signal: options?.signal }
         );
         setLatestExchange({ question, response });
         setExchanges((prev) => [
@@ -180,6 +183,47 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
       }
     });
     return () => sub.unsubscribe();
+  }, [submitQuestion]);
+
+  // GEP augment coaching controller — handles debouncing, cancellation,
+  // and all three staleness scenarios (see augment-coaching.ts for details).
+  useEffect(() => {
+    const ctrl = createAugmentCoachingController(
+      augmentOffer$,
+      augmentPicked$,
+      {
+        submitQuery: async (names, signal) => {
+          const question = `I'm being offered these augments: ${names.join(", ")}. Which should I pick and which should I re-roll?`;
+          debugInput$.next({
+            source: "gep",
+            summary: `Auto-querying coaching for augment offer: ${names.join(", ")}`,
+          });
+          await submitQuestion(question, { signal });
+        },
+        onPicked: (name) => {
+          const augmentData = gameDataRef.current.augments.get(
+            name.toLowerCase()
+          );
+          const newAugment: CoachingItem = {
+            name,
+            description: augmentData?.description ?? "",
+            sets: augmentData?.sets,
+          };
+          setChosenAugments((prev) =>
+            prev.some((a) => a.name === name) ? prev : [...prev, newAugment]
+          );
+          if (augmentData) {
+            manualInput$.next({ type: "augment", augment: augmentData });
+          }
+          debugInput$.next({
+            source: "gep",
+            summary: `Augment added to build: ${name}`,
+          });
+        },
+      }
+    );
+
+    return () => ctrl.dispose();
   }, [submitQuestion]);
 
   if (!apiKey) {

@@ -1,0 +1,64 @@
+import { contextBridge, ipcRenderer } from "electron";
+
+/**
+ * Preload script — exposes a safe IPC bridge to the renderer.
+ *
+ * Channels:
+ * - invoke: request/response commands (LCU, coaching log)
+ * - onLcuEvent/onLcuDisconnect: LCU WebSocket push events
+ * - onHotkeyEvent: push-to-talk hotkey (renderer keydown/keyup in Phase 1,
+ *   overlay.hotkeys in ow-electron)
+ * - onGepInfoUpdate/onGepGameEvent: GEP augment detection events
+ * - onOverlayStatus: overlay injection state
+ */
+contextBridge.exposeInMainWorld("electronAPI", {
+  // Request/response commands
+  invoke: (channel: string, ...args: unknown[]) =>
+    ipcRenderer.invoke(channel, ...args),
+
+  // LCU WebSocket events
+  onLcuEvent: (callback: (event: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("lcu-event", handler);
+    return () => ipcRenderer.removeListener("lcu-event", handler);
+  },
+
+  onLcuDisconnect: (callback: (event: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("lcu-disconnect", handler);
+    return () => ipcRenderer.removeListener("lcu-disconnect", handler);
+  },
+
+  // Push-to-talk hotkey events
+  onHotkeyEvent: (callback: (event: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("hotkey-event", handler);
+    return () => ipcRenderer.removeListener("hotkey-event", handler);
+  },
+
+  // GEP events (augment detection, game state)
+  onGepInfoUpdate: (callback: (event: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("gep-info-update", handler);
+    return () => ipcRenderer.removeListener("gep-info-update", handler);
+  },
+
+  onGepGameEvent: (callback: (event: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("gep-game-event", handler);
+    return () => ipcRenderer.removeListener("gep-game-event", handler);
+  },
+
+  // Overlay injection status
+  onOverlayStatus: (callback: (event: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("overlay-status", handler);
+    return () => ipcRenderer.removeListener("overlay-status", handler);
+  },
+});

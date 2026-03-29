@@ -27,7 +27,7 @@ Before creating a commit, review `docs/reference/technical-reference.md` and upd
 - **TDD: write tests first, then implementation.** Every time. No exceptions for testable code.
 - **Red phase must fail on assertions, not missing modules.** Create the module with stub implementations (empty returns, placeholder values) first so it compiles. Then write tests that fail because the stubs return wrong values. Then implement the real logic and watch them go green.
 - Tests verify behavior through public interfaces, not implementation details.
-- Mock external dependencies (fetch, Tauri invoke), not internal modules where possible.
+- Mock external dependencies (fetch, Electron IPC via `window.electronAPI`), not internal modules where possible.
 - Use factory functions for test fixtures that might be mutated (avoid shared mutable state across tests).
 
 ### Scripts
@@ -48,21 +48,56 @@ Before creating a commit, review `docs/reference/technical-reference.md` and upd
 src/lib/           — Core business logic modules (data-ingest, game-state, etc.)
 src/components/    — React components
 src/hooks/         — React hooks
-src-tauri/         — Rust backend (Tauri commands, plugin setup)
+electron/          — Electron main process, preload script, build config
 scripts/           — Development helper scripts (run with tsx)
-docs/             — PRD, implementation plan, status
+docs/             — PRD, implementation plan, research, technical reference
 ```
 
 ## Key Patterns
 
 - **Data ingest** uses luaparse for Lua files, strips wiki markup, classifies entities by game mode
-- **Game state** polls Riot API via Rust proxy command (self-signed cert), injectable fetcher for tests
+- **Game state** polls Riot API via Electron main process proxy (self-signed cert), injectable fetcher for tests
 - **Cache** uses localStorage with versioned keys; dev mode skips cache for hot reload
 - **Shell UI** has tabs for each data type with mode/tier filters; filter bars are sticky
 
+## Riot & Overwolf Compliance Rules
+
+These rules are non-negotiable. Every feature, prompt, notification, and UI element must comply. When in doubt, don't ship it — ask first.
+
+### Allowed
+
+- Build recommendations ("consider buying Zhonya's next")
+- Item purchase suggestions based on game state
+- Augment selection guidance ("pick X because it synergizes with your build")
+- Champion select assistance
+- Presenting multiple options with reasoning for the player to choose from
+- Contextual coaching that responds to player questions
+
+### Prohibited
+
+- **Tactical map actions**: "go gank top lane", "take dragon now", "rotate mid" — anything that tells the player WHERE to go or WHAT to do on the map based on game state
+- **Power spike alerts**: "X champion has hit level 6", "enemy has completed item Y"
+- **Enemy cooldown/ultimate tracking**: timers, estimates, or reminders about enemy ability availability
+- **Augment or Arena item win rates**: statistical win rates are banned; contextual reasoning about augment quality is allowed
+- **Enemy summoner spell tracking**: timers or facilitation of manual tracking
+- **Brawl mode data**: completely off-limits for third-party products
+- **De-anonymizing players**: in Ranked Solo/Duo champ select, non-party summoner names must stay hidden
+- **In-game advertisements**: overlays with ads during gameplay are banned
+- **Overlays that mimic Riot's UI**: app must have its own visual identity
+
+### The line between allowed and prohibited
+
+The distinction Riot draws: **telling players what to buy or pick = allowed; telling players what to do on the map = prohibited.** "Your team needs armor" is fine. "Their jungler is dead, go take baron" is not. If a recommendation references map state, enemy positioning, or timing of objectives to suggest an action, it's on the wrong side of the line.
+
+### Where to find the full policy
+
+- `docs/research/augment-detection-research.md` — Riot policy compliance section
+- Riot general policies: `https://developer.riotgames.com/policies/general`
+- Overwolf compliance: `https://dev.overwolf.com/ow-native/guides/game-compliance/riot-games/`
+
 ## Commands
 
-- `pnpm tauri dev` — run the app
+- `pnpm dev:electron` — run the app (Vite + ow-electron)
 - `pnpm test` — run all tests
 - `pnpm typecheck` — TypeScript check
 - `pnpm check-game` — verify Riot API connectivity
