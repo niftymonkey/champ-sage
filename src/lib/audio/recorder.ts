@@ -34,7 +34,7 @@ export async function startRecording(): Promise<void> {
     audio: {
       channelCount: 1,
       sampleRate: 16000,
-      echoCancellation: false,
+      echoCancellation: true,
       noiseSuppression: false,
       autoGainControl: true,
     },
@@ -53,7 +53,12 @@ export async function startRecording(): Promise<void> {
   };
 
   source.connect(processor);
-  processor.connect(context.destination);
+  // Route through a muted gain node to keep the audio graph alive
+  // without playing mic input back through speakers (feedback prevention)
+  const silentSink = context.createGain();
+  silentSink.gain.value = 0;
+  processor.connect(silentSink);
+  silentSink.connect(context.destination);
 
   session = {
     stream,

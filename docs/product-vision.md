@@ -33,7 +33,7 @@ The app continuously monitors game state and surfaces recommendations at decisio
 
 **UI hierarchy:**
 
-- Primary slot: the big, front-and-center recommendation (augment pick, next item, immediate tactical call)
+- Primary slot: the big, front-and-center recommendation (augment pick, next item, build adaptation)
 - Secondary strip: situational observations, less urgent but still useful
 
 ### Reactive Layer (overlay)

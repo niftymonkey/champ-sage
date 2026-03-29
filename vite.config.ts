@@ -9,7 +9,7 @@ export default defineConfig({
     port: 1420,
     strictPort: true,
     watch: {
-      ignored: ["**/src-tauri/**", "**/electron/**", "**/dist-electron/**"],
+      ignored: ["**/electron/**", "**/dist-electron/**"],
     },
   },
 });

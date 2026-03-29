@@ -460,11 +460,14 @@ function initGep(): void {
       console.log(`[champ-sage] GEP: League detected (pid: ${gameInfo.pid})`);
       e.enable();
 
-      // Subscribe to augment features (and live_client_data for completeness)
+      const requiredFeatures = ["augments"];
+
       gepApi
-        .setRequiredFeatures(gameId, ["augments"])
+        .setRequiredFeatures(gameId, requiredFeatures)
         .then(() => {
-          console.log("[champ-sage] GEP: Required features set (augments)");
+          console.log(
+            `[champ-sage] GEP: Required features set (${requiredFeatures.join(", ")})`
+          );
         })
         .catch((err: Error) => {
           console.error(
@@ -474,11 +477,7 @@ function initGep(): void {
           // Retry after a delay — GEP docs say this can fail initially
           setTimeout(() => {
             gepApi
-              .setRequiredFeatures(gameId, [
-                "augments",
-                "live_client_data",
-                "match_info",
-              ])
+              .setRequiredFeatures(gameId, requiredFeatures)
               .then(() =>
                 console.log("[champ-sage] GEP: Features set on retry")
               )

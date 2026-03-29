@@ -6,9 +6,6 @@ dist/
 dist-electron/
 out/
 
-# Tauri build output (legacy, will be removed)
-src-tauri/target/
-
 # TypeScript
 *.tsbuildinfo
 

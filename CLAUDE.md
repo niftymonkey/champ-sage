@@ -60,6 +60,41 @@ docs/             — PRD, implementation plan, research, technical reference
 - **Cache** uses localStorage with versioned keys; dev mode skips cache for hot reload
 - **Shell UI** has tabs for each data type with mode/tier filters; filter bars are sticky
 
+## Riot & Overwolf Compliance Rules
+
+These rules are non-negotiable. Every feature, prompt, notification, and UI element must comply. When in doubt, don't ship it — ask first.
+
+### Allowed
+
+- Build recommendations ("consider buying Zhonya's next")
+- Item purchase suggestions based on game state
+- Augment selection guidance ("pick X because it synergizes with your build")
+- Champion select assistance
+- Presenting multiple options with reasoning for the player to choose from
+- Contextual coaching that responds to player questions
+
+### Prohibited
+
+- **Tactical map actions**: "go gank top lane", "take dragon now", "rotate mid" — anything that tells the player WHERE to go or WHAT to do on the map based on game state
+- **Power spike alerts**: "X champion has hit level 6", "enemy has completed item Y"
+- **Enemy cooldown/ultimate tracking**: timers, estimates, or reminders about enemy ability availability
+- **Augment or Arena item win rates**: statistical win rates are banned; contextual reasoning about augment quality is allowed
+- **Enemy summoner spell tracking**: timers or facilitation of manual tracking
+- **Brawl mode data**: completely off-limits for third-party products
+- **De-anonymizing players**: in Ranked Solo/Duo champ select, non-party summoner names must stay hidden
+- **In-game advertisements**: overlays with ads during gameplay are banned
+- **Overlays that mimic Riot's UI**: app must have its own visual identity
+
+### The line between allowed and prohibited
+
+The distinction Riot draws: **telling players what to buy or pick = allowed; telling players what to do on the map = prohibited.** "Your team needs armor" is fine. "Their jungler is dead, go take baron" is not. If a recommendation references map state, enemy positioning, or timing of objectives to suggest an action, it's on the wrong side of the line.
+
+### Where to find the full policy
+
+- `docs/research/augment-detection-research.md` — Riot policy compliance section
+- Riot general policies: `https://developer.riotgames.com/policies/general`
+- Overwolf compliance: `https://dev.overwolf.com/ow-native/guides/game-compliance/riot-games/`
+
 ## Commands
 
 - `pnpm dev:electron` — run the app (Vite + ow-electron)

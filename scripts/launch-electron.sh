@@ -1,13 +1,15 @@
 #!/bin/bash
-# Launch Electron from WSL2 via the Windows-side electron binary.
+# Launch Electron from WSL2 via the Windows-side ow-electron binary.
 #
-# Prerequisites: install electron globally on Windows:
-#   npm install -g electron
+# Prerequisites: install ow-electron globally on Windows:
+#   npm install -g @overwolf/ow-electron
 #
-# Vite dev server runs in WSL2 on localhost:1420, shared with Windows.
-# The electron CLI accepts a project path as its first argument.
+# Derives the Windows path from the repo root automatically via wslpath,
+# so this works regardless of where the repo is cloned.
 
-PROJECT_WIN='\\wsl.localhost\Ubuntu\home\mlo\dev\niftymonkey\champ-sage'
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+PROJECT_WIN="$(wslpath -w "${PROJECT_ROOT}")"
 
 # Wait for Vite dev server to be ready
 echo "[launch-electron] Waiting for Vite dev server on localhost:1420..."
