@@ -9,6 +9,7 @@ import type {
 import type { LoadedGameData } from "../lib/data-ingest";
 import { getCoachingResponse } from "../lib/ai/recommendation-engine";
 import { playerIntent$, manualInput$, debugInput$ } from "../lib/reactive";
+import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 
 interface CoachingInputProps {
   context: CoachingContext | null;
@@ -181,6 +182,53 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     });
     return () => sub.unsubscribe();
   }, [submitQuestion]);
+
+  // GEP augment offer → auto-query the coaching engine after 2s debounce.
+  // The debounce gives time for re-rolls to settle before asking for advice.
+  useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const sub = augmentOffer$.subscribe((names) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+
+      debounceTimer = setTimeout(() => {
+        const question = `I'm being offered these augments: ${names.join(", ")}. Which should I pick and which should I re-roll?`;
+        debugInput$.next({
+          source: "gep",
+          summary: `Auto-querying coaching for augment offer: ${names.join(", ")}`,
+        });
+        submitQuestion(question);
+      }, 2000);
+    });
+
+    return () => {
+      sub.unsubscribe();
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
+  }, [submitQuestion]);
+
+  // GEP augment picked → update tracked augments
+  useEffect(() => {
+    const sub = augmentPicked$.subscribe((name) => {
+      const augmentData = gameDataRef.current.augments.get(name.toLowerCase());
+      const newAugment: CoachingItem = {
+        name,
+        description: augmentData?.description ?? "",
+        sets: augmentData?.sets,
+      };
+      setChosenAugments((prev) =>
+        prev.some((a) => a.name === name) ? prev : [...prev, newAugment]
+      );
+      if (augmentData) {
+        manualInput$.next({ type: "augment", augment: augmentData });
+      }
+      debugInput$.next({
+        source: "gep",
+        summary: `Augment added to build: ${name}`,
+      });
+    });
+    return () => sub.unsubscribe();
+  }, []);
 
   if (!apiKey) {
     console.warn(

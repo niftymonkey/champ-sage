@@ -57,8 +57,6 @@ export interface EogStats {
 // User input events (discriminated union)
 export type UserInputEvent =
   | { type: "augment"; augment: Augment }
-  | { type: "augment-offer"; augments: string[]; source: "gep" | "manual" }
-  | { type: "augment-picked"; name: string; source: "gep" | "manual" }
   | { type: "query"; text: string };
 
 // Coaching output (placeholder — owning feature defines final shape)

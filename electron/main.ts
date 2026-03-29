@@ -458,15 +458,9 @@ function initGep(): void {
 
       // Subscribe to augment features (and live_client_data for completeness)
       gepApi
-        .setRequiredFeatures(gameId, [
-          "augments",
-          "live_client_data",
-          "match_info",
-        ])
+        .setRequiredFeatures(gameId, ["augments"])
         .then(() => {
-          console.log(
-            "[champ-sage] GEP: Required features set (augments, live_client_data, match_info)"
-          );
+          console.log("[champ-sage] GEP: Required features set (augments)");
         })
         .catch((err: Error) => {
           console.error(

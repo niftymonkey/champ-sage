@@ -34,11 +34,7 @@ export const coaching$ = new Subject<CoachingMessage>();
 export const notifications$ = new Subject<AppNotification>();
 
 // User input subjects (for pushing from UI)
-export const manualInput$ = new Subject<
-  | (UserInputEvent & { type: "augment" })
-  | (UserInputEvent & { type: "augment-offer" })
-  | (UserInputEvent & { type: "augment-picked" })
->();
+export const manualInput$ = new Subject<UserInputEvent & { type: "augment" }>();
 export const playerIntent$ = new Subject<UserInputEvent & { type: "query" }>();
 
 // Debug stream — raw input events from data sources (discovery, WebSocket, API polls)

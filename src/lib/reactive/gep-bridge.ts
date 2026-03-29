@@ -10,17 +10,25 @@
 
 import { Subject, Subscription } from "rxjs";
 import { distinctUntilChanged } from "rxjs/operators";
-import { debugInput$, manualInput$ } from "./streams";
+import { debugInput$ } from "./streams";
 
-export interface GepAugmentOffer {
+export interface GepAugmentOfferPayload {
   augment_1: { name: string };
   augment_2: { name: string };
   augment_3: { name: string };
 }
 
-export interface GepPickedAugment {
-  [slot: string]: { name: string };
-}
+/**
+ * Emits the current 3 augment choices whenever GEP detects the augment
+ * selection screen or a re-roll changes the options. Fires on every change,
+ * not debounced — consumers should debounce as needed.
+ */
+export const augmentOffer$ = new Subject<string[]>();
+
+/**
+ * Emits the display name of the augment the player selected.
+ */
+export const augmentPicked$ = new Subject<string>();
 
 /** Raw GEP info updates — deduplicated via distinctUntilChanged */
 export const gepInfoUpdate$ = new Subject<unknown>();
@@ -88,7 +96,7 @@ export function initGepBridge(): () => void {
       // The key is "me" under feature "augments", category "me".
       if (update.feature === "augments" && update.key === "me") {
         try {
-          const augments: GepAugmentOffer =
+          const augments: GepAugmentOfferPayload =
             typeof update.value === "string"
               ? JSON.parse(update.value)
               : update.value;
@@ -101,14 +109,10 @@ export function initGepBridge(): () => void {
 
           debugInput$.next({
             source: "gep",
-            summary: `Augment offer detected: ${names.join(", ")}`,
+            summary: `Augment offer: ${names.join(", ")}`,
           });
 
-          manualInput$.next({
-            type: "augment-offer" as const,
-            augments: names,
-            source: "gep" as const,
-          });
+          augmentOffer$.next(names);
         } catch (err) {
           debugInput$.next({
             source: "gep",
@@ -126,11 +130,7 @@ export function initGepBridge(): () => void {
             summary: `Augment picked: ${name}`,
           });
 
-          manualInput$.next({
-            type: "augment-picked" as const,
-            name,
-            source: "gep" as const,
-          });
+          augmentPicked$.next(name);
         }
       }
     })
