@@ -254,7 +254,7 @@ function registerIpcHandlers(): void {
           }
         });
 
-        ws.on("close", () => {
+        ws.on("close", (_code: number, _reason: Buffer) => {
           sendToAllWindows("lcu-disconnect", {
             reason: "Server closed connection",
           });
@@ -403,6 +403,10 @@ function initOverlay(): void {
   });
 
   overlayApi.on("game-exit", (gameInfo: any, wasInjected: boolean) => {
+    // Proactively close the LCU WebSocket before the client shuts down
+    // to avoid the noisy CloseEvent dump from the ws library
+    cleanupWebSocket();
+
     console.log(
       `[champ-sage] Game exited: ${gameInfo.name} (was injected: ${wasInjected})`
     );

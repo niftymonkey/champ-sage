@@ -27,7 +27,7 @@ Before creating a commit, review `docs/reference/technical-reference.md` and upd
 - **TDD: write tests first, then implementation.** Every time. No exceptions for testable code.
 - **Red phase must fail on assertions, not missing modules.** Create the module with stub implementations (empty returns, placeholder values) first so it compiles. Then write tests that fail because the stubs return wrong values. Then implement the real logic and watch them go green.
 - Tests verify behavior through public interfaces, not implementation details.
-- Mock external dependencies (fetch, Tauri invoke), not internal modules where possible.
+- Mock external dependencies (fetch, Electron IPC via `window.electronAPI`), not internal modules where possible.
 - Use factory functions for test fixtures that might be mutated (avoid shared mutable state across tests).
 
 ### Scripts
@@ -48,21 +48,21 @@ Before creating a commit, review `docs/reference/technical-reference.md` and upd
 src/lib/           — Core business logic modules (data-ingest, game-state, etc.)
 src/components/    — React components
 src/hooks/         — React hooks
-src-tauri/         — Rust backend (Tauri commands, plugin setup)
+electron/          — Electron main process, preload script, build config
 scripts/           — Development helper scripts (run with tsx)
-docs/             — PRD, implementation plan, status
+docs/             — PRD, implementation plan, research, technical reference
 ```
 
 ## Key Patterns
 
 - **Data ingest** uses luaparse for Lua files, strips wiki markup, classifies entities by game mode
-- **Game state** polls Riot API via Rust proxy command (self-signed cert), injectable fetcher for tests
+- **Game state** polls Riot API via Electron main process proxy (self-signed cert), injectable fetcher for tests
 - **Cache** uses localStorage with versioned keys; dev mode skips cache for hot reload
 - **Shell UI** has tabs for each data type with mode/tier filters; filter bars are sticky
 
 ## Commands
 
-- `pnpm tauri dev` — run the app
+- `pnpm dev:electron` — run the app (Vite + ow-electron)
 - `pnpm test` — run all tests
 - `pnpm typecheck` — TypeScript check
 - `pnpm check-game` — verify Riot API connectivity
