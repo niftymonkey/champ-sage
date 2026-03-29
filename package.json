@@ -1,6 +1,7 @@
 {
   "name": "champ-sage",
   "private": true,
+  "author": "Mark Lozano",
   "version": "0.1.0",
   "type": "module",
   "main": "dist-electron/main.cjs",

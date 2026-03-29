@@ -8,7 +8,8 @@
  * this module is a no-op and the app falls back to voice/manual input.
  */
 
-import { Subject } from "rxjs";
+import { Subject, Subscription } from "rxjs";
+import { distinctUntilChanged } from "rxjs/operators";
 import { debugInput$, manualInput$ } from "./streams";
 
 export interface GepAugmentOffer {
@@ -21,112 +22,140 @@ export interface GepPickedAugment {
   [slot: string]: { name: string };
 }
 
-/** Observable for raw GEP info updates (for debugging/logging) */
+/** Raw GEP info updates — deduplicated via distinctUntilChanged */
 export const gepInfoUpdate$ = new Subject<unknown>();
 
-/** Observable for raw GEP game events (for debugging/logging) */
+/** Raw GEP game events — deduplicated via distinctUntilChanged */
 export const gepGameEvent$ = new Subject<unknown>();
 
 /**
  * Start listening for GEP events from the Electron main process.
  * Call once during app initialization. Returns a cleanup function.
+ *
+ * GEP fires each event twice (known ow-electron behavior). We push
+ * raw events into Subjects, pipe through distinctUntilChanged for dedup,
+ * then log and process the clean stream.
  */
+let bridgeActive = false;
+
 export function initGepBridge(): () => void {
   const api = window.electronAPI;
   if (!api?.onGepInfoUpdate) {
     return () => {};
   }
 
-  // Log all raw GEP events to a dedicated GEP log for post-game review
-  const logGepEvent = (label: string, data: unknown) => {
-    const timestamp = new Date().toISOString();
-    const line = `[${timestamp}] [${label}] ${JSON.stringify(data)}`;
-    api.invoke("append_gep_log", line).catch(() => {});
-  };
+  // Guard against double-init (React StrictMode calls effects twice in dev)
+  if (bridgeActive) {
+    return () => {};
+  }
+  bridgeActive = true;
 
-  const unlistenInfo = api.onGepInfoUpdate((payload) => {
-    logGepEvent("info", payload);
-    const update = payload as {
-      feature?: string;
-      category?: string;
-      key?: string;
-      value?: string;
-    };
+  const subs = new Subscription();
 
-    gepInfoUpdate$.next(update);
+  // Raw subjects that receive every IPC event (including duplicates)
+  const rawInfo$ = new Subject<unknown>();
+  const rawEvent$ = new Subject<unknown>();
 
-    // Augment offers — GEP sends these when the augment selection screen appears
-    if (update.key === "augments" && update.category === "me") {
-      try {
-        const augments: GepAugmentOffer =
-          typeof update.value === "string"
-            ? JSON.parse(update.value)
-            : update.value;
+  // Deduplicated streams
+  const dedupedInfo$ = rawInfo$.pipe(
+    distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+  );
+  const dedupedEvent$ = rawEvent$.pipe(
+    distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
+  );
 
-        const names = [
-          augments.augment_1?.name,
-          augments.augment_2?.name,
-          augments.augment_3?.name,
-        ].filter(Boolean);
+  // Log and process deduplicated info updates
+  subs.add(
+    dedupedInfo$.subscribe((payload) => {
+      const timestamp = new Date().toISOString();
+      api
+        .invoke(
+          "append_gep_log",
+          `[${timestamp}] [info] ${JSON.stringify(payload)}`
+        )
+        .catch(() => {});
 
-        debugInput$.next({
-          source: "gep",
-          summary: `Augment offer detected: ${names.join(", ")}`,
-        });
+      gepInfoUpdate$.next(payload);
 
-        // Emit as augment offer event into the manual input stream
-        manualInput$.next({
-          type: "augment-offer" as const,
-          augments: names,
-          source: "gep" as const,
-        });
-      } catch (err) {
-        debugInput$.next({
-          source: "gep",
-          summary: `Failed to parse augment offer: ${err}`,
-        });
-      }
-    }
+      const update = payload as {
+        feature?: string;
+        category?: string;
+        key?: string;
+        value?: string;
+      };
 
-    // Augment picked — GEP sends when the player selects an augment
-    if (update.key === "picked_augment" && update.category === "me") {
-      try {
-        const picked: GepPickedAugment =
-          typeof update.value === "string"
-            ? JSON.parse(update.value)
-            : update.value;
+      // Augment offers — GEP sends these when the augment selection screen appears.
+      // The key is "me" under feature "augments", category "me".
+      if (update.feature === "augments" && update.key === "me") {
+        try {
+          const augments: GepAugmentOffer =
+            typeof update.value === "string"
+              ? JSON.parse(update.value)
+              : update.value;
 
-        // Find the most recently filled slot
-        const slots = Object.entries(picked)
-          .filter(([, v]) => v.name !== "")
-          .map(([slot, v]) => ({ slot, name: v.name }));
+          const names = [
+            augments.augment_1?.name,
+            augments.augment_2?.name,
+            augments.augment_3?.name,
+          ].filter(Boolean);
 
-        if (slots.length > 0) {
-          const latest = slots[slots.length - 1];
           debugInput$.next({
             source: "gep",
-            summary: `Augment picked: ${latest.name} (${latest.slot})`,
+            summary: `Augment offer detected: ${names.join(", ")}`,
+          });
+
+          manualInput$.next({
+            type: "augment-offer" as const,
+            augments: names,
+            source: "gep" as const,
+          });
+        } catch (err) {
+          debugInput$.next({
+            source: "gep",
+            summary: `Failed to parse augment offer: ${err}`,
+          });
+        }
+      }
+
+      // Augment picked — value is a plain string like "Protein Shake"
+      if (update.feature === "augments" && update.key === "picked_augment") {
+        const name = String(update.value ?? "").trim();
+        if (name) {
+          debugInput$.next({
+            source: "gep",
+            summary: `Augment picked: ${name}`,
           });
 
           manualInput$.next({
             type: "augment-picked" as const,
-            name: latest.name,
+            name,
             source: "gep" as const,
           });
         }
-      } catch (err) {
-        debugInput$.next({
-          source: "gep",
-          summary: `Failed to parse picked augment: ${err}`,
-        });
       }
-    }
-  });
+    })
+  );
 
-  const unlistenEvent = api.onGepGameEvent((payload) => {
-    logGepEvent("event", payload);
-    gepGameEvent$.next(payload);
-  });
+  // Log and forward deduplicated game events
+  subs.add(
+    dedupedEvent$.subscribe((payload) => {
+      const timestamp = new Date().toISOString();
+      api
+        .invoke(
+          "append_gep_log",
+          `[${timestamp}] [event] ${JSON.stringify(payload)}`
+        )
+        .catch(() => {});
+
+      gepGameEvent$.next(payload);
+    })
+  );
+
+  // Wire IPC listeners to raw subjects
+  const unlistenInfo = api.onGepInfoUpdate((payload) => rawInfo$.next(payload));
+  const unlistenEvent = api.onGepGameEvent((payload) =>
+    rawEvent$.next(payload)
+  );
 
   debugInput$.next({
     source: "gep",
@@ -134,7 +163,11 @@ export function initGepBridge(): () => void {
   });
 
   return () => {
+    bridgeActive = false;
     unlistenInfo();
     unlistenEvent();
+    subs.unsubscribe();
+    rawInfo$.complete();
+    rawEvent$.complete();
   };
 }

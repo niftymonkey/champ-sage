@@ -3,20 +3,24 @@ import { readFileSync, appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import WebSocket from "ws";
 
-// ow-electron types — cast the app to access Overwolf APIs
-let owApp: import("@overwolf/ow-electron").overwolf.OverwolfApp | null = null;
+const app = electronApp;
 
-try {
-  const { overwolf } = require("@overwolf/ow-electron");
-  owApp = electronApp as import("@overwolf/ow-electron").overwolf.OverwolfApp;
-} catch {
-  // Running as vanilla Electron — Overwolf features disabled
+// ow-electron detection — when running under ow-electron, the app object
+// has an `overwolf` property with packages (overlay, gep). We don't need
+// to require anything — the runtime injects it onto the app object.
+// When running under vanilla Electron, this property doesn't exist.
+const owApp: any =
+  "overwolf" in (electronApp as any) ? (electronApp as any) : null;
+
+if (owApp) {
+  console.log(
+    "[champ-sage] Running as ow-electron (Overwolf features available)"
+  );
+} else {
   console.log(
     "[champ-sage] Running as vanilla Electron (no Overwolf features)"
   );
 }
-
-const app = electronApp;
 
 // League of Legends game IDs
 const LOL_GAME_ID = 5426;
@@ -334,6 +338,9 @@ function createMainWindow(): BrowserWindow {
 // and the separate desktop window only.
 // ---------------------------------------------------------------------------
 
+let gepInitialized = false;
+let overlayInitialized = false;
+
 function initOverwolfFeatures(): void {
   if (!owApp) return;
 
@@ -345,10 +352,12 @@ function initOverwolfFeatures(): void {
       `[champ-sage] Overwolf package ready: ${packageName} v${version}`
     );
 
-    if (packageName === "overlay") {
+    if (packageName === "overlay" && !overlayInitialized) {
+      overlayInitialized = true;
       initOverlay();
     }
-    if (packageName === "gep") {
+    if (packageName === "gep" && !gepInitialized) {
+      gepInitialized = true;
       initGep();
     }
   });
@@ -486,18 +495,15 @@ function initGep(): void {
     }
   );
 
-  // Forward augment info updates to the renderer
+  // Forward all info updates to the renderer — dedup happens there via RxJS
   gepApi.on("new-info-update", (e: any, gameId: number, ...args: any[]) => {
     if (gameId !== LOL_GAME_ID) return;
-
     const update = args[0];
     if (!update) return;
-
-    // Forward all GEP info updates — the renderer filters for augments
     sendToAllWindows("gep-info-update", update);
   });
 
-  // Forward game events to the renderer
+  // Forward all game events to the renderer
   gepApi.on("new-game-event", (e: any, gameId: number, ...args: any[]) => {
     if (gameId !== LOL_GAME_ID) return;
     sendToAllWindows("gep-game-event", args[0]);
