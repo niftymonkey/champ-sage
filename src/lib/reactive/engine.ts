@@ -23,7 +23,6 @@ import {
   userInput$,
   manualInput$,
   playerIntent$,
-  debugInput$,
 } from "./streams";
 import { normalizeGameState } from "../game-state/normalize";
 import type { PlatformBridge, LcuEventPayload } from "./platform-bridge";
@@ -35,6 +34,9 @@ import {
   shouldLogWebSocketEvent,
   describeEvent,
 } from "./debug-filters";
+import { getLogger } from "../logger";
+
+const engineLog = getLogger("engine");
 
 const DISCOVERY_INTERVAL_MS = 3000;
 const POLL_INTERVAL_MS = 2000;
@@ -160,12 +162,11 @@ export class ReactiveEngine {
           this.currentPort !== status.port ||
           (status.connected && this.currentPort === 0);
         if (isNewDiscovery || !status.connected) {
-          debugInput$.next({
-            source: "discovery",
-            summary: status.connected
+          engineLog.info(
+            status.connected
               ? `LCU found — port ${status.port}`
-              : "LCU not found",
-          });
+              : "LCU not found"
+          );
         }
         if (status.connected) {
           this.currentPort = status.port;
@@ -193,56 +194,42 @@ export class ReactiveEngine {
           filter((s) => s.connected),
           switchMap((creds) => {
             return new Observable<void>(() => {
-              let unlisten: (() => void) | null = null;
-              let unlistenDisconnect: (() => void) | null = null;
-
               const isRetry = this.wsRetrySeq > 0;
-              debugInput$.next({
-                source: "websocket",
-                summary: isRetry
+              engineLog.info(
+                isRetry
                   ? `Retrying WebSocket connection... (attempt ${this.wsRetrySeq + 1})`
-                  : `Connecting WebSocket to port ${creds.port}...`,
-              });
+                  : `Connecting WebSocket to port ${creds.port}...`
+              );
 
-              Promise.all([
-                this.bridge.listenLcuEvent((event) =>
-                  this.wsEvents$.next(event)
-                ),
-                this.bridge.listenLcuDisconnect((event) => {
-                  debugInput$.next({
-                    source: "websocket",
-                    summary: `WebSocket disconnected: ${event.reason}`,
-                  });
+              // Register IPC listeners synchronously — unlisten functions are
+              // available immediately, so cleanup works even if stop() is called
+              // before the WebSocket finishes connecting (React StrictMode remount).
+              const unlisten = this.bridge.listenLcuEvent((event) =>
+                this.wsEvents$.next(event)
+              );
+              const unlistenDisconnect = this.bridge.listenLcuDisconnect(
+                (event) => {
+                  engineLog.warn(`WebSocket disconnected: ${event.reason}`);
                   this.wsRetrySeq++;
-                }),
-                this.bridge.connectLcuWebSocket(creds.port, creds.token),
-              ])
-                .then(([ul, uld]) => {
-                  unlisten = ul;
-                  unlistenDisconnect = uld;
+                }
+              );
 
-                  debugInput$.next({
-                    source: "websocket",
-                    summary: "WebSocket connected and subscribed",
-                  });
-
-                  // Fetch current phase via REST so we don't miss state
-                  // if the app started after a phase transition already happened
+              this.bridge
+                .connectLcuWebSocket(creds.port, creds.token)
+                .then(() => {
+                  engineLog.info("WebSocket connected and subscribed");
                   this.fetchInitialState(creds.port, creds.token);
                 })
                 .catch((err) => {
-                  debugInput$.next({
-                    source: "websocket",
-                    summary: `WebSocket connection FAILED: ${err instanceof Error ? err.message : String(err)}`,
-                  });
-                  // Bump retry seq so the next discovery tick re-emits
-                  // and triggers a new connection attempt
+                  engineLog.error(
+                    `WebSocket connection FAILED: ${err instanceof Error ? err.message : String(err)}`
+                  );
                   this.wsRetrySeq++;
                 });
 
               return () => {
-                unlisten?.();
-                unlistenDisconnect?.();
+                unlisten();
+                unlistenDisconnect();
               };
             });
           })
@@ -254,10 +241,7 @@ export class ReactiveEngine {
     this.subscription.add(
       this.wsEvents$.subscribe((evt) => {
         if (isDebugWorthy(evt.uri) && shouldLogWebSocketEvent(evt.uri)) {
-          debugInput$.next({
-            source: "websocket",
-            summary: describeEvent(evt.event_type, evt.uri),
-          });
+          engineLog.debug(describeEvent(evt.event_type, evt.uri));
         }
       })
     );
@@ -438,10 +422,7 @@ export class ReactiveEngine {
       .fetchLcu(port, token, "/lol-gameflow/v1/gameflow-phase")
       .then((json) => {
         const phase = JSON.parse(json) as string;
-        debugInput$.next({
-          source: "initial-state",
-          summary: `Phase: ${phase}`,
-        });
+        engineLog.debug(`Initial phase: ${phase}`);
         if (phase && phase !== "None") {
           this.wsEvents$.next({
             uri: "/lol-gameflow/v1/gameflow-phase",
@@ -451,10 +432,9 @@ export class ReactiveEngine {
         }
       })
       .catch((err) => {
-        debugInput$.next({
-          source: "initial-state",
-          summary: `Phase fetch failed: ${err instanceof Error ? err.message : String(err)}`,
-        });
+        engineLog.warn(
+          `Initial phase fetch failed: ${err instanceof Error ? err.message : String(err)}`
+        );
       });
 
     // Fetch current session
@@ -462,11 +442,7 @@ export class ReactiveEngine {
       .fetchLcu(port, token, "/lol-gameflow/v1/session")
       .then((json) => {
         const session: unknown = JSON.parse(json);
-        debugInput$.next({
-          source: "initial-state",
-          summary: "Session fetched",
-          detail: JSON.stringify(session, null, 2),
-        });
+        engineLog.debug("Initial session fetched");
         this.wsEvents$.next({
           uri: "/lol-gameflow/v1/session",
           event_type: "Update",
@@ -474,10 +450,7 @@ export class ReactiveEngine {
         });
       })
       .catch(() => {
-        debugInput$.next({
-          source: "initial-state",
-          summary: "Session not available",
-        });
+        engineLog.debug("Initial session not available");
       });
   }
 
@@ -511,10 +484,7 @@ export class ReactiveEngine {
               const normalized = normalizeGameState(raw);
               const status = `OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`;
               if (shouldLogPollStatus("OK", this.lastPollStatus)) {
-                debugInput$.next({
-                  source: "riot-api",
-                  summary: `Poll ${status}`,
-                });
+                engineLog.debug(`Poll ${status}`);
               }
               this.lastPollStatus = "OK";
               return { success: true as const, data: normalized };
@@ -525,10 +495,7 @@ export class ReactiveEngine {
                 ? "LOADING"
                 : "CONNECTION_FAILED";
               if (shouldLogPollStatus(status, this.lastPollStatus)) {
-                debugInput$.next({
-                  source: "riot-api",
-                  summary: `Poll failed — ${errMsg}`,
-                });
+                engineLog.warn(`Poll failed — ${errMsg}`);
               }
               this.lastPollStatus = status;
               return { success: false as const, data: null };

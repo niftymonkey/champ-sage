@@ -8,9 +8,13 @@ import type {
 } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import { getCoachingResponse } from "../lib/ai/recommendation-engine";
-import { playerIntent$, manualInput$, debugInput$ } from "../lib/reactive";
+import { playerIntent$, manualInput$ } from "../lib/reactive";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
+import { getLogger } from "../lib/logger";
+
+const reactiveLog = getLogger("coaching:reactive");
+const proactiveLog = getLogger("coaching:proactive");
 
 interface CoachingInputProps {
   context: CoachingContext | null;
@@ -73,11 +77,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           : !apiKey
             ? "no API key"
             : "empty question";
-        console.warn("[coaching] SKIPPED:", reason);
-        debugInput$.next({
-          source: "llm",
-          summary: `Coaching skipped: ${reason}`,
-        });
+        reactiveLog.warn(`Coaching skipped: ${reason}`);
         return;
       }
 
@@ -106,10 +106,9 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           if (augmentData) {
             manualInput$.next({ type: "augment", augment: augmentData });
           }
-          debugInput$.next({
-            source: "llm",
-            summary: `Augment selected: ${newAugmentName} (total: ${chosenAugmentsRef.current.length + 1})`,
-          });
+          reactiveLog.info(
+            `Augment selected: ${newAugmentName} (total: ${chosenAugmentsRef.current.length + 1})`
+          );
         }
       }
 
@@ -129,21 +128,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
             : contextRef.current.currentAugments,
       };
 
-      debugInput$.next({
-        source: "llm",
-        summary: `Coaching query: "${question}"`,
-        detail:
-          [
-            augmentOptions
-              ? `Augment options matched: ${augmentOptions.map((a) => a.name).join(", ")}`
-              : null,
-            chosenAugmentsRef.current.length > 0
-              ? `Known augments: ${chosenAugmentsRef.current.map((a) => a.name).join(", ")}`
-              : null,
-          ]
-            .filter(Boolean)
-            .join("\n") || undefined,
-      });
+      reactiveLog.info(`Coaching query: "${question}"`);
 
       try {
         const response = await getCoachingResponse(
@@ -163,7 +148,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
         ]);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Request failed";
-        console.error("[coaching] ERROR:", msg);
+        reactiveLog.error(`Coaching error: ${msg}`);
         setError(msg);
       } finally {
         setLoading(false);
@@ -175,10 +160,6 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   useEffect(() => {
     const sub = playerIntent$.subscribe((event) => {
       if (event.type === "query" && event.text.trim()) {
-        debugInput$.next({
-          source: "voice",
-          summary: `Voice transcript received by coaching: "${event.text}"`,
-        });
         submitQuestion(event.text);
       }
     });
@@ -194,10 +175,9 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
       {
         submitQuery: async (names, signal) => {
           const question = `I'm being offered these augments: ${names.join(", ")}. Which should I pick and which should I re-roll?`;
-          debugInput$.next({
-            source: "gep",
-            summary: `Auto-querying coaching for augment offer: ${names.join(", ")}`,
-          });
+          proactiveLog.info(
+            `Auto-querying coaching for augment offer: ${names.join(", ")}`
+          );
           await submitQuestion(question, { signal });
         },
         onPicked: (name) => {
@@ -215,10 +195,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           if (augmentData) {
             manualInput$.next({ type: "augment", augment: augmentData });
           }
-          debugInput$.next({
-            source: "gep",
-            summary: `Augment added to build: ${name}`,
-          });
+          proactiveLog.info(`Augment added to build: ${name}`);
         },
       }
     );
@@ -227,8 +204,8 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
   }, [submitQuestion]);
 
   if (!apiKey) {
-    console.warn(
-      "[coaching] No API key configured. Set VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY in .env"
+    reactiveLog.warn(
+      "No API key configured. Set VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY in .env"
     );
     return (
       <div className="coaching-display">

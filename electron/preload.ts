@@ -1,10 +1,13 @@
 import { contextBridge, ipcRenderer } from "electron";
 
+// electron-log preload — sets up IPC bridge for renderer → main log transport
+import "electron-log/preload";
+
 /**
  * Preload script — exposes a safe IPC bridge to the renderer.
  *
  * Channels:
- * - invoke: request/response commands (LCU, coaching log)
+ * - invoke: request/response commands (LCU discovery, fetch)
  * - onLcuEvent/onLcuDisconnect: LCU WebSocket push events
  * - onHotkeyEvent: push-to-talk hotkey (renderer keydown/keyup in Phase 1,
  *   overlay.hotkeys in ow-electron)

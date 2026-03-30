@@ -19,6 +19,9 @@ importers:
       deep-object-diff:
         specifier: ^1.1.9
         version: 1.1.9
+      electron-log:
+        specifier: ^5.4.3
+        version: 5.4.3
       luaparse:
         specifier: ^0.3.1
         version: 0.3.1
@@ -2297,6 +2300,13 @@ packages:
       {
         integrity: sha512-kXhajX6DzdIQcTlctVTKoG1oO39JhWcTG0lH7ZEJ4FzPaKJy7KFNfNJUd5BoEmLjv5GlrRZpEOYnniD+LcwNJA==,
       }
+
+  electron-log@5.4.3:
+    resolution:
+      {
+        integrity: sha512-sOUsM3LjZdugatazSQ/XTyNcw8dfvH1SYhXWiJyfYodAAKOZdHs0txPiLDXFzOZbhXgAgshQkshH2ccq0feyLQ==,
+      }
+    engines: { node: ">= 14" }
 
   electron-publish@26.8.1:
     resolution:
@@ -6654,6 +6664,8 @@ snapshots:
     transitivePeerDependencies:
       - dmg-builder
       - supports-color
+
+  electron-log@5.4.3: {}
 
   electron-publish@26.8.1:
     dependencies:

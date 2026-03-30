@@ -32,6 +32,7 @@
     "@openrouter/ai-sdk-provider": "^2.3.3",
     "ai": "^6.0.134",
     "deep-object-diff": "^1.1.9",
+    "electron-log": "^5.4.3",
     "luaparse": "^0.3.1",
     "openai": "^6.32.0",
     "react": "^19.1.0",

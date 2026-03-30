@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { skip, distinctUntilChanged, map } from "rxjs/operators";
-import { detailedDiff } from "deep-object-diff";
 import { hasGameStateChangedMeaningfully } from "../lib/reactive/debug-filters";
 import {
   summarizeLifecycleEvent,
@@ -12,16 +11,14 @@ import {
   liveGameState$,
   userInput$,
   notifications$,
-  debugInput$,
 } from "../lib/reactive";
-import type { DebugInputEvent, LiveGameState } from "../lib/reactive";
+import type { LiveGameState } from "../lib/reactive";
 
 interface LogEntry {
   id: number;
   timestamp: string;
   stream: string;
   summary: string;
-  detail?: string;
 }
 
 let nextId = 0;
@@ -30,81 +27,7 @@ function formatTime(): string {
   return new Date().toLocaleTimeString("en-US", { hour12: false });
 }
 
-/** Compute a compact diff string between two objects. Returns undefined if empty. */
-function computeDiff(
-  prev: Record<string, unknown> | null,
-  next: unknown
-): string | undefined {
-  if (next == null || typeof next !== "object") return undefined;
-  const nextObj = next as Record<string, unknown>;
-  if (!prev) {
-    // First emission — show a compact summary of top-level keys
-    const keys = Object.keys(nextObj);
-    if (keys.length === 0) return undefined;
-    if (keys.length <= 6) {
-      return keys
-        .map((k) => {
-          const v = nextObj[k];
-          if (v == null) return `${k}: null`;
-          if (
-            typeof v === "string" ||
-            typeof v === "number" ||
-            typeof v === "boolean"
-          )
-            return `${k}: ${v}`;
-          if (Array.isArray(v)) return `${k}: [${v.length}]`;
-          return `${k}: {...}`;
-        })
-        .join("\n");
-    }
-    return `${keys.length} keys: ${keys.slice(0, 8).join(", ")}${keys.length > 8 ? "..." : ""}`;
-  }
-
-  const diff = detailedDiff(prev, nextObj);
-  const parts: string[] = [];
-
-  const formatObj = (label: string, obj: Record<string, unknown>) => {
-    const entries = Object.entries(obj);
-    if (entries.length === 0) return;
-    parts.push(
-      `${label}:\n${entries
-        .map(([k, v]) => {
-          if (v != null && typeof v === "object" && !Array.isArray(v)) {
-            // Nested changes — flatten one level
-            return Object.entries(v as Record<string, unknown>)
-              .map(([nk, nv]) => `  ${k}.${nk}: ${JSON.stringify(nv)}`)
-              .join("\n");
-          }
-          return `  ${k}: ${JSON.stringify(v)}`;
-        })
-        .join("\n")}`
-    );
-  };
-
-  const d = diff as {
-    added: Record<string, unknown>;
-    deleted: Record<string, unknown>;
-    updated: Record<string, unknown>;
-  };
-  formatObj("+added", d.added);
-  formatObj("-deleted", d.deleted);
-  formatObj("~updated", d.updated);
-
-  return parts.length > 0 ? parts.join("\n") : undefined;
-}
-
-const INPUT_COLORS: Record<string, string> = {
-  discovery: "#a78bfa",
-  websocket: "#6b7280",
-  "ws-filtered": "#818cf8",
-  "riot-api": "#34d399",
-  "lcu-rest": "#60a5fa",
-  "initial-state": "#fbbf24",
-  voice: "#ec4899",
-  llm: "#f472b6",
-};
-
-const OUTPUT_COLORS: Record<string, string> = {
+const STREAM_COLORS: Record<string, string> = {
   lifecycle: "#4ade80",
   liveGame: "#60a5fa",
   userInput: "#f59e0b",
@@ -115,112 +38,61 @@ const MAX_LOG_ENTRIES = 200;
 
 function formatBufferAsText(entries: LogEntry[]): string {
   return entries
-    .map((e) => {
-      let line = `[${e.timestamp}] [${e.stream}] ${e.summary}`;
-      if (e.detail) {
-        line += `\n${e.detail}`;
-      }
-      return line;
-    })
-    .join("\n\n");
+    .map((e) => `[${e.timestamp}] [${e.stream}] ${e.summary}`)
+    .join("\n");
 }
 
 function copyToClipboard(text: string): void {
   navigator.clipboard.writeText(text);
 }
 
-// ---- Module-level log buffers (persist across tab switches) ----
+// ---- Module-level log buffer (persists across tab switches) ----
 
-const inputBuffer: LogEntry[] = [];
-const outputBuffer: LogEntry[] = [];
-let bufferVersion = 0; // bumped on every write so React knows to re-render
+const logBuffer: LogEntry[] = [];
+let bufferVersion = 0;
 let subscriptionsStarted = false;
 
-function pushInput(stream: string, summary: string, detail?: string): void {
-  inputBuffer.push({
+function pushEntry(stream: string, summary: string): void {
+  // Deduplicate consecutive identical entries from the same stream —
+  // the LCU often sends multiple WebSocket events in quick succession
+  // with minor field differences that produce the same summary.
+  const prev = logBuffer[logBuffer.length - 1];
+  if (prev && prev.stream === stream && prev.summary === summary) return;
+
+  logBuffer.push({
     id: nextId++,
     timestamp: formatTime(),
     stream,
     summary,
-    detail,
   });
-  if (inputBuffer.length > MAX_LOG_ENTRIES) inputBuffer.shift();
+  if (logBuffer.length > MAX_LOG_ENTRIES) logBuffer.shift();
   bufferVersion++;
   notifyListeners();
 }
 
-function pushOutput(stream: string, summary: string, detail?: string): void {
-  outputBuffer.push({
-    id: nextId++,
-    timestamp: formatTime(),
-    stream,
-    summary,
-    detail,
-  });
-  if (outputBuffer.length > MAX_LOG_ENTRIES) outputBuffer.shift();
-  bufferVersion++;
-  notifyListeners();
-}
-
-// Listeners that the component registers to trigger re-renders
 type Listener = () => void;
 const listeners = new Set<Listener>();
 function notifyListeners() {
   for (const fn of listeners) fn();
 }
 
-// Track previous values for diff computation (persists across mounts)
-const prevValues: Record<string, Record<string, unknown> | null> = {
-  lobby: null,
-  matchmaking: null,
-  session: null,
-};
-
 function startSubscriptions(): void {
   if (subscriptionsStarted) return;
   subscriptionsStarted = true;
 
-  // Input stream
-  debugInput$.subscribe((event: DebugInputEvent) => {
-    pushInput(event.source, event.summary, event.detail);
-  });
-
-  // Output log entries — skip(1) to avoid BehaviorSubject replay
   gameLifecycle$.pipe(skip(1)).subscribe((event) => {
     const summary = summarizeLifecycleEvent(event);
-    let detail: string | undefined;
 
-    if (
-      event.type === "lobby" ||
-      event.type === "matchmaking" ||
-      event.type === "session"
-    ) {
-      const prev = prevValues[event.type];
-      detail = computeDiff(prev, event.data);
-      prevValues[event.type] =
-        event.data != null && typeof event.data === "object"
-          ? (event.data as Record<string, unknown>)
-          : null;
-
-      // Suppress matchmaking ticks that only update timeInQueue
-      if (
-        event.type === "matchmaking" &&
-        detail &&
-        /^~updated:\n\s+timeInQueue: \d+$/.test(detail.trim())
-      ) {
-        return;
-      }
-
-      // Truncate JWT tokens in diffs — they're unreadable noise
-      if (detail) {
-        detail = detail.replace(
-          /\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
-          "[JWT token]"
-        );
+    // Suppress matchmaking ticks that only update timeInQueue
+    if (event.type === "matchmaking") {
+      const data = event.data as Record<string, unknown> | null;
+      if (data) {
+        const keys = Object.keys(data);
+        if (keys.length === 1 && keys[0] === "timeInQueue") return;
       }
     }
 
-    pushOutput("lifecycle", summary, detail);
+    pushEntry("lifecycle", summary);
   });
 
   liveGameState$
@@ -231,20 +103,16 @@ function startSubscriptions(): void {
     )
     .subscribe((summary) => {
       if (summary !== "Default (no data)") {
-        pushOutput("liveGame", summary);
+        pushEntry("liveGame", summary);
       }
     });
 
   userInput$.subscribe((event) => {
-    pushOutput("userInput", summarizeUserInput(event));
+    pushEntry("userInput", summarizeUserInput(event));
   });
 
   notifications$.subscribe((notif) => {
-    pushOutput(
-      "notification",
-      `[${notif.level}] ${notif.message}`,
-      `id: ${notif.id}`
-    );
+    pushEntry("notification", `[${notif.level}] ${notif.message}`);
   });
 }
 
@@ -252,26 +120,20 @@ startSubscriptions();
 
 export function DebugPanel() {
   const [, setRenderTick] = useState(0);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [showNoise, setShowNoise] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<string>("—");
   const [lcuConnected, setLcuConnected] = useState(false);
   const [pollingActive, setPollingActive] = useState(false);
   const [gameStateSnapshot, setGameStateSnapshot] =
     useState<LiveGameState | null>(null);
-  const inputLogEndRef = useRef<HTMLDivElement>(null);
-  const outputLogEndRef = useRef<HTMLDivElement>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Re-render when buffers change
     const listener = () => setRenderTick((t) => t + 1);
     listeners.add(listener);
 
-    // Seed from output buffer history — the BehaviorSubject only holds the
-    // latest event which might be a session/lobby, not connection/phase.
-    // Scan the buffer for the most recent connection and phase events.
-    for (let i = outputBuffer.length - 1; i >= 0; i--) {
-      const entry = outputBuffer[i];
+    // Seed status from buffer history
+    for (let i = logBuffer.length - 1; i >= 0; i--) {
+      const entry = logBuffer[i];
       if (entry.stream === "lifecycle") {
         if (entry.summary === "Connected" || entry.summary === "Disconnected") {
           setLcuConnected(entry.summary === "Connected");
@@ -279,8 +141,8 @@ export function DebugPanel() {
         }
       }
     }
-    for (let i = outputBuffer.length - 1; i >= 0; i--) {
-      const entry = outputBuffer[i];
+    for (let i = logBuffer.length - 1; i >= 0; i--) {
+      const entry = logBuffer[i];
       if (entry.stream === "lifecycle" && entry.summary.startsWith("Phase: ")) {
         const phase = entry.summary.replace("Phase: ", "");
         setCurrentPhase(phase);
@@ -290,8 +152,6 @@ export function DebugPanel() {
     }
     setGameStateSnapshot(liveGameState$.getValue());
 
-    // Status card subscriptions — no skip(1) so BehaviorSubject replay
-    // catches us up, and subsequent events update in real time
     const subs = [
       gameLifecycle$.subscribe((event) => {
         if (event.type === "connection") setLcuConnected(event.connected);
@@ -300,7 +160,6 @@ export function DebugPanel() {
           setPollingActive(event.phase === "InProgress");
         }
       }),
-
       liveGameState$.subscribe((state) => {
         setGameStateSnapshot(state);
       }),
@@ -312,20 +171,9 @@ export function DebugPanel() {
     };
   }, []);
 
-  // Auto-scroll: always scroll to bottom after each render.
-  // Uses "instant" instead of "smooth" to avoid animation races
-  // when multiple entries arrive in quick succession.
   useEffect(() => {
-    inputLogEndRef.current?.scrollIntoView({ behavior: "instant" });
+    logEndRef.current?.scrollIntoView({ behavior: "instant" });
   });
-
-  useEffect(() => {
-    outputLogEndRef.current?.scrollIntoView({ behavior: "instant" });
-  });
-
-  const filteredInputLog = showNoise
-    ? inputBuffer
-    : inputBuffer.filter((e) => !e.summary.includes("[noise]"));
 
   return (
     <div className="debug-panel">
@@ -356,164 +204,61 @@ export function DebugPanel() {
         />
       </div>
 
-      <div className="debug-two-columns">
-        {/* Left column: Inputs */}
-        <div className="debug-column">
-          <div className="debug-section-title">
-            Data Source Inputs
-            <span className="debug-log-count">{filteredInputLog.length}</span>
-            <label className="debug-noise-toggle">
-              <input
-                type="checkbox"
-                checked={showNoise}
-                onChange={(e) => setShowNoise(e.target.checked)}
-              />
-              noise
-            </label>
-            {inputBuffer.length > 0 && (
-              <>
-                <button
-                  className="debug-clear-btn"
-                  onClick={() =>
-                    copyToClipboard(formatBufferAsText(inputBuffer))
-                  }
-                >
-                  Copy All
-                </button>
-                <button
-                  className="debug-clear-btn"
-                  onClick={() => {
-                    inputBuffer.length = 0;
-                    bufferVersion++;
-                    notifyListeners();
-                  }}
-                >
-                  Clear
-                </button>
-              </>
-            )}
-          </div>
-          <div className="debug-source-legend">
-            {Object.entries(INPUT_COLORS).map(([source, color]) => (
-              <span key={source} className="debug-stream-indicator">
-                <span
-                  className="debug-stream-dot"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="debug-stream-name">{source}</span>
-              </span>
-            ))}
-          </div>
-          <div className="debug-log">
-            {filteredInputLog.length === 0 && (
-              <div className="debug-log-empty">
-                Waiting for data source events...
-              </div>
-            )}
-            {filteredInputLog.map((entry) => (
-              <LogEntryRow
-                key={entry.id}
-                entry={entry}
-                colors={INPUT_COLORS}
-                expandedId={expandedId}
-                onToggle={setExpandedId}
-              />
-            ))}
-            <div ref={inputLogEndRef} />
-          </div>
-        </div>
-
-        {/* Right column: App Observables */}
-        <div className="debug-column">
-          <div className="debug-section-title">
-            App Observables
-            <span className="debug-log-count">{outputBuffer.length}</span>
-            {outputBuffer.length > 0 && (
-              <>
-                <button
-                  className="debug-clear-btn"
-                  onClick={() =>
-                    copyToClipboard(formatBufferAsText(outputBuffer))
-                  }
-                >
-                  Copy All
-                </button>
-                <button
-                  className="debug-clear-btn"
-                  onClick={() => {
-                    outputBuffer.length = 0;
-                    bufferVersion++;
-                    notifyListeners();
-                  }}
-                >
-                  Clear
-                </button>
-              </>
-            )}
-          </div>
-          <div className="debug-source-legend">
-            {Object.entries(OUTPUT_COLORS).map(([stream, color]) => (
-              <span key={stream} className="debug-stream-indicator">
-                <span
-                  className="debug-stream-dot"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="debug-stream-name">{stream}</span>
-              </span>
-            ))}
-          </div>
-          <div className="debug-log">
-            {outputBuffer.length === 0 && (
-              <div className="debug-log-empty">
-                Waiting for observable emissions...
-              </div>
-            )}
-            {outputBuffer.map((entry) => (
-              <LogEntryRow
-                key={entry.id}
-                entry={entry}
-                colors={OUTPUT_COLORS}
-                expandedId={expandedId}
-                onToggle={setExpandedId}
-              />
-            ))}
-            <div ref={outputLogEndRef} />
-          </div>
-        </div>
+      <div className="debug-section-title">
+        App Observables
+        <span className="debug-log-count">{logBuffer.length}</span>
+        {logBuffer.length > 0 && (
+          <>
+            <button
+              className="debug-clear-btn"
+              onClick={() => copyToClipboard(formatBufferAsText(logBuffer))}
+            >
+              Copy All
+            </button>
+            <button
+              className="debug-clear-btn"
+              onClick={() => {
+                logBuffer.length = 0;
+                bufferVersion++;
+                notifyListeners();
+              }}
+            >
+              Clear
+            </button>
+          </>
+        )}
       </div>
-    </div>
-  );
-}
-
-function LogEntryRow({
-  entry,
-  colors,
-  expandedId,
-  onToggle,
-}: {
-  entry: LogEntry;
-  colors: Record<string, string>;
-  expandedId: number | null;
-  onToggle: (id: number | null) => void;
-}) {
-  return (
-    <div
-      className={`debug-log-entry${entry.detail ? " expandable" : ""}`}
-      onClick={() =>
-        entry.detail && onToggle(expandedId === entry.id ? null : entry.id)
-      }
-    >
-      <span className="debug-log-time">{entry.timestamp}</span>
-      <span
-        className="debug-log-stream"
-        style={{ color: colors[entry.stream] ?? "#888" }}
-      >
-        {entry.stream}
-      </span>
-      <span className="debug-log-summary">{entry.summary}</span>
-      {expandedId === entry.id && entry.detail && (
-        <pre className="debug-log-detail">{entry.detail}</pre>
-      )}
+      <div className="debug-source-legend">
+        {Object.entries(STREAM_COLORS).map(([stream, color]) => (
+          <span key={stream} className="debug-stream-indicator">
+            <span
+              className="debug-stream-dot"
+              style={{ backgroundColor: color }}
+            />
+            <span className="debug-stream-name">{stream}</span>
+          </span>
+        ))}
+      </div>
+      <div className="debug-log">
+        {logBuffer.length === 0 && (
+          <div className="debug-log-empty">
+            Waiting for observable emissions...
+          </div>
+        )}
+        {logBuffer.map((entry) => (
+          <div key={entry.id} className="debug-log-entry">
+            <span className="debug-log-time">{entry.timestamp}</span>
+            <span
+              className="debug-log-stream"
+              style={{ color: STREAM_COLORS[entry.stream] ?? "#888" }}
+            >
+              {entry.stream}
+            </span>
+            <span className="debug-log-summary">{entry.summary}</span>
+          </div>
+        ))}
+        <div ref={logEndRef} />
+      </div>
     </div>
   );
 }

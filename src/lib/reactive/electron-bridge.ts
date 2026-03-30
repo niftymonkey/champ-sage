@@ -60,8 +60,8 @@ function createNoOpBridge(): PlatformBridge {
     fetchLcu: fail,
     fetchRiotApi: fail,
     connectLcuWebSocket: fail,
-    listenLcuEvent: async () => () => {},
-    listenLcuDisconnect: async () => () => {},
+    listenLcuEvent: () => () => {},
+    listenLcuDisconnect: () => () => {},
   };
 }
 
@@ -94,13 +94,13 @@ export function createElectronBridge(): PlatformBridge {
       );
     },
 
-    async listenLcuEvent(handler: (event: LcuEventPayload) => void) {
+    listenLcuEvent(handler: (event: LcuEventPayload) => void) {
       return api.onLcuEvent((payload) => {
         handler(payload as LcuEventPayload);
       });
     },
 
-    async listenLcuDisconnect(handler: (event: LcuDisconnectPayload) => void) {
+    listenLcuDisconnect(handler: (event: LcuDisconnectPayload) => void) {
       return api.onLcuDisconnect((payload) => {
         handler(payload as LcuDisconnectPayload);
       });

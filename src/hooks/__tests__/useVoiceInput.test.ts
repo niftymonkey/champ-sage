@@ -2,7 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useVoiceInput } from "../useVoiceInput";
 import type { SttProvider, SttResult } from "../../lib/voice/stt-provider";
-import { playerIntent$, debugInput$ } from "../../lib/reactive";
+import { playerIntent$ } from "../../lib/reactive";
+
+// Mock the logger — vi.hoisted runs before vi.mock hoisting
+const mockVoiceLog = vi.hoisted(() => ({
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn(),
+}));
+
+vi.mock("../../lib/logger", () => ({
+  getLogger: vi.fn(() => mockVoiceLog),
+}));
 
 // Mock the renderer-side audio recorder
 vi.mock("../../lib/audio/recorder", () => ({
@@ -154,11 +167,8 @@ describe("useVoiceInput", () => {
     sub.unsubscribe();
   });
 
-  it("emits debug events at each stage", async () => {
+  it("logs at each stage of the voice pipeline", async () => {
     const provider = createMockProvider();
-    const debugEvents: Array<{ source: string; summary: string }> = [];
-    const sub = debugInput$.subscribe((e) => debugEvents.push(e));
-
     const { result } = renderHook(() => useVoiceInput(provider));
 
     await act(async () => {
@@ -168,22 +178,17 @@ describe("useVoiceInput", () => {
       await result.current.stopAndTranscribe();
     });
 
-    const voiceEvents = debugEvents.filter((e) => e.source === "voice");
-    expect(voiceEvents.length).toBeGreaterThanOrEqual(4);
-    expect(
-      voiceEvents.some((e) => e.summary.includes("Recording started"))
-    ).toBe(true);
-    expect(
-      voiceEvents.some((e) => e.summary.includes("Recording stopped"))
-    ).toBe(true);
-    expect(voiceEvents.some((e) => e.summary.includes("Audio captured"))).toBe(
-      true
+    // Should have logged: recording started, recording stopped, audio captured (debug), transcript
+    expect(mockVoiceLog.info).toHaveBeenCalledWith("Recording started");
+    expect(mockVoiceLog.info).toHaveBeenCalledWith(
+      "Recording stopped, transcribing..."
     );
-    expect(voiceEvents.some((e) => e.summary.includes("Transcript"))).toBe(
-      true
+    expect(mockVoiceLog.info).toHaveBeenCalledWith(
+      expect.stringContaining("Transcript")
     );
-
-    sub.unsubscribe();
+    expect(mockVoiceLog.debug).toHaveBeenCalledWith(
+      expect.stringContaining("Audio captured")
+    );
   });
 
   it("handles recording errors gracefully", async () => {

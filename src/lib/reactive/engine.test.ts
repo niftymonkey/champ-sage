@@ -76,14 +76,14 @@ function createMockBridge(): MockBridge {
 
     connectLcuWebSocket: vi.fn(async () => {}),
 
-    listenLcuEvent: vi.fn(async (handler) => {
+    listenLcuEvent: vi.fn((handler) => {
       eventHandler = handler;
       return () => {
         eventHandler = null;
       };
     }),
 
-    listenLcuDisconnect: vi.fn(async (handler) => {
+    listenLcuDisconnect: vi.fn((handler) => {
       disconnectHandler = handler;
       return () => {
         disconnectHandler = null;
