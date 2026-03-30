@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   summarizeLifecycleEvent,
   summarizeLiveGameState,
@@ -10,6 +10,19 @@ import type {
   UserInputEvent,
 } from "./types";
 import type { ActivePlayer } from "../game-state/types";
+
+vi.mock("../data-ingest/champion-id-map", () => {
+  const nameMap: Record<number, string> = {
+    136: "Aurelion Sol",
+    497: "Rakan",
+    254: "Vi",
+    202: "Jhin",
+    68: "Rumble",
+  };
+  return {
+    resolveChampionName: vi.fn((id: number) => nameMap[id]),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -99,6 +112,19 @@ describe("summarizeLifecycleEvent", () => {
     expect(summarizeLifecycleEvent(event)).toBe("Lobby: ARAM, 3 members");
   });
 
+  it("includes queue ID when present", () => {
+    const event: GameLifecycleEvent = {
+      type: "lobby",
+      data: {
+        gameConfig: { gameMode: "ARAM", queueId: 450 },
+        members: [{}, {}],
+      },
+    };
+    expect(summarizeLifecycleEvent(event)).toBe(
+      "Lobby: ARAM (queue 450), 2 members"
+    );
+  });
+
   it("falls back to generic lobby summary when data is missing", () => {
     const event: GameLifecycleEvent = { type: "lobby", data: {} };
     expect(summarizeLifecycleEvent(event)).toBe("Lobby update");
@@ -128,6 +154,20 @@ describe("summarizeLifecycleEvent", () => {
       },
     };
     expect(summarizeLifecycleEvent(event)).toBe("Session: ChampSelect, ARAM");
+  });
+
+  it("includes map ID when present", () => {
+    const event: GameLifecycleEvent = {
+      type: "session",
+      data: {
+        phase: "InProgress",
+        gameData: { queue: { gameMode: "CLASSIC" } },
+        map: { mapId: 11 },
+      },
+    };
+    expect(summarizeLifecycleEvent(event)).toBe(
+      "Session: InProgress, CLASSIC, map 11"
+    );
   });
 
   it("falls back to generic session summary when data is missing", () => {
@@ -172,15 +212,91 @@ describe("summarizeLiveGameState", () => {
     );
   });
 
-  it("indicates champ select active", () => {
-    expect(
-      summarizeLiveGameState(
-        createDefaultLiveGameState({ champSelect: { myTeam: [] } })
-      )
-    ).toBe("Champ select active");
+  it("shows your champion and allies during champ select", () => {
+    const champSelect = {
+      localPlayerCellId: 0,
+      myTeam: [
+        {
+          cellId: 0,
+          championId: 136,
+          championPickIntent: 0,
+          assignedPosition: "",
+          gameName: "niftymonkey",
+        },
+        {
+          cellId: 1,
+          championId: 497,
+          championPickIntent: 0,
+          assignedPosition: "utility",
+          gameName: "",
+        },
+        {
+          cellId: 2,
+          championId: 254,
+          championPickIntent: 0,
+          assignedPosition: "jungle",
+          gameName: "",
+        },
+      ],
+      theirTeam: [],
+      timer: { phase: "BAN_PICK", adjustedTimeLeftInPhase: 25000 },
+    };
+    const result = summarizeLiveGameState(
+      createDefaultLiveGameState({ champSelect })
+    );
+    expect(result).toContain("Champ Select");
+    expect(result).toContain("You: Aurelion Sol");
+    expect(result).toContain("Rakan (utility)");
+    expect(result).toContain("Vi (jungle)");
+    expect(result).toContain("BAN_PICK (25s)");
   });
 
-  it("shows EOG win/loss", () => {
+  it("shows hovering intent when not locked in", () => {
+    const champSelect = {
+      localPlayerCellId: 0,
+      myTeam: [
+        {
+          cellId: 0,
+          championId: 0,
+          championPickIntent: 202,
+          assignedPosition: "",
+        },
+      ],
+      theirTeam: [],
+      timer: { phase: "BAN_PICK", adjustedTimeLeftInPhase: 60000 },
+    };
+    const result = summarizeLiveGameState(
+      createDefaultLiveGameState({ champSelect })
+    );
+    expect(result).toContain("Hovering: Jhin");
+  });
+
+  it("falls back to numeric ID for unknown champions", () => {
+    const champSelect = {
+      localPlayerCellId: 0,
+      myTeam: [
+        {
+          cellId: 0,
+          championId: 999,
+          championPickIntent: 0,
+          assignedPosition: "",
+        },
+      ],
+      theirTeam: [],
+    };
+    const result = summarizeLiveGameState(
+      createDefaultLiveGameState({ champSelect })
+    );
+    expect(result).toContain("You: #999");
+  });
+
+  it("falls back gracefully when champSelect has no team data", () => {
+    expect(
+      summarizeLiveGameState(createDefaultLiveGameState({ champSelect: {} }))
+    ).toBe("Champ Select");
+  });
+
+  it("shows EOG with game mode and duration", () => {
     const eogStats = {
       gameId: "123",
       gameLength: 1200,
@@ -191,7 +307,21 @@ describe("summarizeLiveGameState", () => {
     };
     expect(
       summarizeLiveGameState(createDefaultLiveGameState({ eogStats }))
-    ).toBe("EOG: WIN");
+    ).toBe("EOG: WIN | ARAM | 20:00");
+  });
+
+  it("shows EOG loss", () => {
+    const eogStats = {
+      gameId: "456",
+      gameLength: 900,
+      gameMode: "CHERRY",
+      isWin: false,
+      championId: 222,
+      items: [],
+    };
+    expect(
+      summarizeLiveGameState(createDefaultLiveGameState({ eogStats }))
+    ).toBe("EOG: LOSS | CHERRY | 15:00");
   });
 
   it("shows champion, level, time, mode, and player count", () => {
@@ -213,7 +343,7 @@ describe("summarizeLiveGameState", () => {
 // ---------------------------------------------------------------------------
 
 describe("summarizeUserInput", () => {
-  it("shows augment name", () => {
+  it("shows augment name and tier", () => {
     const event: UserInputEvent = {
       type: "augment",
       augment: {
@@ -224,7 +354,25 @@ describe("summarizeUserInput", () => {
         mode: "mayhem",
       },
     };
-    expect(summarizeUserInput(event)).toBe("Augment: Blade Waltz");
+    expect(summarizeUserInput(event)).toBe(
+      "Augment picked: Blade Waltz (Gold)"
+    );
+  });
+
+  it("shows augment name with tier", () => {
+    const event: UserInputEvent = {
+      type: "augment",
+      augment: {
+        name: "Blade Waltz",
+        description: "desc",
+        tier: "Silver",
+        sets: [],
+        mode: "mayhem",
+      },
+    };
+    expect(summarizeUserInput(event)).toBe(
+      "Augment picked: Blade Waltz (Silver)"
+    );
   });
 
   it("shows query text", () => {

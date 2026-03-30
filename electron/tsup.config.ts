@@ -10,7 +10,7 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     external: ["electron"],
-    noExternal: ["ws"],
+    noExternal: ["ws", "electron-log"],
   },
   {
     entry: { preload: "electron/preload.ts" },
@@ -20,5 +20,6 @@ export default defineConfig([
     target: "node18",
     sourcemap: true,
     external: ["electron"],
+    noExternal: ["electron-log"],
   },
 ]);

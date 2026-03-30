@@ -18,11 +18,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { SttProvider, SttResult } from "../lib/voice/stt-provider";
 import { buildVocabHints } from "../lib/voice/vocab-hints";
-import { playerIntent$, debugInput$, liveGameState$ } from "../lib/reactive";
+import { playerIntent$, liveGameState$ } from "../lib/reactive";
 import {
   startRecording as startAudioCapture,
   stopRecording as stopAudioCapture,
 } from "../lib/audio/recorder";
+import { getLogger } from "../lib/logger";
+
+const voiceLog = getLogger("voice");
 
 /** Default hotkey for push-to-talk.
  *
@@ -69,10 +72,7 @@ export function useVoiceInput(
       isRecordingRef.current = false;
       setState((s) => ({ ...s, isRecording: false, isTranscribing: true }));
 
-      debugInput$.next({
-        source: "voice",
-        summary: "Recording stopped, transcribing...",
-      });
+      voiceLog.info("Recording stopped, transcribing...");
 
       // Get WAV bytes from renderer-side audio capture
       const wavBytes = await stopAudioCapture();
@@ -91,10 +91,7 @@ export function useVoiceInput(
       const pcmBytes = Math.max(0, wavBytes.length - 44);
       const audioDurationSec =
         bytesPerSecond > 0 ? pcmBytes / bytesPerSecond : 0;
-      debugInput$.next({
-        source: "voice",
-        summary: `Audio captured: ${audioDurationSec.toFixed(1)}s`,
-      });
+      voiceLog.debug(`Audio captured: ${audioDurationSec.toFixed(1)}s`);
 
       if (!providerRef.current) {
         throw new Error("No STT provider configured");
@@ -105,23 +102,13 @@ export function useVoiceInput(
       const championNames = gameState.players.map((p) => p.championName);
       const hints = buildVocabHints(championNames);
 
-      debugInput$.next({
-        source: "voice",
-        summary: `Vocab hints: ${hints.length} words`,
-        detail: hints.join(", "),
-      });
-
       // Transcribe
       const result: SttResult = await providerRef.current.transcribe(
         blob,
         hints
       );
 
-      debugInput$.next({
-        source: "voice",
-        summary: `Transcript (${result.latencyMs}ms): ${result.transcript}`,
-        detail: result.transcript,
-      });
+      voiceLog.info(`Transcript (${result.latencyMs}ms): ${result.transcript}`);
 
       setState((s) => ({
         ...s,
@@ -137,10 +124,7 @@ export function useVoiceInput(
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      debugInput$.next({
-        source: "voice",
-        summary: `Error: ${message}`,
-      });
+      voiceLog.error(`Transcription error: ${message}`);
       setState((s) => ({
         ...s,
         isRecording: false,
@@ -165,18 +149,12 @@ export function useVoiceInput(
 
       isRecordingRef.current = true;
       setState((s) => ({ ...s, isRecording: true, error: null }));
-      debugInput$.next({
-        source: "voice",
-        summary: "Recording started (hotkey held)",
-      });
+      voiceLog.info("Recording started");
       await startAudioCapture();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       isRecordingRef.current = false;
-      debugInput$.next({
-        source: "voice",
-        summary: `Recording error: ${message}`,
-      });
+      voiceLog.error(`Recording error: ${message}`);
       setState((s) => ({ ...s, isRecording: false, error: message }));
     }
   }, []);
@@ -197,20 +175,12 @@ export function useVoiceInput(
       if (e.code !== PUSH_TO_TALK_HOTKEY) return;
       if (e.repeat) return;
       if (isRecordingRef.current) return;
-      debugInput$.next({
-        source: "voice",
-        summary: `Hotkey pressed: ${PUSH_TO_TALK_HOTKEY}`,
-      });
       startRef.current();
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code !== PUSH_TO_TALK_HOTKEY) return;
       if (!isRecordingRef.current) return;
-      debugInput$.next({
-        source: "voice",
-        summary: `Hotkey released: ${PUSH_TO_TALK_HOTKEY}`,
-      });
       stopRef.current();
     };
 
@@ -225,25 +195,16 @@ export function useVoiceInput(
       unlistenOverlayHotkey = api.onHotkeyEvent((payload) => {
         const { state } = payload as { state: string };
         if (state === "Pressed" && !isRecordingRef.current) {
-          debugInput$.next({
-            source: "voice",
-            summary: "Overlay hotkey pressed",
-          });
           startRef.current();
         } else if (state === "Released" && isRecordingRef.current) {
-          debugInput$.next({
-            source: "voice",
-            summary: "Overlay hotkey released",
-          });
           stopRef.current();
         }
       });
     }
 
-    debugInput$.next({
-      source: "voice",
-      summary: `Push-to-talk: ${PUSH_TO_TALK_HOTKEY} (keyboard + overlay hotkey)`,
-    });
+    voiceLog.info(
+      `Push-to-talk registered: ${PUSH_TO_TALK_HOTKEY} (keyboard + overlay hotkey)`
+    );
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);

@@ -10,7 +10,9 @@
 
 import { Subject, Subscription } from "rxjs";
 import { distinctUntilChanged } from "rxjs/operators";
-import { debugInput$ } from "./streams";
+import { getLogger } from "../logger";
+
+const gepLog = getLogger("gep");
 
 export interface GepAugmentOfferPayload {
   augment_1: { name: string };
@@ -72,17 +74,10 @@ export function initGepBridge(): () => void {
     distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
   );
 
-  // Log and process deduplicated info updates
+  // Process deduplicated info updates
   subs.add(
     dedupedInfo$.subscribe((payload) => {
-      const timestamp = new Date().toISOString();
-      api
-        .invoke(
-          "append_gep_log",
-          `[${timestamp}] [info] ${JSON.stringify(payload)}`
-        )
-        .catch(() => {});
-
+      gepLog.trace("GEP info update", payload);
       gepInfoUpdate$.next(payload);
 
       const update = payload as {
@@ -107,17 +102,10 @@ export function initGepBridge(): () => void {
             augments.augment_3?.name,
           ].filter(Boolean);
 
-          debugInput$.next({
-            source: "gep",
-            summary: `Augment offer: ${names.join(", ")}`,
-          });
-
+          gepLog.info(`Augment offer: ${names.join(", ")}`);
           augmentOffer$.next(names);
         } catch (err) {
-          debugInput$.next({
-            source: "gep",
-            summary: `Failed to parse augment offer: ${err}`,
-          });
+          gepLog.error(`Failed to parse augment offer: ${err}`);
         }
       }
 
@@ -125,28 +113,17 @@ export function initGepBridge(): () => void {
       if (update.feature === "augments" && update.key === "picked_augment") {
         const name = String(update.value ?? "").trim();
         if (name) {
-          debugInput$.next({
-            source: "gep",
-            summary: `Augment picked: ${name}`,
-          });
-
+          gepLog.info(`Augment picked: ${name}`);
           augmentPicked$.next(name);
         }
       }
     })
   );
 
-  // Log and forward deduplicated game events
+  // Forward deduplicated game events
   subs.add(
     dedupedEvent$.subscribe((payload) => {
-      const timestamp = new Date().toISOString();
-      api
-        .invoke(
-          "append_gep_log",
-          `[${timestamp}] [event] ${JSON.stringify(payload)}`
-        )
-        .catch(() => {});
-
+      gepLog.trace("GEP game event", payload);
       gepGameEvent$.next(payload);
     })
   );
@@ -157,10 +134,7 @@ export function initGepBridge(): () => void {
     rawEvent$.next(payload)
   );
 
-  debugInput$.next({
-    source: "gep",
-    summary: "GEP bridge initialized — listening for augment events",
-  });
+  gepLog.info("GEP bridge initialized — listening for augment events");
 
   return () => {
     bridgeActive = false;

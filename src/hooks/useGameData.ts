@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { loadGameData, type LoadedGameData } from "../lib/data-ingest";
+import { populateChampionIdMap } from "../lib/data-ingest/champion-id-map";
+import { getLogger } from "../lib/logger";
+
+const dataLog = getLogger("data-ingest");
 
 interface UseGameDataResult {
   data: LoadedGameData | null;
@@ -19,11 +23,17 @@ export function useGameData(): UseGameDataResult {
 
     loadGameData()
       .then((result) => {
+        populateChampionIdMap(result.champions);
+        dataLog.info(
+          `Data loaded: ${result.champions.size} champions, ${result.items.size} items, ${result.augments.size} augments (v${result.version})`
+        );
         setData(result);
         setLoading(false);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : String(err));
+        const msg = err instanceof Error ? err.message : String(err);
+        dataLog.error(`Data ingest failed: ${msg}`);
+        setError(msg);
         setLoading(false);
       });
   }, []);

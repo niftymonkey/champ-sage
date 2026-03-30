@@ -1,7 +1,20 @@
-import { app as electronApp, BrowserWindow, ipcMain } from "electron";
-import { readFileSync, appendFileSync, mkdirSync } from "node:fs";
+import {
+  app as electronApp,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  shell,
+} from "electron";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import WebSocket from "ws";
+import {
+  initLogger,
+  setLogLevel,
+  getLogsDir,
+  log,
+  loadLogLevel,
+} from "./logger";
 
 const app = electronApp;
 
@@ -11,16 +24,6 @@ const app = electronApp;
 // When running under vanilla Electron, this property doesn't exist.
 const owApp: any =
   "overwolf" in (electronApp as any) ? (electronApp as any) : null;
-
-if (owApp) {
-  console.log(
-    "[champ-sage] Running as ow-electron (Overwolf features available)"
-  );
-} else {
-  console.log(
-    "[champ-sage] Running as vanilla Electron (no Overwolf features)"
-  );
-}
 
 // League of Legends game IDs
 const LOL_GAME_ID = 5426;
@@ -64,37 +67,6 @@ function parseLockfile(content: string): LcuCredentials {
 
 function lcuBasicAuth(token: string): string {
   return `Basic ${Buffer.from(`riot:${token}`).toString("base64")}`;
-}
-
-// ---------------------------------------------------------------------------
-// Coaching log
-// ---------------------------------------------------------------------------
-
-let coachingLogPath: string | null = null;
-let gepLogPath: string | null = null;
-
-function initLogs(): void {
-  const logsDir = join(app.getPath("userData"), "coaching-logs");
-  mkdirSync(logsDir, { recursive: true });
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  coachingLogPath = join(logsDir, `coaching-${timestamp}.log`);
-  gepLogPath = join(logsDir, `gep-${timestamp}.log`);
-  console.log(`[champ-sage] Coaching log: ${coachingLogPath}`);
-  console.log(`[champ-sage] GEP log: ${gepLogPath}`);
-}
-
-function getCoachingLogPath(): string {
-  if (!coachingLogPath) {
-    initLogs();
-  }
-  return coachingLogPath!;
-}
-
-function getGepLogPath(): string {
-  if (!gepLogPath) {
-    initLogs();
-  }
-  return gepLogPath!;
 }
 
 // ---------------------------------------------------------------------------
@@ -278,25 +250,6 @@ function registerIpcHandlers(): void {
       });
     })
   );
-
-  ipcMain.handle("append_coaching_log", async (_event, text: string) => {
-    const path = getCoachingLogPath();
-    appendFileSync(path, text + "\n");
-  });
-
-  ipcMain.handle("get_coaching_log_location", async () => {
-    return getCoachingLogPath();
-  });
-
-  // GEP event logging — separate log file for raw GEP data
-  ipcMain.handle("append_gep_log", async (_event, text: string) => {
-    const path = getGepLogPath();
-    appendFileSync(path, text + "\n");
-  });
-
-  ipcMain.handle("get_gep_log_location", async () => {
-    return getGepLogPath();
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -342,6 +295,10 @@ function createMainWindow(): BrowserWindow {
 // and the separate desktop window only.
 // ---------------------------------------------------------------------------
 
+const appLog = log.scope("app");
+const gepLog = log.scope("gep");
+const voiceLog = log.scope("voice");
+
 let gepInitialized = false;
 let overlayInitialized = false;
 
@@ -350,11 +307,8 @@ function initOverwolfFeatures(): void {
 
   const packages = owApp.overwolf.packages;
 
-  // Wait for each package to be ready
-  packages.on("ready", (e, packageName: string, version: string) => {
-    console.log(
-      `[champ-sage] Overwolf package ready: ${packageName} v${version}`
-    );
+  packages.on("ready", (e: unknown, packageName: string, version: string) => {
+    appLog.info(`Overwolf package ready: ${packageName} v${version}`);
 
     if (packageName === "overlay" && !overlayInitialized) {
       overlayInitialized = true;
@@ -374,74 +328,59 @@ function initOverlay(): void {
 
   const overlayApi = (owApp.overwolf.packages as any).overlay;
   if (!overlayApi) {
-    console.warn("[champ-sage] Overlay API not available");
+    appLog.warn("Overlay API not available");
     return;
   }
 
-  // Register League of Legends for overlay injection
   overlayApi.registerGames({ gamesIds: [LOL_GAME_ID] });
-  console.log("[champ-sage] Overlay registered for League of Legends");
+  appLog.info("Overlay registered for League of Legends");
 
-  // When League launches, inject the overlay
   overlayApi.on("game-launched", (event: any, gameInfo: any) => {
-    console.log(
-      `[champ-sage] Game launched: ${gameInfo.name} (id: ${gameInfo.id})`
-    );
+    appLog.info(`Game launched: ${gameInfo.name} (id: ${gameInfo.id})`);
 
     if (gameInfo.processInfo?.isElevated) {
-      console.warn("[champ-sage] Game is elevated — cannot inject overlay");
+      appLog.error("Game is elevated — cannot inject overlay");
       event.dismiss();
       return;
     }
 
     event.inject();
-    console.log("[champ-sage] Overlay injected");
+    appLog.info("Overlay injected");
   });
 
   overlayApi.on("game-injected", (gameInfo: any) => {
-    console.log(`[champ-sage] Overlay active in ${gameInfo.name}`);
+    appLog.info(`Overlay active in ${gameInfo.name}`);
     sendToAllWindows("overlay-status", { active: true, game: gameInfo.name });
 
-    // Register push-to-talk hotkey now that overlay is active
     registerOverlayHotkey(overlayApi);
   });
 
   overlayApi.on("game-exit", (gameInfo: any, wasInjected: boolean) => {
-    // Proactively close the LCU WebSocket before the client shuts down
-    // to avoid the noisy CloseEvent dump from the ws library
     cleanupWebSocket();
-
-    console.log(
-      `[champ-sage] Game exited: ${gameInfo.name} (was injected: ${wasInjected})`
-    );
+    appLog.info(`Game exited: ${gameInfo.name} (was injected: ${wasInjected})`);
     sendToAllWindows("overlay-status", { active: false, game: gameInfo.name });
   });
 
-  overlayApi.on("game-injection-error", (gameInfo: any, error: string) => {
-    console.error(`[champ-sage] Overlay injection error: ${error}`);
+  overlayApi.on("game-injection-error", (_gameInfo: any, error: string) => {
+    appLog.error(`Overlay injection error: ${error}`);
   });
 }
 
 function registerOverlayHotkey(overlayApi: any): void {
-  // NumpadSubtract (keyCode 109) — hold-to-talk
-  // passthrough: true so the key also reaches the game (numpad minus isn't
-  // used by League, so this is safe)
   overlayApi.hotkeys.register(
     {
       name: "push-to-talk",
       keyCode: 109, // VK_SUBTRACT (numpad minus)
       passthrough: true,
     },
-    (hotkey: any, state: "pressed" | "released") => {
+    (_hotkey: any, state: "pressed" | "released") => {
       sendToAllWindows("hotkey-event", {
         state: state === "pressed" ? "Pressed" : "Released",
       });
     }
   );
 
-  console.log(
-    "[champ-sage] Overlay hotkey registered: NumpadSubtract (hold-to-talk)"
-  );
+  voiceLog.info("Overlay hotkey registered: NumpadSubtract (hold-to-talk)");
 }
 
 // --- GEP (Game Events Provider) ---
@@ -451,17 +390,16 @@ function initGep(): void {
 
   const gepApi = owApp.overwolf.packages.gep;
   if (!gepApi) {
-    console.warn("[champ-sage] GEP API not available");
+    gepLog.warn("GEP API not available");
     return;
   }
 
-  // When League is detected, enable GEP and subscribe to augment features
   gepApi.on(
     "game-detected",
-    (e: any, gameId: number, name: string, gameInfo: any) => {
+    (e: any, gameId: number, _name: string, gameInfo: any) => {
       if (gameId !== LOL_GAME_ID) return;
 
-      console.log(`[champ-sage] GEP: League detected (pid: ${gameInfo.pid})`);
+      gepLog.info(`League detected (pid: ${gameInfo.pid})`);
       e.enable();
 
       const requiredFeatures = ["augments"];
@@ -469,59 +407,111 @@ function initGep(): void {
       gepApi
         .setRequiredFeatures(gameId, requiredFeatures)
         .then(() => {
-          console.log(
-            `[champ-sage] GEP: Required features set (${requiredFeatures.join(", ")})`
+          gepLog.debug(
+            `Required features set (${requiredFeatures.join(", ")})`
           );
         })
         .catch((err: Error) => {
-          console.error(
-            "[champ-sage] GEP: Failed to set required features:",
-            err.message
-          );
-          // Retry after a delay — GEP docs say this can fail initially
+          gepLog.warn("Failed to set required features:", err.message);
           setTimeout(() => {
             gepApi
               .setRequiredFeatures(gameId, requiredFeatures)
-              .then(() =>
-                console.log("[champ-sage] GEP: Features set on retry")
-              )
+              .then(() => gepLog.info("Features set on retry"))
               .catch((err2: Error) =>
-                console.error(
-                  "[champ-sage] GEP: Retry also failed:",
-                  err2.message
-                )
+                gepLog.error("Retry also failed:", err2.message)
               );
           }, 3000);
         });
     }
   );
 
-  // Forward all info updates to the renderer — dedup happens there via RxJS
-  gepApi.on("new-info-update", (e: any, gameId: number, ...args: any[]) => {
+  gepApi.on("new-info-update", (_e: any, gameId: number, ...args: any[]) => {
     if (gameId !== LOL_GAME_ID) return;
     const update = args[0];
     if (!update) return;
     sendToAllWindows("gep-info-update", update);
   });
 
-  // Forward all game events to the renderer
-  gepApi.on("new-game-event", (e: any, gameId: number, ...args: any[]) => {
+  gepApi.on("new-game-event", (_e: any, gameId: number, ...args: any[]) => {
     if (gameId !== LOL_GAME_ID) return;
     sendToAllWindows("gep-game-event", args[0]);
   });
 
   // @ts-ignore — game-exit is undocumented but works
-  gepApi.on("game-exit", (e: any, gameId: number) => {
+  gepApi.on("game-exit", (_e: any, gameId: number) => {
     if (gameId !== LOL_GAME_ID) return;
-    console.log("[champ-sage] GEP: League exited");
+    gepLog.info("League exited");
   });
 
-  gepApi.on("error", (e: any, gameId: number, error: any) => {
+  gepApi.on("error", (_e: any, gameId: number, error: any) => {
     if (gameId !== LOL_GAME_ID) return;
-    console.error("[champ-sage] GEP error:", error);
+    gepLog.error("GEP error:", error);
   });
 
-  console.log("[champ-sage] GEP initialized, waiting for League to launch...");
+  gepLog.info("GEP initialized, waiting for League to launch...");
+}
+
+// ---------------------------------------------------------------------------
+// Application menu with log level control
+// ---------------------------------------------------------------------------
+
+function buildAppMenu(): void {
+  const currentLevel = loadLogLevel();
+  const levels = ["error", "warn", "info", "debug", "trace"] as const;
+
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: "File",
+      submenu: [
+        {
+          label: "Log Level",
+          submenu: levels.map((level) => ({
+            label: level.charAt(0).toUpperCase() + level.slice(1),
+            type: "radio" as const,
+            checked: level === currentLevel,
+            click: () => {
+              setLogLevel(level);
+              // Rebuild menu to update radio state
+              buildAppMenu();
+            },
+          })),
+        },
+        {
+          label: "Open Log Folder",
+          click: () => shell.openPath(getLogsDir()),
+        },
+        { type: "separator" },
+        { role: "quit" },
+      ],
+    },
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "selectAll" },
+      ],
+    },
+    {
+      label: "View",
+      submenu: [
+        { role: "reload" },
+        { role: "forceReload" },
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { role: "togglefullscreen" },
+      ],
+    },
+  ];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 // ---------------------------------------------------------------------------
@@ -529,9 +519,17 @@ function initGep(): void {
 // ---------------------------------------------------------------------------
 
 app.whenReady().then(() => {
+  initLogger();
   registerIpcHandlers();
-  initLogs();
+  buildAppMenu();
   createMainWindow();
+
+  appLog.info(
+    owApp
+      ? "Running as ow-electron (Overwolf features available)"
+      : "Running as vanilla Electron (no Overwolf features)"
+  );
+
   initOverwolfFeatures();
 
   app.on("activate", () => {

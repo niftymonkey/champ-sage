@@ -3,14 +3,9 @@ import type { CoachingContext, CoachingQuery, CoachingResponse } from "./types";
 import { createCoachingModel, MODEL_CONFIG } from "./model-config";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
 import { coachingResponseSchema } from "./schemas";
+import { getLogger } from "../logger";
 
-function logToFile(text: string): void {
-  const timestamp = new Date().toISOString();
-  const line = `[${timestamp}] ${text}`;
-  if (window.electronAPI) {
-    window.electronAPI.invoke("append_coaching_log", line).catch(() => {});
-  }
-}
+const coachingLog = getLogger("coaching:reactive");
 
 export async function getCoachingResponse(
   context: CoachingContext,
@@ -25,25 +20,19 @@ export async function getCoachingResponse(
   });
   const userPrompt = buildUserPrompt(context, query);
 
-  logToFile(
-    [
-      "=== COACHING REQUEST ===",
-      `Model: ${MODEL_CONFIG.id}`,
-      `Question: ${query.question}`,
-      `Champion: ${context.champion.name} Lv${context.champion.level}`,
-      `Items: ${context.currentItems.map((i) => i.name).join(", ") || "None"}`,
-      `Augments: ${context.currentAugments.map((a) => a.name).join(", ") || "None"}`,
-      `Mode: ${context.gameMode} (LCU: ${context.lcuGameMode}) | Augments tracked: ${context.currentAugments.length > 0 ? context.currentAugments.map((a) => a.name).join(", ") : "None"}`,
-      `Enemies: ${context.enemyTeam.map((e) => e.champion).join(", ") || "None"}`,
-      `History: ${query.history?.length ?? 0} exchanges`,
-      "",
-      "--- SYSTEM PROMPT ---",
-      systemPrompt,
-      "",
-      "--- USER PROMPT ---",
-      userPrompt,
-    ].join("\n")
+  coachingLog.info(
+    `Request: ${query.question} | ${context.champion.name} Lv${context.champion.level} | ${context.gameMode}`,
+    {
+      model: MODEL_CONFIG.id,
+      items: context.currentItems.map((i) => i.name),
+      augments: context.currentAugments.map((a) => a.name),
+      enemies: context.enemyTeam.map((e) => e.champion),
+      historyLength: query.history?.length ?? 0,
+    }
   );
+
+  coachingLog.trace("System prompt:", systemPrompt);
+  coachingLog.trace("User prompt:", userPrompt);
 
   const startMs = Date.now();
   const model = createCoachingModel(apiKey);
@@ -62,28 +51,24 @@ export async function getCoachingResponse(
     const usage = result.usage;
     const recs = result.output.recommendations;
 
-    logToFile(
-      [
-        `--- RESPONSE (${elapsedMs}ms) ---`,
-        `Tokens: ${usage.inputTokens ?? "?"}in / ${usage.outputTokens ?? "?"}out`,
-        `Answer: ${result.output.answer}`,
-        ...(recs.length > 0
-          ? [
-              "Recommendations:",
-              ...recs.map((r, i) => `  #${i + 1} ${r.name}: ${r.reasoning}`),
-            ]
-          : []),
-        "=== END COACHING REQUEST ===",
-      ].join("\n")
+    coachingLog.info(
+      `Response (${elapsedMs}ms): ${usage.inputTokens ?? "?"}in/${usage.outputTokens ?? "?"}out`,
+      {
+        answer: result.output.answer,
+        recommendations: recs.map((r) => r.name),
+      }
     );
+
+    coachingLog.trace("Full response:", result.output);
 
     return result.output;
   } catch (err) {
     const elapsedMs = Date.now() - startMs;
-    const message = err instanceof Error ? err.message : String(err);
-    logToFile(
-      `--- ERROR (${elapsedMs}ms) ---\n${message}\n=== END COACHING REQUEST ===`
-    );
+    coachingLog.error("Request failed", {
+      elapsedMs,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     throw err;
   }
 }

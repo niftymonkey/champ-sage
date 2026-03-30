@@ -6,12 +6,11 @@ import { useLiveGameState } from "./hooks/useLiveGameState";
 import { useUserInput } from "./hooks/useUserInput";
 import { useVoiceInput } from "./hooks/useVoiceInput";
 import { useZoom } from "./hooks/useZoom";
-import {
-  initializeReactiveEngine,
-  debugInput$,
-  userInput$,
-} from "./lib/reactive";
+import { initializeReactiveEngine, userInput$ } from "./lib/reactive";
 import type { ReactiveEngine } from "./lib/reactive";
+import { getLogger } from "./lib/logger";
+
+const appLog = getLogger("app");
 import {
   WhisperProvider,
   LocalWhisperProvider,
@@ -46,7 +45,7 @@ function App() {
         gepCleanupRef.current = initGepBridge();
       })
       .catch((err) => {
-        console.warn("[app] Failed to initialize GEP bridge", err);
+        appLog.warn("Failed to initialize GEP bridge", err);
       });
 
     return () => {
@@ -71,18 +70,18 @@ function App() {
       | string
       | undefined;
     if (localUrl) {
-      console.log("[app] Using local Whisper provider:", localUrl);
+      appLog.info(`Using local Whisper provider: ${localUrl}`);
       return new LocalWhisperProvider(localUrl);
     }
 
     const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
     if (!apiKey) {
-      console.warn(
-        "[app] No STT provider available (no VITE_LOCAL_WHISPER_URL or VITE_OPENAI_API_KEY)"
+      appLog.warn(
+        "No STT provider available (no VITE_LOCAL_WHISPER_URL or VITE_OPENAI_API_KEY)"
       );
       return null;
     }
-    console.log("[app] Using OpenAI Whisper provider");
+    appLog.info("Using OpenAI Whisper provider");
     return new WhisperProvider(apiKey);
   }, []);
 
@@ -98,12 +97,10 @@ function App() {
     const championNames = liveGame.players.map((p) => p.championName);
     ensureAbilities(data, championNames, data.version).catch(() => {});
 
-    // Log game detection info for debugging
     const detectedMode = registry.detect(liveGame.gameMode);
-    debugInput$.next({
-      source: "discovery",
-      summary: `Game detected: ${liveGame.gameMode} | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.join(", ")} | augments in data: ${data.augments.size}`,
-    });
+    appLog.info(
+      `Game detected: ${liveGame.gameMode} | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.length} | augments in data: ${data.augments.size}`
+    );
   }, [data, liveGame.players]);
 
   const prevPhaseRef = useRef<string | null>(null);
@@ -168,11 +165,6 @@ function App() {
     const mode = gameState.gameMode;
     if (mode === prevGameModeRef.current) return;
     prevGameModeRef.current = mode;
-    const detectedMode = registry.detect(mode);
-    debugInput$.next({
-      source: "discovery",
-      summary: `Mode detection: gameMode="${mode}" → ${detectedMode ? detectedMode.displayName : "none"} | augments: ${detectedMode ? (detectedMode.buildContext(gameState, data).modeAugments?.size ?? 0) : 0}`,
-    });
   }, [data, gameState]);
 
   const effectiveState = useMemo(() => {

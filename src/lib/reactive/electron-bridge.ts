@@ -10,8 +10,8 @@ import type {
  */
 interface ElectronAPI {
   invoke(channel: string, ...args: unknown[]): Promise<unknown>;
-  onLcuEvent(callback: (event: unknown) => void): () => void;
-  onLcuDisconnect(callback: (event: unknown) => void): () => void;
+  onLcuEvent(callback: (event: LcuEventPayload) => void): () => void;
+  onLcuDisconnect(callback: (event: LcuDisconnectPayload) => void): () => void;
   onHotkeyEvent(callback: (event: unknown) => void): () => void;
   onGepInfoUpdate(callback: (event: unknown) => void): () => void;
   onGepGameEvent(callback: (event: unknown) => void): () => void;
@@ -60,8 +60,8 @@ function createNoOpBridge(): PlatformBridge {
     fetchLcu: fail,
     fetchRiotApi: fail,
     connectLcuWebSocket: fail,
-    listenLcuEvent: async () => () => {},
-    listenLcuDisconnect: async () => () => {},
+    listenLcuEvent: () => () => {},
+    listenLcuDisconnect: () => () => {},
   };
 }
 
@@ -94,16 +94,12 @@ export function createElectronBridge(): PlatformBridge {
       );
     },
 
-    async listenLcuEvent(handler: (event: LcuEventPayload) => void) {
-      return api.onLcuEvent((payload) => {
-        handler(payload as LcuEventPayload);
-      });
+    listenLcuEvent(handler: (event: LcuEventPayload) => void) {
+      return api.onLcuEvent(handler);
     },
 
-    async listenLcuDisconnect(handler: (event: LcuDisconnectPayload) => void) {
-      return api.onLcuDisconnect((payload) => {
-        handler(payload as LcuDisconnectPayload);
-      });
+    listenLcuDisconnect(handler: (event: LcuDisconnectPayload) => void) {
+      return api.onLcuDisconnect(handler);
     },
   };
 }

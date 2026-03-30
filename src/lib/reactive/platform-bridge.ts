@@ -32,12 +32,10 @@ export interface PlatformBridge {
   connectLcuWebSocket(port: number, token: string): Promise<void>;
 
   /** Listen for LCU WebSocket events. Returns an unlisten function. */
-  listenLcuEvent(
-    handler: (event: LcuEventPayload) => void
-  ): Promise<() => void>;
+  listenLcuEvent(handler: (event: LcuEventPayload) => void): () => void;
 
   /** Listen for LCU WebSocket disconnects. Returns an unlisten function. */
   listenLcuDisconnect(
     handler: (event: LcuDisconnectPayload) => void
-  ): Promise<() => void>;
+  ): () => void;
 }

@@ -101,6 +101,47 @@ None → Lobby → Matchmaking → ReadyCheck → ChampSelect → InProgress →
 - **EndOfGame**: Post-game screen showing stats/honor. Stats still available.
 - Returns to **Lobby** when the player exits the post-game screen.
 
+### Champ select session (`/lol-champ-select/v1/session`)
+
+Available during the ChampSelect phase. Fires on every change (pick, ban, timer tick, trade). Captured from Practice Tool on 2026-03-29.
+
+**Key fields:**
+
+- `localPlayerCellId` — numeric cell ID identifying the local player (0-indexed)
+- `myTeam[]` — array of allied player objects:
+  - `cellId` — position in the draft (0-indexed)
+  - `championId` — numeric champion key (0 = not yet picked). Maps to `Champion.key` in our data ingest.
+  - `championPickIntent` — numeric champion key the player is hovering before lock-in (0 = none)
+  - `assignedPosition` — role string: `"top"`, `"jungle"`, `"middle"`, `"bottom"`, `"utility"`, or `""` (empty in ARAM/Arena)
+  - `gameName` — Riot ID game name (only populated for the local player; empty for teammates in ranked)
+  - `tagLine` — Riot ID tagline
+  - `spell1Id`, `spell2Id` — summoner spell IDs (4=Flash, 12=Teleport, 14=Ignite, 11=Smite, 21=Barrier, etc.)
+  - `selectedSkinId` — skin ID (championId \* 1000 + skin number)
+  - `team` — team number (1 = blue/ORDER, 2 = red/CHAOS)
+  - `isHumanoid` — boolean (false for the local player in Practice Tool, true for bots that simulate humans)
+  - `nameVisibilityType` — `"VISIBLE"` or `"HIDDEN"` (hidden for enemy team in ranked)
+  - `puuid` — player UUID
+- `theirTeam[]` — same structure as `myTeam[]`, for the enemy team. Champion IDs are 0 in modes where enemy picks are hidden during champ select.
+- `bans` — `{ myTeamBans: number[], theirTeamBans: number[], numBans: number }`
+- `benchChampions[]` — array of available bench champions (ARAM trade pool)
+- `benchEnabled` — boolean (true in ARAM)
+- `actions[][]` — nested array of pick/ban actions:
+  - `actorCellId` — which player is acting
+  - `championId` — champion being picked/banned
+  - `completed` — boolean (true = locked in)
+  - `isInProgress` — boolean (true = currently this player's turn)
+  - `type` — `"pick"` or `"ban"`
+- `timer` — current phase timer:
+  - `phase` — `"BAN_PICK"`, `"FINALIZATION"`, `"GAME_STARTING"`, or `""`
+  - `adjustedTimeLeftInPhase` — milliseconds remaining
+  - `totalTimeInPhase` — total milliseconds for this phase
+- `isCustomGame` — boolean
+- `queueId` — numeric queue ID (e.g., 3140 for Practice Tool)
+- `trades[]` — available trade offers between teammates
+- `gameId` — numeric game ID
+
+**Champion ID resolution:** The LCU uses numeric champion keys (e.g., 136 = Aurelion Sol, 497 = Rakan). These map to `Champion.key` in our DDragon data ingest. Use `resolveChampionName()` from `src/lib/data-ingest/champion-id-map.ts` for reverse lookup.
+
 ### End-of-game stats (`/lol-end-of-game/v1/eog-stats-block`)
 
 Available at the `PreEndOfGame` phase transition (immediately when the nexus dies — ~20 seconds before `EndOfGame`).
