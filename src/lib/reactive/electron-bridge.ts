@@ -10,8 +10,8 @@ import type {
  */
 interface ElectronAPI {
   invoke(channel: string, ...args: unknown[]): Promise<unknown>;
-  onLcuEvent(callback: (event: unknown) => void): () => void;
-  onLcuDisconnect(callback: (event: unknown) => void): () => void;
+  onLcuEvent(callback: (event: LcuEventPayload) => void): () => void;
+  onLcuDisconnect(callback: (event: LcuDisconnectPayload) => void): () => void;
   onHotkeyEvent(callback: (event: unknown) => void): () => void;
   onGepInfoUpdate(callback: (event: unknown) => void): () => void;
   onGepGameEvent(callback: (event: unknown) => void): () => void;
@@ -95,15 +95,11 @@ export function createElectronBridge(): PlatformBridge {
     },
 
     listenLcuEvent(handler: (event: LcuEventPayload) => void) {
-      return api.onLcuEvent((payload) => {
-        handler(payload as LcuEventPayload);
-      });
+      return api.onLcuEvent(handler);
     },
 
     listenLcuDisconnect(handler: (event: LcuDisconnectPayload) => void) {
-      return api.onLcuDisconnect((payload) => {
-        handler(payload as LcuDisconnectPayload);
-      });
+      return api.onLcuDisconnect(handler);
     },
   };
 }

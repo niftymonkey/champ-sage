@@ -271,6 +271,25 @@ describe("summarizeLiveGameState", () => {
     expect(result).toContain("Hovering: Jhin");
   });
 
+  it("falls back to numeric ID for unknown champions", () => {
+    const champSelect = {
+      localPlayerCellId: 0,
+      myTeam: [
+        {
+          cellId: 0,
+          championId: 999,
+          championPickIntent: 0,
+          assignedPosition: "",
+        },
+      ],
+      theirTeam: [],
+    };
+    const result = summarizeLiveGameState(
+      createDefaultLiveGameState({ champSelect })
+    );
+    expect(result).toContain("You: #999");
+  });
+
   it("falls back gracefully when champSelect has no team data", () => {
     expect(
       summarizeLiveGameState(createDefaultLiveGameState({ champSelect: {} }))

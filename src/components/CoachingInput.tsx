@@ -98,17 +98,18 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
             description: augmentData?.description ?? "",
             sets: augmentData?.sets,
           };
-          setChosenAugments((prev) =>
-            prev.some((a) => a.name === newAugment.name)
-              ? prev
-              : [...prev, newAugment]
+          const alreadySelected = chosenAugmentsRef.current.some(
+            (a) => a.name === newAugment.name
           );
-          if (augmentData) {
-            manualInput$.next({ type: "augment", augment: augmentData });
+          if (!alreadySelected) {
+            setChosenAugments((prev) => [...prev, newAugment]);
+            if (augmentData) {
+              manualInput$.next({ type: "augment", augment: augmentData });
+            }
+            reactiveLog.info(
+              `Augment selected: ${newAugmentName} (total: ${chosenAugmentsRef.current.length + 1})`
+            );
           }
-          reactiveLog.info(
-            `Augment selected: ${newAugmentName} (total: ${chosenAugmentsRef.current.length + 1})`
-          );
         }
       }
 
@@ -181,6 +182,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           await submitQuestion(question, { signal });
         },
         onPicked: (name) => {
+          if (chosenAugmentsRef.current.some((a) => a.name === name)) return;
           const augmentData = gameDataRef.current.augments.get(
             name.toLowerCase()
           );
@@ -189,9 +191,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
             description: augmentData?.description ?? "",
             sets: augmentData?.sets,
           };
-          setChosenAugments((prev) =>
-            prev.some((a) => a.name === name) ? prev : [...prev, newAugment]
-          );
+          setChosenAugments((prev) => [...prev, newAugment]);
           if (augmentData) {
             manualInput$.next({ type: "augment", augment: augmentData });
           }
@@ -203,10 +203,15 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     return () => ctrl.dispose();
   }, [submitQuestion]);
 
+  useEffect(() => {
+    if (!apiKey) {
+      reactiveLog.warn(
+        "No API key configured. Set VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY in .env"
+      );
+    }
+  }, [apiKey]);
+
   if (!apiKey) {
-    reactiveLog.warn(
-      "No API key configured. Set VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY in .env"
-    );
     return (
       <div className="coaching-display">
         <p className="entity-meta">

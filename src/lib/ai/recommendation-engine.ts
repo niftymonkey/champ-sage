@@ -64,8 +64,11 @@ export async function getCoachingResponse(
     return result.output;
   } catch (err) {
     const elapsedMs = Date.now() - startMs;
-    const message = err instanceof Error ? err.message : String(err);
-    coachingLog.error(`Request failed (${elapsedMs}ms): ${message}`);
+    coachingLog.error("Request failed", {
+      elapsedMs,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     throw err;
   }
 }

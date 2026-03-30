@@ -142,6 +142,8 @@ Available during the ChampSelect phase. Fires on every change (pick, ban, timer 
 
 **Champion ID resolution:** The LCU uses numeric champion keys (e.g., 136 = Aurelion Sol, 497 = Rakan). These map to `Champion.key` in our DDragon data ingest. Use `resolveChampionName()` from `src/lib/data-ingest/champion-id-map.ts` for reverse lookup.
 
+### End-of-game stats (`/lol-end-of-game/v1/eog-stats-block`)
+
 Available at the `PreEndOfGame` phase transition (immediately when the nexus dies — ~20 seconds before `EndOfGame`).
 
 **What it provides:**
