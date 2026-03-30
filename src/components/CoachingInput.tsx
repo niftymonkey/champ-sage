@@ -102,12 +102,14 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
             (a) => a.name === newAugment.name
           );
           if (!alreadySelected) {
-            setChosenAugments((prev) => [...prev, newAugment]);
+            const next = [...chosenAugmentsRef.current, newAugment];
+            chosenAugmentsRef.current = next;
+            setChosenAugments(next);
             if (augmentData) {
               manualInput$.next({ type: "augment", augment: augmentData });
             }
             reactiveLog.info(
-              `Augment selected: ${newAugmentName} (total: ${chosenAugmentsRef.current.length + 1})`
+              `Augment selected: ${newAugmentName} (total: ${next.length})`
             );
           }
         }
@@ -191,7 +193,9 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
             description: augmentData?.description ?? "",
             sets: augmentData?.sets,
           };
-          setChosenAugments((prev) => [...prev, newAugment]);
+          const next = [...chosenAugmentsRef.current, newAugment];
+          chosenAugmentsRef.current = next;
+          setChosenAugments(next);
           if (augmentData) {
             manualInput$.next({ type: "augment", augment: augmentData });
           }
