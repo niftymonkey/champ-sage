@@ -41,6 +41,13 @@ beforeEach(() => {
     onGepInfoUpdate: vi.fn(() => () => {}),
     onGepGameEvent: vi.fn(() => () => {}),
     onOverlayStatus: vi.fn(() => () => {}),
+    onCalibrationCapture: vi.fn(() => () => {}),
+    onOverlayEditMode: vi.fn(() => () => {}),
+    startStripDrag: vi.fn(),
+    sendCoachingRequest: vi.fn(),
+    onCoachingRequest: vi.fn(() => () => {}),
+    sendCoachingResponse: vi.fn(),
+    onCoachingResponse: vi.fn(() => () => {}),
   };
 });
 
@@ -69,6 +76,13 @@ describe("useVoiceInput", () => {
       onGepInfoUpdate: vi.fn(() => () => {}),
       onGepGameEvent: vi.fn(() => () => {}),
       onOverlayStatus: vi.fn(() => () => {}),
+      onCalibrationCapture: vi.fn(() => () => {}),
+      onOverlayEditMode: vi.fn(() => () => {}),
+      startStripDrag: vi.fn(),
+      sendCoachingRequest: vi.fn(),
+      onCoachingRequest: vi.fn(() => () => {}),
+      sendCoachingResponse: vi.fn(),
+      onCoachingResponse: vi.fn(() => () => {}),
     };
   });
 

@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Overlay Prototype — Badge Positioning</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #111;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-family: monospace;
+        color: #fff;
+      }
+
+      .controls {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 12px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-size: 12px;
+        width: 280px;
+      }
+
+      .controls label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 4px 0;
+      }
+
+      .controls input[type="range"] {
+        width: 140px;
+      }
+
+      .controls .value {
+        width: 50px;
+        text-align: right;
+        color: #0f0;
+      }
+
+      .viewport {
+        position: relative;
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        margin-top: 10px;
+      }
+
+      .viewport img {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      .badge {
+        position: absolute;
+        transform: translateX(-50%);
+        width: 14%;
+        height: 50px;
+        background: rgba(0, 0, 0, 0.85);
+        border-radius: 6px;
+        padding: 4px 6px;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .badge .rank {
+        color: #fff;
+        border-radius: 3px;
+        padding: 1px 6px;
+        font-weight: bold;
+        font-size: 13px;
+        line-height: 1;
+        float: left;
+        margin-right: 4px;
+        margin-top: 1px;
+      }
+
+      .badge .reason {
+        color: #ddd;
+        font-size: 9px;
+        line-height: 1.3;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+      }
+
+      .badge.rank-1 {
+        border: 2px solid #22c55e;
+      }
+      .badge.rank-1 .rank {
+        background: #22c55e;
+      }
+
+      .badge.rank-2 {
+        border: 2px solid #eab308;
+      }
+      .badge.rank-2 .rank {
+        background: #eab308;
+      }
+
+      .badge.rank-3 {
+        border: 2px solid #ef4444;
+      }
+      .badge.rank-3 .rank {
+        background: #ef4444;
+      }
+
+      .coaching-strip {
+        position: absolute;
+        width: 50%;
+        left: 25%;
+        max-height: 40px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 10px;
+        line-height: 1.3;
+        text-align: center;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      h2 {
+        margin: 20px 0 5px;
+        font-size: 16px;
+      }
+      p.subtitle {
+        margin-bottom: 10px;
+        font-size: 12px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Overlay Prototype</h2>
+    <p class="subtitle">
+      Screenshot at 50% scale (1280x720). Sliders adjust positions in % of
+      screen.
+    </p>
+
+    <div class="controls">
+      <strong>Badge Positions</strong>
+      <label
+        >Badge Y:
+        <input
+          type="range"
+          id="badgeY"
+          min="5"
+          max="25"
+          step="0.5"
+          value="9.5"
+        /><span class="value" id="badgeY-val">9.5%</span></label
+      >
+      <label
+        >Left X:
+        <input
+          type="range"
+          id="leftX"
+          min="20"
+          max="45"
+          step="0.5"
+          value="31.5"
+        /><span class="value" id="leftX-val">31.5%</span></label
+      >
+      <label
+        >Center X:
+        <input
+          type="range"
+          id="centerX"
+          min="45"
+          max="55"
+          step="0.5"
+          value="50"
+        /><span class="value" id="centerX-val">50%</span></label
+      >
+      <label
+        >Right X:
+        <input
+          type="range"
+          id="rightX"
+          min="55"
+          max="80"
+          step="0.5"
+          value="68.5"
+        /><span class="value" id="rightX-val">68.5%</span></label
+      >
+      <label
+        >Badge Width:
+        <input
+          type="range"
+          id="badgeW"
+          min="8"
+          max="20"
+          step="0.5"
+          value="14"
+        /><span class="value" id="badgeW-val">14%</span></label
+      >
+      <label
+        >Badge Height:
+        <input
+          type="range"
+          id="badgeH"
+          min="30"
+          max="80"
+          step="1"
+          value="50"
+        /><span class="value" id="badgeH-val">50px</span></label
+      >
+      <label
+        >Font Size:
+        <input
+          type="range"
+          id="fontSize"
+          min="8"
+          max="14"
+          step="0.5"
+          value="10"
+        /><span class="value" id="fontSize-val">10px</span></label
+      >
+      <hr style="margin: 8px 0; border-color: #444" />
+      <strong>Coaching Strip (centered, 50% width)</strong>
+      <label
+        >Strip Y:
+        <input
+          type="range"
+          id="stripY"
+          min="1"
+          max="15"
+          step="0.5"
+          value="5"
+        /><span class="value" id="stripY-val">5%</span></label
+      >
+      <hr style="margin: 8px 0; border-color: #444" />
+      <div
+        id="output"
+        style="
+          font-size: 10px;
+          color: #0f0;
+          margin-top: 6px;
+          word-break: break-all;
+        "
+      ></div>
+    </div>
+
+    <div class="viewport">
+      <img src="calibration-bg.png" alt="Game screenshot" />
+      <div class="overlay">
+        <div class="badge rank-1" id="badge-left">
+          <span class="rank">1</span>
+          <span class="reason"
+            >Best for your build — scales with AP and gives sustain through
+            ability hits</span
+          >
+        </div>
+        <div class="badge rank-2" id="badge-center">
+          <span class="rank">2</span>
+          <span class="reason"
+            >Decent — extra AP helps but less impactful than sustain</span
+          >
+        </div>
+        <div class="badge rank-3" id="badge-right">
+          <span class="rank">3</span>
+          <span class="reason"
+            >Low value — ability haste is not a priority for your champion</span
+          >
+        </div>
+
+        <div class="coaching-strip" id="strip">
+          Pick Ability Power Shard. Re-roll Health Shard and Ability Haste
+          Shard.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const badges = [
+        document.getElementById("badge-left"),
+        document.getElementById("badge-center"),
+        document.getElementById("badge-right"),
+      ];
+      const strip = document.getElementById("strip");
+      const output = document.getElementById("output");
+
+      const s = {
+        badgeY: document.getElementById("badgeY"),
+        leftX: document.getElementById("leftX"),
+        centerX: document.getElementById("centerX"),
+        rightX: document.getElementById("rightX"),
+        badgeW: document.getElementById("badgeW"),
+        badgeH: document.getElementById("badgeH"),
+        fontSize: document.getElementById("fontSize"),
+        stripY: document.getElementById("stripY"),
+      };
+
+      function update() {
+        const y = parseFloat(s.badgeY.value);
+        const positions = [
+          parseFloat(s.leftX.value),
+          parseFloat(s.centerX.value),
+          parseFloat(s.rightX.value),
+        ];
+        const w = parseFloat(s.badgeW.value);
+        const h = parseInt(s.badgeH.value);
+        const fs = parseFloat(s.fontSize.value);
+        const sy = parseFloat(s.stripY.value);
+
+        badges.forEach((badge, i) => {
+          badge.style.top = y + "%";
+          badge.style.left = positions[i] + "%";
+          badge.style.width = w + "%";
+          badge.style.height = h + "px";
+          badge.querySelector(".reason").style.fontSize = fs + "px";
+        });
+
+        strip.style.top = sy + "%";
+
+        // Update labels
+        document.getElementById("badgeY-val").textContent = y + "%";
+        document.getElementById("leftX-val").textContent = positions[0] + "%";
+        document.getElementById("centerX-val").textContent = positions[1] + "%";
+        document.getElementById("rightX-val").textContent = positions[2] + "%";
+        document.getElementById("badgeW-val").textContent = w + "%";
+        document.getElementById("badgeH-val").textContent = h + "px";
+        document.getElementById("fontSize-val").textContent = fs + "px";
+        document.getElementById("stripY-val").textContent = sy + "%";
+
+        output.textContent = `cardCenters: [${positions[0] / 100}, ${positions[1] / 100}, ${positions[2] / 100}], badgeY: ${y / 100}, badgeW: ${w / 100}, badgeH: ${h * 2}px real, fontSize: ${fs * 2}px real, stripY: ${sy / 100}`;
+      }
+
+      Object.values(s).forEach((el) => el.addEventListener("input", update));
+      update();
+    </script>
+  </body>
+</html>

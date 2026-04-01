@@ -64,4 +64,46 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("overlay-status", handler);
     return () => ipcRenderer.removeListener("overlay-status", handler);
   },
+
+  // F8 calibration capture hotkey
+  onCalibrationCapture: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on("calibration-capture", handler);
+    return () => ipcRenderer.removeListener("calibration-capture", handler);
+  },
+
+  // Overlay edit mode (Tab hold)
+  onOverlayEditMode: (callback: (data: { editing: boolean }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload as { editing: boolean });
+    ipcRenderer.on("overlay-edit-mode", handler);
+    return () => ipcRenderer.removeListener("overlay-edit-mode", handler);
+  },
+
+  // Coaching strip drag
+  startStripDrag: () => {
+    ipcRenderer.send("start-strip-drag");
+  },
+
+  // Coaching request/response relay (desktop window → main → overlay)
+  sendCoachingRequest: () => {
+    ipcRenderer.send("coaching-request");
+  },
+
+  onCoachingRequest: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on("coaching-request", handler);
+    return () => ipcRenderer.removeListener("coaching-request", handler);
+  },
+
+  sendCoachingResponse: (data: unknown) => {
+    ipcRenderer.send("coaching-response", data);
+  },
+
+  onCoachingResponse: (callback: (data: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("coaching-response", handler);
+    return () => ipcRenderer.removeListener("coaching-response", handler);
+  },
 });

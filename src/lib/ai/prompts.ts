@@ -12,6 +12,7 @@ export function buildSystemPrompt(context: {
     "",
     "ITEM AWARENESS: Do not recommend purchasing items already listed in the player's inventory.",
     "GOLD AWARENESS: The gold amount shown is the player's exact current gold. Use it to determine what they can afford. Do not hedge with 'if you can buy' when the gold amount is visible.",
+    "ITEM RECOMMENDATIONS: Always name the full target item you're building toward AND the immediate component to buy. Example: 'Build toward Rabadon's Deathcap — buy Needlessly Large Rod next (1250g).' Players think in terms of completed items, not components.",
     "",
     "RESPONSE RULES:",
     "- Be extremely concise. Sacrifice grammar for concision.",
