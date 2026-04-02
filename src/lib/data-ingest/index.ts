@@ -32,10 +32,30 @@ interface CachedGameData {
   runes: RuneTree[];
   augments: Record<string, Augment>;
   augmentSets: AugmentSet[];
+  lastRefreshedAt: number;
 }
 
 export interface LoadedGameData extends GameData {
   dictionary: EntityDictionary;
+}
+
+export async function loadCachedGameData(): Promise<LoadedGameData | null> {
+  const cached = await readCache<CachedGameData>(CACHE_KEY);
+  if (!cached) return null;
+  return fromCached(cached);
+}
+
+export async function checkForNewVersion(
+  cachedVersion: string
+): Promise<boolean> {
+  try {
+    const latest = await fetchLatestVersion();
+    return latest !== cachedVersion;
+  } catch {
+    // If the version check fails, assume there might be an update
+    // so we don't skip a refresh due to a transient error
+    return true;
+  }
 }
 
 export async function loadGameData(): Promise<LoadedGameData> {
@@ -100,6 +120,7 @@ export async function fetchAndCache(): Promise<LoadedGameData> {
     runes,
     augments: mapToObject(augments),
     augmentSets,
+    lastRefreshedAt: Date.now(),
   };
 
   await writeCache(CACHE_KEY, data);
