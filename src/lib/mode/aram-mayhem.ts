@@ -1,6 +1,5 @@
 import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
-import type { Augment, Item } from "../data-ingest/types";
 import type {
   GameMode,
   ModeContext,
@@ -8,6 +7,7 @@ import type {
   TeamComposition,
 } from "./types";
 import { GAME_MODE_MAYHEM, GAME_MODE_ARAM } from "./types";
+import { filterItemsByMode, filterAugmentsByMode } from "./utils";
 
 export const aramMayhemMode: GameMode = {
   id: "aram-mayhem",
@@ -62,28 +62,6 @@ export const aramMayhemMode: GameMode = {
     };
   },
 };
-
-function filterItemsByMode(
-  items: Map<number, Item>,
-  mode: string
-): Map<number, Item> {
-  const filtered = new Map<number, Item>();
-  for (const [id, item] of items) {
-    if (item.mode === mode) filtered.set(id, item);
-  }
-  return filtered;
-}
-
-function filterAugmentsByMode(
-  augments: Map<string, Augment>,
-  mode: string
-): Map<string, Augment> {
-  const filtered = new Map<string, Augment>();
-  for (const [key, augment] of augments) {
-    if (augment.mode === mode) filtered.set(key, augment);
-  }
-  return filtered;
-}
 
 function buildTeamComposition(players: PlayerModeContext[]): TeamComposition {
   const classCounts: Record<string, number> = {};
