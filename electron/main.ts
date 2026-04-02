@@ -522,6 +522,18 @@ function initOverlay(): void {
     cleanupWebSocket();
     appLog.info(`Game exited: ${gameInfo.name} (was injected: ${wasInjected})`);
     sendToAllWindows("overlay-status", { active: false, game: gameInfo.name });
+
+    // Destroy overlay windows to prevent memory leaks across game sessions
+    try {
+      badgeOverlay?.window?.destroy();
+    } catch {
+      /* already destroyed */
+    }
+    try {
+      stripOverlay?.window?.destroy();
+    } catch {
+      /* already destroyed */
+    }
     badgeOverlay = null;
     stripOverlay = null;
   });

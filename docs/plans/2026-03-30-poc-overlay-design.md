@@ -49,7 +49,7 @@ Separate Vite entry point (`overlay.html` + `overlay-main.tsx`) — lightweight,
 
 ## Data flow
 
-```
+```text
 Desktop window (existing)                Main process                 Overlay windows (new)
 ─────────────────────────                ────────────                 ────────────────────
 CoachingInput receives                        │
@@ -66,7 +66,7 @@ GEP events (augmentOffer$,               already sent via             overlay su
 - No new data sources needed
 - Coaching relay: desktop renderer sends `coaching-response` to main process, main process forwards to overlay windows via existing `sendToAllWindows`
 - GEP events already broadcast to all windows
-- Edit mode: Tab hotkey sends `edit-mode` IPC events to overlay windows on press/release
+- Edit mode: Shift+Tab hotkey sends `overlay-edit-mode` IPC events to overlay windows on press/release
 
 ## Badge content
 
