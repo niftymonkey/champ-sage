@@ -24,7 +24,9 @@ export type LogModule =
   | "voice"
   | "data-ingest"
   | "ui"
-  | "ipc";
+  | "ipc"
+  | "overlay"
+  | "overlay:calibration";
 
 export interface ScopedLogger {
   error: (...args: unknown[]) => void;

@@ -133,6 +133,18 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
 
       reactiveLog.info(`Coaching query: "${question}"`);
 
+      // Determine if this is an augment/shard offer or a voice/reactive query.
+      // Auto-generated augment queries always start with this prefix.
+      const isAugmentQuery = question.startsWith(
+        "I'm being offered these augments:"
+      );
+      const source = isAugmentQuery ? "augment" : "reactive";
+
+      // Only notify coaching strip for voice/reactive queries
+      if (source === "reactive") {
+        window.electronAPI?.sendCoachingRequest();
+      }
+
       try {
         const response = await getCoachingResponse(
           contextWithAugments,
@@ -149,10 +161,22 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           ...prev,
           { question, answer: response.answer },
         ]);
+
+        // Relay to overlay — tagged with source so badges and strip
+        // only display their respective responses
+        window.electronAPI?.sendCoachingResponse({ ...response, source });
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Request failed";
-        reactiveLog.error(`Coaching error: ${msg}`);
-        setError(msg);
+        // Aborted requests are expected — player picked an augment before
+        // the coaching response arrived, so the in-flight request was cancelled
+        if (err instanceof Error && err.name === "AbortError") {
+          reactiveLog.debug(
+            "Coaching request cancelled — player picked before response arrived"
+          );
+        } else {
+          const msg = err instanceof Error ? err.message : "Request failed";
+          reactiveLog.error(`Coaching error: ${msg}`);
+          setError(msg);
+        }
       } finally {
         setLoading(false);
       }

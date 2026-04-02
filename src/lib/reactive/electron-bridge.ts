@@ -16,6 +16,13 @@ interface ElectronAPI {
   onGepInfoUpdate(callback: (event: unknown) => void): () => void;
   onGepGameEvent(callback: (event: unknown) => void): () => void;
   onOverlayStatus(callback: (event: unknown) => void): () => void;
+  onCalibrationCapture(callback: () => void): () => void;
+  onOverlayEditMode(callback: (data: { editing: boolean }) => void): () => void;
+  startStripDrag(): void;
+  sendCoachingRequest(): void;
+  onCoachingRequest(callback: () => void): () => void;
+  sendCoachingResponse(data: unknown): void;
+  onCoachingResponse(callback: (data: unknown) => void): () => void;
 }
 
 declare global {

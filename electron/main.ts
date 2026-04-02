@@ -1,11 +1,13 @@
 import {
   app as electronApp,
   BrowserWindow,
+  desktopCapturer,
   ipcMain,
   Menu,
+  screen,
   shell,
 } from "electron";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import WebSocket from "ws";
 import {
@@ -108,7 +110,13 @@ function quietHandler<T extends unknown[]>(
 
 function sendToAllWindows(channel: string, data: unknown): void {
   for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send(channel, data);
+    try {
+      if (!win.isDestroyed()) {
+        win.webContents.send(channel, data);
+      }
+    } catch {
+      // Window may be mid-destruction — ignore EPIPE / send failures
+    }
   }
 }
 
@@ -202,6 +210,9 @@ function registerIpcHandlers(): void {
         headers: { Authorization: lcuBasicAuth(token) },
         rejectUnauthorized: false,
       });
+      // Suppress ws library's default onclose/onerror console logging
+      (ws as any).onclose = null;
+      (ws as any).onerror = null;
       activeWs = ws;
 
       return new Promise<void>((resolve, reject) => {
@@ -231,19 +242,27 @@ function registerIpcHandlers(): void {
         });
 
         ws.on("close", (_code: number, _reason: Buffer) => {
-          sendToAllWindows("lcu-disconnect", {
-            reason: "Server closed connection",
-          });
+          try {
+            sendToAllWindows("lcu-disconnect", {
+              reason: "Server closed connection",
+            });
+          } catch {
+            // Ignore — app may be shutting down
+          }
           activeWs = null;
         });
 
         ws.on("error", (err: Error) => {
-          if (ws.readyState === WebSocket.CONNECTING) {
-            reject(new Error(`WebSocket connection failed: ${err.message}`));
-          } else {
-            sendToAllWindows("lcu-disconnect", {
-              reason: `WebSocket error: ${err.message}`,
-            });
+          try {
+            if (ws.readyState === WebSocket.CONNECTING) {
+              reject(new Error(`WebSocket connection failed: ${err.message}`));
+            } else {
+              sendToAllWindows("lcu-disconnect", {
+                reason: `WebSocket error: ${err.message}`,
+              });
+            }
+          } catch {
+            // Ignore — app may be shutting down
           }
           activeWs = null;
         });
@@ -323,6 +342,149 @@ function initOverwolfFeatures(): void {
 
 // --- Overlay ---
 
+const overlayLog = log.scope("overlay");
+
+/** Track active overlay windows for cleanup */
+let badgeOverlay: any = null;
+let stripOverlay: any = null;
+
+function loadOverlayContent(
+  win: BrowserWindow,
+  page: "overlay" | "overlay-strip"
+): void {
+  if (process.env.VITE_DEV_SERVER_URL) {
+    win.loadURL(`${process.env.VITE_DEV_SERVER_URL}/${page}.html`);
+  } else {
+    win.loadFile(join(__dirname, `../dist/${page}.html`));
+  }
+}
+
+const OVERLAY_WEB_PREFS = {
+  contextIsolation: true,
+  nodeIntegration: false,
+  preload: join(__dirname, "preload.cjs"),
+  backgroundThrottling: false,
+};
+
+async function createOverlayWindows(overlayApi: any): Promise<void> {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.size;
+
+  // Badge overlay — full screen, click-through (passThrough)
+  try {
+    badgeOverlay = await overlayApi.createWindow({
+      name: "champ-sage-badges",
+      width,
+      height,
+      transparent: true,
+      frame: false,
+      passthrough: "passThrough",
+      zOrder: "topMost",
+      ignoreKeyboardInput: true,
+      webPreferences: OVERLAY_WEB_PREFS,
+    });
+
+    loadOverlayContent(badgeOverlay.window, "overlay");
+    overlayLog.info(`Badge overlay created (${width}x${height})`);
+  } catch (err) {
+    overlayLog.error("Failed to create badge overlay:", err);
+  }
+
+  // Coaching strip — small window, interactive (noPassThrough), draggable
+  try {
+    const stripWidth = Math.round(width * 0.5);
+    const stripHeight = 60;
+    const stripX = Math.round((width - stripWidth) / 2);
+    const stripY = Math.round(height * 0.05);
+
+    stripOverlay = await overlayApi.createWindow({
+      name: "champ-sage-strip",
+      width: stripWidth,
+      height: stripHeight,
+      x: stripX,
+      y: stripY,
+      transparent: true,
+      frame: false,
+      passthrough: "noPassThrough",
+      zOrder: "topMost",
+      ignoreKeyboardInput: true,
+      webPreferences: OVERLAY_WEB_PREFS,
+    });
+
+    loadOverlayContent(stripOverlay.window, "overlay-strip");
+
+    // Start click-through — only interactive when Shift+Tab is held
+    stripOverlay.window.setIgnoreMouseEvents(true, { forward: true });
+
+    overlayLog.info(
+      `Coaching strip overlay created (${stripWidth}x${stripHeight} at ${stripX},${stripY})`
+    );
+  } catch (err) {
+    overlayLog.error("Failed to create coaching strip overlay:", err);
+  }
+}
+
+function registerOverlayIpc(): void {
+  // Calibration screenshot capture
+  ipcMain.handle(
+    "capture-calibration-screenshot",
+    quietHandler(async () => {
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.size;
+
+      const sources = await desktopCapturer.getSources({
+        types: ["screen"],
+        thumbnailSize: { width, height },
+      });
+
+      if (sources.length === 0) {
+        throw new Error("No screen sources available for capture");
+      }
+
+      const screenshot = sources[0].thumbnail.toPNG();
+      const screenshotDir = join(
+        app.getPath("userData"),
+        "calibration-screenshots"
+      );
+      mkdirSync(screenshotDir, { recursive: true });
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const filename = `calibration-${width}x${height}-${timestamp}.png`;
+      const filepath = join(screenshotDir, filename);
+
+      writeFileSync(filepath, screenshot);
+      overlayLog.info(`Screenshot saved: ${filepath}`);
+
+      return { filepath, width, height };
+    })
+  );
+
+  // Relay coaching requests/responses from desktop window to overlay windows
+  ipcMain.on("coaching-request", () => {
+    sendToAllWindows("coaching-request", {});
+  });
+
+  ipcMain.on("coaching-response", (_event, data) => {
+    sendToAllWindows("coaching-response", data);
+  });
+
+  // Coaching strip drag — renderer sends mousedown, we call startDragging()
+  ipcMain.on("start-strip-drag", (e) => {
+    if (!stripOverlay) return;
+    try {
+      // fromWebContents matches the sender to the overlay window
+      const overlayApi = (owApp?.overwolf.packages as any)?.overlay;
+      const win = overlayApi?.fromWebContents(e.sender);
+      if (win) {
+        win.startDragging();
+        overlayLog.info("Strip drag started");
+      }
+    } catch {
+      // Ignore — window may not be ready
+    }
+  });
+}
+
 function initOverlay(): void {
   if (!owApp) return;
 
@@ -352,13 +514,28 @@ function initOverlay(): void {
     appLog.info(`Overlay active in ${gameInfo.name}`);
     sendToAllWindows("overlay-status", { active: true, game: gameInfo.name });
 
-    registerOverlayHotkey(overlayApi);
+    registerOverlayHotkeys(overlayApi);
+    createOverlayWindows(overlayApi);
   });
 
   overlayApi.on("game-exit", (gameInfo: any, wasInjected: boolean) => {
     cleanupWebSocket();
     appLog.info(`Game exited: ${gameInfo.name} (was injected: ${wasInjected})`);
     sendToAllWindows("overlay-status", { active: false, game: gameInfo.name });
+
+    // Destroy overlay windows to prevent memory leaks across game sessions
+    try {
+      badgeOverlay?.window?.destroy();
+    } catch {
+      /* already destroyed */
+    }
+    try {
+      stripOverlay?.window?.destroy();
+    } catch {
+      /* already destroyed */
+    }
+    badgeOverlay = null;
+    stripOverlay = null;
   });
 
   overlayApi.on("game-injection-error", (_gameInfo: any, error: string) => {
@@ -366,7 +543,7 @@ function initOverlay(): void {
   });
 }
 
-function registerOverlayHotkey(overlayApi: any): void {
+function registerOverlayHotkeys(overlayApi: any): void {
   overlayApi.hotkeys.register(
     {
       name: "push-to-talk",
@@ -380,7 +557,52 @@ function registerOverlayHotkey(overlayApi: any): void {
     }
   );
 
-  voiceLog.info("Overlay hotkey registered: NumpadSubtract (hold-to-talk)");
+  // Shift+Tab to enable coaching strip dragging
+  overlayApi.hotkeys.register(
+    {
+      name: "overlay-edit-mode",
+      keyCode: 9, // VK_TAB
+      modifiers: { shift: true },
+      passthrough: true,
+    },
+    (_hotkey: any, state: "pressed" | "released") => {
+      const editing = state === "pressed";
+      sendToAllWindows("overlay-edit-mode", { editing });
+
+      if (stripOverlay) {
+        try {
+          if (editing) {
+            stripOverlay.window.setIgnoreMouseEvents(false);
+          } else {
+            stripOverlay.window.setIgnoreMouseEvents(true, { forward: true });
+          }
+        } catch {
+          // Window may have been destroyed
+        }
+      }
+
+      overlayLog.info(`Overlay edit mode: ${editing ? "ON" : "OFF"}`);
+    }
+  );
+
+  // F8 hotkey for calibration screenshots
+  overlayApi.hotkeys.register(
+    {
+      name: "calibration-screenshot",
+      keyCode: 119, // VK_F8
+      passthrough: true,
+    },
+    (_hotkey: any, state: "pressed" | "released") => {
+      if (state === "pressed") {
+        sendToAllWindows("calibration-capture", {});
+        overlayLog.info("F8 pressed — triggering calibration capture");
+      }
+    }
+  );
+
+  voiceLog.info(
+    "Overlay hotkeys registered: NumpadSubtract (hold-to-talk), Shift+Tab (edit mode), F8 (calibration)"
+  );
 }
 
 // --- GEP (Game Events Provider) ---
@@ -521,6 +743,7 @@ function buildAppMenu(): void {
 app.whenReady().then(() => {
   initLogger();
   registerIpcHandlers();
+  registerOverlayIpc();
   buildAppMenu();
   createMainWindow();
 
@@ -545,3 +768,12 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
+
+// Suppress EPIPE errors during shutdown — the WebSocket may try to
+// write to a broken pipe as the app is closing.
+process.on("uncaughtException", (err) => {
+  if (err.message?.includes("EPIPE")) return;
+  appLog.error("Uncaught exception:", err.message);
+});
+process.stdout?.on?.("error", () => {});
+process.stderr?.on?.("error", () => {});
