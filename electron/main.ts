@@ -20,6 +20,21 @@ import {
 
 const app = electronApp;
 
+// Intercept console.log to suppress raw CloseEvent dumps from the ws library.
+// Something in the ws/Node internals prints "Received on close: CloseEvent {...}"
+// which produces walls of unreadable output. We filter those out.
+const originalConsoleLog = console.log;
+console.log = (...args: unknown[]) => {
+  if (
+    args.length > 0 &&
+    typeof args[0] === "string" &&
+    args[0].startsWith("Received on close")
+  ) {
+    return;
+  }
+  originalConsoleLog.apply(console, args);
+};
+
 // ow-electron detection — when running under ow-electron, the app object
 // has an `overwolf` property with packages (overlay, gep). We don't need
 // to require anything — the runtime injects it onto the app object.
@@ -76,18 +91,32 @@ function lcuBasicAuth(token: string): string {
 // ---------------------------------------------------------------------------
 
 let activeWs: WebSocket | null = null;
+let activeWsReject: ((err: Error) => void) | null = null;
+let shuttingDown = false;
 
 function cleanupWebSocket(): void {
   if (!activeWs) return;
 
   const ws = activeWs;
+  const pendingReject = activeWsReject;
   activeWs = null;
+  activeWsReject = null;
+
+  // Remove all listeners BEFORE closing to prevent close/error handlers
+  // from firing during teardown (which causes EPIPE and CloseEvent dumps)
   ws.removeAllListeners();
 
-  if (ws.readyState === WebSocket.CONNECTING) {
+  // Reject any pending connection promise so Electron doesn't warn
+  // "reply was never sent"
+  if (pendingReject) {
+    pendingReject(new Error("WebSocket cleanup — connection aborted"));
+  }
+
+  if (
+    ws.readyState === WebSocket.CONNECTING ||
+    ws.readyState === WebSocket.OPEN
+  ) {
     ws.terminate();
-  } else if (ws.readyState === WebSocket.OPEN) {
-    ws.close();
   }
 }
 
@@ -210,15 +239,25 @@ function registerIpcHandlers(): void {
         headers: { Authorization: lcuBasicAuth(token) },
         rejectUnauthorized: false,
       });
-      // Suppress ws library's default onclose/onerror console logging
-      (ws as any).onclose = null;
-      (ws as any).onerror = null;
       activeWs = ws;
 
       return new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const settle = (fn: () => void) => {
+          if (settled) return;
+          settled = true;
+          fn();
+        };
+
+        // Track reject so cleanupWebSocket() can settle the Promise
+        activeWsReject = (err: Error) => settle(() => reject(err));
+
         ws.on("open", () => {
-          ws.send(JSON.stringify([5, "OnJsonApiEvent"]));
-          resolve();
+          settle(() => {
+            activeWsReject = null;
+            ws.send(JSON.stringify([5, "OnJsonApiEvent"]));
+            resolve();
+          });
         });
 
         ws.on("message", (raw: Buffer) => {
@@ -231,38 +270,43 @@ function registerIpcHandlers(): void {
               eventType: string;
               data: unknown;
             };
-            sendToAllWindows("lcu-event", {
-              uri: payload.uri ?? "",
-              event_type: payload.eventType ?? "",
-              data: payload.data ?? null,
-            });
+            if (!shuttingDown) {
+              sendToAllWindows("lcu-event", {
+                uri: payload.uri ?? "",
+                event_type: payload.eventType ?? "",
+                data: payload.data ?? null,
+              });
+            }
           } catch {
             // Non-JSON message
           }
         });
 
-        ws.on("close", (_code: number, _reason: Buffer) => {
-          try {
+        ws.on("close", () => {
+          // Settle with rejection if the Promise is still pending
+          // (connection dropped before open fired)
+          settle(() =>
+            reject(new Error("WebSocket closed before connection completed"))
+          );
+
+          if (!shuttingDown) {
             sendToAllWindows("lcu-disconnect", {
               reason: "Server closed connection",
             });
-          } catch {
-            // Ignore — app may be shutting down
           }
           activeWs = null;
+          activeWsReject = null;
         });
 
         ws.on("error", (err: Error) => {
-          try {
-            if (ws.readyState === WebSocket.CONNECTING) {
-              reject(new Error(`WebSocket connection failed: ${err.message}`));
-            } else {
-              sendToAllWindows("lcu-disconnect", {
-                reason: `WebSocket error: ${err.message}`,
-              });
-            }
-          } catch {
-            // Ignore — app may be shutting down
+          settle(() =>
+            reject(new Error(`WebSocket connection failed: ${err.message}`))
+          );
+
+          if (!shuttingDown) {
+            sendToAllWindows("lcu-disconnect", {
+              reason: `WebSocket error: ${err.message}`,
+            });
           }
           activeWs = null;
         });
@@ -763,16 +807,25 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  shuttingDown = true;
   cleanupWebSocket();
   if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-// Suppress EPIPE errors during shutdown — the WebSocket may try to
-// write to a broken pipe as the app is closing.
+app.on("before-quit", () => {
+  shuttingDown = true;
+  cleanupWebSocket();
+});
+
+// Suppress EPIPE and other pipe errors during shutdown.
+// ow-electron may show an error dialog for uncaught exceptions —
+// this handler prevents EPIPE from reaching that dialog.
 process.on("uncaughtException", (err) => {
+  if (shuttingDown) return;
   if (err.message?.includes("EPIPE")) return;
+  if (err.message?.includes("broken pipe")) return;
   appLog.error("Uncaught exception:", err.message);
 });
 process.stdout?.on?.("error", () => {});

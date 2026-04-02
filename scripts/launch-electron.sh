@@ -18,4 +18,7 @@ while ! curl -s http://localhost:1420 > /dev/null 2>&1; do
 done
 echo "[launch-electron] Vite is ready. Launching Electron..."
 
+# Change to a Windows-compatible directory before running powershell.exe to avoid UNC path warnings
+# and use double quotes for the PowerShell command to handle paths correctly.
+cd /mnt/c
 powershell.exe -ExecutionPolicy Bypass -Command "\$env:VITE_DEV_SERVER_URL='http://localhost:1420'; ow-electron '${PROJECT_WIN}'"
