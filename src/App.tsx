@@ -57,7 +57,7 @@ function App() {
     };
   }, []);
 
-  const { data, loading, error, refresh } = useGameData();
+  const { data, loading, error, refreshState, refresh } = useGameData();
   const lifecycle = useGameLifecycle();
   const liveGame = useLiveGameState();
   const { submit } = useUserInput();
@@ -207,10 +207,17 @@ function App() {
           {data && (
             <button
               className="refresh-btn"
-              onClick={refresh}
-              disabled={loading}
+              onClick={(e) => refresh(e.ctrlKey || e.metaKey)}
+              disabled={loading || refreshState !== "idle"}
+              title="Ctrl+click to force refresh"
             >
-              {loading ? "Loading..." : "Refresh"}
+              {refreshState === "checking"
+                ? "Checking..."
+                : refreshState === "refreshing"
+                  ? "Updating..."
+                  : loading
+                    ? "Loading..."
+                    : "Refresh"}
             </button>
           )}
         </div>

@@ -1,5 +1,5 @@
 /**
- * Cache layer for game data. Uses localStorage in the browser (Tauri webview)
+ * Cache layer for game data. Uses localStorage in the Electron renderer
  * and falls back gracefully if unavailable.
  */
 

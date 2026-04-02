@@ -69,7 +69,7 @@ export interface CoachingMessage {
 // Notification output (placeholder)
 export interface AppNotification {
   id: string;
-  level: "info" | "warning" | "error";
+  level: "info" | "success" | "warning" | "error";
   message: string;
   timestamp: number;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { loadGameData } from "./index";
+import { loadGameData, loadCachedGameData, checkForNewVersion } from "./index";
 import * as dataDragon from "./sources/data-dragon";
 import * as wikiAugments from "./sources/wiki-augments";
 import * as arenaAugments from "./sources/wiki-arena-augments";
@@ -234,5 +234,84 @@ describe("loadGameData", () => {
     const data = await loadGameData();
     const aatrox = data.champions.get("aatrox");
     expect(aatrox!.aramOverrides).toBeUndefined();
+  });
+
+  it("writes lastRefreshedAt timestamp to cache", async () => {
+    const before = Date.now();
+    await loadGameData();
+    const after = Date.now();
+
+    const writtenData = vi.mocked(cache.writeCache).mock.calls[0][1] as {
+      lastRefreshedAt: number;
+    };
+    expect(writtenData.lastRefreshedAt).toBeGreaterThanOrEqual(before);
+    expect(writtenData.lastRefreshedAt).toBeLessThanOrEqual(after);
+  });
+});
+
+describe("loadCachedGameData", () => {
+  it("returns data when cache hit", async () => {
+    const origDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
+
+    vi.mocked(cache.readCache).mockResolvedValue({
+      version: "15.6.1",
+      champions: { aatrox: createMockChampions().get("aatrox") },
+      items: { "1001": mockItems.get(1001) },
+      runes: mockRunes,
+      augments: { typhoon: mockMayhemAugments.get("typhoon") },
+      augmentSets: [],
+      lastRefreshedAt: 1000,
+    });
+
+    const data = await loadCachedGameData();
+
+    expect(data).not.toBeNull();
+    expect(data!.version).toBe("15.6.1");
+    expect(data!.champions.size).toBe(1);
+    expect(dataDragon.fetchLatestVersion).not.toHaveBeenCalled();
+
+    import.meta.env.DEV = origDev;
+  });
+
+  it("returns null when cache miss", async () => {
+    const origDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
+
+    vi.mocked(cache.readCache).mockResolvedValue(null);
+
+    const data = await loadCachedGameData();
+
+    expect(data).toBeNull();
+
+    import.meta.env.DEV = origDev;
+  });
+});
+
+describe("checkForNewVersion", () => {
+  it("returns false when versions match", async () => {
+    vi.mocked(dataDragon.fetchLatestVersion).mockResolvedValue("15.6.1");
+
+    const result = await checkForNewVersion("15.6.1");
+
+    expect(result).toBe(false);
+  });
+
+  it("returns true when versions differ", async () => {
+    vi.mocked(dataDragon.fetchLatestVersion).mockResolvedValue("15.7.1");
+
+    const result = await checkForNewVersion("15.6.1");
+
+    expect(result).toBe(true);
+  });
+
+  it("returns false when fetch fails (avoid thundering herd)", async () => {
+    vi.mocked(dataDragon.fetchLatestVersion).mockRejectedValue(
+      new Error("Network error")
+    );
+
+    const result = await checkForNewVersion("15.6.1");
+
+    expect(result).toBe(false);
   });
 });
