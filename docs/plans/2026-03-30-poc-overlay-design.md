@@ -28,20 +28,17 @@ Two overlay windows created via `overlayApi.createWindow()` after `game-injected
 **Coaching strip window**
 
 - Fixed-width (~400px) rectangular panel, height capped at ~3 lines
-- Click-through (`passthrough: "passThrough"`)
-- Default position: bottom-left, above chat area
-- Position saved to localStorage, persists across sessions
-- Visible when coaching text arrives, auto-fades after timeout (~15-20s)
-- Scales proportionally on `game-window-changed`
+- Interactive (`passthrough: "noPassThrough"`), click-through by default via `setIgnoreMouseEvents`
+- Centered above cards, 50% screen width
+- Visible when coaching text arrives, auto-fades to 25% after 8s, hover restores to 90%
 
 ### Edit mode
 
-Hotkey: **Tab** (registered as passthrough so League scoreboard still works — same pattern as Mobalytics).
+Hotkey: **Shift+Tab** (registered as passthrough so League scoreboard still works).
 
-- Hold Tab: both windows switch to `noPassThrough`, gain visible border/highlight, become draggable
-- Release Tab: lock back to click-through
-- Badge window: vertical offset adjustment only (horizontal is calculated)
-- Coaching strip: freely draggable
+- Hold Shift+Tab: coaching strip becomes interactive (draggable, visible drag handle)
+- Release: strip returns to click-through via `setIgnoreMouseEvents`
+- Coaching strip: freely draggable in edit mode
 
 ### Renderer
 
