@@ -52,9 +52,10 @@ export async function checkForNewVersion(
     const latest = await fetchLatestVersion();
     return latest !== cachedVersion;
   } catch {
-    // If the version check fails, assume there might be an update
-    // so we don't skip a refresh due to a transient error
-    return true;
+    // If the version check fails, assume we're current — don't trigger
+    // a full fetch across all data sources on a transient error.
+    // Users can force-refresh manually if needed.
+    return false;
   }
 }
 

@@ -66,10 +66,9 @@ export function useGameData(): UseGameDataResult {
           return;
         }
 
-        setRefreshState("refreshing");
-        notify("info", "Updating game data...");
-
         const doFetch = async () => {
+          setRefreshState("refreshing");
+          notify("info", "Updating game data...");
           try {
             const result = await fetchAndCache();
             applyData(result);
@@ -84,6 +83,8 @@ export function useGameData(): UseGameDataResult {
         };
 
         if (applyJitter) {
+          // Return to idle during jitter wait so the button stays enabled
+          setRefreshState("idle");
           const delayMs = Math.floor(Math.random() * JITTER_MAX_MS);
           jitterTimerRef.current = setTimeout(doFetch, delayMs);
         } else {

@@ -18,7 +18,7 @@ On launch, the app serves data instantly from localStorage cache. In the backgro
 **New functions:**
 
 - `loadCachedGameData(): Promise<LoadedGameData | null>` — reads from cache only, returns null on miss. This is the "instant serve" path.
-- `checkForNewVersion(cachedVersion: string): Promise<boolean>` — calls `fetchLatestVersion()` and compares against the cached version. Returns `true` if they differ, or if the check fails (treat errors as "might be new" so we don't block refresh on transient failures).
+- `checkForNewVersion(cachedVersion: string): Promise<boolean>` — calls `fetchLatestVersion()` and compares against the cached version. Returns `true` if they differ. Returns `false` on failure — don't trigger a full fetch across all data sources on a transient error. Users can force-refresh manually.
 
 **Modified:**
 

@@ -305,13 +305,13 @@ describe("checkForNewVersion", () => {
     expect(result).toBe(true);
   });
 
-  it("returns true when fetch fails (safe fallback)", async () => {
+  it("returns false when fetch fails (avoid thundering herd)", async () => {
     vi.mocked(dataDragon.fetchLatestVersion).mockRejectedValue(
       new Error("Network error")
     );
 
     const result = await checkForNewVersion("15.6.1");
 
-    expect(result).toBe(true);
+    expect(result).toBe(false);
   });
 });
