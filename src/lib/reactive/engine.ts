@@ -207,8 +207,14 @@ export class ReactiveEngine {
               const unlisten = this.bridge.listenLcuEvent((event) =>
                 this.wsEvents$.next(event)
               );
+              // Track whether this connection attempt already failed
+              // to avoid double-logging (error + close both fire on failure)
+              let failed = false;
+
               const unlistenDisconnect = this.bridge.listenLcuDisconnect(
                 (event) => {
+                  if (failed) return;
+                  failed = true;
                   engineLog.warn(`WebSocket disconnected: ${event.reason}`);
                   this.wsRetrySeq++;
                 }
@@ -221,8 +227,10 @@ export class ReactiveEngine {
                   this.fetchInitialState(creds.port, creds.token);
                 })
                 .catch((err) => {
-                  engineLog.error(
-                    `WebSocket connection FAILED: ${err instanceof Error ? err.message : String(err)}`
+                  if (failed) return;
+                  failed = true;
+                  engineLog.warn(
+                    `WebSocket connection failed: ${err instanceof Error ? err.message : String(err)}`
                   );
                   this.wsRetrySeq++;
                 });
