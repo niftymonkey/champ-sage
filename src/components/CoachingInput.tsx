@@ -1,13 +1,17 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import type {
-  CoachingResponse,
-  CoachingContext,
-  CoachingExchange,
-  CoachingQuery,
-  CoachingItem,
-} from "../lib/ai/types";
+import type { CoachingResponse, CoachingQuery } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
-import { getCoachingResponse } from "../lib/ai/recommendation-engine";
+import type { GameState } from "../lib/game-state/types";
+import type { ConversationSession } from "../lib/ai/conversation-session";
+import { useCoachingMode } from "../hooks/useCoachingContext";
+import { useLiveGameState } from "../hooks/useLiveGameState";
+import { getMultiTurnCoachingResponse } from "../lib/ai/recommendation-engine";
+import { createConversationSession } from "../lib/ai/conversation-session";
+import { buildGameSystemPrompt } from "../lib/ai/prompts";
+import {
+  takeGameSnapshot,
+  formatStateSnapshot,
+} from "../lib/ai/state-formatter";
 import { playerIntent$, manualInput$ } from "../lib/reactive";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
@@ -17,7 +21,6 @@ const reactiveLog = getLogger("coaching:reactive");
 const proactiveLog = getLogger("coaching:proactive");
 
 interface CoachingInputProps {
-  context: CoachingContext | null;
   gameData: LoadedGameData;
 }
 
@@ -46,34 +49,67 @@ function extractAugmentOptions(
   return options.length > 0 ? options : undefined;
 }
 
-export function CoachingInput({ context, gameData }: CoachingInputProps) {
+export function CoachingInput({ gameData }: CoachingInputProps) {
+  const liveGameState = useLiveGameState();
+  const { mode, enemyStats } = useCoachingMode();
   const [loading, setLoading] = useState(false);
   const [latestExchange, setLatestExchange] = useState<{
     question: string;
     response: CoachingResponse;
   } | null>(null);
-  const [exchanges, setExchanges] = useState<CoachingExchange[]>([]);
-  const [chosenAugments, setChosenAugments] = useState<CoachingItem[]>([]);
+  const [chosenAugments, setChosenAugments] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const contextRef = useRef(context);
-  const exchangesRef = useRef(exchanges);
+  // Refs for stable access in callbacks
+  const liveGameStateRef = useRef(liveGameState);
   const gameDataRef = useRef(gameData);
+  const modeRef = useRef(mode);
+  const enemyStatsRef = useRef(enemyStats);
   const chosenAugmentsRef = useRef(chosenAugments);
-  contextRef.current = context;
-  exchangesRef.current = exchanges;
+  const sessionRef = useRef<ConversationSession | null>(null);
+
+  liveGameStateRef.current = liveGameState;
   gameDataRef.current = gameData;
+  modeRef.current = mode;
+  enemyStatsRef.current = enemyStats;
   chosenAugmentsRef.current = chosenAugments;
 
   const apiKey =
     import.meta.env.VITE_OPENROUTER_API_KEY ??
     import.meta.env.VITE_OPENAI_API_KEY;
 
+  // Create/reset conversation session when mode changes (new game detected)
+  useEffect(() => {
+    if (!mode || !liveGameState.activePlayer) {
+      sessionRef.current = null;
+      return;
+    }
+
+    // Build the game state for the system prompt
+    const gameState: GameState = {
+      status: "connected",
+      activePlayer: liveGameState.activePlayer,
+      players: liveGameState.players,
+      gameMode: liveGameState.gameMode,
+      gameTime: liveGameState.gameTime,
+    };
+
+    const systemPrompt = buildGameSystemPrompt(mode, gameData, gameState);
+    sessionRef.current = createConversationSession(systemPrompt);
+    setChosenAugments([]);
+    setLatestExchange(null);
+    setError(null);
+
+    reactiveLog.info(
+      `Conversation session created for ${mode.displayName} | ${liveGameState.activePlayer.championName}`
+    );
+  }, [mode, gameData, liveGameState.activePlayer?.championName]);
+
   const submitQuestion = useCallback(
     async (question: string, options?: { signal?: AbortSignal }) => {
-      if (!contextRef.current || !apiKey || !question.trim()) {
-        const reason = !contextRef.current
-          ? "no context"
+      if (!sessionRef.current || !apiKey || !question.trim()) {
+        const reason = !sessionRef.current
+          ? "no session"
           : !apiKey
             ? "no API key"
             : "empty question";
@@ -81,6 +117,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
         return;
       }
 
+      // Track augment selections from voice input ("I chose X")
       const selectionPattern =
         /i (?:chose|picked|took|selected|went with)\s+(.+)/i;
       const selectionMatch = question.match(selectionPattern);
@@ -90,21 +127,13 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           .filter((m) => m.type === "augment");
         if (mentioned.length > 0) {
           const newAugmentName = mentioned[0].name;
-          const augmentData = gameDataRef.current.augments.get(
-            newAugmentName.toLowerCase()
-          );
-          const newAugment: CoachingItem = {
-            name: newAugmentName,
-            description: augmentData?.description ?? "",
-            sets: augmentData?.sets,
-          };
-          const alreadySelected = chosenAugmentsRef.current.some(
-            (a) => a.name === newAugment.name
-          );
-          if (!alreadySelected) {
-            const next = [...chosenAugmentsRef.current, newAugment];
+          if (!chosenAugmentsRef.current.includes(newAugmentName)) {
+            const next = [...chosenAugmentsRef.current, newAugmentName];
             chosenAugmentsRef.current = next;
             setChosenAugments(next);
+            const augmentData = gameDataRef.current.augments.get(
+              newAugmentName.toLowerCase()
+            );
             if (augmentData) {
               manualInput$.next({ type: "augment", augment: augmentData });
             }
@@ -118,61 +147,78 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
       setLoading(true);
       setError(null);
 
+      // Build state snapshot from current game state
+      const snapshot = takeGameSnapshot(
+        liveGameStateRef.current,
+        enemyStatsRef.current,
+        gameDataRef.current,
+        chosenAugmentsRef.current
+      );
+      const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
+
+      // Build the question text, appending augment options if detected
       const augmentOptions = extractAugmentOptions(
         question,
         gameDataRef.current
       );
+      let questionText = question;
+      if (augmentOptions && augmentOptions.length > 0) {
+        const augmentLines = augmentOptions.map(
+          (opt) => `- **${opt.name}** [${opt.tier}]: ${opt.description}`
+        );
+        questionText = `${question}\n\nAugment options:\n${augmentLines.join("\n")}`;
+      }
 
-      const contextWithAugments = {
-        ...contextRef.current,
-        currentAugments:
-          chosenAugmentsRef.current.length > 0
-            ? chosenAugmentsRef.current
-            : contextRef.current.currentAugments,
-      };
+      // Add user message to conversation session
+      sessionRef.current.addUserMessage(stateText, questionText);
 
-      reactiveLog.info(`Coaching query: "${question}"`);
+      reactiveLog.info(
+        `Coaching query: "${question}" | ${sessionRef.current.messages.length} messages in thread`
+      );
 
-      // Determine if this is an augment/shard offer or a voice/reactive query.
-      // Auto-generated augment queries always start with this prefix.
+      // Determine source for overlay routing
       const isAugmentQuery = question.startsWith(
         "I'm being offered these augments:"
       );
       const source = isAugmentQuery ? "augment" : "reactive";
 
-      // Only notify coaching strip for voice/reactive queries
       if (source === "reactive") {
         window.electronAPI?.sendCoachingRequest();
       }
 
       try {
-        const response = await getCoachingResponse(
-          contextWithAugments,
-          {
-            question,
-            history: exchangesRef.current,
-            augmentOptions,
-          },
+        const response = await getMultiTurnCoachingResponse(
+          sessionRef.current,
           apiKey,
           { signal: options?.signal }
         );
-        setLatestExchange({ question, response });
-        setExchanges((prev) => [
-          ...prev,
-          { question, answer: response.answer },
-        ]);
 
-        // Relay to overlay — tagged with source so badges and strip
-        // only display their respective responses
+        // Record assistant response in the session
+        sessionRef.current.addAssistantMessage(JSON.stringify(response));
+
+        setLatestExchange({ question, response });
+
+        // Relay to overlay
         window.electronAPI?.sendCoachingResponse({ ...response, source });
       } catch (err) {
-        // Aborted requests are expected — player picked an augment before
-        // the coaching response arrived, so the in-flight request was cancelled
         if (err instanceof Error && err.name === "AbortError") {
+          // Cancelled — remove the orphaned user message from the session
+          // The next turn's snapshot will reflect whatever choice was made
           reactiveLog.debug(
-            "Coaching request cancelled — player picked before response arrived"
+            "Coaching request cancelled — removing orphaned message"
           );
+          try {
+            sessionRef.current.removeLastUserMessage();
+          } catch {
+            // Session may have been reset between cancel and this handler
+          }
         } else {
+          // Remove the failed user message so the session stays clean
+          try {
+            sessionRef.current.removeLastUserMessage();
+          } catch {
+            // Ignore if session was reset
+          }
           const msg = err instanceof Error ? err.message : "Request failed";
           reactiveLog.error(`Coaching error: ${msg}`);
           setError(msg);
@@ -193,8 +239,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     return () => sub.unsubscribe();
   }, [submitQuestion]);
 
-  // GEP augment coaching controller — handles debouncing, cancellation,
-  // and all three staleness scenarios (see augment-coaching.ts for details).
+  // GEP augment coaching controller
   useEffect(() => {
     const ctrl = createAugmentCoachingController(
       augmentOffer$,
@@ -208,18 +253,13 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
           await submitQuestion(question, { signal });
         },
         onPicked: (name) => {
-          if (chosenAugmentsRef.current.some((a) => a.name === name)) return;
+          if (chosenAugmentsRef.current.includes(name)) return;
+          const next = [...chosenAugmentsRef.current, name];
+          chosenAugmentsRef.current = next;
+          setChosenAugments(next);
           const augmentData = gameDataRef.current.augments.get(
             name.toLowerCase()
           );
-          const newAugment: CoachingItem = {
-            name,
-            description: augmentData?.description ?? "",
-            sets: augmentData?.sets,
-          };
-          const next = [...chosenAugmentsRef.current, newAugment];
-          chosenAugmentsRef.current = next;
-          setChosenAugments(next);
           if (augmentData) {
             manualInput$.next({ type: "augment", augment: augmentData });
           }
@@ -250,7 +290,7 @@ export function CoachingInput({ context, gameData }: CoachingInputProps) {
     );
   }
 
-  if (!context) {
+  if (!liveGameState.activePlayer) {
     return null;
   }
 

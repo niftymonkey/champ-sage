@@ -1,5 +1,6 @@
 import "./App.css";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { CoachingProvider } from "./hooks/useCoachingContext";
 import { useGameData } from "./hooks/useGameData";
 import { useGameLifecycle } from "./hooks/useGameLifecycle";
 import { useLiveGameState } from "./hooks/useLiveGameState";
@@ -196,6 +197,11 @@ function App() {
     return buildEffectiveGameState(gameState, modeContext);
   }, [gameState, data, selectedAugments]);
 
+  const detectedMode = useMemo(() => {
+    if (!data || gameState.status !== "connected") return null;
+    return registry.detect(gameState.gameMode);
+  }, [data, gameState.status, gameState.gameMode]);
+
   const augmentSelection = {
     selectedAugments,
     select: selectAugment,
@@ -261,11 +267,17 @@ function App() {
         </div>
       </div>
       {data && (
-        <DataBrowser
-          data={data}
-          effectiveState={effectiveState}
-          augmentSelection={augmentSelection}
-        />
+        <CoachingProvider
+          mode={detectedMode}
+          liveGameState={liveGame}
+          gameData={data}
+        >
+          <DataBrowser
+            data={data}
+            effectiveState={effectiveState}
+            augmentSelection={augmentSelection}
+          />
+        </CoachingProvider>
       )}
     </main>
   );
