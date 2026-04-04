@@ -50,44 +50,33 @@ Contains everything that doesn't change mid-game:
 
 **Mode-awareness:** Use the `GameMode` interface to decide what to include. No hardcoded mode strings. If `mode.decisionTypes` includes `augment-selection`, include augment rules. If the mode matches ARAM, include balance overrides. Everything is driven by the mode interface.
 
-## State Updates (Per User Message)
+## State Snapshots (Per User Message)
 
-Every user turn is prefixed with a state update showing what changed since the last message. The system prompt tells the LLM to expect this format.
+Every user turn includes a full state snapshot — not a diff. Research (Laban et al., arXiv:2505.06120) shows LLMs degrade significantly when tracking accumulated state across many diffs in multi-turn conversations. Full snapshots re-anchor the model to ground truth each turn, at negligible token cost (~100-200 tokens, cached as input).
 
-**First message** gets a full state snapshot:
+The system prompt tells the LLM to expect a `[Game State]` block before each question.
+
+**Every message format:**
 
 ```
 [Game State]
-Player Champion: Ahri (Level 3)
-KDA: 0/0/0
-Items: Doran's Ring
-Gold: 500
-Stats: 200 AP, 60 Armor, 40 MR, 30 AH, 350 MS, 1800 HP
-Augments: None
+Player Champion: Ahri (Level 12)
+KDA: 5/3/8
+Items: Zhonya's Hourglass (Active: Stasis for 2.5s), Rabadon's Deathcap
+Gold: 800
+Stats: 250 AP, 120 Armor, 40 MR, 40 AH, 350 MS, 2200 HP
+Augments: Jeweled Gauntlet, Ethereal Blades
 
 Ally Team: Garen, Lux, Jinx, Thresh
 Enemy Team:
-- Zed (Level 3): 85 AD, 35 Armor, 32 MR, 340 MS, 1600 HP — Doran's Blade
-- Darius (Level 2): 70 AD, 42 Armor, 32 MR, 340 MS, 1500 HP — no items
+- Zed (Level 12): 180 AD, 75 Armor, 42 MR, 380 MS, 2000 HP — Duskblade, Edge of Night
+- Garen (Level 13): 145 AD, 180 Armor, 72 MR, 370 MS, 2800 HP — Thornmail, Sunfire Aegis
 ...
 ```
 
-**Subsequent messages** get diffs:
+**POV:** Neutral/agnostic phrasing throughout. "Items:" not "Your items." "Enemy Team:" not "They have."
 
-```
-[State Update]
-New items: Zhonya's Hourglass (Active: Stasis for 2.5s)
-Gold: 3200 → 800
-Level: 12 → 13
-Stats: 250 AP, 120 Armor, 40 MR, 40 AH, 350 MS, 2200 HP
-KDA: 5/2/8 → 5/3/8
-Enemy changes:
-- Garen (Level 13): 145 AD, 180 Armor, 72 MR, 370 MS, 2800 HP — Thornmail, Sunfire Aegis, Plated Steelcaps
-```
-
-**POV:** Neutral/agnostic phrasing throughout. "New items:" not "You purchased." "Enemy changes:" not "They built."
-
-**What counts as a change:** Everything — gold, level, items, KDA, enemy items/stats. Start comprehensive, optimize later if noisy.
+**Message history:** All messages are kept in the array (no sliding window or summarization). At 400k context window, even a 30-exchange game session (~12k tokens total) is well within budget. If quality degrades in long sessions during playtesting, summarization can be added later via a cheap LLM call to compress evicted messages.
 
 ### Player Champion Stats
 
@@ -123,8 +112,8 @@ Enemy changes:
 
 ### Cancelled proactive requests
 
-- When a proactive augment/stat anvil request is cancelled (player picked before LLM responded), replace the orphaned question with a statement: "Augment selected: [X] from [X, Y, Z]"
-- Preserves the information in the conversation thread without an unanswered question
+- When a proactive augment/stat anvil request is cancelled (player picked before LLM responded), remove the orphaned question from the message array entirely
+- No replacement statement needed — the next turn's full state snapshot will show the chosen augment/stat anvil in the player's current state
 
 ## Mode-Awareness
 
@@ -149,4 +138,6 @@ Requires concrete `GameMode` implementations for at least three modes: ARAM Mayh
 - `buildSystemPrompt()` and `buildUserPrompt()` need significant rework to support message array construction
 - `getCoachingResponse()` switches from `generateText()` (single turn) to a message-array-based call
 - Conversation state (message array) lives per game session, reset on new game
+- All messages kept in array (no sliding window) — 400k context window handles any game session length
+- If quality degrades in very long sessions, add summarization later via cheap LLM call
 - Enemy stat computation is a new module that subscribes to game state updates
