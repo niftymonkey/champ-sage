@@ -415,6 +415,18 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
     overlayLog.warn(
       `Creating overlay windows but references still exist — badge=${!!badgeOverlay} (destroyed=${badgeOverlay?.window?.isDestroyed?.()}), strip=${!!stripOverlay} (destroyed=${stripOverlay?.window?.isDestroyed?.()})`
     );
+    for (const overlay of [badgeOverlay, stripOverlay]) {
+      try {
+        const win = overlay?.window;
+        if (win && !win.isDestroyed()) {
+          win.destroy();
+        }
+      } catch {
+        // ignore stale handles
+      }
+    }
+    badgeOverlay = null;
+    stripOverlay = null;
   }
 
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -440,13 +452,18 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
     });
     badgeOverlay.window.webContents.on(
       "did-fail-load",
-      (_e: any, code: number, desc: string) => {
+      (_event, code, desc) => {
         overlayLog.error(`Badge overlay: FAILED TO LOAD (${code}: ${desc})`);
       }
     );
-    badgeOverlay.window.webContents.on("crashed", () => {
-      overlayLog.error("Badge overlay: RENDERER CRASHED");
-    });
+    badgeOverlay.window.webContents.on(
+      "render-process-gone",
+      (_event, details) => {
+        overlayLog.error(
+          `Badge overlay: renderer gone (${details.reason}, exitCode=${details.exitCode})`
+        );
+      }
+    );
     overlayLog.info(`Badge overlay created (${width}x${height})`);
   } catch (err) {
     overlayLog.error("Failed to create badge overlay:", err);
@@ -479,13 +496,18 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
     });
     stripOverlay.window.webContents.on(
       "did-fail-load",
-      (_e: any, code: number, desc: string) => {
+      (_event, code, desc) => {
         overlayLog.error(`Coaching strip: FAILED TO LOAD (${code}: ${desc})`);
       }
     );
-    stripOverlay.window.webContents.on("crashed", () => {
-      overlayLog.error("Coaching strip: RENDERER CRASHED");
-    });
+    stripOverlay.window.webContents.on(
+      "render-process-gone",
+      (_event, details) => {
+        overlayLog.error(
+          `Coaching strip: renderer gone (${details.reason}, exitCode=${details.exitCode})`
+        );
+      }
+    );
 
     // Start click-through — only interactive when Shift+Tab is held
     stripOverlay.window.setIgnoreMouseEvents(true, { forward: true });
