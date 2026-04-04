@@ -411,6 +411,12 @@ const OVERLAY_WEB_PREFS = {
 };
 
 async function createOverlayWindows(overlayApi: any): Promise<void> {
+  if (badgeOverlay || stripOverlay) {
+    overlayLog.warn(
+      `Creating overlay windows but references still exist — badge=${!!badgeOverlay} (destroyed=${badgeOverlay?.window?.isDestroyed?.()}), strip=${!!stripOverlay} (destroyed=${stripOverlay?.window?.isDestroyed?.()})`
+    );
+  }
+
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.size;
 
@@ -429,6 +435,18 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
     });
 
     loadOverlayContent(badgeOverlay.window, "overlay");
+    badgeOverlay.window.webContents.on("did-finish-load", () => {
+      overlayLog.info("Badge overlay: renderer loaded successfully");
+    });
+    badgeOverlay.window.webContents.on(
+      "did-fail-load",
+      (_e: any, code: number, desc: string) => {
+        overlayLog.error(`Badge overlay: FAILED TO LOAD (${code}: ${desc})`);
+      }
+    );
+    badgeOverlay.window.webContents.on("crashed", () => {
+      overlayLog.error("Badge overlay: RENDERER CRASHED");
+    });
     overlayLog.info(`Badge overlay created (${width}x${height})`);
   } catch (err) {
     overlayLog.error("Failed to create badge overlay:", err);
@@ -456,6 +474,18 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
     });
 
     loadOverlayContent(stripOverlay.window, "overlay-strip");
+    stripOverlay.window.webContents.on("did-finish-load", () => {
+      overlayLog.info("Coaching strip: renderer loaded successfully");
+    });
+    stripOverlay.window.webContents.on(
+      "did-fail-load",
+      (_e: any, code: number, desc: string) => {
+        overlayLog.error(`Coaching strip: FAILED TO LOAD (${code}: ${desc})`);
+      }
+    );
+    stripOverlay.window.webContents.on("crashed", () => {
+      overlayLog.error("Coaching strip: RENDERER CRASHED");
+    });
 
     // Start click-through — only interactive when Shift+Tab is held
     stripOverlay.window.setIgnoreMouseEvents(true, { forward: true });
@@ -563,7 +593,9 @@ function initOverlay(): void {
   });
 
   overlayApi.on("game-exit", (gameInfo: any, wasInjected: boolean) => {
-    cleanupWebSocket();
+    // NOTE: Do NOT call cleanupWebSocket() here. The WebSocket connects to
+    // the LCU client, which stays alive between games. Killing it prevents
+    // the engine from detecting game 2's phase transition to "InProgress".
     appLog.info(`Game exited: ${gameInfo.name} (was injected: ${wasInjected})`);
     sendToAllWindows("overlay-status", { active: false, game: gameInfo.name });
 
