@@ -1,3 +1,10 @@
+/**
+ * Straight ARAM mode — no augments, no sets, but has balance overrides.
+ *
+ * Matches the "ARAM" game mode string from the Live Client Data API.
+ * Distinct from ARAM Mayhem (KIWI) which adds augments and sets.
+ */
+
 import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
 import type {
@@ -6,22 +13,21 @@ import type {
   PlayerModeContext,
   TeamComposition,
 } from "./types";
-import { GAME_MODE_MAYHEM } from "./types";
-import { filterItemsByMode, filterAugmentsByMode } from "./utils";
+import { GAME_MODE_ARAM } from "./types";
+import { filterItemsByMode } from "./utils";
 
-export const aramMayhemMode: GameMode = {
-  id: "aram-mayhem",
-  displayName: "ARAM Mayhem",
-  decisionTypes: ["augment-selection", "item-purchase", "open-ended-coaching"],
-  augmentSelectionLevels: [1, 7, 11, 15],
+export const aramMode: GameMode = {
+  id: "aram",
+  displayName: "ARAM",
+  decisionTypes: ["item-purchase", "open-ended-coaching"],
+  augmentSelectionLevels: [],
 
   matches(gameMode: string): boolean {
-    return gameMode === GAME_MODE_MAYHEM;
+    return gameMode === GAME_MODE_ARAM;
   },
 
   buildContext(gameState: GameState, gameData: LoadedGameData): ModeContext {
     const activePlayer = gameState.players.find((p) => p.isActivePlayer);
-    // Default to ORDER if no active player (spectator/loading edge case)
     const activeTeam = activePlayer?.team ?? "ORDER";
 
     const playerContexts = new Map<string, PlayerModeContext>();
@@ -52,11 +58,11 @@ export const aramMayhemMode: GameMode = {
     }
 
     return {
-      mode: aramMayhemMode,
+      mode: aramMode,
       playerContexts,
       modeItems: filterItemsByMode(gameData.items, "aram"),
-      modeAugments: filterAugmentsByMode(gameData.augments, "mayhem"),
-      augmentSets: gameData.augmentSets,
+      modeAugments: new Map(), // No augments in straight ARAM
+      augmentSets: [], // No sets in straight ARAM
       allyTeamComp: buildTeamComposition(allyPlayers),
       enemyTeamComp: buildTeamComposition(enemyPlayers),
     };

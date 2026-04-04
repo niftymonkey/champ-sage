@@ -1,3 +1,9 @@
+/**
+ * Classic (Summoner's Rift) mode — items only, no augments, no balance overrides.
+ *
+ * Matches the "CLASSIC" game mode string from the Live Client Data API.
+ */
+
 import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
 import type {
@@ -6,22 +12,21 @@ import type {
   PlayerModeContext,
   TeamComposition,
 } from "./types";
-import { GAME_MODE_MAYHEM } from "./types";
-import { filterItemsByMode, filterAugmentsByMode } from "./utils";
+import { GAME_MODE_CLASSIC } from "./types";
+import { filterItemsByMode } from "./utils";
 
-export const aramMayhemMode: GameMode = {
-  id: "aram-mayhem",
-  displayName: "ARAM Mayhem",
-  decisionTypes: ["augment-selection", "item-purchase", "open-ended-coaching"],
-  augmentSelectionLevels: [1, 7, 11, 15],
+export const classicMode: GameMode = {
+  id: "classic",
+  displayName: "Classic",
+  decisionTypes: ["item-purchase", "open-ended-coaching"],
+  augmentSelectionLevels: [],
 
   matches(gameMode: string): boolean {
-    return gameMode === GAME_MODE_MAYHEM;
+    return gameMode === GAME_MODE_CLASSIC;
   },
 
   buildContext(gameState: GameState, gameData: LoadedGameData): ModeContext {
     const activePlayer = gameState.players.find((p) => p.isActivePlayer);
-    // Default to ORDER if no active player (spectator/loading edge case)
     const activeTeam = activePlayer?.team ?? "ORDER";
 
     const playerContexts = new Map<string, PlayerModeContext>();
@@ -37,7 +42,7 @@ export const aramMayhemMode: GameMode = {
         championName: player.championName,
         team: player.team,
         tags: champion?.tags ?? [],
-        balanceOverrides: champion?.aramOverrides ?? null,
+        balanceOverrides: null, // No balance overrides on Summoner's Rift
         selectedAugments: [],
         setProgress: [],
       };
@@ -52,11 +57,11 @@ export const aramMayhemMode: GameMode = {
     }
 
     return {
-      mode: aramMayhemMode,
+      mode: classicMode,
       playerContexts,
-      modeItems: filterItemsByMode(gameData.items, "aram"),
-      modeAugments: filterAugmentsByMode(gameData.augments, "mayhem"),
-      augmentSets: gameData.augmentSets,
+      modeItems: filterItemsByMode(gameData.items, "standard"),
+      modeAugments: new Map(),
+      augmentSets: [],
       allyTeamComp: buildTeamComposition(allyPlayers),
       enemyTeamComp: buildTeamComposition(enemyPlayers),
     };

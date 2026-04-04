@@ -19,6 +19,8 @@ import { DataBrowser } from "./components/DataBrowser";
 import {
   createModeRegistry,
   aramMayhemMode,
+  aramMode,
+  classicMode,
   buildEffectiveGameState,
 } from "./lib/mode";
 import { addSelectedAugment } from "./lib/mode/augment-selection";
@@ -28,6 +30,8 @@ import type { GameState } from "./lib/game-state/types";
 
 const registry = createModeRegistry();
 registry.register(aramMayhemMode);
+registry.register(aramMode);
+registry.register(classicMode);
 
 function App() {
   const engineRef = useRef<ReactiveEngine | null>(null);
