@@ -1,4 +1,5 @@
 import type { CoachingContext, CoachingQuery } from "./types";
+import type { GameMode } from "../mode/types";
 import { formatGameTime } from "../format";
 import { GAME_MODE_MAYHEM, GAME_MODE_ARAM } from "../mode/types";
 
@@ -6,6 +7,7 @@ export function buildSystemPrompt(context: {
   gameMode: string;
   lcuGameMode: string;
   hasAugmentOptions?: boolean;
+  mode?: GameMode;
 }): string {
   const sections = [
     "You are an expert League of Legends coaching AI. Prioritize the game data provided in this prompt over your general knowledge — item stats, augment effects, and champion abilities change frequently.",
@@ -20,13 +22,17 @@ export function buildSystemPrompt(context: {
     "- Never explain what the player already knows.",
   ];
 
-  const isMayhem =
-    context.lcuGameMode === GAME_MODE_MAYHEM ||
-    context.gameMode === GAME_MODE_MAYHEM ||
-    context.gameMode === GAME_MODE_ARAM;
+  // Determine if this mode supports augment selection:
+  // When a GameMode is provided, check its decision types;
+  // otherwise fall back to string-based detection for backward compat
+  const supportsAugments = context.mode
+    ? context.mode.decisionTypes.includes("augment-selection")
+    : context.lcuGameMode === GAME_MODE_MAYHEM ||
+      context.gameMode === GAME_MODE_MAYHEM ||
+      context.gameMode === GAME_MODE_ARAM;
 
-  // Only include augment rules when the player is actually choosing augments
-  if (isMayhem && context.hasAugmentOptions) {
+  // Only include augment rules when the mode supports them and options are present
+  if (supportsAugments && context.hasAugmentOptions) {
     sections.push(
       "",
       "AUGMENT SELECTION RULES:",

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
 import type { CoachingContext, CoachingQuery } from "./types";
+import type { GameMode, ModeContext } from "../mode/types";
 
 function createContext(
   overrides: Partial<CoachingContext> = {}
@@ -107,6 +108,58 @@ describe("buildSystemPrompt", () => {
       hasAugmentOptions: true,
     }).toLowerCase();
     expect(prompt).not.toContain("re-roll");
+  });
+
+  describe("mode-aware system prompt", () => {
+    it("includes augment rules when mode has augment-selection and options are present", () => {
+      const mode: GameMode = {
+        id: "aram-mayhem",
+        displayName: "ARAM Mayhem",
+        decisionTypes: [
+          "augment-selection",
+          "item-purchase",
+          "open-ended-coaching",
+        ],
+        augmentSelectionLevels: [1, 7, 11, 15],
+        matches: (gm: string) => gm === "KIWI" || gm === "ARAM",
+        buildContext: () => ({}) as ModeContext,
+      };
+      const prompt = buildSystemPrompt({
+        gameMode: "ARAM",
+        lcuGameMode: "KIWI",
+        hasAugmentOptions: true,
+        mode,
+      }).toLowerCase();
+      expect(prompt).toContain("augment");
+      expect(prompt).toContain("re-roll");
+    });
+
+    it("excludes augment rules when mode lacks augment-selection even with options", () => {
+      const mode: GameMode = {
+        id: "classic",
+        displayName: "Classic",
+        decisionTypes: ["item-purchase", "open-ended-coaching"],
+        augmentSelectionLevels: [],
+        matches: (gm: string) => gm === "CLASSIC",
+        buildContext: () => ({}) as ModeContext,
+      };
+      const prompt = buildSystemPrompt({
+        gameMode: "ARAM",
+        lcuGameMode: "KIWI",
+        hasAugmentOptions: true,
+        mode,
+      }).toLowerCase();
+      expect(prompt).not.toContain("re-roll");
+    });
+
+    it("falls back to string-based detection when no mode provided", () => {
+      const prompt = buildSystemPrompt({
+        gameMode: "ARAM",
+        lcuGameMode: "KIWI",
+        hasAugmentOptions: true,
+      }).toLowerCase();
+      expect(prompt).toContain("re-roll");
+    });
   });
 });
 

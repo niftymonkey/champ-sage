@@ -3,6 +3,7 @@ import { assembleContext } from "./context-assembler";
 import type { LiveGameState } from "../reactive/types";
 import type { LoadedGameData } from "../data-ingest";
 import type { Champion, Item } from "../data-ingest/types";
+import type { GameMode, ModeContext } from "../mode/types";
 
 function createLiveGameState(
   overrides: Partial<LiveGameState> = {}
@@ -492,6 +493,98 @@ describe("assembleContext", () => {
 
       const result = assembleContext(createLiveGameState(), gameData);
       expect(result!.teamAnalysis).toBeNull();
+    });
+  });
+
+  describe("mode-aware context assembly", () => {
+    function createAramMayhemMode(): GameMode {
+      return {
+        id: "aram-mayhem",
+        displayName: "ARAM Mayhem",
+        decisionTypes: [
+          "augment-selection",
+          "item-purchase",
+          "open-ended-coaching",
+        ],
+        augmentSelectionLevels: [1, 7, 11, 15],
+        matches: (gm: string) => gm === "KIWI" || gm === "ARAM",
+        buildContext: () => ({}) as ModeContext,
+      };
+    }
+
+    function createClassicMode(): GameMode {
+      return {
+        id: "classic",
+        displayName: "Classic",
+        decisionTypes: ["item-purchase", "open-ended-coaching"],
+        augmentSelectionLevels: [],
+        matches: (gm: string) => gm === "CLASSIC",
+        buildContext: () => ({}) as ModeContext,
+      };
+    }
+
+    it("includes balanceOverrides for ARAM Mayhem mode", () => {
+      const result = assembleContext(
+        createLiveGameState(),
+        createGameData(),
+        createAramMayhemMode()
+      );
+      expect(result).not.toBeNull();
+      expect(result!.balanceOverrides).not.toBeNull();
+      expect(result!.balanceOverrides).toContain("-5%");
+    });
+
+    it("excludes balanceOverrides for Classic mode", () => {
+      const result = assembleContext(
+        createLiveGameState(),
+        createGameData(),
+        createClassicMode()
+      );
+      expect(result).not.toBeNull();
+      expect(result!.balanceOverrides).toBeNull();
+    });
+
+    it("includes augmentSets for modes with augment-selection", () => {
+      const gameData = createGameData();
+      gameData.augmentSets = [
+        {
+          name: "TestSet",
+          bonuses: [{ threshold: 2, description: "Bonus effect" }],
+        },
+      ];
+      const result = assembleContext(
+        createLiveGameState(),
+        gameData,
+        createAramMayhemMode()
+      );
+      expect(result).not.toBeNull();
+      expect(result!.augmentSets).toHaveLength(1);
+      expect(result!.augmentSets[0].name).toBe("TestSet");
+    });
+
+    it("excludes augmentSets for modes without augment-selection", () => {
+      const gameData = createGameData();
+      gameData.augmentSets = [
+        {
+          name: "TestSet",
+          bonuses: [{ threshold: 2, description: "Bonus effect" }],
+        },
+      ];
+      const result = assembleContext(
+        createLiveGameState(),
+        gameData,
+        createClassicMode()
+      );
+      expect(result).not.toBeNull();
+      expect(result!.augmentSets).toEqual([]);
+    });
+
+    it("preserves existing behavior when no mode is provided", () => {
+      const result = assembleContext(createLiveGameState(), createGameData());
+      expect(result).not.toBeNull();
+      // Without mode param, should include everything (backward compat)
+      expect(result!.balanceOverrides).not.toBeNull();
+      expect(result!.augmentSets).toBeDefined();
     });
   });
 });

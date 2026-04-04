@@ -3,11 +3,14 @@ import type { PlayerInfo } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
 import type { CoachingContext } from "./types";
 import type { AramOverrides } from "../data-ingest/types";
+import type { GameMode } from "../mode/types";
+import { GAME_MODE_ARAM } from "../mode/types";
 import { formatModifier } from "../format";
 
 export function assembleContext(
   gameState: LiveGameState,
-  gameData: LoadedGameData
+  gameData: LoadedGameData,
+  mode?: GameMode
 ): CoachingContext | null {
   if (!gameState.activePlayer) {
     return null;
@@ -52,9 +55,19 @@ export function assembleContext(
       champion: p.championName,
     }));
 
-  const balanceOverrides = champion?.aramOverrides
-    ? formatBalanceOverrides(champion.aramOverrides)
-    : null;
+  // Include ARAM balance overrides when no mode is specified (backward compat)
+  // or when the mode handles ARAM games
+  const includeAramOverrides = !mode || mode.matches(GAME_MODE_ARAM);
+  const balanceOverrides =
+    includeAramOverrides && champion?.aramOverrides
+      ? formatBalanceOverrides(champion.aramOverrides)
+      : null;
+
+  // Include augment sets when no mode is specified (backward compat)
+  // or when the mode supports augment selection
+  const includeAugmentSets =
+    !mode || mode.decisionTypes.includes("augment-selection");
+  const augmentSets = includeAugmentSets ? gameData.augmentSets : [];
 
   const statProfile = champion ? formatStatProfile(champion) : null;
   const teamAnalysis = buildTeamAnalysis(
@@ -79,7 +92,7 @@ export function assembleContext(
     },
     currentAugments: [],
     teamAnalysis,
-    augmentSets: gameData.augmentSets,
+    augmentSets,
     enemyTeam,
     allyTeam,
     gameMode: gameState.gameMode,
