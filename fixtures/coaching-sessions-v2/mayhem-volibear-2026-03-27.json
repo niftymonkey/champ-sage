@@ -1,0 +1,4596 @@
+[
+  {
+    "label": "Volibear @0:18: augment choice",
+    "index": 0,
+    "timestamp": "2026-03-27T19:40:25.750Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 3,
+        "currentGold": 1400,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 43,
+          "magicResist": 35,
+          "maxHealth": 803,
+          "currentHealth": 803,
+          "moveSpeed": 340,
+          "attackSpeed": 0.643,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 18
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "query": {
+      "question": "poor o'blaster, demons dance, or vampirism.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Demon's Dance",
+          "tier": "Gold",
+          "description": "Gain the Fleet Footwork and Grasp of the Undying keystone runes."
+        },
+        {
+          "name": "Vampirism",
+          "tier": "Gold",
+          "description": "You can no longer be healed by allies and your health regeneration is set to 0. Gain 25% omnivamp."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Demon's Dance**. Best on Volibear: Fleet + Grasp both fit melee trade/stacking, and you keep ally healing. **Vampirism** is too risky here; losing ally heals + all regen is bad on tank Voli. Poor o'blaster only if you’re committing full damage, which this comp doesn’t need.",
+      "latencyMs": 1644,
+      "tokensIn": 926,
+      "tokensOut": 179
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 1400,
+      "champion": "Volibear",
+      "gameTime": "0:18"
+    }
+  },
+  {
+    "label": "Volibear @0:34: general question",
+    "index": 1,
+    "timestamp": "2026-03-27T19:40:43.341Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 3,
+        "currentGold": 1400,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 43,
+          "magicResist": 35,
+          "maxHealth": 803,
+          "currentHealth": 803,
+          "moveSpeed": 340,
+          "attackSpeed": 0.643,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 34
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "query": {
+      "question": "spiritual purification. Demon's dance. Big brain.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Spiritual Purification",
+          "tier": "Gold",
+          "description": "Scoring a champion takedown causes the area around the slain champion to explode in a 500 unit radius, dealing adaptive damage to enemies within equal to 15% of their current health and leaving behind a zone for 1.5 seconds that slows enemies within by 60%."
+        },
+        {
+          "name": "Demon's Dance",
+          "tier": "Gold",
+          "description": "Gain the Fleet Footwork and Grasp of the Undying keystone runes."
+        },
+        {
+          "name": "Big Brain",
+          "tier": "Gold",
+          "description": "Gain a shield that absorbs damage equal to 300% AP and lasts until destroyed. Shield is replenished upon respawn."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Demon's Dance**. Best with Voli melee trading/stacking; strong tank-fighter value. **Spiritual Purification** only if snowballing kills. **Big Brain** low value on your current build.",
+      "latencyMs": 1500,
+      "tokensIn": 1085,
+      "tokensOut": 146
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 1400,
+      "champion": "Volibear",
+      "gameTime": "0:34"
+    }
+  },
+  {
+    "label": "Volibear @0:44: augment confirmation",
+    "index": 2,
+    "timestamp": "2026-03-27T19:40:51.106Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 3,
+        "currentGold": 1400,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 43,
+          "magicResist": 35,
+          "maxHealth": 803,
+          "currentHealth": 803,
+          "moveSpeed": 340,
+          "attackSpeed": 0.643,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3133,
+              "name": "Caulfield's Warhammer"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223057,
+              "name": "Sheen"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 44
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "query": {
+      "question": "I chose Demon's Dance.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Demon's Dance",
+          "tier": "Gold",
+          "description": "Gain the Fleet Footwork and Grasp of the Undying keystone runes."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Good. **Take Demon's Dance**; it’s the best Voli tempo/tank augment here. Spend the voucher on core combat stats, not greed.",
+      "latencyMs": 1170,
+      "tokensIn": 1052,
+      "tokensOut": 80
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 1400,
+      "champion": "Volibear",
+      "gameTime": "0:44"
+    }
+  },
+  {
+    "label": "Volibear @4:05: item question",
+    "index": 3,
+    "timestamp": "2026-03-27T19:44:13.160Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 6,
+        "currentGold": 84,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 56,
+          "magicResist": 40,
+          "maxHealth": 1061,
+          "currentHealth": 1061,
+          "moveSpeed": 340,
+          "attackSpeed": 0.674,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 2508,
+              "name": "Fated Ashes"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 3147,
+              "name": "Haunting Guise"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            },
+            {
+              "id": 221011,
+              "name": "Giant's Belt"
+            },
+            {
+              "id": 1033,
+              "name": "Null-Magic Mantle"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3133,
+              "name": "Caulfield's Warhammer"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223057,
+              "name": "Sheen"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6670,
+              "name": "Noonquiver"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 245
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance"],
+    "query": {
+      "question": "What's my next item?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Buy **Bami’s Cinder** next. Best immediate HP + waveclear/tank value for Voli, and it progresses cleanly into tank core without wasting your Heartsteel start.",
+      "latencyMs": 1486,
+      "tokensIn": 855,
+      "tokensOut": 139
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 84,
+      "champion": "Volibear",
+      "gameTime": "4:05"
+    }
+  },
+  {
+    "label": "Volibear @4:24: general question",
+    "index": 4,
+    "timestamp": "2026-03-27T19:44:31.175Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 6,
+        "currentGold": 241,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 56,
+          "magicResist": 40,
+          "maxHealth": 1061,
+          "currentHealth": 1061,
+          "moveSpeed": 340,
+          "attackSpeed": 0.674,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 2508,
+              "name": "Fated Ashes"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 3147,
+              "name": "Haunting Guise"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            },
+            {
+              "id": 221011,
+              "name": "Giant's Belt"
+            },
+            {
+              "id": 1033,
+              "name": "Null-Magic Mantle"
+            },
+            {
+              "id": 221031,
+              "name": "Chain Vest"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 1028,
+              "name": "Ruby Crystal"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6670,
+              "name": "Noonquiver"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 264
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance"],
+    "query": {
+      "question": "Do I get that before boots?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "No — keep **Boots** if you don’t already have tier 2, then save for the next **Heartsteel** component. If your Boots are already bought, don’t spend 241 gold on Heartsteel progress yet.",
+      "latencyMs": 1189,
+      "tokensIn": 909,
+      "tokensOut": 116
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 241,
+      "champion": "Volibear",
+      "gameTime": "4:24"
+    }
+  },
+  {
+    "label": "Volibear @4:38: augment choice",
+    "index": 5,
+    "timestamp": "2026-03-27T19:44:44.996Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 6,
+        "currentGold": 115,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 56,
+          "magicResist": 40,
+          "maxHealth": 1061,
+          "currentHealth": 1061,
+          "moveSpeed": 340,
+          "attackSpeed": 0.674,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            },
+            {
+              "id": 221011,
+              "name": "Giant's Belt"
+            },
+            {
+              "id": 1033,
+              "name": "Null-Magic Mantle"
+            },
+            {
+              "id": 221031,
+              "name": "Chain Vest"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 1028,
+              "name": "Ruby Crystal"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 278
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance"],
+    "query": {
+      "question": "No, I meant Tier 2 boots. Do I get those before whatever these boots upgrade into you?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Yes — get **Tier 2 Boots** first. Best immediate power/mobility for Voli; don’t sit on basic Boots. After that, build toward your next tank component, not the Boots upgrade path. Don’t buy anything else yet with 115g.",
+      "latencyMs": 1113,
+      "tokensIn": 989,
+      "tokensOut": 97
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 115,
+      "champion": "Volibear",
+      "gameTime": "4:38"
+    }
+  },
+  {
+    "label": "Volibear @5:15: augment choice",
+    "index": 6,
+    "timestamp": "2026-03-27T19:45:22.424Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 7,
+        "currentGold": 475,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 60,
+          "magicResist": 42,
+          "maxHealth": 1154,
+          "currentHealth": 1154,
+          "moveSpeed": 340,
+          "attackSpeed": 0.686,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            },
+            {
+              "id": 221011,
+              "name": "Giant's Belt"
+            },
+            {
+              "id": 1033,
+              "name": "Null-Magic Mantle"
+            },
+            {
+              "id": 221031,
+              "name": "Chain Vest"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 1028,
+              "name": "Ruby Crystal"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 315
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance"],
+    "query": {
+      "question": "Quest, steal your heart, recursion, or firebrand.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Firebrand",
+          "tier": "Gold",
+          "description": "Basic attacks apply a Burn for 5 seconds that deals bonus magic damage equal to2/5% of the target's maximum health per second.This Burn stacks infinitely and refreshes with each application."
+        },
+        {
+          "name": "Recursion",
+          "tier": "Gold",
+          "description": "Grants 60 ability haste."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Take **Firebrand**. Best with Voli autos + Heartsteel; huge sustained tank shred. **Recursion** only if you need pure spell spam. Re-roll the other one if possible.",
+      "latencyMs": 2733,
+      "tokensIn": 1253,
+      "tokensOut": 108
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 475,
+      "champion": "Volibear",
+      "gameTime": "5:15"
+    }
+  },
+  {
+    "label": "Volibear @5:36: item question",
+    "index": 7,
+    "timestamp": "2026-03-27T19:45:45.168Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 7,
+        "currentGold": 679,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 60,
+          "magicResist": 42,
+          "maxHealth": 1154,
+          "currentHealth": 1154,
+          "moveSpeed": 340,
+          "attackSpeed": 0.686,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            },
+            {
+              "id": 221011,
+              "name": "Giant's Belt"
+            },
+            {
+              "id": 1033,
+              "name": "Null-Magic Mantle"
+            },
+            {
+              "id": 221031,
+              "name": "Chain Vest"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 1028,
+              "name": "Ruby Crystal"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 336
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance"],
+    "query": {
+      "question": "But I already have a heart steal and I'm building a tank. Why is that better than what I have currently when half the time I can't reach the chance",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Because **Heartsteel** is your best payoff item here even if some fights are hard to reach. You’re Voli tank with Grasp/Fleet: when you do get in, Heartsteel gives way more HP scaling and snowball value than the weak options. With 679g, **don’t finish a new item path**—buy **Tier 2 Boots** if you can, otherwise **save gold** toward your next tank component. If you’re asking for the next actual build direction: **Bami’s Cinder / tank HP item**, not damage.",
+      "latencyMs": 1529,
+      "tokensIn": 979,
+      "tokensOut": 188
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 679,
+      "champion": "Volibear",
+      "gameTime": "5:36"
+    }
+  },
+  {
+    "label": "Volibear @6:07: augment confirmation",
+    "index": 8,
+    "timestamp": "2026-03-27T19:46:15.365Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 7,
+        "currentGold": 938,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 60,
+          "magicResist": 42,
+          "maxHealth": 1154,
+          "currentHealth": 1154,
+          "moveSpeed": 340,
+          "attackSpeed": 0.686,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            },
+            {
+              "id": 221011,
+              "name": "Giant's Belt"
+            },
+            {
+              "id": 1033,
+              "name": "Null-Magic Mantle"
+            },
+            {
+              "id": 221031,
+              "name": "Chain Vest"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 1028,
+              "name": "Ruby Crystal"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 367
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance"],
+    "query": {
+      "question": "I chose Quest Steel Your Heart.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Quest: Steel Your Heart",
+          "tier": "Gold",
+          "description": "Quest: Obtain Heartsteel and accumulate over 300 bonus health from Colossal Consumption. Reward: Upon completing your Quest, increase the bonus health gained from Heartsteel Colossal Consumption by 200%. [Heartsteel stats: 900 Health]"
+        }
+      ]
+    },
+    "response": {
+      "answer": "Yes — **Quest: Steel Your Heart** is a good take here. You already own **Heartsteel**, so this augment can fully pay off; finish stacking it and stay tanky. With 938g, **get Tier 2 Boots now if you can**, otherwise hold for your next tank HP component. Don’t buy Heartsteel again.",
+      "latencyMs": 1279,
+      "tokensIn": 1354,
+      "tokensOut": 153
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 938,
+      "champion": "Volibear",
+      "gameTime": "6:07"
+    }
+  },
+  {
+    "label": "Volibear @8:20: item question",
+    "index": 9,
+    "timestamp": "2026-03-27T19:48:28.420Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 9,
+        "currentGold": 261,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 70,
+          "magicResist": 46,
+          "maxHealth": 1351,
+          "currentHealth": 1351,
+          "moveSpeed": 340,
+          "attackSpeed": 0.709,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            },
+            {
+              "id": 0,
+              "name": "Jak'Sho"
+            },
+            {
+              "id": 0,
+              "name": "The Protean"
+            },
+            {
+              "id": 221011,
+              "name": "Giant's Belt"
+            },
+            {
+              "id": 2138,
+              "name": "Elixir of Iron"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 223071,
+              "name": "Black Cleaver"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 3133,
+              "name": "Caulfield's Warhammer"
+            },
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 2140,
+              "name": "Elixir of Wrath"
+            },
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 500
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance", "Quest"],
+    "query": {
+      "question": "So I have a balmies now. What is the item I'm building this into?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "**Bami’s Cinder is usually just a holding piece here — don’t rush a specific damage upgrade.** With your current setup, next real build should be **HP/tank, not damage**: **Warmog’s Armor** or **Kaenic Rookern** depending on whether you need vs AD/AP. If you want one clear direction: **finish a big HP tank item next, then keep stacking Heartsteel value.**",
+      "latencyMs": 2012,
+      "tokensIn": 1204,
+      "tokensOut": 205
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 261,
+      "champion": "Volibear",
+      "gameTime": "8:20"
+    }
+  },
+  {
+    "label": "Volibear @8:51: augment choice",
+    "index": 10,
+    "timestamp": "2026-03-27T19:48:59.399Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 9,
+        "currentGold": 520,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 70,
+          "magicResist": 46,
+          "maxHealth": 1351,
+          "currentHealth": 1351,
+          "moveSpeed": 340,
+          "attackSpeed": 0.709,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 2138,
+              "name": "Elixir of Iron"
+            },
+            {
+              "id": 0,
+              "name": "Jak'Sho"
+            },
+            {
+              "id": 0,
+              "name": "The Protean"
+            },
+            {
+              "id": 221011,
+              "name": "Giant's Belt"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 223071,
+              "name": "Black Cleaver"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 3133,
+              "name": "Caulfield's Warhammer"
+            },
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            },
+            {
+              "id": 3134,
+              "name": "Serrated Dirk"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 531
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance", "Quest"],
+    "query": {
+      "question": "Okay, I wanna know what the next main item I should have is. I bought bommies and some other items thinking I was building it into something. Please don't tell me stuff like that anymore. Just tell me the main item I'm moving towards.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "**Warmog’s Armor** is your next main item. Best direct HP tank follow-up for Voli here with Heartsteel already started; gives you the big health spike you actually want. If you need anti-AP instead, **Kaenic Rookern** is the only real alternative.",
+      "latencyMs": 1173,
+      "tokensIn": 1285,
+      "tokensOut": 124
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 520,
+      "champion": "Volibear",
+      "gameTime": "8:51"
+    }
+  },
+  {
+    "label": "Volibear @10:55: augment choice",
+    "index": 11,
+    "timestamp": "2026-03-27T19:51:03.318Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 11,
+        "currentGold": 664,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 81,
+          "magicResist": 50,
+          "maxHealth": 1563,
+          "currentHealth": 1563,
+          "moveSpeed": 340,
+          "attackSpeed": 0.735,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 2140,
+              "name": "Elixir of Wrath"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 443083,
+              "name": "Warmog's Armor"
+            },
+            {
+              "id": 0,
+              "name": "Jak'Sho"
+            },
+            {
+              "id": 0,
+              "name": "The Protean"
+            },
+            {
+              "id": 2139,
+              "name": "Elixir of Sorcery"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 223071,
+              "name": "Black Cleaver"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 3133,
+              "name": "Caulfield's Warhammer"
+            },
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 1018,
+              "name": "Cloak of Agility"
+            },
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            },
+            {
+              "id": 3134,
+              "name": "Serrated Dirk"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 655
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance", "Quest"],
+    "query": {
+      "question": "dropkick, final form, or ultimate revolution.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Ultimate Revolution",
+          "tier": "Prismatic",
+          "description": "Casting your ultimate ability resets its cooldown once its effect For instant-cast spells or has For duration-based spells (75 second cooldown, reset upon death)."
+        },
+        {
+          "name": "Final Form",
+          "tier": "Prismatic",
+          "description": "Casting your ultimate ability empowers you for 10 seconds, causing you to gain a shield for 50% of your maximum health, 20% omnivamp, and 30% bonus movement speed for the duration (20 second cooldown)."
+        },
+        {
+          "name": "Dropkick",
+          "tier": "Prismatic",
+          "description": "Your basic attacks and abilities execute enemy champions below 5% (+ 3.5% per 100 base AD) (+ 2% per 1000 bonus health) of their maximum health, which causes their corpse to be sent flying away in a line. Upon collision with an enemy champion or terrain, the target's corpse explodes to deal 150 to 500 (+ 100% bonus armor) (+ 100% bonus magic resistance) magic damage to nearby enemies. Successful executions heal you for 100 to 300 (+ 25% bonus health). The execution may also be triggered by the explosion and goes through shields."
+        }
+      ]
+    },
+    "response": {
+      "answer": "**Final Form**. Best now: huge HP shield + omnivamp + MS on R = lets Voli actually live after ult engage and stick fights. Re-roll the other two.",
+      "latencyMs": 3037,
+      "tokensIn": 1760,
+      "tokensOut": 137
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 664,
+      "champion": "Volibear",
+      "gameTime": "10:55"
+    }
+  },
+  {
+    "label": "Volibear @11:12: augment choice",
+    "index": 12,
+    "timestamp": "2026-03-27T19:51:19.660Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 11,
+        "currentGold": 804,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 81,
+          "magicResist": 50,
+          "maxHealth": 1563,
+          "currentHealth": 1563,
+          "moveSpeed": 340,
+          "attackSpeed": 0.735,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 223020,
+              "name": "Sorcerer's Shoes"
+            },
+            {
+              "id": 223116,
+              "name": "Rylai's Crystal Scepter"
+            },
+            {
+              "id": 3916,
+              "name": "Oblivion Orb"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 443083,
+              "name": "Warmog's Armor"
+            },
+            {
+              "id": 0,
+              "name": "Jak'Sho"
+            },
+            {
+              "id": 0,
+              "name": "The Protean"
+            },
+            {
+              "id": 2139,
+              "name": "Elixir of Sorcery"
+            },
+            {
+              "id": 221058,
+              "name": "Needlessly Large Rod"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 223071,
+              "name": "Black Cleaver"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 3133,
+              "name": "Caulfield's Warhammer"
+            },
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 1018,
+              "name": "Cloak of Agility"
+            },
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            },
+            {
+              "id": 3134,
+              "name": "Serrated Dirk"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 672
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance", "Quest"],
+    "query": {
+      "question": "courage of the Colossus, final form or slow cooker.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Courage of the Colossus",
+          "tier": "Prismatic",
+          "description": "Immobilizing or grounding an enemy champion grants a shield for 3 seconds that absorbs 150 to 450 (+ 4% maximum health) damage (5 second cooldown per cast instance). Shields can stack between multiple triggers of this effect, though not refreshing the duration of previous shields."
+        },
+        {
+          "name": "Slow Cooker",
+          "tier": "Prismatic",
+          "description": "Surrounds you in flames, causing you to apply a Burn every second to enemy champions within 500 units for 3 seconds that deals magic damage equal to0.66% of your maximum health per second.This Burn stacks infinitely and refreshes with each application."
+        },
+        {
+          "name": "Final Form",
+          "tier": "Prismatic",
+          "description": "Casting your ultimate ability empowers you for 10 seconds, causing you to gain a shield for 50% of your maximum health, 20% omnivamp, and 30% bonus movement speed for the duration (20 second cooldown)."
+        }
+      ]
+    },
+    "response": {
+      "answer": "**Final Form**. Best by far: huge ult shield + omnivamp + MS solves your engage/survive problem on Voli. Re-roll **Courage of the Colossus** and **Slow Cooker**.",
+      "latencyMs": 1645,
+      "tokensIn": 1726,
+      "tokensOut": 162
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 804,
+      "champion": "Volibear",
+      "gameTime": "11:12"
+    }
+  },
+  {
+    "label": "Volibear @17:31: augment choice",
+    "index": 13,
+    "timestamp": "2026-03-27T19:57:40.286Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 17,
+        "currentGold": 6124,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 117,
+          "magicResist": 64,
+          "maxHealth": 2285,
+          "currentHealth": 2285,
+          "moveSpeed": 340,
+          "attackSpeed": 0.822,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 223165,
+              "name": "Morellonomicon"
+            },
+            {
+              "id": 223020,
+              "name": "Sorcerer's Shoes"
+            },
+            {
+              "id": 223116,
+              "name": "Rylai's Crystal Scepter"
+            },
+            {
+              "id": 1052,
+              "name": "Amplifying Tome"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 443083,
+              "name": "Warmog's Armor"
+            },
+            {
+              "id": 223084,
+              "name": "Heartsteel"
+            },
+            {
+              "id": 0,
+              "name": "Jak'Sho"
+            },
+            {
+              "id": 0,
+              "name": "The Protean"
+            },
+            {
+              "id": 6660,
+              "name": "Bami's Cinder"
+            },
+            {
+              "id": 1028,
+              "name": "Ruby Crystal"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 223071,
+              "name": "Black Cleaver"
+            },
+            {
+              "id": 226695,
+              "name": "Serpent's Fang"
+            },
+            {
+              "id": 226697,
+              "name": "Hubris"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 3134,
+              "name": "Serrated Dirk"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 323042,
+              "name": "Muramana"
+            },
+            {
+              "id": 3035,
+              "name": "Last Whisper"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 223057,
+              "name": "Sheen"
+            },
+            {
+              "id": 3133,
+              "name": "Caulfield's Warhammer"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 1051
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance", "Quest"],
+    "query": {
+      "question": "shrink engine, sole eater, or red envelopes.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Red Envelopes",
+          "tier": "Gold",
+          "description": "Red envelopes will now randomly appear around you every 25 to 15 seconds. You can pick up these envelopes by moving over them, granting you between 8 to 15 gold and 22 to 46 gold, and 150 bonus movement speed for 4 seconds. Additionally, whenever you pick an envelope, you gain one of the following stats by random: 5 bonus attack damage 5 ability power 5 ability haste 5 bonus armor 5 bonus magic resistance 50 bonus health 10% bonus attack speed 5 bonus movement speed 5 Lethality 5 magic penetration"
+        },
+        {
+          "name": "Shrink Engine",
+          "tier": "Gold",
+          "description": "Scoring a champion takedown generates a stack, stacking infinitely. For each stack, gain 8 ability haste and 1% bonus movement speed, and reduce your size by 4%. Lose 65% of stacks on death. Size reduction is capped at 80%"
+        }
+      ]
+    },
+    "response": {
+      "answer": "**Shrink Engine**. Best with your reset-heavy takedown fights; stacks AH + MS forever and pairs well with Voli frontlining. Re-roll **Red Envelopes** if you have one left, otherwise just take Shrink Engine.",
+      "latencyMs": 1578,
+      "tokensIn": 1685,
+      "tokensOut": 158
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 6124,
+      "champion": "Volibear",
+      "gameTime": "17:31"
+    }
+  },
+  {
+    "label": "Volibear @17:54: augment choice",
+    "index": 14,
+    "timestamp": "2026-03-27T19:58:03.315Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 17,
+        "currentGold": 6591,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 117,
+          "magicResist": 64,
+          "maxHealth": 2285,
+          "currentHealth": 2285,
+          "moveSpeed": 340,
+          "attackSpeed": 0.822,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323070,
+              "name": "Tear of the Goddess"
+            },
+            {
+              "id": 223165,
+              "name": "Morellonomicon"
+            },
+            {
+              "id": 223020,
+              "name": "Sorcerer's Shoes"
+            },
+            {
+              "id": 223116,
+              "name": "Rylai's Crystal Scepter"
+            },
+            {
+              "id": 224645,
+              "name": "Shadowflame"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 443083,
+              "name": "Warmog's Armor"
+            },
+            {
+              "id": 223084,
+              "name": "Heartsteel"
+            },
+            {
+              "id": 0,
+              "name": "Jak'Sho"
+            },
+            {
+              "id": 0,
+              "name": "The Protean"
+            },
+            {
+              "id": 6660,
+              "name": "Bami's Cinder"
+            },
+            {
+              "id": 1028,
+              "name": "Ruby Crystal"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 223071,
+              "name": "Black Cleaver"
+            },
+            {
+              "id": 226695,
+              "name": "Serpent's Fang"
+            },
+            {
+              "id": 226697,
+              "name": "Hubris"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 3134,
+              "name": "Serrated Dirk"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 323042,
+              "name": "Muramana"
+            },
+            {
+              "id": 3035,
+              "name": "Last Whisper"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 17,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 223057,
+              "name": "Sheen"
+            },
+            {
+              "id": 3133,
+              "name": "Caulfield's Warhammer"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 1074
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance", "Quest"],
+    "query": {
+      "question": "donation, sole leader, or overflow.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Overflow",
+          "tier": "Gold",
+          "description": "Your abilities' mana costs are doubled, but you also gain 10%"
+        },
+        {
+          "name": "Donation",
+          "tier": "Gold",
+          "description": "Gain 1750 gold upon acquiring this augment."
+        }
+      ]
+    },
+    "response": {
+      "answer": "**Overflow**. Best on Voli here: extra damage + self/outgoing healing/shielding is huge with Heartsteel/Warmog’s tank-bruiser setup. Re-roll **Donation**; take **Sole Leader** only if it’s obviously stronger in the other card pool.",
+      "latencyMs": 1164,
+      "tokensIn": 1487,
+      "tokensOut": 116
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 6591,
+      "champion": "Volibear",
+      "gameTime": "17:54"
+    }
+  },
+  {
+    "label": "Volibear @19:45: augment confirmation",
+    "index": 15,
+    "timestamp": "2026-03-27T19:59:52.536Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 18,
+        "currentGold": 691,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 123,
+          "magicResist": 67,
+          "maxHealth": 2418,
+          "currentHealth": 2418,
+          "moveSpeed": 340,
+          "attackSpeed": 0.838,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323040,
+              "name": "Seraph's Embrace"
+            },
+            {
+              "id": 223165,
+              "name": "Morellonomicon"
+            },
+            {
+              "id": 223020,
+              "name": "Sorcerer's Shoes"
+            },
+            {
+              "id": 223116,
+              "name": "Rylai's Crystal Scepter"
+            },
+            {
+              "id": 224645,
+              "name": "Shadowflame"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 443083,
+              "name": "Warmog's Armor"
+            },
+            {
+              "id": 223084,
+              "name": "Heartsteel"
+            },
+            {
+              "id": 0,
+              "name": "Jak'Sho"
+            },
+            {
+              "id": 0,
+              "name": "The Protean"
+            },
+            {
+              "id": 223068,
+              "name": "Sunfire Aegis"
+            },
+            {
+              "id": 221031,
+              "name": "Chain Vest"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 223071,
+              "name": "Black Cleaver"
+            },
+            {
+              "id": 226695,
+              "name": "Serpent's Fang"
+            },
+            {
+              "id": 226697,
+              "name": "Hubris"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 3134,
+              "name": "Serrated Dirk"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 323042,
+              "name": "Muramana"
+            },
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 223161,
+              "name": "Spear of Shojin"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 223508,
+              "name": "Essence Reaver"
+            },
+            {
+              "id": 1037,
+              "name": "Pickaxe"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 1185
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance", "Quest"],
+    "query": {
+      "question": "I chose final form.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Final Form",
+          "tier": "Prismatic",
+          "description": "Casting your ultimate ability empowers you for 10 seconds, causing you to gain a shield for 50% of your maximum health, 20% omnivamp, and 30% bonus movement speed for the duration (20 second cooldown)."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Correct. **Final Form**. Keep it; best for Voli here. No reroll needed.",
+      "latencyMs": 703,
+      "tokensIn": 1427,
+      "tokensOut": 35
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 691,
+      "champion": "Volibear",
+      "gameTime": "19:45"
+    }
+  },
+  {
+    "label": "Volibear @19:49: augment confirmation",
+    "index": 16,
+    "timestamp": "2026-03-27T19:59:58.231Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Volibear",
+        "level": 18,
+        "currentGold": 751,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 123,
+          "magicResist": 67,
+          "maxHealth": 2418,
+          "currentHealth": 2418,
+          "moveSpeed": 340,
+          "attackSpeed": 0.838,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Volibear",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sion",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Tahm Kench",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Annie",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Smolder",
+          "team": "ORDER",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 6653,
+              "name": "Liandry's Torment"
+            },
+            {
+              "id": 323040,
+              "name": "Seraph's Embrace"
+            },
+            {
+              "id": 223165,
+              "name": "Morellonomicon"
+            },
+            {
+              "id": 223020,
+              "name": "Sorcerer's Shoes"
+            },
+            {
+              "id": 223116,
+              "name": "Rylai's Crystal Scepter"
+            },
+            {
+              "id": 224645,
+              "name": "Shadowflame"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Alistar",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 443083,
+              "name": "Warmog's Armor"
+            },
+            {
+              "id": 223084,
+              "name": "Heartsteel"
+            },
+            {
+              "id": 0,
+              "name": "Jak'Sho"
+            },
+            {
+              "id": 0,
+              "name": "The Protean"
+            },
+            {
+              "id": 223068,
+              "name": "Sunfire Aegis"
+            },
+            {
+              "id": 221031,
+              "name": "Chain Vest"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 223071,
+              "name": "Black Cleaver"
+            },
+            {
+              "id": 226695,
+              "name": "Serpent's Fang"
+            },
+            {
+              "id": 226697,
+              "name": "Hubris"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 3134,
+              "name": "Serrated Dirk"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223078,
+              "name": "Trinity Force"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 323042,
+              "name": "Muramana"
+            },
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 223161,
+              "name": "Spear of Shojin"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Gangplank",
+          "team": "CHAOS",
+          "level": 18,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223036,
+              "name": "Lord Dominik's Regards"
+            },
+            {
+              "id": 223158,
+              "name": "Ionian Boots of Lucidity"
+            },
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 223508,
+              "name": "Essence Reaver"
+            },
+            {
+              "id": 1037,
+              "name": "Pickaxe"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 1189
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Demon's Dance", "Quest", "Final Form"],
+    "query": {
+      "question": "I chose overflow.",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Overflow",
+          "tier": "Gold",
+          "description": "Your abilities' mana costs are doubled, but you also gain 10%"
+        }
+      ]
+    },
+    "response": {
+      "answer": "Good. Keep **Overflow**. Best with your Heartsteel/Warmog/Jak'Sho tank-bruiser setup: more damage + stronger self-heal/shields. Spend gold on **Bramble/Chain Vest upgrade path? no** — you already have Thornmail. Best buy is **no item needed now** unless you can finish a high-value component toward damage/utility; otherwise hold for next spike.",
+      "latencyMs": 1567,
+      "tokensIn": 1475,
+      "tokensOut": 135
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 751,
+      "champion": "Volibear",
+      "gameTime": "19:49"
+    }
+  }
+]

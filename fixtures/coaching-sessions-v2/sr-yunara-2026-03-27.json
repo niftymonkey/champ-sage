@@ -1,0 +1,1557 @@
+[
+  {
+    "label": "Yunara @0:29: augment choice",
+    "index": 0,
+    "timestamp": "2026-03-27T19:24:44.139Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Yunara",
+        "level": 1,
+        "currentGold": 50,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 55,
+          "abilityPower": 0,
+          "armor": 25,
+          "magicResist": 30,
+          "maxHealth": 590,
+          "currentHealth": 590,
+          "moveSpeed": 325,
+          "attackSpeed": 0.65,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Yunara",
+          "team": "ORDER",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Urgot",
+          "team": "ORDER",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "ORDER",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Diana",
+          "team": "ORDER",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "ORDER",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zyra",
+          "team": "CHAOS",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Volibear",
+          "team": "CHAOS",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lucian",
+          "team": "CHAOS",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Irelia",
+          "team": "CHAOS",
+          "level": 1,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "PRACTICETOOL",
+      "gameTime": 29
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "All right, talk to me about what my go-to combo is for this champ.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Go-to: auto pokes > Q when they step up > E to keep spacing > R when you need DPS spike or chase. In lane: auto-Q-auto, save E for disengage. If fighting all-in: E in, Q mid-kite, R ASAP, then keep autoing. Core rule: keep attacking to stack your on-hit/crit value; don’t waste E if you can just kite with autos.",
+      "latencyMs": 2660,
+      "tokensIn": 630,
+      "tokensOut": 101
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 50,
+      "champion": "Yunara",
+      "gameTime": "0:29"
+    }
+  },
+  {
+    "label": "Yunara @3:54: item question",
+    "index": 1,
+    "timestamp": "2026-03-27T19:28:09.837Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Yunara",
+        "level": 4,
+        "currentGold": 1033,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 55,
+          "abilityPower": 0,
+          "armor": 35,
+          "magicResist": 33,
+          "maxHealth": 839,
+          "currentHealth": 839,
+          "moveSpeed": 325,
+          "attackSpeed": 0.679,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Yunara",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Urgot",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Diana",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1107,
+              "name": "Scorchclaw Pup"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zyra",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3865,
+              "name": "World Atlas"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Volibear",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lucian",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Irelia",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1054,
+              "name": "Doran's Shield"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "PRACTICETOOL",
+      "gameTime": 234
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "That's my first item.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Best first buy: **Berserker’s Greaves** if you can buy now; otherwise **long sword + dagger** toward your core crit/on-hit start. Since enemy is mostly AD, if you need safety in lane, **Plated Steelcaps** is the defensive swap. Don’t buy Doran’s Blade again.",
+      "latencyMs": 1901,
+      "tokensIn": 777,
+      "tokensOut": 183
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 1033,
+      "champion": "Yunara",
+      "gameTime": "3:54"
+    }
+  },
+  {
+    "label": "Yunara @4:41: item question",
+    "index": 2,
+    "timestamp": "2026-03-27T19:28:56.703Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Yunara",
+        "level": 4,
+        "currentGold": 29,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 55,
+          "abilityPower": 0,
+          "armor": 35,
+          "magicResist": 33,
+          "maxHealth": 839,
+          "currentHealth": 839,
+          "moveSpeed": 325,
+          "attackSpeed": 0.679,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Yunara",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Urgot",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Diana",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "ORDER",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1107,
+              "name": "Scorchclaw Pup"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zyra",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3865,
+              "name": "World Atlas"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Volibear",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lucian",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Irelia",
+          "team": "CHAOS",
+          "level": 4,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1054,
+              "name": "Doran's Shield"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "PRACTICETOOL",
+      "gameTime": 281
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "Why did you say if you can buy now when you know exactly how much gold I have?",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Transmute: Gold",
+          "tier": "Silver",
+          "description": "Gain one random Gold augment, excluding the other two offerings in your current assortment."
+        }
+      ]
+    },
+    "response": {
+      "answer": "Because I was answering from the shop-state as a general condition, not your exact gold. With 29g, you can’t buy anything relevant right now, so the correct call is: wait. Also you already own Berserker’s Greaves, so don’t re-buy them.",
+      "latencyMs": 2166,
+      "tokensIn": 928,
+      "tokensOut": 72
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 29,
+      "champion": "Yunara",
+      "gameTime": "4:41"
+    }
+  },
+  {
+    "label": "Yunara @5:42: augment choice",
+    "index": 3,
+    "timestamp": "2026-03-27T19:29:56.980Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Yunara",
+        "level": 5,
+        "currentGold": 726,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 55,
+          "abilityPower": 0,
+          "armor": 39,
+          "magicResist": 34,
+          "maxHealth": 930,
+          "currentHealth": 930,
+          "moveSpeed": 325,
+          "attackSpeed": 0.69,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Yunara",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Urgot",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Diana",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1107,
+              "name": "Scorchclaw Pup"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 223009,
+              "name": "Boots of Swiftness"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zyra",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3865,
+              "name": "World Atlas"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Volibear",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lucian",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Irelia",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1054,
+              "name": "Doran's Shield"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "PRACTICETOOL",
+      "gameTime": 342
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "Well, that was my next item",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Next: **B. Fated Ashes** if you want best damage spike. If not, **Long Sword + Dagger** is the safe stat buy. You already have Berserker’s Greaves and Doran’s Blade, so don’t repeat those.",
+      "latencyMs": 2007,
+      "tokensIn": 964,
+      "tokensOut": 135
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 726,
+      "champion": "Yunara",
+      "gameTime": "5:42"
+    }
+  },
+  {
+    "label": "Yunara @6:08: general question",
+    "index": 4,
+    "timestamp": "2026-03-27T19:30:22.896Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Yunara",
+        "level": 5,
+        "currentGold": 779,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 55,
+          "abilityPower": 0,
+          "armor": 39,
+          "magicResist": 34,
+          "maxHealth": 930,
+          "currentHealth": 930,
+          "moveSpeed": 325,
+          "attackSpeed": 0.69,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Yunara",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Urgot",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Diana",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1107,
+              "name": "Scorchclaw Pup"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 223009,
+              "name": "Boots of Swiftness"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zyra",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3865,
+              "name": "World Atlas"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Volibear",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lucian",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Irelia",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1054,
+              "name": "Doran's Shield"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "PRACTICETOOL",
+      "gameTime": 368
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "This isn't faded ashes for AP champs.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Next buy: **Long Sword + Dagger**. Best raw spike for Yunara; builds into your damage core and fits your crit/on-hit plan. If you want safer lane only, **pick up a Cloth Armor component instead of extra damage** against this AD-heavy team, but don’t sit on gold.",
+      "latencyMs": 1805,
+      "tokensIn": 1033,
+      "tokensOut": 139
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 779,
+      "champion": "Yunara",
+      "gameTime": "6:08"
+    }
+  },
+  {
+    "label": "Yunara @6:29: item question",
+    "index": 5,
+    "timestamp": "2026-03-27T19:30:43.424Z",
+    "model": "openai/gpt-5.4-mini",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Yunara",
+        "level": 5,
+        "currentGold": 222,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 55,
+          "abilityPower": 0,
+          "armor": 39,
+          "magicResist": 34,
+          "maxHealth": 930,
+          "currentHealth": 930,
+          "moveSpeed": 325,
+          "attackSpeed": 0.69,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Yunara",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Urgot",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Diana",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "ORDER",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1107,
+              "name": "Scorchclaw Pup"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 223009,
+              "name": "Boots of Swiftness"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zyra",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3865,
+              "name": "World Atlas"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Volibear",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 222022,
+              "name": "Glowing Mote"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lucian",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1055,
+              "name": "Doran's Blade"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Irelia",
+          "team": "CHAOS",
+          "level": 5,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1054,
+              "name": "Doran's Shield"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            },
+            {
+              "id": 1042,
+              "name": "Dagger"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            },
+            {
+              "id": 2055,
+              "name": "Control Ward"
+            },
+            {
+              "id": 3340,
+              "name": "Stealth Ward"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "PRACTICETOOL",
+      "gameTime": 389
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "I wanted to know what the next full item was. Not partial.",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": {
+      "answer": "Next full item: **Kraken Slayer**. Best immediate completed spike for Yunara here: strong DPS, good vs this AD-heavy enemy, and fits your crit/on-hit style. Save gold for it; don’t buy a partial unless you must lane.",
+      "latencyMs": 1545,
+      "tokensIn": 1017,
+      "tokensOut": 149
+    },
+    "error": null,
+    "scorerContext": {
+      "items": [],
+      "gold": 222,
+      "champion": "Yunara",
+      "gameTime": "6:29"
+    }
+  }
+]

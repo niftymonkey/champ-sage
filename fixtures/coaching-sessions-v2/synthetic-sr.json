@@ -1,0 +1,654 @@
+[
+  {
+    "label": "SYNTHETIC: SR lane vs roam decision",
+    "index": 0,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "synthetic",
+    "category": "sr",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Ahri",
+        "level": 8,
+        "currentGold": 450,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 53,
+          "abilityPower": 0,
+          "armor": 45,
+          "magicResist": 38,
+          "maxHealth": 1191,
+          "currentHealth": 1191,
+          "moveSpeed": 330,
+          "attackSpeed": 0.753,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Ahri",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 2,
+          "deaths": 1,
+          "assists": 3,
+          "items": [
+            {
+              "id": 3802,
+              "name": "Lost Chapter"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Vi",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kai'Sa",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3134,
+              "name": "Serrated Dirk"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lee Sin",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3051,
+              "name": "Hearthbound Axe"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jinx",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1037,
+              "name": "Pickaxe"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Yone",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223006,
+              "name": "Berserker's Greaves"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "CLASSIC",
+      "gameTime": 600
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "Should I keep farming mid or roam to help bot lane?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["roam", "bot", "lane", "push", "wave", "priority"],
+    "scorerContext": {
+      "items": ["Lost Chapter", "Boots"],
+      "gold": 450,
+      "champion": "Ahri",
+      "gameTime": "10:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: SR objective timing decision",
+    "index": 1,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "synthetic",
+    "category": "sr",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Vi",
+        "level": 7,
+        "currentGold": 300,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 63,
+          "abilityPower": 0,
+          "armor": 53,
+          "magicResist": 42,
+          "maxHealth": 1164,
+          "currentHealth": 1164,
+          "moveSpeed": 340,
+          "attackSpeed": 0.706,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Vi",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 1,
+          "deaths": 2,
+          "assists": 4,
+          "items": [
+            {
+              "id": 1106,
+              "name": "Gustwalker Hatchling"
+            },
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Ahri",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kai'Sa",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ahri",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3802,
+              "name": "Lost Chapter"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kayn",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1106,
+              "name": "Gustwalker Hatchling"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Leona",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3044,
+              "name": "Phage"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "CLASSIC",
+      "gameTime": 480
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "Dragon spawns in 30 seconds. Should I set up or keep farming jungle?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": [
+      "dragon",
+      "objective",
+      "jungle",
+      "gank",
+      "priority",
+      "bot",
+      "vision"
+    ],
+    "scorerContext": {
+      "items": ["Gustwalker Hatchling", "Long Sword", "Boots"],
+      "gold": 300,
+      "champion": "Vi",
+      "gameTime": "8:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: SR jungle invade decision",
+    "index": 2,
+    "timestamp": "2026-03-27T00:00:00Z",
+    "model": "synthetic",
+    "category": "sr",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Vi",
+        "level": 6,
+        "currentGold": 150,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 63,
+          "abilityPower": 0,
+          "armor": 49,
+          "magicResist": 40,
+          "maxHealth": 1070,
+          "currentHealth": 1070,
+          "moveSpeed": 340,
+          "attackSpeed": 0.695,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Vi",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 3,
+          "deaths": 0,
+          "assists": 2,
+          "items": [
+            {
+              "id": 1106,
+              "name": "Gustwalker Hatchling"
+            },
+            {
+              "id": 1001,
+              "name": "Boots"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Ahri",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kai'Sa",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ahri",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3802,
+              "name": "Lost Chapter"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kayn",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 1036,
+              "name": "Long Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 221038,
+              "name": "B. F. Sword"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Leona",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 3044,
+              "name": "Phage"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "CLASSIC",
+      "gameTime": 420
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "Their jungler is bot side. Should I invade their top jungle?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": [
+      "invade",
+      "jungle",
+      "ward",
+      "vision",
+      "camp",
+      "counter"
+    ],
+    "scorerContext": {
+      "items": ["Gustwalker Hatchling", "Boots"],
+      "gold": 150,
+      "champion": "Vi",
+      "gameTime": "7:00"
+    }
+  }
+]
