@@ -175,7 +175,7 @@ interface ModelCandidate {
 // Models to evaluate across providers and tiers.
 // Comment/uncomment to control which models run.
 const models: ModelCandidate[] = [
-  { name: "GPT 5.4 mini", id: "openai/gpt-5.4-mini", provider: "openrouter" },
+  { name: "GPT 5.4 mini", id: "gpt-5.4-mini", provider: "openai" },
   // { name: "GPT 5.4", id: "openai/gpt-5.4", provider: "openrouter" },
   // { name: "Gemini 2.5 Pro", id: "google/gemini-2.5-pro", provider: "openrouter" },
   // { name: "Claude Sonnet 4.6", id: "anthropic/claude-sonnet-4.6", provider: "openrouter" },
@@ -374,163 +374,155 @@ const MODE_MAP: Record<string, GameMode> = {
 const multiTurnFixturesDir = resolve("fixtures/coaching-sessions-v2");
 
 if (existsSync(multiTurnFixturesDir)) {
-  // Wrap in async IIFE so we can await loadGameData()
-  void (async () => {
-    const { loadGameData } = await import("../data-ingest");
-    const gameData = await loadGameData();
+  const { loadGameData } = await import("../data-ingest");
+  const gameData = await loadGameData();
 
-    const mtFixtureFiles = readdirSync(multiTurnFixturesDir).filter((f) =>
-      f.endsWith(".json")
+  const mtFixtureFiles = readdirSync(multiTurnFixturesDir).filter((f) =>
+    f.endsWith(".json")
+  );
+  const mtFixtures: MultiTurnFixture[] = mtFixtureFiles.flatMap((file) =>
+    JSON.parse(readFileSync(resolve(multiTurnFixturesDir, file), "utf-8"))
+  );
+
+  const validMtFixtures = mtFixtures.filter(
+    (f) => f.error === null && f.query.question.length > 5
+  );
+
+  function buildMultiTurnInput(
+    f: MultiTurnFixture,
+    gameData: LoadedGameData
+  ): MultiTurnEvalInput {
+    const mode = MODE_MAP[f.gameModeId];
+    if (!mode) {
+      throw new Error(`Unknown gameModeId: ${f.gameModeId}`);
+    }
+
+    // Build the system prompt using real function
+    const systemPrompt = buildGameSystemPrompt(mode, gameData, f.gameState);
+
+    // Compute enemy stats for each enemy player
+    const activePlayerInfo = f.gameState.players.find((p) => p.isActivePlayer);
+    const activeTeam = activePlayerInfo?.team ?? "ORDER";
+    const enemyPlayers = f.gameState.players.filter(
+      (p) => p.team !== activeTeam
     );
-    const mtFixtures: MultiTurnFixture[] = mtFixtureFiles.flatMap((file) =>
-      JSON.parse(readFileSync(resolve(multiTurnFixturesDir, file), "utf-8"))
-    );
 
-    const validMtFixtures = mtFixtures.filter(
-      (f) => f.error === null && f.query.question.length > 5
-    );
-
-    function buildMultiTurnInput(
-      f: MultiTurnFixture,
-      gameData: LoadedGameData
-    ): MultiTurnEvalInput {
-      const mode = MODE_MAP[f.gameModeId];
-      if (!mode) {
-        throw new Error(`Unknown gameModeId: ${f.gameModeId}`);
-      }
-
-      // Build the system prompt using real function
-      const systemPrompt = buildGameSystemPrompt(mode, gameData, f.gameState);
-
-      // Compute enemy stats for each enemy player
-      const activePlayerInfo = f.gameState.players.find(
-        (p) => p.isActivePlayer
+    const enemyStats = new Map<string, ReturnType<typeof computeEnemyStats>>();
+    for (const enemy of enemyPlayers) {
+      const champData = gameData.champions.get(
+        enemy.championName.toLowerCase()
       );
-      const activeTeam = activePlayerInfo?.team ?? "ORDER";
-      const enemyPlayers = f.gameState.players.filter(
-        (p) => p.team !== activeTeam
-      );
-
-      const enemyStats = new Map<
-        string,
-        ReturnType<typeof computeEnemyStats>
-      >();
-      for (const enemy of enemyPlayers) {
-        const champData = gameData.champions.get(
-          enemy.championName.toLowerCase()
+      if (champData) {
+        const enemyItems = enemy.items
+          .map((item) => gameData.items.get(item.id))
+          .filter((item): item is NonNullable<typeof item> => item != null);
+        enemyStats.set(
+          enemy.championName,
+          computeEnemyStats(champData.stats, enemy.level, enemyItems)
         );
-        if (champData) {
-          const enemyItems = enemy.items
-            .map((item) => gameData.items.get(item.id))
-            .filter((item): item is NonNullable<typeof item> => item != null);
-          enemyStats.set(
-            enemy.championName,
-            computeEnemyStats(champData.stats, enemy.level, enemyItems)
-          );
-        }
       }
-
-      // Build LiveGameState from GameState
-      const liveGameState: LiveGameState = {
-        activePlayer: f.gameState.activePlayer,
-        players: f.gameState.players,
-        gameMode: f.gameState.gameMode,
-        lcuGameMode:
-          f.gameModeId === "aram-mayhem" ? "KIWI" : f.gameState.gameMode,
-        gameTime: f.gameState.gameTime,
-        champSelect: null,
-        eogStats: null,
-      };
-
-      // Build snapshot and format it
-      const snapshot = takeGameSnapshot(
-        liveGameState,
-        enemyStats,
-        gameData,
-        f.chosenAugments
-      );
-      const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
-
-      // Build conversation session with history
-      const session = createConversationSession(systemPrompt);
-
-      if (f.query.history) {
-        for (const exchange of f.query.history) {
-          session.addUserMessage(stateText, exchange.question);
-          session.addAssistantMessage(exchange.answer);
-        }
-      }
-
-      // Add current question
-      session.addUserMessage(stateText, f.query.question);
-
-      return {
-        label: f.label,
-        category: f.category,
-        question: f.query.question,
-        champion: f.scorerContext.champion,
-        gameTime: f.scorerContext.gameTime,
-        items: f.scorerContext.items,
-        gold: f.scorerContext.gold,
-        systemPrompt: session.systemPrompt,
-        userPrompt: "", // not used in multi-turn — messages carry the content
-        history: f.query.history ?? [],
-        expectedReferences: f.expectedReferences,
-        messages: [...session.messages],
-      };
     }
 
-    // Group multi-turn inputs by category
-    const mtInputsByCategory = new Map<string, MultiTurnEvalInput[]>();
-    for (const f of validMtFixtures) {
-      const input = buildMultiTurnInput(f, gameData);
-      const categoryLabel = CATEGORY_LABELS[input.category] ?? input.category;
-      const list = mtInputsByCategory.get(categoryLabel) ?? [];
-      list.push(input);
-      mtInputsByCategory.set(categoryLabel, list);
+    // Build LiveGameState from GameState
+    const liveGameState: LiveGameState = {
+      activePlayer: f.gameState.activePlayer,
+      players: f.gameState.players,
+      gameMode: f.gameState.gameMode,
+      lcuGameMode:
+        f.gameModeId === "aram-mayhem" ? "KIWI" : f.gameState.gameMode,
+      gameTime: f.gameState.gameTime,
+      champSelect: null,
+      eogStats: null,
+    };
+
+    // Build snapshot and format it
+    const snapshot = takeGameSnapshot(
+      liveGameState,
+      enemyStats,
+      gameData,
+      f.chosenAugments
+    );
+    const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
+
+    // Build conversation session with history
+    const session = createConversationSession(systemPrompt);
+
+    if (f.query.history) {
+      for (const exchange of f.query.history) {
+        session.addUserMessage(stateText, exchange.question);
+        session.addAssistantMessage(exchange.answer);
+      }
     }
 
-    // Register multi-turn evals
-    for (const model of models) {
-      for (const [category, inputs] of mtInputsByCategory) {
-        if (inputs.length === 0) continue;
+    // Add current question
+    session.addUserMessage(stateText, f.query.question);
 
-        evalite(`${model.name} / ${category} [multi-turn]`, {
-          data: () => inputs.map((input) => ({ input })),
+    return {
+      label: f.label,
+      category: f.category,
+      question: f.query.question,
+      champion: f.scorerContext.champion,
+      gameTime: f.scorerContext.gameTime,
+      items: f.scorerContext.items,
+      gold: f.scorerContext.gold,
+      systemPrompt: session.systemPrompt,
+      userPrompt: "", // not used in multi-turn — messages carry the content
+      history: f.query.history ?? [],
+      expectedReferences: f.expectedReferences,
+      messages: [...session.messages],
+    };
+  }
 
-          task: async (input: MultiTurnEvalInput): Promise<EvalOutput> => {
-            const result = await generateText({
-              model: getModel(model),
-              system: input.systemPrompt,
-              messages: input.messages as ModelMessage[],
-              output: Output.object({ schema: coachingResponseSchema }),
-              maxOutputTokens: 4096,
-            });
+  // Group multi-turn inputs by category
+  const mtInputsByCategory = new Map<string, MultiTurnEvalInput[]>();
+  for (const f of validMtFixtures) {
+    const input = buildMultiTurnInput(f, gameData);
+    const categoryLabel = CATEGORY_LABELS[input.category] ?? input.category;
+    const list = mtInputsByCategory.get(categoryLabel) ?? [];
+    list.push(input);
+    mtInputsByCategory.set(categoryLabel, list);
+  }
 
-            return result.output;
+  // Register multi-turn evals
+  for (const model of models) {
+    for (const [category, inputs] of mtInputsByCategory) {
+      if (inputs.length === 0) continue;
+
+      evalite(`${model.name} / ${category} [multi-turn]`, {
+        data: () => inputs.map((input) => ({ input })),
+
+        task: async (input: MultiTurnEvalInput): Promise<EvalOutput> => {
+          const result = await generateText({
+            model: getModel(model),
+            system: input.systemPrompt,
+            messages: input.messages as ModelMessage[],
+            output: Output.object({ schema: coachingResponseSchema }),
+            maxOutputTokens: 4096,
+          });
+
+          return result.output;
+        },
+
+        scorers: ALL_SCORERS,
+
+        columns: (result) => [
+          { label: "Category", value: `${category} [MT]` },
+          {
+            label: "Champion",
+            value: `${result.input.champion} @${result.input.gameTime}`,
           },
-
-          scorers: ALL_SCORERS,
-
-          columns: (result) => [
-            { label: "Category", value: `${category} [MT]` },
-            {
-              label: "Champion",
-              value: `${result.input.champion} @${result.input.gameTime}`,
-            },
-            {
-              label: "Question",
-              value: result.input.question.substring(0, 45),
-            },
-            {
-              label: "Context",
-              value: `${result.input.items.length} items, ${result.input.gold}g`,
-            },
-          ],
-        });
-      }
+          {
+            label: "Question",
+            value: result.input.question.substring(0, 45),
+          },
+          {
+            label: "Context",
+            value: `${result.input.items.length} items, ${result.input.gold}g`,
+          },
+        ],
+      });
     }
-  })();
+  }
 } else {
   console.log(
     "Multi-turn fixtures not found at fixtures/coaching-sessions-v2/ — skipping multi-turn evals"
