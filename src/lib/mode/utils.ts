@@ -1,4 +1,5 @@
 import type { Augment, Item } from "../data-ingest/types";
+import type { PlayerModeContext, TeamComposition } from "./types";
 
 export function filterItemsByMode(
   items: Map<number, Item>,
@@ -20,4 +21,16 @@ export function filterAugmentsByMode(
     if (augment.mode === mode) filtered.set(key, augment);
   }
   return filtered;
+}
+
+export function buildTeamComposition(
+  players: PlayerModeContext[]
+): TeamComposition {
+  const classCounts: Record<string, number> = {};
+  for (const player of players) {
+    for (const tag of player.tags) {
+      classCounts[tag] = (classCounts[tag] ?? 0) + 1;
+    }
+  }
+  return { players, classCounts };
 }

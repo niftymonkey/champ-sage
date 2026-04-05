@@ -238,8 +238,9 @@ function resolveGameModeId(
 
 /** Format seconds as "M:SS" */
 function formatGameTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = String(seconds % 60).padStart(2, "0");
+  const total = Math.floor(seconds);
+  const mins = Math.floor(total / 60);
+  const secs = String(total % 60).padStart(2, "0");
   return `${mins}:${secs}`;
 }
 

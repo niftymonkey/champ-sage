@@ -118,7 +118,7 @@ describe("formatStateSnapshot", () => {
   it("includes player stats from API", () => {
     const output = formatStateSnapshot(createSnapshot());
     expect(output).toContain(
-      "Stats: 200 AP, 80 AD, 60 Armor, 40 MR, 30 AH, 350 MS, 1800 HP"
+      "Stats: 200 AP, 80 AD, 60 Armor, 40 MR, 30 AH, 0.80 AS, 0% Crit, 350 MS, 1800 HP"
     );
   });
 

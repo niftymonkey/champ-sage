@@ -6,14 +6,9 @@
 
 import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
-import type {
-  GameMode,
-  ModeContext,
-  PlayerModeContext,
-  TeamComposition,
-} from "./types";
+import type { GameMode, ModeContext, PlayerModeContext } from "./types";
 import { GAME_MODE_CLASSIC } from "./types";
-import { filterItemsByMode } from "./utils";
+import { filterItemsByMode, buildTeamComposition } from "./utils";
 
 export const classicMode: GameMode = {
   id: "classic",
@@ -67,13 +62,3 @@ export const classicMode: GameMode = {
     };
   },
 };
-
-function buildTeamComposition(players: PlayerModeContext[]): TeamComposition {
-  const classCounts: Record<string, number> = {};
-  for (const player of players) {
-    for (const tag of player.tags) {
-      classCounts[tag] = (classCounts[tag] ?? 0) + 1;
-    }
-  }
-  return { players, classCounts };
-}

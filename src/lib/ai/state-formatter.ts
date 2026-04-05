@@ -155,6 +155,8 @@ function formatPlayerStats(stats: ActivePlayerStats): string {
     `${Math.round(stats.armor)} Armor`,
     `${Math.round(stats.magicResist)} MR`,
     `${Math.round(stats.abilityHaste)} AH`,
+    `${stats.attackSpeed.toFixed(2)} AS`,
+    `${Math.round(stats.critChance * 100)}% Crit`,
     `${Math.round(stats.moveSpeed)} MS`,
     `${Math.round(stats.maxHealth)} HP`,
   ];

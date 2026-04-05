@@ -3,7 +3,7 @@ import type { CoachingResponse, CoachingQuery } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { ConversationSession } from "../lib/ai/conversation-session";
-import { useCoachingMode } from "../hooks/useCoachingContext";
+import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { getMultiTurnCoachingResponse } from "../lib/ai/recommendation-engine";
 import { createConversationSession } from "../lib/ai/conversation-session";
@@ -51,7 +51,7 @@ function extractAugmentOptions(
 
 export function CoachingInput({ gameData }: CoachingInputProps) {
   const liveGameState = useLiveGameState();
-  const { mode, enemyStats } = useCoachingMode();
+  const { mode, enemyStats } = useCoachingContext();
   const [loading, setLoading] = useState(false);
   const [latestExchange, setLatestExchange] = useState<{
     question: string;

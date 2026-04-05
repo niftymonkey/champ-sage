@@ -15,7 +15,7 @@ Every coaching LLM call rebuilds full context from scratch: champion abilities, 
 
 Convert from single-turn `generateText()` with pasted history to a real multi-turn message array, the same architecture as ChatGPT/Claude conversations:
 
-```
+```text
 system:    coaching rules + static game data
 user:      [first question with full state snapshot]
 assistant: [response]
@@ -58,7 +58,7 @@ The system prompt tells the LLM to expect a `[Game State]` block before each que
 
 **Every message format:**
 
-```
+```text
 [Game State]
 Player Champion: Ahri (Level 12)
 KDA: 5/3/8

@@ -1,4 +1,4 @@
-import { generateText, Output, type ModelMessage } from "ai";
+import { generateText, Output } from "ai";
 import type { CoachingContext, CoachingQuery, CoachingResponse } from "./types";
 import type { ConversationSession } from "./conversation-session";
 import { createCoachingModel, MODEL_CONFIG } from "./model-config";
@@ -97,7 +97,7 @@ export async function getMultiTurnCoachingResponse(
     const result = await generateText({
       model,
       system: session.systemPrompt,
-      messages: [...session.messages] as ModelMessage[],
+      messages: [...session.messages],
       output: Output.object({ schema: coachingResponseSchema }),
       maxOutputTokens: 1024,
       ...(options?.signal ? { abortSignal: options.signal } : {}),

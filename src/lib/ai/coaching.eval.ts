@@ -495,7 +495,7 @@ if (existsSync(multiTurnFixturesDir)) {
           const result = await generateText({
             model: getModel(model),
             system: input.systemPrompt,
-            messages: input.messages as ModelMessage[],
+            messages: input.messages,
             output: Output.object({ schema: coachingResponseSchema }),
             maxOutputTokens: 4096,
           });

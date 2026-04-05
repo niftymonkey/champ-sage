@@ -172,11 +172,15 @@ function App() {
     prevGameModeRef.current = mode;
   }, [data, gameState]);
 
+  const detectedMode = useMemo(() => {
+    if (!data || gameState.status !== "connected") return null;
+    return registry.detect(gameState.gameMode);
+  }, [data, gameState.status, gameState.gameMode]);
+
   const effectiveState = useMemo(() => {
     if (!data || gameState.status !== "connected") {
       return buildEffectiveGameState(gameState, null);
     }
-    const detectedMode = registry.detect(gameState.gameMode);
     let modeContext = detectedMode
       ? detectedMode.buildContext(gameState, data)
       : null;
@@ -195,12 +199,7 @@ function App() {
     }
 
     return buildEffectiveGameState(gameState, modeContext);
-  }, [gameState, data, selectedAugments]);
-
-  const detectedMode = useMemo(() => {
-    if (!data || gameState.status !== "connected") return null;
-    return registry.detect(gameState.gameMode);
-  }, [data, gameState.status, gameState.gameMode]);
+  }, [gameState, data, selectedAugments, detectedMode]);
 
   const augmentSelection = {
     selectedAugments,

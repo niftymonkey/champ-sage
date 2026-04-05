@@ -73,6 +73,6 @@ export function CoachingProvider({
   return <CoachingCtx.Provider value={value}>{children}</CoachingCtx.Provider>;
 }
 
-export function useCoachingMode(): CoachingContextValue {
+export function useCoachingContext(): CoachingContextValue {
   return useContext(CoachingCtx);
 }
