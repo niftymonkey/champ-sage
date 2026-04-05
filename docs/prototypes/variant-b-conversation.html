@@ -1,0 +1,1152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Champ Sage — Variant B: Conversation Flow</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #111318;
+        --bg-chat: #15171e;
+        --bg-msg-coach: #1c1f2a;
+        --bg-msg-you: #1a2332;
+        --bg-strip: #12141a;
+        --bg-augment: #1e2118;
+        --border: #262a36;
+        --border-light: #2e3344;
+        --text: #dce0eb;
+        --text-2: #9ca3b8;
+        --text-3: #5e6478;
+        --green: #4ade80;
+        --green-bg: rgba(74, 222, 128, 0.08);
+        --amber: #fbbf24;
+        --amber-bg: rgba(251, 191, 36, 0.08);
+        --red: #fb7185;
+        --red-bg: rgba(251, 113, 133, 0.08);
+        --blue: #60a5fa;
+        --blue-bg: rgba(96, 165, 250, 0.08);
+        --gold: #d4a843;
+        --gold-border: rgba(212, 168, 67, 0.5);
+        --gold-dim: rgba(212, 168, 67, 0.06);
+        --kda-k: #4ade80;
+        --kda-d: #fb7185;
+        --kda-a: #9ca3b8;
+        --font: "Nunito", sans-serif;
+        --mono: "Fira Code", monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        font-size: 24px;
+      }
+
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* ─── Top Bar ─── */
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 0.8rem;
+        height: 2.2rem;
+        background: var(--bg-strip);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        font-size: 0.67rem;
+      }
+
+      .tb-left,
+      .tb-right {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .top-bar [title] {
+        cursor: help;
+      }
+
+      .tb-right {
+        font-family: var(--mono);
+        font-size: 0.63rem;
+        color: var(--text-3);
+      }
+
+      .tb-dot {
+        width: 0.4rem;
+        height: 0.4rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: all 0.3s;
+      }
+
+      .tb-dot.connected {
+        background: var(--green);
+        box-shadow: 0 0 6px rgba(74, 222, 128, 0.4);
+      }
+
+      .tb-dot.idle {
+        background: var(--text-3);
+        box-shadow: none;
+      }
+
+      .tb-mode {
+        font-weight: 700;
+        color: var(--text);
+        font-size: 0.67rem;
+      }
+
+      .tb-detail {
+        color: var(--text-2);
+        font-size: 0.63rem;
+      }
+
+      .tb-sep {
+        color: var(--text-3);
+        padding: 0 0.25rem;
+      }
+
+      .kda-k {
+        color: var(--kda-k);
+      }
+      .kda-d {
+        color: var(--kda-d);
+      }
+      .kda-a {
+        color: var(--kda-a);
+      }
+      .kda-sep {
+        color: var(--text-3);
+        padding: 0 0.12rem;
+        font-size: 0.5rem;
+        vertical-align: middle;
+      }
+
+      /* ─── Hover States ─── */
+      .msg.coach .msg-bubble {
+        transition: border-color 0.15s;
+      }
+      .msg.coach .msg-bubble:hover {
+        border-color: var(--border-light);
+      }
+
+      .augment-msg {
+        transition: border-color 0.15s;
+      }
+      .augment-msg:hover {
+        border-color: rgba(212, 168, 67, 0.7);
+      }
+
+      .plan-msg {
+        transition: border-color 0.15s;
+      }
+      .plan-msg:hover {
+        border-color: rgba(212, 168, 67, 0.7);
+      }
+
+      .aug-choice {
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .aug-choice:hover {
+        background: rgba(0, 0, 0, 0.35);
+        border-color: var(--border-light);
+      }
+      .aug-choice.best:hover {
+        background: rgba(74, 222, 128, 0.12);
+      }
+
+      .bubble-rec {
+        transition: background 0.15s;
+      }
+      .bubble-rec:hover {
+        background: rgba(0, 0, 0, 0.3);
+      }
+
+      .plan-item {
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .plan-item:hover {
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--text);
+      }
+
+      .enemy-entry {
+        transition: border-color 0.15s;
+      }
+      .enemy-entry:hover {
+        border-color: var(--border-light);
+      }
+
+      .esc-entry {
+        transition: background 0.12s;
+        padding: 0.3rem;
+        border-radius: 0.25rem;
+      }
+      .esc-entry:hover {
+        background: var(--bg-msg-coach);
+      }
+
+      .voice-badge {
+        cursor: help;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+      .voice-ring {
+        width: 0.38rem;
+        height: 0.38rem;
+        border-radius: 50%;
+        border: 1.5px solid var(--text-3);
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      .tb-gold {
+        color: var(--amber);
+      }
+
+      .tb-connected-label {
+        color: var(--text-3);
+        font-size: 0.54rem;
+      }
+
+      /* ─── Main Body ─── */
+      .main-body {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* ─── State Toggle ─── */
+      .state-toggle {
+        position: absolute;
+        top: 0.6rem;
+        right: 0.6rem;
+        z-index: 50;
+        display: flex;
+        gap: 0.15rem;
+        background: var(--bg-strip);
+        border: 1px solid var(--border);
+        border-radius: 0.3rem;
+        padding: 0.15rem;
+        font-family: var(--mono);
+        font-size: 0.54rem;
+      }
+
+      .state-toggle button {
+        background: transparent;
+        border: none;
+        color: var(--text-3);
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.2rem;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .state-toggle button.active {
+        background: var(--border);
+        color: var(--text);
+      }
+
+      /* ─── Chat Column ─── */
+      .chat-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-chat);
+        overflow: hidden;
+        min-width: 0;
+      }
+
+      .messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem 1.2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+
+      .messages::-webkit-scrollbar {
+        width: 3px;
+      }
+      .messages::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .messages::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      /* Messages */
+      .msg {
+        max-width: 85%;
+      }
+      .msg.you {
+        align-self: flex-end;
+      }
+      .msg.coach {
+        align-self: flex-start;
+      }
+      .msg.system {
+        align-self: center;
+        max-width: 100%;
+      }
+
+      .msg-sender {
+        font-size: 0.63rem;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .msg.you .msg-sender {
+        color: var(--blue);
+        justify-content: flex-end;
+      }
+      .msg.coach .msg-sender {
+        color: var(--green);
+      }
+
+      .msg-time {
+        font-family: var(--mono);
+        font-size: 0.54rem;
+        color: var(--text-3);
+        font-weight: 400;
+      }
+
+      .msg-bubble {
+        padding: 0.6rem 0.8rem;
+        border-radius: 0.7rem;
+        font-size: 0.75rem;
+        line-height: 1.6;
+      }
+
+      .msg.you .msg-bubble {
+        background: var(--bg-msg-you);
+        border: 1px solid rgba(96, 165, 250, 0.15);
+        border-bottom-right-radius: 0.2rem;
+      }
+
+      .msg.coach .msg-bubble {
+        background: var(--bg-msg-coach);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 0.2rem;
+      }
+
+      /* Recs */
+      .bubble-recs {
+        margin-top: 0.6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+
+      .bubble-rec {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.4rem 0.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 0.4rem;
+      }
+
+      .bubble-rec-rank {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 0.7rem;
+        min-width: 0.8rem;
+      }
+
+      .bubble-rec-rank.r1 {
+        color: var(--green);
+      }
+      .bubble-rec-rank.r2 {
+        color: var(--amber);
+      }
+      .bubble-rec-rank.r3 {
+        color: var(--red);
+      }
+
+      .bubble-rec-name {
+        font-weight: 700;
+        font-size: 0.7rem;
+        margin-bottom: 0.1rem;
+      }
+      .bubble-rec-why {
+        font-size: 0.63rem;
+        color: var(--text-2);
+        line-height: 1.4;
+      }
+
+      /* Augment system message */
+      .augment-msg {
+        background: var(--bg-augment);
+        border: 1px solid var(--gold-border);
+        border-radius: 0.6rem;
+        padding: 0.7rem 0.8rem;
+        width: 100%;
+      }
+
+      .augment-label {
+        font-size: 0.63rem;
+        font-weight: 700;
+        color: var(--amber);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .augment-label .msg-time {
+        margin-left: auto;
+      }
+
+      .aug-choices {
+        display: flex;
+        gap: 0.4rem;
+      }
+
+      .aug-choice {
+        flex: 1;
+        padding: 0.5rem 0.6rem;
+        border-radius: 0.4rem;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border);
+      }
+
+      .aug-choice.best {
+        border-color: var(--green);
+        background: var(--green-bg);
+      }
+
+      .aug-choice-rank {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 0.83rem;
+        margin-bottom: 0.2rem;
+      }
+      .aug-choice-rank.r1 {
+        color: var(--green);
+      }
+      .aug-choice-rank.r2 {
+        color: var(--amber);
+      }
+      .aug-choice-rank.r3 {
+        color: var(--red);
+      }
+
+      .aug-choice-name {
+        font-weight: 700;
+        font-size: 0.7rem;
+        margin-bottom: 0.2rem;
+      }
+      .aug-choice-why {
+        font-size: 0.63rem;
+        color: var(--text-2);
+        line-height: 1.4;
+      }
+
+      .aug-choice-tag {
+        font-family: var(--mono);
+        font-size: 0.54rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 0.4rem;
+      }
+
+      .aug-choice-tag.pick {
+        color: var(--green);
+      }
+      .aug-choice-tag.reroll {
+        color: var(--text-3);
+      }
+
+      /* Plan system message */
+      .plan-msg {
+        background: var(--bg-msg-coach);
+        border: 1px solid var(--gold-border);
+        border-radius: 0.6rem;
+        padding: 0.7rem 0.8rem;
+        width: 100%;
+      }
+
+      .plan-label {
+        font-size: 0.63rem;
+        font-weight: 700;
+        color: var(--green);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.4rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .plan-label .msg-time {
+        margin-left: auto;
+      }
+
+      .plan-text {
+        font-size: 0.75rem;
+        line-height: 1.6;
+        margin-bottom: 0.6rem;
+      }
+
+      .plan-build {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+      }
+
+      .plan-item {
+        font-family: var(--mono);
+        font-size: 0.63rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 0.2rem;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border);
+        color: var(--text-2);
+      }
+
+      .plan-sep {
+        color: var(--text-3);
+        font-size: 0.54rem;
+      }
+
+      /* Input hint */
+      .input-hint {
+        padding: 0.5rem 1.2rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-3);
+        font-size: 0.67rem;
+        background: var(--bg-chat);
+        flex-shrink: 0;
+      }
+
+      .input-hint kbd {
+        font-family: var(--mono);
+        font-size: 0.63rem;
+        padding: 0.1rem 0.4rem;
+        border-radius: 0.2rem;
+        background: var(--bg-strip);
+        border: 1px solid var(--border);
+        color: var(--text-2);
+      }
+
+      /* ─── Enemy Strip (bottom bar) ─── */
+      .enemy-strip-bar {
+        border-top: 1px solid var(--border);
+        background: var(--bg-strip);
+        padding: 0.4rem 1.2rem;
+        flex-shrink: 0;
+      }
+
+      .strip-title {
+        font-size: 0.54rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-3);
+        margin-bottom: 0.3rem;
+      }
+
+      .enemy-bar {
+        display: flex;
+        gap: 0.35rem;
+      }
+
+      .enemy-entry {
+        flex: 1;
+        min-width: 0;
+        padding: 0.3rem 0.4rem;
+        background: var(--bg-msg-coach);
+        border: 1px solid var(--border);
+        border-radius: 0.25rem;
+      }
+
+      .en-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.1rem;
+      }
+
+      .en-name {
+        font-weight: 700;
+        font-size: 0.63rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .en-lv {
+        font-family: var(--mono);
+        font-size: 0.54rem;
+        color: var(--text-3);
+        flex-shrink: 0;
+      }
+      .en-items {
+        font-family: var(--mono);
+        font-size: 0.54rem;
+        color: var(--text-2);
+        line-height: 1.4;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* ─── Enemy Side Column (wide screens) ─── */
+      .enemy-side-col {
+        width: 14rem;
+        background: var(--bg-strip);
+        border-left: 1px solid var(--border);
+        padding: 0.8rem;
+        overflow-y: auto;
+        flex-shrink: 0;
+        display: none;
+      }
+
+      .esc-entry {
+        margin-bottom: 0.6rem;
+      }
+      .esc-entry:last-child {
+        margin-bottom: 0;
+      }
+      .esc-name-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.1rem;
+      }
+      .esc-name {
+        font-weight: 700;
+        font-size: 0.7rem;
+      }
+      .esc-lv {
+        font-family: var(--mono);
+        font-size: 0.54rem;
+        color: var(--text-3);
+      }
+      .esc-items {
+        font-family: var(--mono);
+        font-size: 0.54rem;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      /* ─── Idle ─── */
+      .idle-center {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        background: var(--bg-chat);
+      }
+
+      .idle-card {
+        width: 100%;
+        max-width: 24rem;
+        background: var(--bg-msg-coach);
+        border: 1px solid var(--border);
+        border-radius: 0.8rem;
+        overflow: hidden;
+      }
+
+      .idle-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.9rem 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .idle-champ {
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+
+      .idle-outcome {
+        font-family: var(--mono);
+        font-size: 0.63rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 1rem;
+      }
+
+      .idle-outcome.win {
+        background: var(--green-bg);
+        color: var(--green);
+      }
+      .idle-outcome.loss {
+        background: var(--red-bg);
+        color: var(--red);
+      }
+
+      .idle-stats-row {
+        display: flex;
+        gap: 1rem;
+        padding: 0.6rem 1rem;
+        font-family: var(--mono);
+        font-size: 0.63rem;
+        color: var(--text-3);
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+
+      .idle-stats-row strong {
+        color: var(--text-2);
+        font-weight: 500;
+      }
+
+      .idle-items-row {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .idle-item {
+        font-family: var(--mono);
+        font-size: 0.54rem;
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.2rem;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        color: var(--text-2);
+      }
+
+      .idle-exchanges {
+        padding: 0.7rem 1rem;
+      }
+      .idle-ex {
+        margin-bottom: 0.5rem;
+      }
+      .idle-ex:last-child {
+        margin-bottom: 0;
+      }
+      .idle-ex-q {
+        font-size: 0.63rem;
+        color: var(--text-3);
+        margin-bottom: 0.15rem;
+      }
+      .idle-ex-a {
+        font-size: 0.67rem;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      .idle-footer {
+        text-align: center;
+        margin-top: 0.8rem;
+        font-family: var(--mono);
+        font-size: 0.54rem;
+        color: var(--text-3);
+      }
+
+      /* ─── Responsive ─── */
+
+      @media (max-width: 600px) {
+        .aug-choices {
+          flex-direction: column;
+        }
+        .msg {
+          max-width: 95%;
+        }
+        .enemy-bar {
+          flex-wrap: wrap;
+        }
+        .enemy-entry {
+          flex: 1 1 calc(50% - 0.2rem);
+          min-width: calc(50% - 0.2rem);
+        }
+        .tb-detail {
+          display: none;
+        }
+      }
+
+      @media (min-width: 1100px) {
+        .enemy-strip-bar {
+          display: none;
+        }
+        .enemy-side-col {
+          display: block;
+        }
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="top-bar">
+        <div class="tb-left">
+          <div
+            class="tb-dot connected"
+            id="tbDot"
+            title="Connected to League client"
+          ></div>
+          <span class="tb-mode" id="tbMode">ARAM Mayhem</span>
+          <span class="tb-detail" id="tbDetail">
+            <span id="tbTime">14:22</span>
+            <span class="tb-sep">|</span>
+            <span id="tbChamp">Katarina Lv11</span>
+            <span class="tb-sep">|</span>
+            <span
+              id="tbKda"
+              style="font-family: var(--mono)"
+              title="Kills / Deaths / Assists"
+              ><span class="kda-k">8</span><span class="kda-sep">•</span
+              ><span class="kda-d">3</span><span class="kda-sep">•</span
+              ><span class="kda-a">12</span></span
+            >
+            <span class="tb-sep">|</span>
+            <span class="tb-gold" id="tbGold" title="Current gold">2,840g</span>
+          </span>
+        </div>
+        <div class="tb-right">
+          <span class="tb-connected-label" id="tbConnLabel">Connected</span>
+          <span class="tb-sep">|</span>
+          <span title="League of Legends patch version">v16.7.1</span>
+          <span class="tb-sep">|</span>
+          <span class="voice-badge" title="Hold to ask your coach a question"
+            ><span class="voice-ring"></span> Num-</span
+          >
+        </div>
+      </div>
+
+      <div class="main-body">
+        <div class="state-toggle">
+          <button class="active" onclick="showState('ingame')">In-Game</button>
+          <button onclick="showState('idle')">Idle</button>
+        </div>
+
+        <!-- IN-GAME -->
+        <div class="chat-column" id="chatColumn">
+          <div class="messages" id="messagesEl">
+            <!-- Game plan (chronologically first) -->
+            <div class="msg system">
+              <div class="plan-msg">
+                <div class="plan-label">
+                  ▲ Game Plan
+                  <span class="msg-time">0:12</span>
+                </div>
+                <div class="plan-text">
+                  Heavy AP/CC enemy comp. Mercury's Treads for tenacity so you
+                  can channel ult through their CC. Banshee's Veil spell shield
+                  blocks the first Annie stun or Lux bind — lets you engage
+                  safely. Zhonya's for when you get caught mid-ult. Focus Lux or
+                  Annie first — your resets will clean up once the CC threats
+                  are down.
+                </div>
+                <div class="plan-build">
+                  <span class="plan-item">Hextech Rocketbelt</span>
+                  <span class="plan-sep">→</span>
+                  <span class="plan-item">Mercury's Treads</span>
+                  <span class="plan-sep">→</span>
+                  <span class="plan-item">Zhonya's Hourglass</span>
+                  <span class="plan-sep">→</span>
+                  <span class="plan-item">Banshee's Veil</span>
+                  <span class="plan-sep">→</span>
+                  <span class="plan-item">Rabadon's Deathcap</span>
+                  <span class="plan-sep">→</span>
+                  <span class="plan-item">Void Staff</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Voice exchange -->
+            <div class="msg you">
+              <div class="msg-sender">
+                You <span class="msg-time">12:45</span>
+              </div>
+              <div class="msg-bubble">
+                What items should I get into this enemy team?
+              </div>
+            </div>
+
+            <div class="msg coach">
+              <div class="msg-sender">
+                Coach <span class="msg-time">12:48</span>
+              </div>
+              <div class="msg-bubble">
+                Build toward Zhonya's Hourglass for the active against Ekko and
+                Annie burst. After that, Void Staff if they stack MR, or
+                Rabadon's if they don't.
+                <div class="bubble-recs">
+                  <div class="bubble-rec">
+                    <span class="bubble-rec-rank r1">1</span>
+                    <div>
+                      <div class="bubble-rec-name">Zhonya's Hourglass</div>
+                      <div class="bubble-rec-why">
+                        Armguard next (1200g). Active saves you from Ekko ult.
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bubble-rec">
+                    <span class="bubble-rec-rank r2">2</span>
+                    <div>
+                      <div class="bubble-rec-name">Void Staff</div>
+                      <div class="bubble-rec-why">
+                        If Sett or Mundo build MR.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Augment offer (chronologically latest) -->
+            <div class="msg system">
+              <div class="augment-msg">
+                <div class="augment-label">
+                  ◆ Augment Offer
+                  <span class="msg-time">14:18</span>
+                </div>
+                <div class="aug-choices">
+                  <div class="aug-choice best">
+                    <div class="aug-choice-rank r1">1</div>
+                    <div class="aug-choice-name">Phenomenal Evil</div>
+                    <div class="aug-choice-why">
+                      Best scaling. 40 AP start, snowballs your resets with burn
+                      package.
+                    </div>
+                    <div class="aug-choice-tag pick">Pick</div>
+                  </div>
+                  <div class="aug-choice">
+                    <div class="aug-choice-rank r2">2</div>
+                    <div class="aug-choice-name">Recursion</div>
+                    <div class="aug-choice-why">
+                      Decent but less consistent than raw AP right now.
+                    </div>
+                    <div class="aug-choice-tag reroll">Re-roll</div>
+                  </div>
+                  <div class="aug-choice">
+                    <div class="aug-choice-rank r3">3</div>
+                    <div class="aug-choice-name">Firebrand</div>
+                    <div class="aug-choice-why">
+                      Redundant with Infernal Conduit.
+                    </div>
+                    <div class="aug-choice-tag reroll">Re-roll</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Enemy strip (bottom, hidden on wide) -->
+          <div class="enemy-strip-bar">
+            <div class="strip-title">Enemy Team</div>
+            <div class="enemy-bar">
+              <div class="enemy-entry">
+                <div class="en-row">
+                  <span class="en-name">Lux</span
+                  ><span class="en-lv">Lv11</span>
+                </div>
+                <div class="en-items">
+                  Luden's Companion, Sorcerer's Shoes, Shadowflame
+                </div>
+              </div>
+              <div class="enemy-entry">
+                <div class="en-row">
+                  <span class="en-name">Sett</span
+                  ><span class="en-lv">Lv10</span>
+                </div>
+                <div class="en-items">
+                  Stridebreaker, Plated Steelcaps, Dead Man's Plate
+                </div>
+              </div>
+              <div class="enemy-entry">
+                <div class="en-row">
+                  <span class="en-name">Ekko</span
+                  ><span class="en-lv">Lv12</span>
+                </div>
+                <div class="en-items">
+                  Hextech Rocketbelt, Lich Bane, Zhonya's Hourglass
+                </div>
+              </div>
+              <div class="enemy-entry">
+                <div class="en-row">
+                  <span class="en-name">Dr. Mundo</span
+                  ><span class="en-lv">Lv11</span>
+                </div>
+                <div class="en-items">Heartsteel, Spirit Visage</div>
+              </div>
+              <div class="enemy-entry">
+                <div class="en-row">
+                  <span class="en-name">Annie</span
+                  ><span class="en-lv">Lv10</span>
+                </div>
+                <div class="en-items">Malignance, Sorcerer's Shoes</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enemy side column (visible on wide) -->
+        <div class="enemy-side-col" id="enemySide">
+          <div class="strip-title">Enemy Team</div>
+          <div class="esc-entry">
+            <div class="esc-name-row">
+              <span class="esc-name">Lux</span><span class="esc-lv">Lv11</span>
+            </div>
+            <div class="esc-items">
+              Luden's Companion, Sorcerer's Shoes, Shadowflame
+            </div>
+          </div>
+          <div class="esc-entry">
+            <div class="esc-name-row">
+              <span class="esc-name">Sett</span><span class="esc-lv">Lv10</span>
+            </div>
+            <div class="esc-items">
+              Stridebreaker, Plated Steelcaps, Dead Man's Plate
+            </div>
+          </div>
+          <div class="esc-entry">
+            <div class="esc-name-row">
+              <span class="esc-name">Ekko</span><span class="esc-lv">Lv12</span>
+            </div>
+            <div class="esc-items">
+              Hextech Rocketbelt, Lich Bane, Zhonya's Hourglass
+            </div>
+          </div>
+          <div class="esc-entry">
+            <div class="esc-name-row">
+              <span class="esc-name">Dr. Mundo</span
+              ><span class="esc-lv">Lv11</span>
+            </div>
+            <div class="esc-items">Heartsteel, Spirit Visage</div>
+          </div>
+          <div class="esc-entry">
+            <div class="esc-name-row">
+              <span class="esc-name">Annie</span
+              ><span class="esc-lv">Lv10</span>
+            </div>
+            <div class="esc-items">Malignance, Sorcerer's Shoes</div>
+          </div>
+        </div>
+
+        <!-- IDLE -->
+        <div class="idle-center hidden" id="idleCenter">
+          <div>
+            <div class="idle-card">
+              <div class="idle-header">
+                <span class="idle-champ">Katarina</span>
+                <span class="idle-outcome win">Victory</span>
+              </div>
+              <div class="idle-stats-row">
+                <span><strong>8 / 3 / 12</strong> KDA</span>
+                <span><strong>24:18</strong></span>
+                <span>ARAM Mayhem</span>
+              </div>
+              <div class="idle-items-row">
+                <span class="idle-item">Hextech Rocketbelt</span>
+                <span class="idle-item">Sorcerer's Shoes</span>
+                <span class="idle-item">Zhonya's Hourglass</span>
+                <span class="idle-item">Rabadon's Deathcap</span>
+                <span class="idle-item">Void Staff</span>
+                <span class="idle-item">Cryptbloom</span>
+              </div>
+              <div class="idle-exchanges">
+                <div class="idle-ex">
+                  <div class="idle-ex-q">
+                    You: What items should I get into this enemy team?
+                  </div>
+                  <div class="idle-ex-a">
+                    Build toward Zhonya's Hourglass for the active against Ekko
+                    and Annie burst.
+                  </div>
+                </div>
+                <div class="idle-ex">
+                  <div class="idle-ex-q">You: What's my last item?</div>
+                  <div class="idle-ex-a">
+                    Cryptbloom. Pen + healing for your team off resets.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="idle-footer">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Scroll to bottom on load (chronological = newest at bottom)
+      window.addEventListener("load", () => {
+        const el = document.getElementById("messagesEl");
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+
+      function showState(state) {
+        document
+          .getElementById("chatColumn")
+          .classList.toggle("hidden", state !== "ingame");
+        document
+          .getElementById("enemySide")
+          .classList.toggle("hidden", state !== "ingame");
+        document
+          .getElementById("idleCenter")
+          .classList.toggle("hidden", state !== "idle");
+
+        const dot = document.getElementById("tbDot");
+        const mode = document.getElementById("tbMode");
+        const detail = document.getElementById("tbDetail");
+
+        if (state === "idle") {
+          dot.className = "tb-dot idle";
+          mode.textContent = "Champ Sage";
+          detail.innerHTML = "Waiting for game\u2026";
+        } else {
+          dot.className = "tb-dot connected";
+          mode.textContent = "ARAM Mayhem";
+          detail.innerHTML =
+            '<span>14:22</span> <span class="tb-sep">|</span> <span>Katarina Lv11</span> <span class="tb-sep">|</span> <span style="font-family: var(--mono)"><span class="kda-k">8</span><span class="kda-sep">•</span><span class="kda-d">3</span><span class="kda-sep">•</span><span class="kda-a">12</span></span> <span class="tb-sep">|</span> <span class="tb-gold">2,840g</span>';
+        }
+
+        document.querySelectorAll(".state-toggle button").forEach((b, i) => {
+          b.classList.toggle("active", (state === "ingame") === (i === 0));
+        });
+      }
+    </script>
+  </body>
+</html>

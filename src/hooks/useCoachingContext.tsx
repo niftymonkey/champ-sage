@@ -17,11 +17,13 @@ import { computeEnemyStats } from "../lib/ai/enemy-stats";
 interface CoachingContextValue {
   mode: GameMode | null;
   enemyStats: Map<string, ComputedStats>;
+  gameData: LoadedGameData | null;
 }
 
 const CoachingCtx = createContext<CoachingContextValue>({
   mode: null,
   enemyStats: new Map(),
+  gameData: null,
 });
 
 interface CoachingProviderProps {
@@ -68,7 +70,10 @@ export function CoachingProvider({
     return stats;
   }, [gameData, liveGameState.players, liveGameState.activePlayer]);
 
-  const value = useMemo(() => ({ mode, enemyStats }), [mode, enemyStats]);
+  const value = useMemo(
+    () => ({ mode, enemyStats, gameData }),
+    [mode, enemyStats, gameData]
+  );
 
   return <CoachingCtx.Provider value={value}>{children}</CoachingCtx.Provider>;
 }

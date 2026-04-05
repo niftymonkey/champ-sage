@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Champ Sage — Variant A: Tactical HUD</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-deep: #0a0c10;
+        --bg-surface: #12151c;
+        --bg-card: #181c26;
+        --border: #2a2f3e;
+        --border-accent: #3d4560;
+        --text-primary: #e2e6ef;
+        --text-secondary: #8890a4;
+        --text-muted: #565e74;
+        --accent-green: #34d399;
+        --accent-green-dim: rgba(52, 211, 153, 0.12);
+        --accent-amber: #fbbf24;
+        --accent-amber-dim: rgba(251, 191, 36, 0.1);
+        --accent-red: #f87171;
+        --accent-red-dim: rgba(248, 113, 113, 0.1);
+        --accent-blue: #60a5fa;
+        --accent-blue-dim: rgba(96, 165, 250, 0.1);
+        --accent-gold: #d4a843;
+        --accent-gold-border: rgba(212, 168, 67, 0.5);
+        --accent-gold-dim: rgba(212, 168, 67, 0.06);
+        --rank-1: #34d399;
+        --rank-2: #fbbf24;
+        --rank-3: #f87171;
+        --kda-k: #4ade80;
+        --kda-d: #f87171;
+        --kda-a: #8890a4;
+        --font-mono: "JetBrains Mono", monospace;
+        --font-body: "DM Sans", sans-serif;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        font-size: 24px;
+      }
+
+      body {
+        font-family: var(--font-body);
+        background: var(--bg-deep);
+        color: var(--text-primary);
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(42, 47, 62, 0.3) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(42, 47, 62, 0.3) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ─── Status Bar ─── */
+      .status-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1rem;
+        height: 2.2rem;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        font-family: var(--font-mono);
+        font-size: 0.63rem;
+        letter-spacing: 0.02em;
+      }
+
+      .sb-left,
+      .sb-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .status-bar [title] {
+        cursor: help;
+      }
+
+      .sb-dot {
+        width: 0.4rem;
+        height: 0.4rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: all 0.3s;
+      }
+
+      .sb-dot.connected {
+        background: var(--accent-green);
+        box-shadow: 0 0 8px var(--accent-green);
+      }
+
+      .sb-dot.idle {
+        background: var(--text-muted);
+        box-shadow: none;
+      }
+
+      .sb-sep {
+        color: var(--text-muted);
+      }
+      .sb-text {
+        color: var(--text-secondary);
+      }
+      .sb-muted {
+        color: var(--text-muted);
+      }
+      .sb-gold {
+        color: var(--accent-amber);
+      }
+
+      .kda-k {
+        color: var(--kda-k);
+      }
+      .kda-d {
+        color: var(--kda-d);
+      }
+      .kda-a {
+        color: var(--kda-a);
+      }
+      .kda-sep {
+        color: var(--text-muted);
+        padding: 0 0.12rem;
+        font-size: 0.5rem;
+        vertical-align: middle;
+      }
+
+      .sb-mode {
+        background: var(--accent-blue-dim);
+        color: var(--accent-blue);
+        padding: 0.08rem 0.4rem;
+        border-radius: 3px;
+        font-weight: 500;
+        font-size: 0.58rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .sb-game-time {
+        color: var(--text-secondary);
+      }
+
+      .sb-connected-label {
+        color: var(--text-muted);
+        font-size: 0.58rem;
+      }
+
+      .voice-badge {
+        cursor: help;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+      .voice-ring {
+        width: 0.38rem;
+        height: 0.38rem;
+        border-radius: 50%;
+        border: 1.5px solid var(--text-muted);
+        display: inline-block;
+        vertical-align: middle;
+      }
+
+      /* ─── Main Body ─── */
+      .main-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* ─── Content Row (feed + game plan side panel) ─── */
+      .content-row {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        min-height: 0;
+      }
+
+      /* ─── State Toggle ─── */
+      .state-toggle {
+        position: absolute;
+        top: 0.6rem;
+        right: 0.6rem;
+        z-index: 50;
+        display: flex;
+        gap: 0.15rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.25rem;
+        padding: 0.15rem;
+        font-family: var(--font-mono);
+        font-size: 0.54rem;
+      }
+
+      .state-toggle button {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.15rem;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .state-toggle button.active {
+        background: var(--border);
+        color: var(--text-primary);
+      }
+
+      /* ─── Coaching Feed ─── */
+      .coaching-feed {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        min-width: 0;
+      }
+
+      .coaching-feed::-webkit-scrollbar {
+        width: 4px;
+      }
+      .coaching-feed::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .coaching-feed::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      /* ─── Cards ─── */
+      .card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.3rem;
+        overflow: hidden;
+        transition: border-color 0.15s;
+        flex-shrink: 0;
+      }
+
+      .card:hover {
+        border-color: var(--border-accent);
+      }
+
+      .card.proactive {
+        border-color: var(--accent-gold-border);
+      }
+
+      .card.proactive:hover {
+        border-color: var(--accent-gold);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.4rem 0.7rem;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 0.58rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .card.proactive .card-header {
+        border-bottom-color: var(--accent-gold-border);
+        background: var(--accent-gold-dim);
+      }
+
+      .card-type {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .card-type-dot {
+        width: 0.28rem;
+        height: 0.28rem;
+        border-radius: 50%;
+      }
+
+      .card-type-dot.augment {
+        background: var(--accent-amber);
+      }
+      .card-type-dot.voice {
+        background: var(--accent-blue);
+      }
+      .card-type-dot.plan {
+        background: var(--accent-green);
+      }
+
+      .card-body {
+        padding: 0.7rem;
+      }
+
+      /* Voice */
+      .voice-question {
+        color: var(--text-secondary);
+        font-size: 0.71rem;
+        margin-bottom: 0.5rem;
+        padding-left: 0.6rem;
+        border-left: 2px solid var(--border-accent);
+        line-height: 1.5;
+      }
+
+      .coach-answer {
+        font-size: 0.75rem;
+        line-height: 1.6;
+        margin-bottom: 0.5rem;
+      }
+
+      .recommendations {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+
+      .rec-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.4rem 0.5rem;
+        border-radius: 0.2rem;
+        border: 1px solid var(--border);
+        background: var(--bg-surface);
+        transition: background 0.15s;
+      }
+
+      .rec-item:hover {
+        background: var(--bg-card);
+      }
+
+      .rec-rank {
+        font-family: var(--font-mono);
+        font-weight: 700;
+        font-size: 0.67rem;
+        min-width: 1rem;
+        text-align: center;
+      }
+
+      .rec-rank.rank-1 {
+        color: var(--rank-1);
+      }
+      .rec-rank.rank-2 {
+        color: var(--rank-2);
+      }
+      .rec-rank.rank-3 {
+        color: var(--rank-3);
+      }
+
+      .rec-name {
+        font-weight: 600;
+        font-size: 0.7rem;
+        margin-bottom: 0.1rem;
+      }
+      .rec-reason {
+        font-size: 0.63rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+
+      /* Augments */
+      .augment-offer {
+        display: flex;
+        gap: 0.4rem;
+      }
+
+      .augment-option {
+        flex: 1;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        border: 1px solid var(--border);
+        background: var(--bg-surface);
+        position: relative;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+
+      .augment-option:hover {
+        background: var(--bg-card);
+        border-color: var(--border-accent);
+      }
+      .augment-option.pick {
+        border-color: var(--rank-1);
+        background: var(--accent-green-dim);
+      }
+      .augment-option.pick:hover {
+        background: rgba(52, 211, 153, 0.16);
+      }
+
+      .augment-rank-badge {
+        position: absolute;
+        top: -1px;
+        right: -1px;
+        font-family: var(--font-mono);
+        font-size: 0.54rem;
+        font-weight: 700;
+        padding: 0.08rem 0.3rem;
+        border-radius: 0 0.2rem 0 0.2rem;
+      }
+
+      .augment-rank-badge.rank-1 {
+        background: var(--rank-1);
+        color: var(--bg-deep);
+      }
+      .augment-rank-badge.rank-2 {
+        background: var(--rank-2);
+        color: var(--bg-deep);
+      }
+      .augment-rank-badge.rank-3 {
+        background: var(--rank-3);
+        color: var(--bg-deep);
+      }
+
+      .augment-name {
+        font-weight: 600;
+        font-size: 0.7rem;
+        margin-bottom: 0.2rem;
+        padding-right: 1rem;
+      }
+      .augment-reason {
+        font-size: 0.63rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+
+      /* Game plan feed card */
+      .game-plan-summary {
+        font-size: 0.75rem;
+        line-height: 1.6;
+        margin-bottom: 0.4rem;
+      }
+
+      .build-path {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+        margin-top: 0.4rem;
+      }
+
+      .build-item {
+        font-family: var(--font-mono);
+        font-size: 0.58rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 3px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+
+      .build-item:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+      }
+
+      .build-arrow {
+        color: var(--text-muted);
+        font-size: 0.54rem;
+      }
+
+      /* ─── Game Plan Side Panel ─── */
+      .game-plan-panel {
+        width: 15rem;
+        background: var(--bg-surface);
+        border-left: 1px solid var(--border);
+        padding: 0.8rem;
+        overflow-y: auto;
+        flex-shrink: 0;
+      }
+
+      .game-plan-panel::-webkit-scrollbar {
+        width: 3px;
+      }
+      .game-plan-panel::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .game-plan-panel::-webkit-scrollbar-thumb {
+        background: var(--border);
+      }
+
+      .gpp-title {
+        font-family: var(--font-mono);
+        font-size: 0.54rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #b8a0e8;
+        margin-bottom: 0.6rem;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .gpp-title-dot {
+        width: 0.28rem;
+        height: 0.28rem;
+        border-radius: 50%;
+        background: #b8a0e8;
+      }
+
+      .gpp-summary {
+        font-size: 0.67rem;
+        line-height: 1.6;
+        color: var(--text-secondary);
+        margin-bottom: 0.8rem;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .gpp-build-title {
+        font-family: var(--font-mono);
+        font-size: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        margin-bottom: 0.4rem;
+      }
+
+      .gpp-build-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+
+      .gpp-build-step {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.25rem 0.35rem;
+        border-radius: 0.2rem;
+        font-size: 0.63rem;
+        color: var(--text-secondary);
+        transition: background 0.12s;
+      }
+
+      .gpp-build-step:hover {
+        background: var(--bg-card);
+      }
+
+      .gpp-build-num {
+        font-family: var(--font-mono);
+        font-size: 0.54rem;
+        color: var(--text-muted);
+        min-width: 0.8rem;
+      }
+
+      .gpp-updated {
+        font-family: var(--font-mono);
+        font-size: 0.5rem;
+        color: var(--text-muted);
+        margin-top: 0.8rem;
+        padding-top: 0.6rem;
+        border-top: 1px solid var(--border);
+      }
+
+      /* ─── Enemy Strip (always bottom) ─── */
+      .enemy-strip-bar {
+        border-top: 1px solid var(--border);
+        background: var(--bg-surface);
+        padding: 0.4rem 1rem;
+        flex-shrink: 0;
+      }
+
+      .strip-title {
+        font-family: var(--font-mono);
+        font-size: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        margin-bottom: 0.3rem;
+      }
+
+      .enemy-grid {
+        display: flex;
+        gap: 0.35rem;
+      }
+
+      .enemy-card {
+        flex: 1;
+        min-width: 0;
+        padding: 0.35rem 0.45rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.2rem;
+        transition: border-color 0.15s;
+      }
+
+      .enemy-card:hover {
+        border-color: var(--border-accent);
+      }
+
+      .ec-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.25rem;
+        padding-bottom: 0.2rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .ec-name {
+        font-weight: 600;
+        font-size: 0.63rem;
+        white-space: nowrap;
+      }
+
+      .ec-lv {
+        font-family: var(--font-mono);
+        font-size: 0.54rem;
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+
+      .ec-body {
+        display: flex;
+        gap: 0.35rem;
+      }
+
+      .ec-items {
+        display: flex;
+        flex-direction: column;
+        gap: 0.08rem;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .ec-item {
+        font-family: var(--font-mono);
+        font-size: 0.54rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.4;
+        cursor: help;
+      }
+
+      .ec-pills {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.15rem;
+        padding: 0.15rem 0.2rem;
+      }
+
+      .ec-pill {
+        font-family: var(--font-mono);
+        font-size: 0.42rem;
+        color: var(--text-secondary);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        border-radius: 0.6rem;
+        padding: 0.08rem 0.4rem;
+        white-space: nowrap;
+        text-align: center;
+        transition: border-color 0.15s;
+      }
+
+      .ec-pill:hover {
+        border-color: var(--border-accent);
+      }
+
+      /* ─── Idle ─── */
+      .idle-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      .last-game-card {
+        width: 100%;
+        max-width: 34rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 0.4rem;
+        overflow: hidden;
+      }
+
+      .lg-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.7rem 0.9rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .lg-champ {
+        font-weight: 600;
+        font-size: 0.92rem;
+      }
+
+      .lg-result {
+        font-family: var(--font-mono);
+        font-size: 0.63rem;
+        font-weight: 600;
+        padding: 0.15rem 0.5rem;
+        border-radius: 3px;
+      }
+
+      .lg-result.win {
+        background: var(--accent-green-dim);
+        color: var(--accent-green);
+      }
+      .lg-result.loss {
+        background: var(--accent-red-dim);
+        color: var(--accent-red);
+      }
+
+      .lg-stats {
+        display: flex;
+        gap: 1rem;
+        padding: 0.6rem 0.9rem;
+        font-family: var(--font-mono);
+        font-size: 0.63rem;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+
+      .lg-stats strong {
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+
+      .lg-items {
+        display: flex;
+        gap: 0.3rem;
+        padding: 0.5rem 0.9rem;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+
+      .lg-item {
+        font-size: 0.58rem;
+        font-family: var(--font-mono);
+        padding: 0.12rem 0.35rem;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--text-secondary);
+      }
+
+      .lg-exchanges {
+        padding: 0.6rem 0.9rem;
+      }
+      .lg-ex {
+        margin-bottom: 0.5rem;
+      }
+      .lg-ex:last-child {
+        margin-bottom: 0;
+      }
+      .lg-ex-q {
+        font-size: 0.63rem;
+        color: var(--text-muted);
+        margin-bottom: 0.1rem;
+      }
+      .lg-ex-a {
+        font-size: 0.67rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+      }
+
+      .idle-meta {
+        margin-top: 0.8rem;
+        font-family: var(--font-mono);
+        font-size: 0.54rem;
+        color: var(--text-muted);
+      }
+
+      /* ─── Responsive ─── */
+
+      @media (max-width: 600px) {
+        .augment-offer {
+          flex-direction: column;
+        }
+        .enemy-bar-row {
+          flex-wrap: wrap;
+        }
+        .enemy-bar-card {
+          flex: 1 1 calc(50% - 0.2rem);
+          min-width: calc(50% - 0.2rem);
+        }
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <div class="sb-left">
+          <div
+            class="sb-dot connected"
+            id="sbDot"
+            title="Connected to League client"
+          ></div>
+          <span class="sb-mode" id="sbMode">ARAM Mayhem</span>
+          <span class="sb-game-time" id="sbTime">18:45</span>
+          <span class="sb-sep" id="sbSep1">|</span>
+          <span class="sb-text" id="sbChamp">Katarina Lv14</span>
+          <span class="sb-sep" id="sbSep2">|</span>
+          <span id="sbKda" title="Kills / Deaths / Assists"
+            ><span class="kda-k">8</span><span class="kda-sep">•</span
+            ><span class="kda-d">3</span><span class="kda-sep">•</span
+            ><span class="kda-a">12</span></span
+          >
+          <span class="sb-sep" id="sbSep3">|</span>
+          <span class="sb-gold" id="sbGold" title="Current gold">2,840g</span>
+        </div>
+        <div class="sb-right">
+          <span class="sb-connected-label">Connected</span>
+          <span class="sb-sep">|</span>
+          <span class="sb-muted" title="League of Legends patch version"
+            >v16.7.1</span
+          >
+          <span class="sb-sep">|</span>
+          <span
+            class="sb-muted voice-badge"
+            title="Hold to ask your coach a question"
+            ><span class="voice-ring"></span> Num-</span
+          >
+        </div>
+      </div>
+
+      <!-- Main Body -->
+      <div class="main-body">
+        <!-- State Toggle -->
+        <div class="state-toggle">
+          <button class="active" onclick="showState('ingame')">In-Game</button>
+          <button onclick="showState('idle')">Idle</button>
+        </div>
+
+        <!-- ═══ IN-GAME VIEW ═══ -->
+        <div
+          id="inGameView"
+          style="
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+          "
+        >
+          <div class="content-row">
+            <!-- Coaching Feed -->
+            <div class="coaching-feed">
+              <!-- Augment offer (most recent, proactive) -->
+              <div class="card proactive">
+                <div class="card-header">
+                  <span class="card-type"
+                    ><span class="card-type-dot augment"></span> Augment
+                    offer</span
+                  >
+                  <span>18:30</span>
+                </div>
+                <div class="card-body">
+                  <div class="augment-offer">
+                    <div class="augment-option pick">
+                      <span class="augment-rank-badge rank-1">1</span>
+                      <div class="augment-name">Phenomenal Evil</div>
+                      <div class="augment-reason">
+                        Best scaling for Katarina. You start at 40 AP and it
+                        snowballs your resets hard with the burn package you
+                        have.
+                      </div>
+                    </div>
+                    <div class="augment-option">
+                      <span class="augment-rank-badge rank-2">2</span>
+                      <div class="augment-name">Recursion</div>
+                      <div class="augment-reason">
+                        Decent value but less consistent than raw AP scaling at
+                        this point in the game.
+                      </div>
+                    </div>
+                    <div class="augment-option">
+                      <span class="augment-rank-badge rank-3">3</span>
+                      <div class="augment-name">Firebrand</div>
+                      <div class="augment-reason">
+                        Slower burn value, redundant with your existing Infernal
+                        Conduit.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Voice: update game plan -->
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-type"
+                    ><span class="card-type-dot voice"></span> Voice query</span
+                  >
+                  <span>14:10</span>
+                </div>
+                <div class="card-body">
+                  <div class="voice-question">Update game plan</div>
+                  <div class="coach-answer">
+                    Ekko is 7/1 and has Rocketbelt + Lich Bane already.
+                    Prioritize Banshee's Veil before Zhonya's now — the spell
+                    shield blocks his E engage. Also swap Void Staff for
+                    Shadowflame since they aren't building MR.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Voice: item question (reactive) -->
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-type"
+                    ><span class="card-type-dot voice"></span> Voice query</span
+                  >
+                  <span>12:45</span>
+                </div>
+                <div class="card-body">
+                  <div class="voice-question">
+                    What items should I get into this enemy team?
+                  </div>
+                  <div class="coach-answer">
+                    Build toward Zhonya's Hourglass for the active against Ekko
+                    and Annie burst. After that, Void Staff if they stack MR, or
+                    Rabadon's if they don't.
+                  </div>
+                  <div class="recommendations">
+                    <div class="rec-item">
+                      <span class="rec-rank rank-1">1</span>
+                      <div class="rec-content">
+                        <div class="rec-name">Zhonya's Hourglass</div>
+                        <div class="rec-reason">
+                          Armguard next (1200g). Active saves you from Ekko ult
+                          and Annie burst timing.
+                        </div>
+                      </div>
+                    </div>
+                    <div class="rec-item">
+                      <span class="rec-rank rank-2">2</span>
+                      <div class="rec-content">
+                        <div class="rec-name">Void Staff</div>
+                        <div class="rec-reason">
+                          If Sett or Mundo build MR. Blighting Jewel next
+                          (1250g).
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Game plan (first entry, proactive) -->
+              <div class="card proactive">
+                <div class="card-header">
+                  <span class="card-type"
+                    ><span class="card-type-dot plan"></span> Game plan</span
+                  >
+                  <span>0:12</span>
+                </div>
+                <div class="card-body">
+                  <div class="game-plan-summary">
+                    Heavy AP/CC enemy comp (Annie, Ekko, Lux). Mercury's Treads
+                    for tenacity so you can channel ult through their CC.
+                    Banshee's Veil spell shield blocks the first Annie stun or
+                    Lux bind — lets you engage safely. Zhonya's for when you get
+                    caught mid-ult. Focus Lux or Annie first in fights — your
+                    resets will clean up once the CC threats are down.
+                  </div>
+                  <div class="build-path">
+                    <span class="build-item">Hextech Rocketbelt</span>
+                    <span class="build-arrow">→</span>
+                    <span class="build-item">Mercury's Treads</span>
+                    <span class="build-arrow">→</span>
+                    <span class="build-item">Zhonya's Hourglass</span>
+                    <span class="build-arrow">→</span>
+                    <span class="build-item">Banshee's Veil</span>
+                    <span class="build-arrow">→</span>
+                    <span class="build-item">Rabadon's Deathcap</span>
+                    <span class="build-arrow">→</span>
+                    <span class="build-item">Void Staff</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Game Plan Side Panel -->
+            <div class="game-plan-panel" id="gamePlanPanel">
+              <div class="gpp-title">
+                <span class="gpp-title-dot"></span> Game Plan
+              </div>
+              <div class="gpp-summary">
+                Ekko is fed (7/1). Prioritize Banshee's Veil before Zhonya's —
+                spell shield blocks his E engage. Swap Void Staff for
+                Shadowflame since they aren't building MR. Focus Lux or Annie
+                first — your resets clean up once CC threats are down.
+              </div>
+              <div class="gpp-build-title">Build Path</div>
+              <div class="gpp-build-list">
+                <div class="gpp-build-step">
+                  <span class="gpp-build-num">1</span> Hextech Rocketbelt
+                </div>
+                <div class="gpp-build-step">
+                  <span class="gpp-build-num">2</span> Mercury's Treads
+                </div>
+                <div class="gpp-build-step">
+                  <span class="gpp-build-num">3</span> Banshee's Veil
+                </div>
+                <div class="gpp-build-step">
+                  <span class="gpp-build-num">4</span> Zhonya's Hourglass
+                </div>
+                <div class="gpp-build-step">
+                  <span class="gpp-build-num">5</span> Rabadon's Deathcap
+                </div>
+                <div class="gpp-build-step">
+                  <span class="gpp-build-num">6</span> Shadowflame
+                </div>
+              </div>
+              <div class="gpp-updated">Updated at 14:10</div>
+            </div>
+          </div>
+
+          <!-- Enemy Strip (always bottom) -->
+          <div class="enemy-strip-bar">
+            <div class="strip-title">Enemy Team</div>
+            <div class="enemy-grid">
+              <div class="enemy-card">
+                <div class="ec-header">
+                  <span class="ec-name">Lux</span
+                  ><span class="ec-lv">Lv13</span>
+                </div>
+                <div class="ec-body">
+                  <div class="ec-items">
+                    <span class="ec-item" title="Luden's Companion"
+                      >Luden's Companion</span
+                    >
+                    <span class="ec-item" title="Sorcerer's Shoes"
+                      >Sorcerer's Shoes</span
+                    >
+                    <span class="ec-item" title="Shadowflame">Shadowflame</span>
+                    <span class="ec-item" title="Rabadon's Deathcap"
+                      >Rabadon's Deathcap</span
+                    >
+                    <span class="ec-item" title="Void Staff">Void Staff</span>
+                    <span class="ec-item" title="Banshee's Veil"
+                      >Banshee's Veil</span
+                    >
+                  </div>
+                  <div class="ec-pills">
+                    <span class="ec-pill">AP</span>
+                    <span class="ec-pill">M.Pen</span>
+                    <span class="ec-pill">Haste</span>
+                    <span class="ec-pill">MR</span>
+                  </div>
+                </div>
+              </div>
+              <div class="enemy-card">
+                <div class="ec-header">
+                  <span class="ec-name">Sett</span
+                  ><span class="ec-lv">Lv12</span>
+                </div>
+                <div class="ec-body">
+                  <div class="ec-items">
+                    <span class="ec-item" title="Stridebreaker"
+                      >Stridebreaker</span
+                    >
+                    <span class="ec-item" title="Plated Steelcaps"
+                      >Plated Steelcaps</span
+                    >
+                    <span class="ec-item" title="Dead Man's Plate"
+                      >Dead Man's Plate</span
+                    >
+                    <span class="ec-item" title="Spirit Visage"
+                      >Spirit Visage</span
+                    >
+                    <span class="ec-item" title="Sterak's Gage"
+                      >Sterak's Gage</span
+                    >
+                    <span class="ec-item" title="Warmog's Armor"
+                      >Warmog's Armor</span
+                    >
+                  </div>
+                  <div class="ec-pills">
+                    <span class="ec-pill">Health</span>
+                    <span class="ec-pill">Armor</span>
+                    <span class="ec-pill">MR</span>
+                    <span class="ec-pill">AD</span>
+                  </div>
+                </div>
+              </div>
+              <div class="enemy-card">
+                <div class="ec-header">
+                  <span class="ec-name">Ekko</span
+                  ><span class="ec-lv">Lv15</span>
+                </div>
+                <div class="ec-body">
+                  <div class="ec-items">
+                    <span class="ec-item" title="Hextech Rocketbelt"
+                      >Hextech Rocketbelt</span
+                    >
+                    <span class="ec-item" title="Lich Bane">Lich Bane</span>
+                    <span class="ec-item" title="Zhonya's Hourglass"
+                      >Zhonya's Hourglass</span
+                    >
+                    <span class="ec-item" title="Rabadon's Deathcap"
+                      >Rabadon's Deathcap</span
+                    >
+                    <span class="ec-item" title="Void Staff">Void Staff</span>
+                    <span class="ec-item" title="Shadowflame">Shadowflame</span>
+                  </div>
+                  <div class="ec-pills">
+                    <span class="ec-pill">AP</span>
+                    <span class="ec-pill">M.Pen</span>
+                    <span class="ec-pill">Haste</span>
+                    <span class="ec-pill">Health</span>
+                    <span class="ec-pill">Armor</span>
+                  </div>
+                </div>
+              </div>
+              <div class="enemy-card">
+                <div class="ec-header">
+                  <span class="ec-name">Dr. Mundo</span
+                  ><span class="ec-lv">Lv13</span>
+                </div>
+                <div class="ec-body">
+                  <div class="ec-items">
+                    <span class="ec-item" title="Heartsteel">Heartsteel</span>
+                    <span class="ec-item" title="Spirit Visage"
+                      >Spirit Visage</span
+                    >
+                    <span class="ec-item" title="Warmog's Armor"
+                      >Warmog's Armor</span
+                    >
+                    <span class="ec-item" title="Thornmail">Thornmail</span>
+                    <span class="ec-item" title="Force of Nature"
+                      >Force of Nature</span
+                    >
+                    <span class="ec-item" title="Plated Steelcaps"
+                      >Plated Steelcaps</span
+                    >
+                  </div>
+                  <div class="ec-pills">
+                    <span class="ec-pill">Health</span>
+                    <span class="ec-pill">Armor</span>
+                    <span class="ec-pill">MR</span>
+                  </div>
+                </div>
+              </div>
+              <div class="enemy-card">
+                <div class="ec-header">
+                  <span class="ec-name">Annie</span
+                  ><span class="ec-lv">Lv12</span>
+                </div>
+                <div class="ec-body">
+                  <div class="ec-items">
+                    <span class="ec-item" title="Malignance">Malignance</span>
+                    <span class="ec-item" title="Sorcerer's Shoes"
+                      >Sorcerer's Shoes</span
+                    >
+                    <span class="ec-item" title="Zhonya's Hourglass"
+                      >Zhonya's Hourglass</span
+                    >
+                    <span class="ec-item" title="Rabadon's Deathcap"
+                      >Rabadon's Deathcap</span
+                    >
+                    <span class="ec-item" title="Morellonomicon"
+                      >Morellonomicon</span
+                    >
+                    <span class="ec-item" title="Banshee's Veil"
+                      >Banshee's Veil</span
+                    >
+                  </div>
+                  <div class="ec-pills">
+                    <span class="ec-pill">AP</span>
+                    <span class="ec-pill">Haste</span>
+                    <span class="ec-pill">Antiheal</span>
+                    <span class="ec-pill">Armor</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ IDLE VIEW ═══ -->
+        <div id="idleView" class="hidden">
+          <div class="idle-content">
+            <div class="last-game-card">
+              <div class="lg-header">
+                <span class="lg-champ">Katarina</span>
+                <span class="lg-result win">VICTORY</span>
+              </div>
+              <div class="lg-stats">
+                <span
+                  ><strong
+                    ><span class="kda-k">12</span><span class="kda-sep">•</span
+                    ><span class="kda-d">4</span><span class="kda-sep">•</span
+                    ><span class="kda-a">15</span></strong
+                  >
+                  KDA</span
+                >
+                <span><strong>26:32</strong> Duration</span>
+                <span><strong>ARAM Mayhem</strong></span>
+              </div>
+              <div class="lg-items">
+                <span class="lg-item">Hextech Rocketbelt</span>
+                <span class="lg-item">Mercury's Treads</span>
+                <span class="lg-item">Banshee's Veil</span>
+                <span class="lg-item">Zhonya's Hourglass</span>
+                <span class="lg-item">Rabadon's Deathcap</span>
+                <span class="lg-item">Shadowflame</span>
+              </div>
+              <div class="lg-exchanges">
+                <div class="lg-ex">
+                  <div class="lg-ex-q">
+                    You: What items should I get into this enemy team?
+                  </div>
+                  <div class="lg-ex-a">
+                    Build toward Zhonya's Hourglass for the active against Ekko
+                    and Annie burst.
+                  </div>
+                </div>
+                <div class="lg-ex">
+                  <div class="lg-ex-q">You: Update game plan</div>
+                  <div class="lg-ex-a">
+                    Ekko is fed. Prioritize Banshee's Veil before Zhonya's —
+                    spell shield blocks his E engage.
+                  </div>
+                </div>
+                <div class="lg-ex">
+                  <div class="lg-ex-q">You: What's my last item?</div>
+                  <div class="lg-ex-a">
+                    Shadowflame. Extra pen into their squishy backline since
+                    they aren't building MR.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="idle-meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function showState(state) {
+        document
+          .getElementById("inGameView")
+          .classList.toggle("hidden", state !== "ingame");
+        document
+          .getElementById("idleView")
+          .classList.toggle("hidden", state !== "idle");
+
+        const dot = document.getElementById("sbDot");
+        const els = [
+          "sbMode",
+          "sbTime",
+          "sbSep1",
+          "sbChamp",
+          "sbSep2",
+          "sbKda",
+          "sbSep3",
+          "sbGold",
+        ];
+
+        if (state === "idle") {
+          dot.className = "sb-dot connected";
+          els.forEach(
+            (id) => (document.getElementById(id).style.display = "none")
+          );
+          document.getElementById("sbMode").style.display = "";
+          document.getElementById("sbMode").textContent = "Champ Sage";
+          document.getElementById("sbMode").style.background = "transparent";
+          document.getElementById("sbMode").style.color =
+            "var(--text-secondary)";
+          document.getElementById("sbMode").style.border = "none";
+          document.getElementById("sbMode").style.padding = "0";
+        } else {
+          dot.className = "sb-dot connected";
+          var mode = document.getElementById("sbMode");
+          mode.textContent = "ARAM MAYHEM";
+          mode.style.background = "";
+          mode.style.color = "";
+          mode.style.border = "";
+          mode.style.padding = "";
+          els.forEach((id) => (document.getElementById(id).style.display = ""));
+        }
+
+        document.querySelectorAll(".state-toggle button").forEach((b, i) => {
+          b.classList.toggle("active", (state === "ingame") === (i === 0));
+        });
+      }
+    </script>
+  </body>
+</html>

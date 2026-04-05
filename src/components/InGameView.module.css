@@ -1,0 +1,14 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.contentRow {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}

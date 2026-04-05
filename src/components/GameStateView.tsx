@@ -1,10 +1,8 @@
 import type { EffectiveGameState, EffectivePlayer } from "../lib/mode";
 import type { Augment, AramOverrides } from "../lib/data-ingest/types";
-import type { LoadedGameData } from "../lib/data-ingest";
 import { checkAugmentAvailability } from "../lib/mode/augment-availability";
 import { formatGameTime, formatModifier } from "../lib/format";
 import { AugmentSlots } from "./AugmentSlots";
-import { CoachingInput } from "./CoachingInput";
 
 interface AugmentSelectionActions {
   selectedAugments: Augment[];
@@ -15,14 +13,12 @@ interface AugmentSelectionActions {
 
 interface GameStateViewProps {
   state: EffectiveGameState;
-  gameData: LoadedGameData;
   modeAugments?: Map<string, Augment>;
   augmentSelection: AugmentSelectionActions;
 }
 
 export function GameStateView({
   state,
-  gameData,
   modeAugments,
   augmentSelection,
 }: GameStateViewProps) {
@@ -87,11 +83,6 @@ export function GameStateView({
             onReset={augmentSelection.reset}
           />
         )}
-      </div>
-
-      {/* Middle: Coaching (flex-grow, takes available space) */}
-      <div className="game-view-coaching">
-        <CoachingInput gameData={gameData} />
       </div>
 
       {/* Bottom: Teams + details (scrollable) */}

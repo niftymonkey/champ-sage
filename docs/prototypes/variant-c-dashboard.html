@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Champ Sage — Variant C: Dashboard</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Source+Code+Pro:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0e1117;
+        --bg-panel: #161b22;
+        --bg-inner: #1c2129;
+        --bg-active: #1f2937;
+        --border: #30363d;
+        --border-active: #3b4554;
+        --text: #e6edf3;
+        --text-2: #8b949e;
+        --text-3: #484f58;
+        --green: #3fb950;
+        --green-bg: rgba(63, 185, 80, 0.1);
+        --amber: #d29922;
+        --amber-bg: rgba(210, 153, 34, 0.08);
+        --red: #f85149;
+        --red-bg: rgba(248, 81, 73, 0.08);
+        --blue: #58a6ff;
+        --blue-bg: rgba(88, 166, 255, 0.08);
+        --font: "Space Grotesk", sans-serif;
+        --mono: "Source Code Pro", monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* ─── Status Bar ─── */
+      .status-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        height: 40px;
+        background: var(--bg-panel);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        font-size: 13px;
+      }
+
+      .sb-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .sb-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-3);
+      }
+
+      .sb-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 4px rgba(63, 185, 80, 0.5);
+      }
+
+      .sb-mode {
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .sb-info {
+        color: var(--text-2);
+        font-size: 12px;
+      }
+
+      .sb-info .gold {
+        color: var(--amber);
+      }
+
+      /* ─── Dashboard Grid ─── */
+      .dashboard {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto 1fr auto;
+        gap: 1px;
+        background: var(--border);
+        overflow: hidden;
+      }
+
+      .panel {
+        background: var(--bg-panel);
+        padding: 14px 16px;
+        overflow-y: auto;
+      }
+
+      .panel::-webkit-scrollbar {
+        width: 3px;
+      }
+      .panel::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .panel::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      .panel-title {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-3);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .panel-title-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+      }
+
+      /* Current Recommendation — top left, big */
+      .panel-rec {
+        grid-column: 1;
+        grid-row: 1 / 3;
+      }
+
+      .current-rec-header {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--amber);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .current-rec-time {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-3);
+        font-weight: 400;
+        margin-left: auto;
+      }
+
+      .current-rec-answer {
+        font-size: 15px;
+        line-height: 1.7;
+        margin: 10px 0 14px;
+        font-weight: 400;
+      }
+
+      .cr-items {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .cr-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 12px;
+        background: var(--bg-inner);
+        border-radius: 6px;
+        border: 1px solid var(--border);
+      }
+
+      .cr-rank {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 14px;
+        min-width: 18px;
+      }
+
+      .cr-rank.r1 {
+        color: var(--green);
+      }
+      .cr-rank.r2 {
+        color: var(--amber);
+      }
+      .cr-rank.r3 {
+        color: var(--red);
+      }
+
+      .cr-name {
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 2px;
+      }
+
+      .cr-why {
+        font-size: 12px;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      /* Augment panel — replaces rec panel when augment offer is active */
+      .aug-panel-choices {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .aug-p {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        background: var(--bg-inner);
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        align-items: flex-start;
+      }
+
+      .aug-p.best {
+        border-color: var(--green);
+        background: var(--green-bg);
+      }
+
+      .aug-p-rank {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 20px;
+        min-width: 24px;
+      }
+
+      .aug-p-rank.r1 {
+        color: var(--green);
+      }
+      .aug-p-rank.r2 {
+        color: var(--amber);
+      }
+      .aug-p-rank.r3 {
+        color: var(--red);
+      }
+
+      .aug-p-info {
+        flex: 1;
+      }
+
+      .aug-p-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 3px;
+      }
+
+      .aug-p-why {
+        font-size: 12px;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      .aug-p-tag {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-top: 6px;
+        letter-spacing: 0.06em;
+      }
+
+      .aug-p-tag.pick {
+        color: var(--green);
+      }
+      .aug-p-tag.reroll {
+        color: var(--text-3);
+      }
+
+      /* Build Path — top right */
+      .panel-build {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .build-track {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 4px;
+      }
+
+      .build-step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+
+      .build-step.done {
+        color: var(--text-3);
+        text-decoration: line-through;
+      }
+
+      .build-step.current {
+        background: var(--bg-active);
+        border: 1px solid var(--border-active);
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .build-step.upcoming {
+        color: var(--text-2);
+      }
+
+      .build-step-num {
+        font-family: var(--mono);
+        font-size: 11px;
+        min-width: 18px;
+        color: var(--text-3);
+      }
+
+      .build-step.current .build-step-num {
+        color: var(--green);
+      }
+
+      .build-step-gold {
+        margin-left: auto;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-3);
+      }
+
+      .build-step.current .build-step-gold {
+        color: var(--amber);
+      }
+
+      /* Enemy Team — right, middle */
+      .panel-enemies {
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .enemy-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .enemy-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 6px 8px;
+        background: var(--bg-inner);
+        border-radius: 4px;
+        font-size: 12px;
+      }
+
+      .er-name {
+        font-weight: 600;
+        min-width: 80px;
+        font-size: 13px;
+      }
+
+      .er-lv {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-3);
+        min-width: 32px;
+      }
+
+      .er-items {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-2);
+        flex: 1;
+      }
+
+      /* Game Plan — bottom, full width */
+      .panel-plan {
+        grid-column: 1 / 3;
+        grid-row: 3;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 16px;
+      }
+
+      .plan-label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--green);
+        white-space: nowrap;
+      }
+
+      .plan-summary {
+        font-size: 13px;
+        color: var(--text-2);
+        line-height: 1.5;
+        flex: 1;
+      }
+
+      /* ─── Idle ─── */
+      .idle-layout {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        background: var(--bg);
+      }
+
+      .idle-card {
+        width: 100%;
+        max-width: 500px;
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .idle-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .idle-champ {
+        font-weight: 700;
+        font-size: 18px;
+      }
+
+      .idle-result {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 4px;
+      }
+
+      .idle-result.win {
+        background: var(--green-bg);
+        color: var(--green);
+      }
+
+      .idle-stats {
+        display: flex;
+        gap: 20px;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-3);
+      }
+
+      .idle-stats strong {
+        color: var(--text-2);
+      }
+
+      .idle-items-wrap {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        padding: 10px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .idle-itm {
+        font-family: var(--mono);
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 3px;
+        background: var(--bg-inner);
+        border: 1px solid var(--border);
+        color: var(--text-2);
+      }
+
+      .idle-convos {
+        padding: 14px 18px;
+      }
+
+      .idle-c {
+        margin-bottom: 10px;
+      }
+      .idle-c:last-child {
+        margin-bottom: 0;
+      }
+      .idle-c-q {
+        font-size: 12px;
+        color: var(--text-3);
+        margin-bottom: 3px;
+      }
+      .idle-c-a {
+        font-size: 13px;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      .idle-meta {
+        text-align: center;
+        margin-top: 16px;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-3);
+      }
+
+      /* ─── Toggle ─── */
+      .state-toggle {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        z-index: 100;
+        display: flex;
+        gap: 4px;
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px;
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+
+      .state-toggle button {
+        background: transparent;
+        border: none;
+        color: var(--text-3);
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .state-toggle button.active {
+        background: var(--border);
+        color: var(--text);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="status-bar">
+        <div class="sb-left">
+          <div class="sb-dot"></div>
+          <span class="sb-mode" id="sbMode">ARAM Mayhem</span>
+          <span class="sb-info" id="sbInfo"
+            >Katarina Lv11 · 8/3/12 · <span class="gold">2,840g</span> ·
+            14:22</span
+          >
+        </div>
+        <div class="sb-right">
+          <span>v16.7.1</span>
+          <span>○ Num-</span>
+        </div>
+      </div>
+
+      <!-- IN-GAME DASHBOARD -->
+      <div class="dashboard" id="dashboard">
+        <!-- Current Recommendation (left, tall) -->
+        <div class="panel panel-rec">
+          <div class="current-rec-header">
+            ◆ Augment Offer
+            <span class="current-rec-time">14:18</span>
+          </div>
+          <div class="aug-panel-choices">
+            <div class="aug-p best">
+              <span class="aug-p-rank r1">1</span>
+              <div class="aug-p-info">
+                <div class="aug-p-name">Phenomenal Evil</div>
+                <div class="aug-p-why">
+                  Best scaling for Katarina. 40 AP start, snowballs resets with
+                  your burn package.
+                </div>
+                <div class="aug-p-tag pick">Pick</div>
+              </div>
+            </div>
+            <div class="aug-p">
+              <span class="aug-p-rank r2">2</span>
+              <div class="aug-p-info">
+                <div class="aug-p-name">Recursion</div>
+                <div class="aug-p-why">
+                  Decent but less consistent than raw AP scaling at this stage.
+                </div>
+                <div class="aug-p-tag reroll">Re-roll</div>
+              </div>
+            </div>
+            <div class="aug-p">
+              <span class="aug-p-rank r3">3</span>
+              <div class="aug-p-info">
+                <div class="aug-p-name">Firebrand</div>
+                <div class="aug-p-why">
+                  Slower burn, redundant with Infernal Conduit.
+                </div>
+                <div class="aug-p-tag reroll">Re-roll</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Build Path (top right) -->
+        <div class="panel panel-build">
+          <div class="panel-title">
+            <span
+              class="panel-title-dot"
+              style="background: var(--green)"
+            ></span>
+            Build Path
+          </div>
+          <div class="build-track">
+            <div class="build-step done">
+              <span class="build-step-num">1</span>
+              Hextech Alternator
+              <span class="build-step-gold">1050g</span>
+            </div>
+            <div class="build-step done">
+              <span class="build-step-num">2</span>
+              Sorcerer's Shoes
+              <span class="build-step-gold">1100g</span>
+            </div>
+            <div class="build-step done">
+              <span class="build-step-num">3</span>
+              Hextech Rocketbelt
+              <span class="build-step-gold">2600g</span>
+            </div>
+            <div class="build-step current">
+              <span class="build-step-num">→</span>
+              Zhonya's Hourglass
+              <span class="build-step-gold">3250g</span>
+            </div>
+            <div class="build-step upcoming">
+              <span class="build-step-num">5</span>
+              Rabadon's Deathcap
+              <span class="build-step-gold">3600g</span>
+            </div>
+            <div class="build-step upcoming">
+              <span class="build-step-num">6</span>
+              Void Staff
+              <span class="build-step-gold">2800g</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enemy Team (right, middle) -->
+        <div class="panel panel-enemies">
+          <div class="panel-title">
+            <span class="panel-title-dot" style="background: var(--red)"></span>
+            Enemy Team
+          </div>
+          <div class="enemy-list">
+            <div class="enemy-row">
+              <span class="er-name">Lux</span>
+              <span class="er-lv">Lv11</span>
+              <span class="er-items">Luden's · Sorc Shoes · Shadowflame</span>
+            </div>
+            <div class="enemy-row">
+              <span class="er-name">Sett</span>
+              <span class="er-lv">Lv10</span>
+              <span class="er-items"
+                >Stridebreaker · Steelcaps · Dead Man's</span
+              >
+            </div>
+            <div class="enemy-row">
+              <span class="er-name">Ekko</span>
+              <span class="er-lv">Lv12</span>
+              <span class="er-items">Rocketbelt · Lich Bane · Zhonya's</span>
+            </div>
+            <div class="enemy-row">
+              <span class="er-name">Dr. Mundo</span>
+              <span class="er-lv">Lv11</span>
+              <span class="er-items">Heartsteel · Spirit Visage</span>
+            </div>
+            <div class="enemy-row">
+              <span class="er-name">Annie</span>
+              <span class="er-lv">Lv10</span>
+              <span class="er-items">Malignance · Sorc Shoes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Plan (bottom bar) -->
+        <div class="panel panel-plan">
+          <span class="plan-label">▲ Game Plan</span>
+          <span class="plan-summary"
+            >Heavy AP/CC enemy comp. Prioritize early magic resist and Zhonya's
+            timing. Focus Lux or Annie first — your resets will clean up their
+            backline.</span
+          >
+        </div>
+      </div>
+
+      <!-- IDLE -->
+      <div class="idle-layout hidden" id="idleLayout">
+        <div>
+          <div class="idle-card">
+            <div class="idle-top">
+              <span class="idle-champ">Katarina</span>
+              <span class="idle-result win">VICTORY</span>
+            </div>
+            <div class="idle-stats">
+              <span><strong>8/3/12</strong> KDA</span>
+              <span><strong>24:18</strong></span>
+              <span>ARAM Mayhem</span>
+            </div>
+            <div class="idle-items-wrap">
+              <span class="idle-itm">Rocketbelt</span>
+              <span class="idle-itm">Sorc Shoes</span>
+              <span class="idle-itm">Zhonya's</span>
+              <span class="idle-itm">Rabadon's</span>
+              <span class="idle-itm">Void Staff</span>
+              <span class="idle-itm">Cryptbloom</span>
+            </div>
+            <div class="idle-convos">
+              <div class="idle-c">
+                <div class="idle-c-q">
+                  You: What items should I get into this enemy team?
+                </div>
+                <div class="idle-c-a">
+                  Build toward Zhonya's for Ekko and Annie burst.
+                </div>
+              </div>
+              <div class="idle-c">
+                <div class="idle-c-q">You: What's my last item?</div>
+                <div class="idle-c-a">
+                  Cryptbloom. Pen + healing off resets.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="idle-meta">
+            Patch 16.7.1 — 172 champions · 648 items · 396 augments
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-toggle">
+      <button class="active" onclick="showState('ingame')">In-Game</button>
+      <button onclick="showState('idle')">Idle</button>
+    </div>
+
+    <script>
+      function showState(state) {
+        document
+          .getElementById("dashboard")
+          .classList.toggle("hidden", state !== "ingame");
+        document
+          .getElementById("idleLayout")
+          .classList.toggle("hidden", state !== "idle");
+
+        const mode = document.getElementById("sbMode");
+        const info = document.getElementById("sbInfo");
+        if (state === "idle") {
+          mode.textContent = "Connected";
+          info.innerHTML = "Waiting for game\u2026";
+        } else {
+          mode.textContent = "ARAM Mayhem";
+          info.innerHTML =
+            'Katarina Lv11 · 8/3/12 · <span class="gold">2,840g</span> · 14:22';
+        }
+
+        document.querySelectorAll(".state-toggle button").forEach((b, i) => {
+          b.classList.toggle("active", (state === "ingame") === (i === 0));
+        });
+      }
+    </script>
+  </body>
+</html>

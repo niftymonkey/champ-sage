@@ -163,9 +163,43 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
       );
       let questionText = question;
       if (augmentOptions && augmentOptions.length > 0) {
-        const augmentLines = augmentOptions.map(
-          (opt) => `- **${opt.name}** [${opt.tier}]: ${opt.description}`
-        );
+        const augmentLines = augmentOptions.map((opt) => {
+          let line = `- **${opt.name}** [${opt.tier}]: ${opt.description}`;
+          // Add set progress context if the augment belongs to any sets
+          if (opt.sets && opt.sets.length > 0) {
+            const setAnnotations = opt.sets.map((setName) => {
+              const currentCount = chosenAugmentsRef.current.filter((name) => {
+                const aug = gameDataRef.current.augments.get(
+                  name.toLowerCase()
+                );
+                return aug?.sets?.includes(setName);
+              }).length;
+              const wouldHave = currentCount + 1;
+              const setDef = gameDataRef.current.augmentSets.find(
+                (s) => s.name === setName
+              );
+              if (!setDef) return setName;
+              const activatedBonus = setDef.bonuses.find(
+                (b) => b.threshold === wouldHave
+              );
+              const maxThreshold = Math.max(
+                ...setDef.bonuses.map((b) => b.threshold)
+              );
+              if (activatedBonus) {
+                return `${setName} ${wouldHave}/${maxThreshold} — UNLOCKS: ${activatedBonus.description}`;
+              }
+              const nextBonus = setDef.bonuses.find(
+                (b) => b.threshold > wouldHave
+              );
+              if (nextBonus) {
+                return `${setName} ${wouldHave}/${nextBonus.threshold}`;
+              }
+              return setName;
+            });
+            line += ` (${setAnnotations.join("; ")})`;
+          }
+          return line;
+        });
         questionText = `${question}\n\nAugment options:\n${augmentLines.join("\n")}`;
       }
 
@@ -290,10 +324,6 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
     );
   }
 
-  if (!liveGameState.activePlayer) {
-    return null;
-  }
-
   return (
     <div className="coaching-display">
       {loading && <p className="coaching-thinking">Thinking...</p>}
@@ -326,7 +356,11 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
         </div>
       )}
 
-      {!loading && !latestExchange && (
+      {!loading && !latestExchange && !liveGameState.activePlayer && (
+        <p className="coaching-placeholder">Waiting for game...</p>
+      )}
+
+      {!loading && !latestExchange && liveGameState.activePlayer && (
         <p className="coaching-placeholder">
           Hold Num- and speak to ask your coach
         </p>

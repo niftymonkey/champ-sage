@@ -1,0 +1,275 @@
+/* ─── Base card ─── */
+.card {
+  background: #181c26;
+  border: 1px solid #2a2f3e;
+  border-radius: 0.3rem;
+  overflow: hidden;
+  transition: border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.card:hover {
+  border-color: #3d4560;
+}
+
+.proactive {
+  border-color: rgba(212, 168, 67, 0.5);
+}
+
+.proactive:hover {
+  border-color: #d4a843;
+}
+
+/* ─── Card header ─── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.7rem;
+  border-bottom: 1px solid #2a2f3e;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.75rem;
+  color: #565e74;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.proactive .header {
+  border-bottom-color: rgba(212, 168, 67, 0.5);
+  background: rgba(212, 168, 67, 0.06);
+}
+
+.cardType {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.typeDot {
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 50%;
+}
+
+.dotAugment {
+  background: #fbbf24;
+}
+
+.dotVoice {
+  background: #60a5fa;
+}
+
+.dotPlan {
+  background: #34d399;
+}
+
+.body {
+  padding: 0.7rem;
+}
+
+/* ─── Voice coaching card ─── */
+.question {
+  color: #8890a4;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid #3d4560;
+  line-height: 1.5;
+}
+
+.answer {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.recommendations {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.recItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.2rem;
+  border: 1px solid #2a2f3e;
+  background: #12151c;
+  transition: background 0.15s;
+}
+
+.recItem:hover {
+  background: #181c26;
+}
+
+.recRank {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
+  min-width: 1rem;
+  text-align: center;
+}
+
+.rank1 {
+  color: #34d399;
+}
+.rank2 {
+  color: #fbbf24;
+}
+.rank3 {
+  color: #f87171;
+}
+
+.recName {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.1rem;
+}
+
+.recReason {
+  font-size: 0.8rem;
+  color: #8890a4;
+  line-height: 1.5;
+}
+
+/* ─── Augment offer card ─── */
+
+.augmentOfferCard {
+  overflow: visible;
+}
+
+.augmentOffer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  padding: 0 0.5rem;
+}
+
+/* Scale down augment cards inside feed — keep 2:3 ratio but smaller */
+.augmentOption :global(.augment-card) {
+  padding: 0.3rem 0.3rem;
+  font-size: 0.75rem;
+}
+
+.augmentOption :global(.augment-card-name) {
+  font-size: 0.7rem;
+}
+
+.augmentOption :global(.augment-card-desc) {
+  font-size: 0.65rem;
+}
+
+.augmentOption :global(.augment-card-icon) {
+  width: 24px;
+  height: 24px;
+}
+
+.augmentOption {
+  flex: 0 1 270px;
+  padding: 0;
+  border-radius: 0.25rem;
+  border: 1px solid #2a2f3e;
+  background: #12151c;
+  position: relative;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.augmentOption:hover {
+  background: #181c26;
+  border-color: #3d4560;
+}
+
+.augmentPick {
+  border-color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.augmentPick:hover {
+  background: rgba(52, 211, 153, 0.16);
+}
+
+.augmentRankBadge {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.08rem 0.3rem;
+  border-radius: 0 0.2rem 0 0.2rem;
+}
+
+.badgeRank1 {
+  background: #34d399;
+  color: #0a0c10;
+}
+.badgeRank2 {
+  background: #fbbf24;
+  color: #0a0c10;
+}
+.badgeRank3 {
+  background: #f87171;
+  color: #0a0c10;
+}
+
+.augmentName {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.2rem;
+  padding-right: 1rem;
+}
+
+.augmentReason {
+  font-size: 0.8rem;
+  color: #8890a4;
+  line-height: 1.5;
+}
+
+/* ─── Game plan card ─── */
+.planSummary {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 0.4rem;
+}
+
+.buildPath {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.buildItem {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  background: #12151c;
+  border: 1px solid #2a2f3e;
+  color: #8890a4;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.buildItem:hover {
+  background: #181c26;
+  color: #e2e6ef;
+}
+
+.buildArrow {
+  color: #565e74;
+  font-size: 0.7rem;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  .augmentOffer {
+    flex-direction: column;
+  }
+}

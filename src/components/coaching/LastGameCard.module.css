@@ -1,0 +1,136 @@
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 34rem;
+  background: #181c26;
+  border: 1px solid #2a2f3e;
+  border-radius: 0.4rem;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid #2a2f3e;
+}
+
+.champName {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.result {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+}
+
+.win {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+}
+
+.loss {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+}
+
+.stats {
+  display: flex;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.8rem;
+  color: #8890a4;
+  border-bottom: 1px solid #2a2f3e;
+  flex-wrap: wrap;
+}
+
+.stats strong {
+  color: #e2e6ef;
+  font-weight: 500;
+}
+
+.kdaKills {
+  color: #4ade80;
+}
+.kdaDeaths {
+  color: #f87171;
+}
+.kdaAssists {
+  color: #8890a4;
+}
+.kdaSep {
+  color: #565e74;
+  padding: 0 0.12rem;
+  font-size: 0.65rem;
+  vertical-align: middle;
+}
+
+.items {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid #2a2f3e;
+  flex-wrap: wrap;
+}
+
+.item {
+  font-size: 0.75rem;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  padding: 0.12rem 0.35rem;
+  background: #12151c;
+  border: 1px solid #2a2f3e;
+  border-radius: 3px;
+  color: #8890a4;
+}
+
+.exchanges {
+  padding: 0.6rem 0.9rem;
+}
+
+.exchange {
+  margin-bottom: 0.5rem;
+}
+
+.exchange:last-child {
+  margin-bottom: 0;
+}
+
+.exchangeQ {
+  font-size: 0.8rem;
+  color: #565e74;
+  margin-bottom: 0.1rem;
+}
+
+.exchangeA {
+  font-size: 0.85rem;
+  color: #8890a4;
+  line-height: 1.5;
+}
+
+.meta {
+  margin-top: 0.8rem;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.7rem;
+  color: #565e74;
+  text-align: center;
+}
+
+.waiting {
+  color: #565e74;
+  font-size: 0.9rem;
+  text-align: center;
+}

@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Champ Sage — Variant D: Timeline Rail</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inconsolata:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0f1014;
+        --bg-rail: #141519;
+        --bg-pane: #16171e;
+        --bg-inner: #1c1d26;
+        --bg-hover: #21222d;
+        --border: #2a2c38;
+        --border-hi: #393c4d;
+        --text: #e3e5ee;
+        --text-2: #9498ad;
+        --text-3: #585c72;
+        --green: #10b981;
+        --green-bg: rgba(16, 185, 129, 0.1);
+        --amber: #f59e0b;
+        --amber-bg: rgba(245, 158, 11, 0.08);
+        --red: #ef4444;
+        --red-bg: rgba(239, 68, 68, 0.08);
+        --cyan: #22d3ee;
+        --cyan-bg: rgba(34, 211, 238, 0.06);
+        --font: "Poppins", sans-serif;
+        --mono: "Inconsolata", monospace;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      /* ─── Top Bar ─── */
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        height: 44px;
+        background: var(--bg-rail);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      .tb-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .tb-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-3);
+      }
+
+      .tb-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+      }
+
+      .tb-mode {
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .tb-detail {
+        font-size: 12px;
+        color: var(--text-2);
+      }
+
+      .tb-detail .gold {
+        color: var(--amber);
+      }
+
+      /* ─── Enemy Strip (horizontal, under status bar) ─── */
+      .enemy-strip {
+        display: flex;
+        gap: 1px;
+        background: var(--border);
+        flex-shrink: 0;
+      }
+
+      .es-cell {
+        flex: 1;
+        background: var(--bg-rail);
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .es-champ {
+        font-weight: 600;
+        font-size: 12px;
+        min-width: 70px;
+      }
+
+      .es-lv {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-3);
+      }
+
+      .es-items {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-2);
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* ─── Main: Rail + Pane ─── */
+      .main {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      /* Timeline Rail */
+      .rail {
+        width: 200px;
+        background: var(--bg-rail);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        flex-shrink: 0;
+      }
+
+      .rail::-webkit-scrollbar {
+        width: 2px;
+      }
+      .rail::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .rail::-webkit-scrollbar-thumb {
+        background: var(--border);
+      }
+
+      .rail-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+        transition: background 0.15s;
+        position: relative;
+      }
+
+      .rail-item:hover {
+        background: var(--bg-hover);
+      }
+
+      .rail-item.active {
+        background: var(--bg-hover);
+      }
+
+      .rail-item.active::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        border-radius: 0 2px 2px 0;
+      }
+
+      .rail-item.active.augment::before {
+        background: var(--amber);
+      }
+      .rail-item.active.voice::before {
+        background: var(--cyan);
+      }
+      .rail-item.active.plan::before {
+        background: var(--green);
+      }
+
+      .rail-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        border: 2px solid;
+      }
+
+      .rail-dot.augment {
+        border-color: var(--amber);
+        background: var(--amber-bg);
+      }
+
+      .rail-dot.voice {
+        border-color: var(--cyan);
+        background: var(--cyan-bg);
+      }
+
+      .rail-dot.plan {
+        border-color: var(--green);
+        background: var(--green-bg);
+      }
+
+      .rail-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .rail-label {
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .rail-time {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-3);
+      }
+
+      /* Detail Pane */
+      .pane {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px 28px;
+        background: var(--bg-pane);
+      }
+
+      .pane::-webkit-scrollbar {
+        width: 3px;
+      }
+      .pane::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .pane::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+      }
+
+      .pane-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .pane-type {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 3px 10px;
+        border-radius: 4px;
+      }
+
+      .pane-type.augment {
+        background: var(--amber-bg);
+        color: var(--amber);
+      }
+      .pane-type.voice {
+        background: var(--cyan-bg);
+        color: var(--cyan);
+      }
+      .pane-type.plan {
+        background: var(--green-bg);
+        color: var(--green);
+      }
+
+      .pane-time {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-3);
+      }
+
+      /* Pane content types */
+      .pane-section {
+        display: none;
+      }
+      .pane-section.active {
+        display: block;
+      }
+
+      /* Augment detail */
+      .aug-detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .aug-d {
+        display: flex;
+        gap: 14px;
+        padding: 16px;
+        background: var(--bg-inner);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        align-items: flex-start;
+      }
+
+      .aug-d.best {
+        border-color: var(--green);
+        background: var(--green-bg);
+      }
+
+      .aug-d-rank {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 24px;
+        min-width: 28px;
+      }
+
+      .aug-d-rank.r1 {
+        color: var(--green);
+      }
+      .aug-d-rank.r2 {
+        color: var(--amber);
+      }
+      .aug-d-rank.r3 {
+        color: var(--red);
+      }
+
+      .aug-d-info {
+        flex: 1;
+      }
+
+      .aug-d-name {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+
+      .aug-d-why {
+        font-size: 13px;
+        color: var(--text-2);
+        line-height: 1.6;
+      }
+
+      .aug-d-tag {
+        font-family: var(--mono);
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 8px;
+      }
+
+      .aug-d-tag.pick {
+        color: var(--green);
+      }
+      .aug-d-tag.reroll {
+        color: var(--text-3);
+      }
+
+      /* Voice detail */
+      .voice-q {
+        font-size: 15px;
+        color: var(--text-2);
+        padding-left: 16px;
+        border-left: 3px solid var(--border-hi);
+        margin-bottom: 16px;
+        line-height: 1.5;
+        font-style: italic;
+      }
+
+      .voice-a {
+        font-size: 15px;
+        line-height: 1.7;
+        margin-bottom: 16px;
+      }
+
+      .voice-recs {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .voice-rec {
+        display: flex;
+        gap: 12px;
+        padding: 12px 14px;
+        background: var(--bg-inner);
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        align-items: flex-start;
+      }
+
+      .voice-rec-rank {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 16px;
+        min-width: 18px;
+      }
+
+      .voice-rec-rank.r1 {
+        color: var(--green);
+      }
+      .voice-rec-rank.r2 {
+        color: var(--amber);
+      }
+
+      .voice-rec-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+
+      .voice-rec-why {
+        font-size: 12px;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      /* Plan detail */
+      .plan-text {
+        font-size: 15px;
+        line-height: 1.7;
+        margin-bottom: 18px;
+      }
+
+      .plan-build-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-3);
+        margin-bottom: 8px;
+      }
+
+      .plan-build-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .plan-b-step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        color: var(--text-2);
+      }
+
+      .plan-b-num {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-3);
+        min-width: 18px;
+      }
+
+      .plan-b-step:first-child {
+        color: var(--text);
+        font-weight: 500;
+        background: var(--bg-inner);
+      }
+
+      .plan-b-step:first-child .plan-b-num {
+        color: var(--green);
+      }
+
+      /* ─── Idle ─── */
+      .idle-full {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+      }
+
+      .idle-card {
+        width: 100%;
+        max-width: 480px;
+        background: var(--bg-pane);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .idle-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .idle-champ {
+        font-weight: 700;
+        font-size: 20px;
+      }
+
+      .idle-outcome {
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 4px;
+      }
+
+      .idle-outcome.win {
+        background: var(--green-bg);
+        color: var(--green);
+      }
+
+      .idle-stats-row {
+        display: flex;
+        gap: 20px;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text-3);
+      }
+
+      .idle-stats-row strong {
+        color: var(--text-2);
+      }
+
+      .idle-items-row {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        padding: 10px 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .idle-itm {
+        font-family: var(--mono);
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 3px;
+        background: var(--bg-inner);
+        border: 1px solid var(--border);
+        color: var(--text-2);
+      }
+
+      .idle-exch {
+        padding: 14px 20px;
+      }
+      .idle-e {
+        margin-bottom: 10px;
+      }
+      .idle-e:last-child {
+        margin-bottom: 0;
+      }
+      .idle-e-q {
+        font-size: 12px;
+        color: var(--text-3);
+        margin-bottom: 3px;
+      }
+      .idle-e-a {
+        font-size: 13px;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      .idle-meta {
+        text-align: center;
+        margin-top: 16px;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-3);
+      }
+
+      /* ─── Toggle ─── */
+      .state-toggle {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        z-index: 100;
+        display: flex;
+        gap: 4px;
+        background: var(--bg-rail);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px;
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+
+      .state-toggle button {
+        background: transparent;
+        border: none;
+        color: var(--text-3);
+        padding: 5px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .state-toggle button.active {
+        background: var(--border);
+        color: var(--text);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="top-bar">
+        <div class="tb-left">
+          <div class="tb-dot"></div>
+          <span class="tb-mode" id="tbMode">ARAM Mayhem</span>
+          <span class="tb-detail" id="tbDetail"
+            >Katarina Lv11 · 8/3/12 · <span class="gold">2,840g</span> ·
+            14:22</span
+          >
+        </div>
+        <div class="tb-right">
+          <span>v16.7.1</span>
+          <span>○ Num-</span>
+        </div>
+      </div>
+
+      <!-- IN-GAME -->
+      <div
+        id="inGameView"
+        style="display: flex; flex-direction: column; flex: 1; overflow: hidden"
+      >
+        <!-- Enemy strip under status bar -->
+        <div class="enemy-strip">
+          <div class="es-cell">
+            <span class="es-champ">Lux</span>
+            <span class="es-lv">11</span>
+            <span class="es-items">Luden's · Sorc · Shadow</span>
+          </div>
+          <div class="es-cell">
+            <span class="es-champ">Sett</span>
+            <span class="es-lv">10</span>
+            <span class="es-items">Stride · Steel · DMP</span>
+          </div>
+          <div class="es-cell">
+            <span class="es-champ">Ekko</span>
+            <span class="es-lv">12</span>
+            <span class="es-items">Rocket · Lich · Zhonya</span>
+          </div>
+          <div class="es-cell">
+            <span class="es-champ">Mundo</span>
+            <span class="es-lv">11</span>
+            <span class="es-items">Heart · Visage</span>
+          </div>
+          <div class="es-cell">
+            <span class="es-champ">Annie</span>
+            <span class="es-lv">10</span>
+            <span class="es-items">Malignance · Sorc</span>
+          </div>
+        </div>
+
+        <div class="main">
+          <!-- Timeline Rail -->
+          <div class="rail">
+            <div class="rail-item augment active" onclick="showPane('augment')">
+              <div class="rail-dot augment"></div>
+              <div class="rail-info">
+                <div class="rail-label">Augment Offer</div>
+                <div class="rail-time">14:18</div>
+              </div>
+            </div>
+            <div class="rail-item voice" onclick="showPane('voice')">
+              <div class="rail-dot voice"></div>
+              <div class="rail-info">
+                <div class="rail-label">Items vs enemy team?</div>
+                <div class="rail-time">12:45</div>
+              </div>
+            </div>
+            <div class="rail-item plan" onclick="showPane('plan')">
+              <div class="rail-dot plan"></div>
+              <div class="rail-info">
+                <div class="rail-label">Game Plan</div>
+                <div class="rail-time">0:12</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detail Pane -->
+          <div class="pane">
+            <!-- Augment Detail -->
+            <div class="pane-section active" id="pane-augment">
+              <div class="pane-header">
+                <span class="pane-type augment">Augment Offer</span>
+                <span class="pane-time">14:18</span>
+              </div>
+              <div class="aug-detail-list">
+                <div class="aug-d best">
+                  <span class="aug-d-rank r1">1</span>
+                  <div class="aug-d-info">
+                    <div class="aug-d-name">Phenomenal Evil</div>
+                    <div class="aug-d-why">
+                      Best scaling for Katarina. You start at 40 AP and it
+                      snowballs your resets hard with the burn package you
+                      already have.
+                    </div>
+                    <div class="aug-d-tag pick">Pick</div>
+                  </div>
+                </div>
+                <div class="aug-d">
+                  <span class="aug-d-rank r2">2</span>
+                  <div class="aug-d-info">
+                    <div class="aug-d-name">Recursion</div>
+                    <div class="aug-d-why">
+                      Decent value but less consistent than raw AP scaling at
+                      this stage of the game.
+                    </div>
+                    <div class="aug-d-tag reroll">Re-roll</div>
+                  </div>
+                </div>
+                <div class="aug-d">
+                  <span class="aug-d-rank r3">3</span>
+                  <div class="aug-d-info">
+                    <div class="aug-d-name">Firebrand</div>
+                    <div class="aug-d-why">
+                      Slower burn value, and redundant with your existing
+                      Infernal Conduit augment.
+                    </div>
+                    <div class="aug-d-tag reroll">Re-roll</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Voice Detail -->
+            <div class="pane-section" id="pane-voice">
+              <div class="pane-header">
+                <span class="pane-type voice">Voice Query</span>
+                <span class="pane-time">12:45</span>
+              </div>
+              <div class="voice-q">
+                What items should I get into this enemy team?
+              </div>
+              <div class="voice-a">
+                Build toward Zhonya's Hourglass for the active against Ekko and
+                Annie burst. After that, Void Staff if they stack MR, or
+                Rabadon's if they don't.
+              </div>
+              <div class="voice-recs">
+                <div class="voice-rec">
+                  <span class="voice-rec-rank r1">1</span>
+                  <div>
+                    <div class="voice-rec-name">Zhonya's Hourglass</div>
+                    <div class="voice-rec-why">
+                      Armguard next (1200g). Active saves you from Ekko ult and
+                      Annie burst timing.
+                    </div>
+                  </div>
+                </div>
+                <div class="voice-rec">
+                  <span class="voice-rec-rank r2">2</span>
+                  <div>
+                    <div class="voice-rec-name">Void Staff</div>
+                    <div class="voice-rec-why">
+                      If Sett or Mundo build MR. Blighting Jewel next (1250g).
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Plan Detail -->
+            <div class="pane-section" id="pane-plan">
+              <div class="pane-header">
+                <span class="pane-type plan">Game Plan</span>
+                <span class="pane-time">0:12</span>
+              </div>
+              <div class="plan-text">
+                Heavy AP/CC enemy comp (Annie, Ekko, Lux). Prioritize early
+                magic resist and Zhonya's timing. Your resets will be strong
+                into their squishy backline if you dodge the initial CC chain.
+                Focus Lux or Annie first in fights.
+              </div>
+              <div class="plan-build-label">Recommended Build Path</div>
+              <div class="plan-build-list">
+                <div class="plan-b-step">
+                  <span class="plan-b-num">1</span> Hextech Alternator
+                </div>
+                <div class="plan-b-step">
+                  <span class="plan-b-num">2</span> Sorcerer's Shoes
+                </div>
+                <div class="plan-b-step">
+                  <span class="plan-b-num">3</span> Hextech Rocketbelt
+                </div>
+                <div class="plan-b-step">
+                  <span class="plan-b-num">4</span> Zhonya's Hourglass
+                </div>
+                <div class="plan-b-step">
+                  <span class="plan-b-num">5</span> Rabadon's Deathcap
+                </div>
+                <div class="plan-b-step">
+                  <span class="plan-b-num">6</span> Void Staff
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IDLE -->
+      <div class="idle-full hidden" id="idleView">
+        <div>
+          <div class="idle-card">
+            <div class="idle-head">
+              <span class="idle-champ">Katarina</span>
+              <span class="idle-outcome win">VICTORY</span>
+            </div>
+            <div class="idle-stats-row">
+              <span><strong>8/3/12</strong> KDA</span>
+              <span><strong>24:18</strong></span>
+              <span>ARAM Mayhem</span>
+            </div>
+            <div class="idle-items-row">
+              <span class="idle-itm">Rocketbelt</span>
+              <span class="idle-itm">Sorc Shoes</span>
+              <span class="idle-itm">Zhonya's</span>
+              <span class="idle-itm">Rabadon's</span>
+              <span class="idle-itm">Void Staff</span>
+              <span class="idle-itm">Cryptbloom</span>
+            </div>
+            <div class="idle-exch">
+              <div class="idle-e">
+                <div class="idle-e-q">
+                  You: What items should I get into this enemy team?
+                </div>
+                <div class="idle-e-a">
+                  Build toward Zhonya's for Ekko and Annie burst.
+                </div>
+              </div>
+              <div class="idle-e">
+                <div class="idle-e-q">You: What's my last item?</div>
+                <div class="idle-e-a">
+                  Cryptbloom. Pen + healing off resets.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="idle-meta">
+            Patch 16.7.1 — 172 champions · 648 items · 396 augments
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="state-toggle">
+      <button class="active" onclick="showState('ingame')">In-Game</button>
+      <button onclick="showState('idle')">Idle</button>
+    </div>
+
+    <script>
+      function showPane(type) {
+        document
+          .querySelectorAll(".pane-section")
+          .forEach((s) => s.classList.remove("active"));
+        document.getElementById("pane-" + type).classList.add("active");
+
+        document
+          .querySelectorAll(".rail-item")
+          .forEach((r) => r.classList.remove("active"));
+        document.querySelector(".rail-item." + type).classList.add("active");
+      }
+
+      function showState(state) {
+        document
+          .getElementById("inGameView")
+          .classList.toggle("hidden", state !== "ingame");
+        document
+          .getElementById("idleView")
+          .classList.toggle("hidden", state !== "idle");
+
+        const mode = document.getElementById("tbMode");
+        const detail = document.getElementById("tbDetail");
+        if (state === "idle") {
+          mode.textContent = "Connected";
+          detail.innerHTML = "Waiting for game\u2026";
+        } else {
+          mode.textContent = "ARAM Mayhem";
+          detail.innerHTML =
+            'Katarina Lv11 · 8/3/12 · <span class="gold">2,840g</span> · 14:22';
+        }
+
+        document.querySelectorAll(".state-toggle button").forEach((b, i) => {
+          b.classList.toggle("active", (state === "ingame") === (i === 0));
+        });
+      }
+    </script>
+  </body>
+</html>

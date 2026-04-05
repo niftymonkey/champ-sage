@@ -333,7 +333,16 @@ export class ReactiveEngine {
         .pipe(
           switchMap((phase) => {
             if (phase !== "InProgress") {
-              liveGameState$.next(createDefaultLiveGameState());
+              // Preserve game data during post-game phases so the
+              // end-of-game screen can display champion, KDA, etc.
+              // Only fully reset when returning to lobby/none.
+              const isPostGame =
+                phase === "PreEndOfGame" || phase === "EndOfGame";
+              if (isPostGame) {
+                // Keep current state — EOG stats will be merged in
+              } else {
+                liveGameState$.next(createDefaultLiveGameState());
+              }
               this.lcuGameMode = "";
               this.lastPollStatus = null;
 
