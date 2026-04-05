@@ -1,0 +1,32 @@
+.feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.feed::-webkit-scrollbar {
+  width: 4px;
+}
+.feed::-webkit-scrollbar-track {
+  background: transparent;
+}
+.feed::-webkit-scrollbar-thumb {
+  background: #2a2f3e;
+  border-radius: 2px;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: #565e74;
+  font-size: 0.9rem;
+  gap: 0.4rem;
+  opacity: 0.6;
+}

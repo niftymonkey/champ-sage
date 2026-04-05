@@ -1,0 +1,99 @@
+.panel {
+  width: 15rem;
+  background: #12151c;
+  border-left: 1px solid #2a2f3e;
+  padding: 0.8rem;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.panel::-webkit-scrollbar {
+  width: 3px;
+}
+.panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.panel::-webkit-scrollbar-thumb {
+  background: #2a2f3e;
+}
+
+.title {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #b8a0e8;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.titleDot {
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 50%;
+  background: #b8a0e8;
+}
+
+.summary {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #8890a4;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #2a2f3e;
+}
+
+.buildTitle {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #565e74;
+  margin-bottom: 0.4rem;
+}
+
+.buildList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.buildStep {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.35rem;
+  border-radius: 0.2rem;
+  font-size: 0.8rem;
+  color: #8890a4;
+  transition: background 0.12s;
+}
+
+.buildStep:hover {
+  background: #181c26;
+}
+
+.buildNum {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.7rem;
+  color: #565e74;
+  min-width: 0.8rem;
+}
+
+.updated {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.6rem;
+  color: #565e74;
+  margin-top: 0.8rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #2a2f3e;
+}
+
+.empty {
+  color: #565e74;
+  font-size: 0.85rem;
+  padding-top: 1rem;
+  text-align: center;
+}
