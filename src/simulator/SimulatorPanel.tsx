@@ -152,15 +152,13 @@ export function SimulatorPanel({ gameData }: SimulatorPanelProps) {
   }
 
   function advanceTime(seconds: number) {
-    setGameTime((t) => {
-      const newTime = t + seconds;
-      if (currentStateRef.current) {
-        const updated = { ...currentStateRef.current, gameTime: newTime };
-        currentStateRef.current = updated;
-        liveGameState$.next(updated);
-      }
-      return newTime;
-    });
+    const newTime = gameTime + seconds;
+    setGameTime(newTime);
+    if (currentStateRef.current) {
+      const updated = { ...currentStateRef.current, gameTime: newTime };
+      currentStateRef.current = updated;
+      liveGameState$.next(updated);
+    }
   }
 
   return (

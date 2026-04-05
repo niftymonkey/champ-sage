@@ -27,6 +27,7 @@ import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
 import {
   coachingFeed$,
+  gamePlan$,
   pushGamePlan,
   pushAugmentOffer,
   pushVoiceCoaching,
@@ -269,9 +270,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         try {
           await submitGamePlanQuery(gameTime);
           // Also push as a voice coaching entry for the feed narrative
-          const plan = (
-            await import("../lib/reactive/coaching-feed")
-          ).gamePlan$.getValue();
+          const plan = gamePlan$.getValue();
           if (plan) {
             pushVoiceCoaching(
               question,
