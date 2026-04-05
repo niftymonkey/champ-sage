@@ -705,7 +705,7 @@
 
       .last-game-card {
         width: 100%;
-        max-width: 26rem;
+        max-width: 34rem;
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: 0.4rem;
@@ -1225,7 +1225,14 @@
                 <span class="lg-result win">VICTORY</span>
               </div>
               <div class="lg-stats">
-                <span><strong>12 / 4 / 15</strong> KDA</span>
+                <span
+                  ><strong
+                    ><span class="kda-k">12</span><span class="kda-sep">•</span
+                    ><span class="kda-d">4</span><span class="kda-sep">•</span
+                    ><span class="kda-a">15</span></strong
+                  >
+                  KDA</span
+                >
                 <span><strong>26:32</strong> Duration</span>
                 <span><strong>ARAM Mayhem</strong></span>
               </div>
@@ -1252,6 +1259,13 @@
                   <div class="lg-ex-a">
                     Ekko is fed. Prioritize Banshee's Veil before Zhonya's —
                     spell shield blocks his E engage.
+                  </div>
+                </div>
+                <div class="lg-ex">
+                  <div class="lg-ex-q">You: What's my last item?</div>
+                  <div class="lg-ex-a">
+                    Shadowflame. Extra pen into their squishy backline since
+                    they aren't building MR.
                   </div>
                 </div>
               </div>
@@ -1286,12 +1300,25 @@
         ];
 
         if (state === "idle") {
-          dot.className = "sb-dot idle";
+          dot.className = "sb-dot connected";
           els.forEach(
             (id) => (document.getElementById(id).style.display = "none")
           );
+          document.getElementById("sbMode").style.display = "";
+          document.getElementById("sbMode").textContent = "Champ Sage";
+          document.getElementById("sbMode").style.background = "transparent";
+          document.getElementById("sbMode").style.color =
+            "var(--text-secondary)";
+          document.getElementById("sbMode").style.border = "none";
+          document.getElementById("sbMode").style.padding = "0";
         } else {
           dot.className = "sb-dot connected";
+          var mode = document.getElementById("sbMode");
+          mode.textContent = "ARAM MAYHEM";
+          mode.style.background = "";
+          mode.style.color = "";
+          mode.style.border = "";
+          mode.style.padding = "";
           els.forEach((id) => (document.getElementById(id).style.display = ""));
         }
 

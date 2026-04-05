@@ -40,7 +40,7 @@ Thin persistent bar with essential state. Monospace font, consistent pipe-separa
 - Gold tooltip: "Current gold"
 - All tooltip elements use `cursor: help`
 
-**Idle:** Game-specific info hidden, dot goes gray. Just connection state, version, voice indicator.
+**Idle:** Game-specific info hidden. Dot stays green if LCU is connected (gray only if League client is not running). "Champ Sage" shows where the game mode badge normally sits. "Connected" / "Disconnected" on the right reflects LCU connection state. Version and voice indicator remain visible.
 
 ### Coaching Feed (center, scrollable)
 
@@ -122,7 +122,7 @@ All coach-initiated content (game plan feed card, augment offers, future item re
 
 When not in a game, the main area shows:
 
-- **Last game summary card** (if a game was played this session): champion, win/loss, KDA, final items, and the last 2-3 coaching exchanges from the feed. This card becomes the future entry point for post-game conversation continuation (#84).
+- **Last game summary card** (if a game was played this session): champion, win/loss, KDA (color-coded with bullet separators matching the status bar format), final items, and the last 3 coaching exchanges from the feed. Card is generously sized (max-width ~34rem) to fill the idle state comfortably. This card becomes the future entry point for post-game conversation continuation (#84).
 - **No game yet:** Empty state with connection status.
 - **Data summary:** Patch version, champion/item/augment counts shown below the card.
 
