@@ -76,6 +76,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const { mode, enemyStats } = useCoachingContext();
   const [chosenAugments, setChosenAugments] = useState<string[]>([]);
   const wasInGameRef = useRef(false);
+  // Capture last known in-game state for end-of-game snapshot.
+  // liveGameState may reset before the snapshot effect fires.
+  const lastInGameStateRef = useRef(liveGameState);
 
   const liveGameStateRef = useRef(liveGameState);
   const gameDataRef = useRef(gameData);
@@ -86,6 +89,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const gamePlanFiredRef = useRef(false);
 
   liveGameStateRef.current = liveGameState;
+  if (liveGameState.activePlayer) {
+    lastInGameStateRef.current = liveGameState;
+  }
   gameDataRef.current = gameData;
   modeRef.current = mode;
   enemyStatsRef.current = enemyStats;
@@ -133,10 +139,12 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     if (!wasInGameRef.current) return;
     wasInGameRef.current = false;
 
-    // Game just ended — capture snapshot from current feed and eog stats
+    // Game just ended — capture snapshot using last known in-game state
+    // (current liveGameState may already be reset)
+    const lastState = lastInGameStateRef.current;
     const feed = coachingFeed$.getValue();
-    const activeInfo = liveGameState.players.find((p) => p.isActivePlayer);
-    const eog = liveGameState.eogStats;
+    const activeInfo = lastState.players.find((p) => p.isActivePlayer);
+    const eog = liveGameState.eogStats ?? lastState.eogStats;
 
     // Extract last 3 voice coaching exchanges for the idle card
     const voiceEntries = feed.filter(
@@ -150,16 +158,16 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     captureLastGameSnapshot({
       championName:
         activeInfo?.championName ??
-        liveGameState.activePlayer?.championName ??
+        lastState.activePlayer?.championName ??
         "Unknown",
       isWin: eog?.isWin ?? false,
       kills: activeInfo?.kills ?? 0,
       deaths: activeInfo?.deaths ?? 0,
       assists: activeInfo?.assists ?? 0,
-      gameTime: eog?.gameLength ?? liveGameState.gameTime,
-      gameMode: liveGameState.gameMode || eog?.gameMode || "",
+      gameTime: eog?.gameLength ?? lastState.gameTime,
+      gameMode: lastState.gameMode || eog?.gameMode || "",
       items: activeInfo?.items.map((i) => i.name) ?? [],
-      augments: [],
+      augments: chosenAugmentsRef.current,
       recentExchanges,
     });
 
@@ -344,19 +352,17 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
         sessionRef.current.addAssistantMessage(JSON.stringify(response));
 
-        // Push to coaching feed
+        // Push to coaching feed (both reactive and augment queries)
         const gameTime = liveGameStateRef.current.gameTime;
-        if (source === "reactive") {
-          pushVoiceCoaching(
-            question,
-            response.answer,
-            response.recommendations.map((r) => ({
-              name: r.name,
-              reasoning: r.reasoning,
-            })),
-            gameTime
-          );
-        }
+        pushVoiceCoaching(
+          question,
+          response.answer,
+          response.recommendations.map((r) => ({
+            name: r.name,
+            reasoning: r.reasoning,
+          })),
+          gameTime
+        );
 
         // Relay to overlay
         window.electronAPI?.sendCoachingResponse({ ...response, source });
@@ -403,7 +409,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         submitQuery: async (names, signal) => {
           const gameTime = liveGameStateRef.current.gameTime;
 
-          // Push augment offer to feed immediately (before coaching response)
+          // Push augment offer to feed with placeholder data
           const entry = pushAugmentOffer(
             names.map((name, i) => ({
               name,
@@ -417,12 +423,40 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           proactiveLog.info(
             `Auto-querying coaching for augment offer: ${names.join(", ")}`
           );
+
+          // submitQuestion handles the LLM call and overlay relay.
+          // We need to update the feed entry with real rankings after.
           await submitQuestion(question, { signal });
 
-          // After coaching response, the augment offer in the feed will have
-          // generic reasoning. The overlay handles the detailed display.
-          // TODO: update the feed entry with coaching response rankings
-          void entry;
+          // Update the feed entry with coaching response rankings
+          const feed = coachingFeed$.getValue();
+          // The last voice-coaching entry (if present) has the response
+          const lastVoice = [...feed]
+            .reverse()
+            .find((e) => e.type === "voice-coaching") as
+            | VoiceCoachingEntry
+            | undefined;
+          if (lastVoice) {
+            // Update the augment offer entry with LLM rankings
+            const updated = feed.map((e) => {
+              if (e.id !== entry.id || e.type !== "augment-offer") return e;
+              const rankedOptions = names.map((name) => {
+                const rec = lastVoice.recommendations.find(
+                  (r) => r.name.toLowerCase() === name.toLowerCase()
+                );
+                const rank = rec
+                  ? lastVoice.recommendations.indexOf(rec) + 1
+                  : names.indexOf(name) + 1;
+                return {
+                  name,
+                  rank,
+                  reasoning: rec?.reasoning ?? "",
+                };
+              });
+              return { ...e, options: rankedOptions };
+            });
+            coachingFeed$.next(updated);
+          }
         },
         onPicked: (name) => {
           if (chosenAugmentsRef.current.includes(name)) return;
