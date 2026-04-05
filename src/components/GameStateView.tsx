@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import type { EffectiveGameState, EffectivePlayer } from "../lib/mode";
 import type { Augment, AramOverrides } from "../lib/data-ingest/types";
 import type { LoadedGameData } from "../lib/data-ingest";
@@ -6,8 +5,6 @@ import { checkAugmentAvailability } from "../lib/mode/augment-availability";
 import { formatGameTime, formatModifier } from "../lib/format";
 import { AugmentSlots } from "./AugmentSlots";
 import { CoachingInput } from "./CoachingInput";
-import { assembleContext } from "../lib/ai/context-assembler";
-import { useLiveGameState } from "../hooks/useLiveGameState";
 
 interface AugmentSelectionActions {
   selectedAugments: Augment[];
@@ -29,13 +26,6 @@ export function GameStateView({
   modeAugments,
   augmentSelection,
 }: GameStateViewProps) {
-  const liveGame = useLiveGameState();
-
-  const coachingContext = useMemo(
-    () => assembleContext(liveGame, gameData),
-    [liveGame, gameData]
-  );
-
   if (state.status === "disconnected") {
     return (
       <div className="game-status">
@@ -101,7 +91,7 @@ export function GameStateView({
 
       {/* Middle: Coaching (flex-grow, takes available space) */}
       <div className="game-view-coaching">
-        <CoachingInput context={coachingContext} gameData={gameData} />
+        <CoachingInput gameData={gameData} />
       </div>
 
       {/* Bottom: Teams + details (scrollable) */}

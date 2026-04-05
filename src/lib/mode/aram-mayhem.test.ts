@@ -243,8 +243,12 @@ describe("aramMayhemMode", () => {
   });
 
   describe("matches", () => {
-    it("matches ARAM game mode", () => {
-      expect(aramMayhemMode.matches("ARAM")).toBe(true);
+    it("matches KIWI (Mayhem) game mode", () => {
+      expect(aramMayhemMode.matches("KIWI")).toBe(true);
+    });
+
+    it("does not match straight ARAM", () => {
+      expect(aramMayhemMode.matches("ARAM")).toBe(false);
     });
 
     it("does not match other game modes", () => {

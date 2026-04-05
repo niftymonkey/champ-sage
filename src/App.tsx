@@ -1,5 +1,6 @@
 import "./App.css";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { CoachingProvider } from "./hooks/useCoachingContext";
 import { useGameData } from "./hooks/useGameData";
 import { useGameLifecycle } from "./hooks/useGameLifecycle";
 import { useLiveGameState } from "./hooks/useLiveGameState";
@@ -19,6 +20,8 @@ import { DataBrowser } from "./components/DataBrowser";
 import {
   createModeRegistry,
   aramMayhemMode,
+  aramMode,
+  classicMode,
   buildEffectiveGameState,
 } from "./lib/mode";
 import { addSelectedAugment } from "./lib/mode/augment-selection";
@@ -28,6 +31,8 @@ import type { GameState } from "./lib/game-state/types";
 
 const registry = createModeRegistry();
 registry.register(aramMayhemMode);
+registry.register(aramMode);
+registry.register(classicMode);
 
 function App() {
   const engineRef = useRef<ReactiveEngine | null>(null);
@@ -167,11 +172,15 @@ function App() {
     prevGameModeRef.current = mode;
   }, [data, gameState]);
 
+  const detectedMode = useMemo(() => {
+    if (!data || gameState.status !== "connected") return null;
+    return registry.detect(gameState.gameMode);
+  }, [data, gameState.status, gameState.gameMode]);
+
   const effectiveState = useMemo(() => {
     if (!data || gameState.status !== "connected") {
       return buildEffectiveGameState(gameState, null);
     }
-    const detectedMode = registry.detect(gameState.gameMode);
     let modeContext = detectedMode
       ? detectedMode.buildContext(gameState, data)
       : null;
@@ -190,7 +199,7 @@ function App() {
     }
 
     return buildEffectiveGameState(gameState, modeContext);
-  }, [gameState, data, selectedAugments]);
+  }, [gameState, data, selectedAugments, detectedMode]);
 
   const augmentSelection = {
     selectedAugments,
@@ -257,11 +266,17 @@ function App() {
         </div>
       </div>
       {data && (
-        <DataBrowser
-          data={data}
-          effectiveState={effectiveState}
-          augmentSelection={augmentSelection}
-        />
+        <CoachingProvider
+          mode={detectedMode}
+          liveGameState={liveGame}
+          gameData={data}
+        >
+          <DataBrowser
+            data={data}
+            effectiveState={effectiveState}
+            augmentSelection={augmentSelection}
+          />
+        </CoachingProvider>
       )}
     </main>
   );

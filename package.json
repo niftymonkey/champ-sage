@@ -20,6 +20,7 @@
     "audit-augments": "tsx scripts/audit-augments.ts",
     "preview-prompts": "tsx scripts/preview-prompts.ts",
     "extract-fixtures": "tsx scripts/extract-fixtures.ts",
+    "convert-fixtures": "tsx scripts/convert-fixtures-multiturn.ts",
     "inspect-evals": "tsx scripts/inspect-evals.ts",
     "eval": "evalite src/lib/ai/coaching.eval.ts",
     "eval:watch": "evalite watch src/lib/ai/coaching.eval.ts",

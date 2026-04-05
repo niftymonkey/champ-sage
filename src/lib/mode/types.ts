@@ -17,12 +17,13 @@ import type {
  *
  * The `lcuGameMode` field in LiveGameState is set from the LCU WebSocket
  * session, while `gameMode` comes from the Live Client Data API. For Mayhem
- * games, both return "KIWI". The "ARAM" fallback in mode detection exists
- * for defensive compatibility in case Riot changes the string in a future patch.
+ * games, both return "KIWI". Straight ARAM returns "ARAM". Each has its own
+ * GameMode implementation — aramMayhemMode matches "KIWI", aramMode matches "ARAM".
  */
 export const GAME_MODE_MAYHEM = "KIWI";
 export const GAME_MODE_ARAM = "ARAM";
 export const GAME_MODE_ARENA = "CHERRY";
+export const GAME_MODE_CLASSIC = "CLASSIC";
 import type {
   ActivePlayerRunes,
   ActivePlayerStats,
