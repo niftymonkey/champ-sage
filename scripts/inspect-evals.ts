@@ -23,6 +23,8 @@ const GATE_SCORERS = [
   "Item Awareness",
   "Structured Output",
   "Augment Re-Roll Accuracy",
+  "State Awareness",
+  "Gold-Aware Recommendations",
 ];
 const RANKING_SCORERS = [
   "Brevity",
@@ -30,6 +32,7 @@ const RANKING_SCORERS = [
   "Conversational Continuity",
   "Gold Awareness",
   "Unnecessary Warnings",
+  "Pivot Explanation",
 ];
 const GATE_THRESHOLD = 0.8;
 
@@ -155,6 +158,9 @@ const SCORER_LABELS: Record<string, string> = {
   "Conversational Continuity": "Contin",
   "Gold Awareness": "Gold",
   "Unnecessary Warnings": "NoWarn",
+  "State Awareness": "State",
+  "Gold-Aware Recommendations": "GoldFmt",
+  "Pivot Explanation": "Pivot",
 };
 
 function label(scorer: string): string {
@@ -205,8 +211,8 @@ function cmdSummary() {
   }
   const rankKeys = [...allRanking];
 
-  // Column widths
-  const nameW = 30;
+  // Column widths — nameW adapts to the longest suite name
+  const nameW = Math.max(30, ...summaries.map((s) => s.name.length));
   const fixW = 5;
   const gateW = 22;
   const rankColW = 8;

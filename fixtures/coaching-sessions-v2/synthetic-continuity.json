@@ -875,5 +875,788 @@
       "champion": "Warwick",
       "gameTime": "16:00"
     }
+  },
+  {
+    "label": "SYNTHETIC: Self-consistency check after 5 exchanges",
+    "index": 3,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Warwick",
+        "level": 11,
+        "currentGold": 800,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 72,
+          "magicResist": 50,
+          "maxHealth": 1489,
+          "currentHealth": 1489,
+          "moveSpeed": 335,
+          "attackSpeed": 0.75,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Warwick",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 3,
+          "deaths": 5,
+          "assists": 7,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 223748,
+              "name": "Titanic Hydra"
+            },
+            {
+              "id": 223068,
+              "name": "Sunfire Aegis"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Twitch",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Akshan",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Aurora",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kalista",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226655,
+              "name": "Luden's Echo"
+            },
+            {
+              "id": 223020,
+              "name": "Sorcerer's Shoes"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Malphite",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223100,
+              "name": "Lich Bane"
+            },
+            {
+              "id": 223089,
+              "name": "Rabadon's Deathcap"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Viego",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 3123,
+              "name": "Executioner's Calling"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 226696,
+              "name": "Axiom Arc"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Caitlyn",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 223006,
+              "name": "Berserker's Greaves"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 720
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Outlaw's Grit", "Overflow"],
+    "query": {
+      "question": "Should I still be building tank items?",
+      "history": [
+        {
+          "question": "What should I build?",
+          "answer": "Go full tank. Sunfire Aegis into Spirit Visage."
+        },
+        {
+          "question": "Recursion, Overflow, or Bread and Cheese?",
+          "answer": "Take Overflow. Healing synergizes with tank sustain."
+        },
+        {
+          "question": "What about Thornmail?",
+          "answer": "Yes, build Thornmail. They have lots of healing with Soraka."
+        },
+        {
+          "question": "Scopier Weapons, Goredrink, or Blunt Force?",
+          "answer": "Goredrink. 15% omnivamp is great on tank Warwick."
+        },
+        {
+          "question": "Am I doing enough damage?",
+          "answer": "Your damage is fine. Tank Warwick wins through sustain, not burst."
+        }
+      ],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["tank", "Sunfire", "sustain"],
+    "scorerContext": {
+      "items": ["Mercury's Treads", "Titanic Hydra", "Sunfire Aegis"],
+      "gold": 800,
+      "champion": "Warwick",
+      "gameTime": "14:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Augment history reference \u2014 why did you recommend Overflow?",
+    "index": 4,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Warwick",
+        "level": 11,
+        "currentGold": 800,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 72,
+          "magicResist": 50,
+          "maxHealth": 1489,
+          "currentHealth": 1489,
+          "moveSpeed": 335,
+          "attackSpeed": 0.75,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Warwick",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 3,
+          "deaths": 5,
+          "assists": 7,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 223748,
+              "name": "Titanic Hydra"
+            },
+            {
+              "id": 223068,
+              "name": "Sunfire Aegis"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Twitch",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Akshan",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Aurora",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kalista",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226655,
+              "name": "Luden's Echo"
+            },
+            {
+              "id": 223020,
+              "name": "Sorcerer's Shoes"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Malphite",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223100,
+              "name": "Lich Bane"
+            },
+            {
+              "id": 223089,
+              "name": "Rabadon's Deathcap"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Viego",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 3123,
+              "name": "Executioner's Calling"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 226696,
+              "name": "Axiom Arc"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Caitlyn",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 223006,
+              "name": "Berserker's Greaves"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 720
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Outlaw's Grit", "Overflow"],
+    "query": {
+      "question": "You told me to take Overflow earlier. Why was that the right choice?",
+      "history": [
+        {
+          "question": "Pinball, Outlaw's Grit, or Big Brain?",
+          "answer": "Take Outlaw's Grit. Free resists on dashes for tank builds."
+        },
+        {
+          "question": "Recursion, Overflow, or Bread and Cheese?",
+          "answer": "Take Overflow. The healing amp synergizes with your tank sustain."
+        },
+        {
+          "question": "What item should I build?",
+          "answer": "Build Sunfire Aegis for armor into their AD-heavy comp."
+        }
+      ],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["Overflow", "healing", "sustain"],
+    "scorerContext": {
+      "items": ["Mercury's Treads", "Titanic Hydra", "Sunfire Aegis"],
+      "gold": 1200,
+      "champion": "Warwick",
+      "gameTime": "12:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Cross-topic consistency \u2014 augment choice references prior item advice",
+    "index": 5,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Warwick",
+        "level": 11,
+        "currentGold": 800,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 72,
+          "magicResist": 50,
+          "maxHealth": 1489,
+          "currentHealth": 1489,
+          "moveSpeed": 335,
+          "attackSpeed": 0.75,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Warwick",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 3,
+          "deaths": 5,
+          "assists": 7,
+          "items": [
+            {
+              "id": 223111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 223748,
+              "name": "Titanic Hydra"
+            },
+            {
+              "id": 223068,
+              "name": "Sunfire Aegis"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Twitch",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Akshan",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Aurora",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kalista",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 226655,
+              "name": "Luden's Echo"
+            },
+            {
+              "id": 223020,
+              "name": "Sorcerer's Shoes"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Malphite",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223100,
+              "name": "Lich Bane"
+            },
+            {
+              "id": 223089,
+              "name": "Rabadon's Deathcap"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Viego",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 223031,
+              "name": "Infinity Edge"
+            },
+            {
+              "id": 3123,
+              "name": "Executioner's Calling"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 226696,
+              "name": "Axiom Arc"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Caitlyn",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 667666,
+              "name": "The Collector"
+            },
+            {
+              "id": 223006,
+              "name": "Berserker's Greaves"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 720
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Outlaw's Grit", "Overflow"],
+    "query": {
+      "question": "I'm being offered these augments: Juiced, Scopier Weapons, Heartsteel Augment. Which should I pick?",
+      "history": [
+        {
+          "question": "Pinball, Outlaw's Grit, or Big Brain?",
+          "answer": "Take Outlaw's Grit. Free resists on dashes for tank builds."
+        },
+        {
+          "question": "What item should I build next?",
+          "answer": "Build Thornmail. They have Soraka and Aatrox \u2014 you need anti-heal."
+        },
+        {
+          "question": "Recursion, Overflow, or Bread and Cheese?",
+          "answer": "Take Overflow. Healing amp synergizes with your tank sustain and Thornmail's passive."
+        }
+      ],
+      "augmentOptions": [
+        {
+          "name": "Juiced",
+          "description": "Gain 25% attack speed.",
+          "tier": "Silver"
+        },
+        {
+          "name": "Scopier Weapons",
+          "description": "Gain 15% bonus attack range.",
+          "tier": "Silver"
+        },
+        {
+          "name": "Heartsteel Augment",
+          "description": "Gain Heartsteel's passive: charge up health on hit.",
+          "tier": "Gold"
+        }
+      ]
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["tank", "Thornmail", "Outlaw"],
+    "scorerContext": {
+      "items": ["Mercury's Treads", "Titanic Hydra", "Sunfire Aegis"],
+      "gold": 900,
+      "champion": "Warwick",
+      "gameTime": "13:00"
+    }
   }
 ]

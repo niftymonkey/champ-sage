@@ -1,0 +1,3108 @@
+[
+  {
+    "label": "SYNTHETIC: State awareness — heavy healing enemy comp needs grievous wounds",
+    "index": 0,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Warwick",
+        "level": 10,
+        "currentGold": 1500,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 72,
+          "abilityPower": 0,
+          "armor": 68,
+          "magicResist": 48,
+          "maxHealth": 1450,
+          "currentHealth": 1450,
+          "moveSpeed": 335,
+          "attackSpeed": 1.15,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Warwick",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 6,
+          "items": [
+            { "id": 223153, "name": "Blade of the Ruined King" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 2,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 5,
+          "deaths": 2,
+          "assists": 3,
+          "items": [
+            { "id": 223031, "name": "Infinity Edge" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 8,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Soraka",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 1,
+          "deaths": 2,
+          "assists": 12,
+          "items": [
+            { "id": 226620, "name": "Moonstone Renewer" },
+            { "id": 223158, "name": "Redemption" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Yuumi",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 1,
+          "assists": 14,
+          "items": [
+            { "id": 223504, "name": "Staff of Flowing Water" },
+            { "id": 223114, "name": "Forbidden Idol" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jhin",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 6,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 2,
+          "deaths": 5,
+          "assists": 7,
+          "items": [
+            { "id": 223190, "name": "Locket of the Iron Solari" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 600
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Blade Waltz"],
+    "query": {
+      "question": "What item should I buy next?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["grievous wounds", "anti-heal"],
+    "scorerHints": { "stateAwareness": ["grievous-wounds"] },
+    "scorerContext": {
+      "items": ["Blade of the Ruined King", "Berserker's Greaves"],
+      "gold": 1500,
+      "champion": "Warwick",
+      "gameTime": "10:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: State awareness — 3+ AP enemies need MR",
+    "index": 1,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Ashe",
+        "level": 11,
+        "currentGold": 2000,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 78,
+          "abilityPower": 0,
+          "armor": 55,
+          "magicResist": 38,
+          "maxHealth": 1280,
+          "currentHealth": 1280,
+          "moveSpeed": 325,
+          "attackSpeed": 1.2,
+          "abilityHaste": 0,
+          "critChance": 0.2
+        }
+      },
+      "players": [
+        {
+          "championName": "Ashe",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 7,
+          "items": [
+            { "id": 223124, "name": "Kraken Slayer" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Leona",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 10,
+          "items": [
+            { "id": 223190, "name": "Locket of the Iron Solari" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ezreal",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 6,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223158, "name": "Manamune" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sona",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 12,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 7,
+          "deaths": 2,
+          "assists": 5,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" },
+            { "id": 223089, "name": "Rabadon's Deathcap" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 6,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Brand",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 8,
+          "items": [
+            { "id": 223116, "name": "Liandry's Torment" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 4,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 9,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 660
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Slow and Steady"],
+    "query": {
+      "question": "What should I build next?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["magic resist", "MR"],
+    "scorerHints": { "stateAwareness": ["mr-needed"] },
+    "scorerContext": {
+      "items": ["Kraken Slayer", "Berserker's Greaves"],
+      "gold": 2000,
+      "champion": "Ashe",
+      "gameTime": "11:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: State awareness — enemy comp + existing items",
+    "index": 2,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Jinx",
+        "level": 12,
+        "currentGold": 1800,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 95,
+          "abilityPower": 0,
+          "armor": 52,
+          "magicResist": 36,
+          "maxHealth": 1350,
+          "currentHealth": 1350,
+          "moveSpeed": 325,
+          "attackSpeed": 1.3,
+          "abilityHaste": 0,
+          "critChance": 0.6
+        }
+      },
+      "players": [
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 12,
+          "kills": 7,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 223031, "name": "Infinity Edge" },
+            { "id": 223006, "name": "Berserker's Greaves" },
+            { "id": 223046, "name": "Phantom Dancer" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Morgana",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 2,
+          "deaths": 4,
+          "assists": 9,
+          "items": [
+            { "id": 223157, "name": "Zhonya's Hourglass" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Maokai",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 10,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Karma",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 1,
+          "deaths": 3,
+          "assists": 11,
+          "items": [
+            { "id": 226620, "name": "Moonstone Renewer" },
+            { "id": 223504, "name": "Staff of Flowing Water" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Varus",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 4,
+          "deaths": 4,
+          "assists": 6,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 8,
+          "deaths": 2,
+          "assists": 4,
+          "items": [
+            { "id": 226692, "name": "Eclipse" },
+            { "id": 223142, "name": "Youmuu's Ghostblade" },
+            { "id": 223158, "name": "Ionian Boots of Lucidity" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Talon",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 6,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 226692, "name": "Eclipse" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 3,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lulu",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 13,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Malphite",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 2,
+          "deaths": 5,
+          "assists": 7,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "ARAM",
+      "gameTime": 720
+    },
+    "gameModeId": "aram",
+    "chosenAugments": [],
+    "query": {
+      "question": "What item do I need?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["armor", "AD"],
+    "scorerHints": { "stateAwareness": ["enemy-comp", "existing-items"] },
+    "scorerContext": {
+      "items": ["Infinity Edge", "Berserker's Greaves", "Phantom Dancer"],
+      "gold": 1800,
+      "champion": "Jinx",
+      "gameTime": "12:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: State awareness — combo healing + AP enemies",
+    "index": 3,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Maokai",
+        "level": 11,
+        "currentGold": 1200,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 55,
+          "abilityPower": 0,
+          "armor": 82,
+          "magicResist": 52,
+          "maxHealth": 1700,
+          "currentHealth": 1700,
+          "moveSpeed": 335,
+          "attackSpeed": 0.7,
+          "abilityHaste": 20,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Maokai",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 2,
+          "deaths": 5,
+          "assists": 12,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223111, "name": "Mercury's Treads" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 6,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ahri",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 4,
+          "deaths": 4,
+          "assists": 7,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 0,
+          "deaths": 5,
+          "assists": 14,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Yasuo",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 3,
+          "items": [
+            { "id": 223031, "name": "Infinity Edge" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Soraka",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 1,
+          "deaths": 3,
+          "assists": 15,
+          "items": [
+            { "id": 226620, "name": "Moonstone Renewer" },
+            { "id": 223158, "name": "Redemption" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 7,
+          "deaths": 3,
+          "assists": 6,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" },
+            { "id": 223089, "name": "Rabadon's Deathcap" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 7,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Aatrox",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 4,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 226631, "name": "Goredrinker" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 6,
+          "deaths": 3,
+          "assists": 2,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 660
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Juggernaut"],
+    "query": {
+      "question": "What should I buy?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["grievous wounds", "magic resist"],
+    "scorerHints": { "stateAwareness": ["grievous-wounds", "mr-needed"] },
+    "scorerContext": {
+      "items": ["Sunfire Aegis", "Mercury's Treads"],
+      "gold": 1200,
+      "champion": "Maokai",
+      "gameTime": "11:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: State awareness control — non-item question, no scorer hints",
+    "index": 4,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Ahri",
+        "level": 12,
+        "currentGold": 2000,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 53,
+          "abilityPower": 250,
+          "armor": 48,
+          "magicResist": 38,
+          "maxHealth": 1250,
+          "currentHealth": 1250,
+          "moveSpeed": 330,
+          "attackSpeed": 0.668,
+          "abilityHaste": 20,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Ahri",
+          "team": "ORDER",
+          "level": 12,
+          "kills": 6,
+          "deaths": 3,
+          "assists": 8,
+          "items": [
+            { "id": 223089, "name": "Rabadon's Deathcap" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Caitlyn",
+          "team": "ORDER",
+          "level": 12,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 6,
+          "items": [
+            { "id": 223031, "name": "Infinity Edge" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Leona",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 12,
+          "items": [
+            { "id": 223190, "name": "Locket of the Iron Solari" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Varus",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 7,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sett",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 2,
+          "deaths": 4,
+          "assists": 8,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 7,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 226692, "name": "Eclipse" },
+            { "id": 223142, "name": "Youmuu's Ghostblade" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 1,
+          "deaths": 4,
+          "assists": 10,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 4,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lux",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 8,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "ARAM",
+      "gameTime": 720
+    },
+    "gameModeId": "aram",
+    "chosenAugments": [],
+    "query": {
+      "question": "How should I position in teamfights?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": ["Rabadon's Deathcap", "Sorcerer's Shoes"],
+      "gold": 2000,
+      "champion": "Ahri",
+      "gameTime": "12:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Pivot expected — enemy comp changed from AD to AP, Thornmail no longer ideal",
+    "index": 5,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Garen",
+        "level": 13,
+        "currentGold": 2500,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 75,
+          "abilityPower": 0,
+          "armor": 90,
+          "magicResist": 50,
+          "maxHealth": 1900,
+          "currentHealth": 1900,
+          "moveSpeed": 340,
+          "attackSpeed": 0.75,
+          "abilityHaste": 15,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 13,
+          "kills": 4,
+          "deaths": 5,
+          "assists": 8,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223111, "name": "Mercury's Treads" },
+            { "id": 223143, "name": "Randuin's Omen" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Ezreal",
+          "team": "ORDER",
+          "level": 13,
+          "kills": 6,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223158, "name": "Manamune" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 12,
+          "kills": 3,
+          "deaths": 5,
+          "assists": 9,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sona",
+          "team": "ORDER",
+          "level": 12,
+          "kills": 0,
+          "deaths": 6,
+          "assists": 15,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jhin",
+          "team": "ORDER",
+          "level": 13,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 6,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223094, "name": "Rapid Firecannon" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 14,
+          "kills": 8,
+          "deaths": 3,
+          "assists": 7,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223089, "name": "Rabadon's Deathcap" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 13,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 8,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" },
+            { "id": 224646, "name": "Stormsurge" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Brand",
+          "team": "CHAOS",
+          "level": 13,
+          "kills": 6,
+          "deaths": 5,
+          "assists": 9,
+          "items": [
+            { "id": 223116, "name": "Liandry's Torment" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 12,
+          "items": [
+            { "id": 223190, "name": "Locket of the Iron Solari" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 2,
+          "deaths": 5,
+          "assists": 10,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 840
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Outlaw's Grit", "Holy Fire"],
+    "query": {
+      "question": "Same build?",
+      "history": [
+        {
+          "question": "What should I build next?",
+          "answer": "Build Thornmail. The enemy team has a lot of AD damage and healing from Aatrox and Draven's lifesteal."
+        },
+        {
+          "question": "Still going Thornmail?",
+          "answer": "Yes, Thornmail is still your best option against this AD-heavy healing comp."
+        }
+      ],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["Thornmail", "MR", "magic resist"],
+    "scorerHints": {
+      "pivotExpected": true,
+      "priorRecommendation": "Thornmail"
+    },
+    "scorerContext": {
+      "items": ["Sunfire Aegis", "Mercury's Treads", "Randuin's Omen"],
+      "gold": 2500,
+      "champion": "Garen",
+      "gameTime": "14:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: No pivot expected — enemy comp unchanged, prior recommendation still valid",
+    "index": 6,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Jinx",
+        "level": 11,
+        "currentGold": 1200,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 82,
+          "abilityPower": 0,
+          "armor": 50,
+          "magicResist": 36,
+          "maxHealth": 1300,
+          "currentHealth": 1300,
+          "moveSpeed": 325,
+          "attackSpeed": 1.15,
+          "abilityHaste": 0,
+          "critChance": 0.2
+        }
+      },
+      "players": [
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 4,
+          "deaths": 5,
+          "assists": 6,
+          "items": [
+            { "id": 223124, "name": "Kraken Slayer" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Maokai",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 10,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223111, "name": "Mercury's Treads" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Morgana",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 2,
+          "deaths": 4,
+          "assists": 8,
+          "items": [
+            { "id": 223157, "name": "Zhonya's Hourglass" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sona",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 0,
+          "deaths": 5,
+          "assists": 13,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 7,
+          "deaths": 2,
+          "assists": 6,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223089, "name": "Rabadon's Deathcap" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 7,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Brand",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 8,
+          "items": [
+            { "id": 223116, "name": "Liandry's Torment" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 10,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "ARAM",
+      "gameTime": 660
+    },
+    "gameModeId": "aram",
+    "chosenAugments": [],
+    "query": {
+      "question": "Still building Spirit Visage?",
+      "history": [
+        {
+          "question": "What should I build for defense?",
+          "answer": "Build Spirit Visage. The enemy has 3 AP threats (Syndra, Vex, Brand) and you need MR badly."
+        }
+      ],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["Spirit Visage", "MR"],
+    "scorerHints": {
+      "pivotExpected": false,
+      "priorRecommendation": "Spirit Visage"
+    },
+    "scorerContext": {
+      "items": ["Kraken Slayer", "Berserker's Greaves"],
+      "gold": 1200,
+      "champion": "Jinx",
+      "gameTime": "11:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Pivot from augment-driven build change — Goliath augment shifts build path",
+    "index": 7,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Vayne",
+        "level": 12,
+        "currentGold": 3000,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 85,
+          "abilityPower": 0,
+          "armor": 50,
+          "magicResist": 36,
+          "maxHealth": 1350,
+          "currentHealth": 1350,
+          "moveSpeed": 330,
+          "attackSpeed": 1.25,
+          "abilityHaste": 0,
+          "critChance": 0.2
+        }
+      },
+      "players": [
+        {
+          "championName": "Vayne",
+          "team": "ORDER",
+          "level": 12,
+          "kills": 6,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 223124, "name": "Kraken Slayer" },
+            { "id": 223006, "name": "Berserker's Greaves" },
+            { "id": 223046, "name": "Phantom Dancer" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 10,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Brand",
+          "team": "ORDER",
+          "level": 12,
+          "kills": 4,
+          "deaths": 4,
+          "assists": 7,
+          "items": [
+            { "id": 223116, "name": "Liandry's Torment" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Maokai",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 12,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223111, "name": "Mercury's Treads" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jhin",
+          "team": "ORDER",
+          "level": 12,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 13,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 6,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" },
+            { "id": 223053, "name": "Sterak's Gage" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 6,
+          "deaths": 4,
+          "assists": 3,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lulu",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 14,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Malphite",
+          "team": "CHAOS",
+          "level": 12,
+          "kills": 2,
+          "deaths": 5,
+          "assists": 8,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223047, "name": "Plated Steelcaps" },
+            { "id": 223143, "name": "Randuin's Omen" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 780
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Slow and Steady", "Goliath"],
+    "query": {
+      "question": "What now?",
+      "history": [
+        {
+          "question": "What should I build after Phantom Dancer?",
+          "answer": "Build Infinity Edge next. You need the crit damage spike to shred through their tanky frontline."
+        },
+        {
+          "question": "Goliath, Bread and Cheese, or Flashy?",
+          "answer": "Take Goliath. The bonus health and size will give you survivability you desperately need as Vayne."
+        }
+      ],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "expectedReferences": ["Infinity Edge", "Goliath", "health"],
+    "scorerHints": {
+      "pivotExpected": true,
+      "priorRecommendation": "Infinity Edge"
+    },
+    "scorerContext": {
+      "items": ["Kraken Slayer", "Berserker's Greaves", "Phantom Dancer"],
+      "gold": 3000,
+      "champion": "Vayne",
+      "gameTime": "13:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Gold-aware — can afford NLR component",
+    "index": 8,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Lux",
+        "level": 9,
+        "currentGold": 1500,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 46,
+          "abilityPower": 40,
+          "armor": 42,
+          "magicResist": 34,
+          "maxHealth": 1050,
+          "currentHealth": 1050,
+          "moveSpeed": 330,
+          "attackSpeed": 0.625,
+          "abilityHaste": 10,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 6,
+          "items": [{ "id": 223020, "name": "Sorcerer's Shoes" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 223124, "name": "Kraken Slayer" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Leona",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 9,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 2,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Varus",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 5,
+          "items": [{ "id": 226655, "name": "Luden's Echo" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 6,
+          "deaths": 2,
+          "assists": 4,
+          "items": [
+            { "id": 226692, "name": "Eclipse" },
+            { "id": 223142, "name": "Youmuu's Ghostblade" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 1,
+          "deaths": 4,
+          "assists": 8,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 4,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 9,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "ARAM",
+      "gameTime": 540
+    },
+    "gameModeId": "aram",
+    "chosenAugments": [],
+    "query": {
+      "question": "What item should I buy?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "scorerHints": { "goldAware": true },
+    "scorerContext": {
+      "items": ["Sorcerer's Shoes"],
+      "gold": 1500,
+      "champion": "Lux",
+      "gameTime": "9:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Gold-aware — can't afford any component",
+    "index": 9,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Lux",
+        "level": 7,
+        "currentGold": 200,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 43,
+          "abilityPower": 30,
+          "armor": 38,
+          "magicResist": 32,
+          "maxHealth": 950,
+          "currentHealth": 950,
+          "moveSpeed": 330,
+          "attackSpeed": 0.625,
+          "abilityHaste": 10,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 1,
+          "deaths": 4,
+          "assists": 3,
+          "items": [{ "id": 223020, "name": "Sorcerer's Shoes" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Caitlyn",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 2,
+          "items": [
+            { "id": 223006, "name": "Berserker's Greaves" },
+            { "id": 223085, "name": "Runaan's Hurricane" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Maokai",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 5,
+          "assists": 6,
+          "items": [{ "id": 223068, "name": "Sunfire Aegis" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sona",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 5,
+          "items": [{ "id": 223114, "name": "Forbidden Idol" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 2,
+          "deaths": 3,
+          "assists": 3,
+          "items": [{ "id": 223078, "name": "Trinity Force" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 5,
+          "deaths": 1,
+          "assists": 4,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Leona",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 1,
+          "deaths": 3,
+          "assists": 8,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 6,
+          "deaths": 2,
+          "assists": 2,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 5,
+          "items": [{ "id": 226655, "name": "Luden's Echo" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 4,
+          "items": [{ "id": 223078, "name": "Trinity Force" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "ARAM",
+      "gameTime": 420
+    },
+    "gameModeId": "aram",
+    "chosenAugments": [],
+    "query": {
+      "question": "What should I build next?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "scorerHints": { "goldAware": true },
+    "scorerContext": {
+      "items": ["Sorcerer's Shoes"],
+      "gold": 200,
+      "champion": "Lux",
+      "gameTime": "7:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Gold-aware — multi-component build path, can only afford cheapest",
+    "index": 10,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Caitlyn",
+        "level": 8,
+        "currentGold": 700,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 72,
+          "abilityPower": 0,
+          "armor": 48,
+          "magicResist": 34,
+          "maxHealth": 1100,
+          "currentHealth": 1100,
+          "moveSpeed": 325,
+          "attackSpeed": 1.0,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Caitlyn",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 3,
+          "deaths": 2,
+          "assists": 4,
+          "items": [{ "id": 223006, "name": "Berserker's Greaves" }],
+          "summonerSpells": ["Flash", "Heal"],
+          "riotIdGameName": "Player1",
+          "position": "BOTTOM",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 3,
+          "assists": 7,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Ally1",
+          "position": "UTILITY",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ahri",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 4,
+          "deaths": 2,
+          "assists": 3,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Ally2",
+          "position": "MIDDLE",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lee Sin",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 2,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 226631, "name": "Goredrinker" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Smite"],
+          "riotIdGameName": "Ally3",
+          "position": "JUNGLE",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 2,
+          "deaths": 3,
+          "assists": 3,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Teleport"],
+          "riotIdGameName": "Ally4",
+          "position": "TOP",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 4,
+          "deaths": 2,
+          "assists": 3,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Teleport"],
+          "riotIdGameName": "Enemy1",
+          "position": "TOP",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vi",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 2,
+          "deaths": 3,
+          "assists": 5,
+          "items": [{ "id": 223078, "name": "Trinity Force" }],
+          "summonerSpells": ["Flash", "Smite"],
+          "riotIdGameName": "Enemy2",
+          "position": "JUNGLE",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 3,
+          "deaths": 2,
+          "assists": 4,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Enemy3",
+          "position": "MIDDLE",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 5,
+          "deaths": 2,
+          "assists": 2,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Heal"],
+          "riotIdGameName": "Enemy4",
+          "position": "BOTTOM",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 8,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Enemy5",
+          "position": "UTILITY",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "CLASSIC",
+      "gameTime": 900
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "What item should I buy?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "scorerHints": { "goldAware": true },
+    "scorerContext": {
+      "items": ["Berserker's Greaves"],
+      "gold": 700,
+      "champion": "Caitlyn",
+      "gameTime": "15:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Gold-aware control — non-item question, no gold hint",
+    "index": 11,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "common",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Zed",
+        "level": 10,
+        "currentGold": 2000,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 95,
+          "abilityPower": 0,
+          "armor": 55,
+          "magicResist": 38,
+          "maxHealth": 1200,
+          "currentHealth": 1200,
+          "moveSpeed": 345,
+          "attackSpeed": 0.75,
+          "abilityHaste": 15,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Zed",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 7,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 226692, "name": "Eclipse" },
+            { "id": 223142, "name": "Youmuu's Ghostblade" },
+            { "id": 223158, "name": "Ionian Boots of Lucidity" }
+          ],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Player1",
+          "position": "MIDDLE",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 2,
+          "deaths": 4,
+          "assists": 3,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Teleport"],
+          "riotIdGameName": "Ally1",
+          "position": "TOP",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lee Sin",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 6,
+          "items": [
+            { "id": 226631, "name": "Goredrinker" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Smite"],
+          "riotIdGameName": "Ally2",
+          "position": "JUNGLE",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 223124, "name": "Kraken Slayer" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Heal"],
+          "riotIdGameName": "Ally3",
+          "position": "BOTTOM",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 10,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Ally4",
+          "position": "UTILITY",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Teleport"],
+          "riotIdGameName": "Enemy1",
+          "position": "TOP",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vi",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 2,
+          "deaths": 3,
+          "assists": 6,
+          "items": [{ "id": 223078, "name": "Trinity Force" }],
+          "summonerSpells": ["Flash", "Smite"],
+          "riotIdGameName": "Enemy2",
+          "position": "JUNGLE",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ahri",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Enemy3",
+          "position": "MIDDLE",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Miss Fortune",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 3,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Heal"],
+          "riotIdGameName": "Enemy4",
+          "position": "BOTTOM",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lulu",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 12,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Enemy5",
+          "position": "UTILITY",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "CLASSIC",
+      "gameTime": 1200
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "How do I carry this game?",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": ["Eclipse", "Youmuu's Ghostblade", "Ionian Boots of Lucidity"],
+      "gold": 2000,
+      "champion": "Zed",
+      "gameTime": "20:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Augment re-roll round 1 to round 2 tracking",
+    "index": 12,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Ashe",
+        "level": 8,
+        "currentGold": 900,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 68,
+          "abilityPower": 0,
+          "armor": 48,
+          "magicResist": 34,
+          "maxHealth": 1100,
+          "currentHealth": 1100,
+          "moveSpeed": 325,
+          "attackSpeed": 1.05,
+          "abilityHaste": 0,
+          "critChance": 0.2
+        }
+      },
+      "players": [
+        {
+          "championName": "Ashe",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 223124, "name": "Kraken Slayer" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 2,
+          "deaths": 4,
+          "assists": 4,
+          "items": [{ "id": 223068, "name": "Sunfire Aegis" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 6,
+          "items": [{ "id": 226655, "name": "Luden's Echo" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sona",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 0,
+          "deaths": 4,
+          "assists": 9,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 3,
+          "items": [{ "id": 223078, "name": "Trinity Force" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 4,
+          "deaths": 2,
+          "assists": 5,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 1,
+          "deaths": 3,
+          "assists": 8,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 2,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 5,
+          "items": [{ "id": 226655, "name": "Luden's Echo" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 1,
+          "deaths": 4,
+          "assists": 7,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 480
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "query": {
+      "question": "I'm being offered these augments: From Beginning To End, Vampirism, Flashy. Which should I pick?",
+      "history": [
+        {
+          "question": "I'm being offered these augments: Get Excited!, Slow and Steady, From Beginning To End. Which should I pick?",
+          "answer": "Pick From Beginning to End. Re-roll the other two."
+        }
+      ],
+      "augmentOptions": ["From Beginning To End", "Vampirism", "Flashy"]
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": ["Kraken Slayer", "Berserker's Greaves"],
+      "gold": 900,
+      "champion": "Ashe",
+      "gameTime": "8:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Augment re-roll all edge case — all 3 re-rolled, entirely new options",
+    "index": 13,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Warwick",
+        "level": 9,
+        "currentGold": 800,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 65,
+          "abilityPower": 0,
+          "armor": 65,
+          "magicResist": 46,
+          "maxHealth": 1400,
+          "currentHealth": 1400,
+          "moveSpeed": 335,
+          "attackSpeed": 0.75,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Warwick",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 223748, "name": "Titanic Hydra" },
+            { "id": 223111, "name": "Mercury's Treads" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 223124, "name": "Kraken Slayer" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 2,
+          "deaths": 4,
+          "assists": 6,
+          "items": [{ "id": 226655, "name": "Luden's Echo" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 8,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 8,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 2,
+          "deaths": 3,
+          "assists": 4,
+          "items": [{ "id": 223068, "name": "Sunfire Aegis" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 5,
+          "deaths": 2,
+          "assists": 5,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 6,
+          "items": [{ "id": 226655, "name": "Luden's Echo" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 3,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 4,
+          "items": [{ "id": 223078, "name": "Trinity Force" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Leona",
+          "team": "CHAOS",
+          "level": 8,
+          "kills": 1,
+          "deaths": 4,
+          "assists": 9,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 540
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "query": {
+      "question": "New augments: Outlaw's Grit, Holy Fire, Demon's Dance. Which one?",
+      "history": [
+        {
+          "question": "I'm being offered Pinball, Bread and Cheese, and Recursion. Which should I pick?",
+          "answer": "Re-roll all three. None of these synergize well with Warwick's kit."
+        }
+      ],
+      "augmentOptions": ["Outlaw's Grit", "Holy Fire", "Demon's Dance"]
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": ["Titanic Hydra", "Mercury's Treads"],
+      "gold": 800,
+      "champion": "Warwick",
+      "gameTime": "9:00"
+    }
+  },
+  {
+    "label": "SYNTHETIC: Augment re-roll — player ignored advice, chose different augment",
+    "index": 14,
+    "timestamp": "2026-04-05T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Jinx",
+        "level": 10,
+        "currentGold": 1100,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 80,
+          "abilityPower": 0,
+          "armor": 50,
+          "magicResist": 36,
+          "maxHealth": 1250,
+          "currentHealth": 1250,
+          "moveSpeed": 325,
+          "attackSpeed": 1.15,
+          "abilityHaste": 0,
+          "critChance": 0.2
+        }
+      },
+      "players": [
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 6,
+          "items": [
+            { "id": 223124, "name": "Kraken Slayer" },
+            { "id": 223006, "name": "Berserker's Greaves" },
+            { "id": 223046, "name": "Phantom Dancer" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Maokai",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 9,
+          "items": [
+            { "id": 223068, "name": "Sunfire Aegis" },
+            { "id": 223111, "name": "Mercury's Treads" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ahri",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 4,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sona",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 5,
+          "assists": 12,
+          "items": [{ "id": 226620, "name": "Moonstone Renewer" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Darius",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 3,
+          "deaths": 3,
+          "assists": 4,
+          "items": [
+            { "id": 223078, "name": "Trinity Force" },
+            { "id": 223047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Vex",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 6,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 1,
+          "deaths": 4,
+          "assists": 9,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Draven",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 6,
+          "deaths": 3,
+          "assists": 2,
+          "items": [
+            { "id": 667666, "name": "The Collector" },
+            { "id": 223006, "name": "Berserker's Greaves" },
+            { "id": 223031, "name": "Infinity Edge" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            { "id": 226655, "name": "Luden's Echo" },
+            { "id": 223020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 1,
+          "deaths": 5,
+          "assists": 8,
+          "items": [{ "id": 223190, "name": "Locket of the Iron Solari" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 600
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Slow and Steady"],
+    "query": {
+      "question": "New augments: Slow and Steady, Vampirism, Get Excited! Which one?",
+      "history": [
+        {
+          "question": "I'm being offered From Beginning To End, Slow and Steady, and Flashy. Which should I pick?",
+          "answer": "Pick From Beginning to End. It synergizes with Jinx's attack speed scaling. Re-roll Slow and Steady and Flashy."
+        },
+        {
+          "question": "I chose Slow and Steady instead.",
+          "answer": "OK, Slow and Steady works too. It gives you bonus damage for staying at range."
+        }
+      ],
+      "augmentOptions": ["Slow and Steady", "Vampirism", "Get Excited!"]
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": ["Kraken Slayer", "Berserker's Greaves", "Phantom Dancer"],
+      "gold": 1100,
+      "champion": "Jinx",
+      "gameTime": "10:00"
+    }
+  }
+]
