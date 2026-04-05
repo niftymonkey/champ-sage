@@ -75,15 +75,31 @@ A living document that shows the current recommended build and strategy. Not a f
 
 ### Enemy Strip (bottom, pinned)
 
-Always at the bottom, never a side column. Five enemy cards in a horizontal row showing champion name, level, and items. Full item names.
+Always at the bottom, pinned below the scrollable feed. Five enemy cards in a horizontal row, each containing:
+
+- **Header row:** Champion name (left) and level (right-aligned)
+- **Body row (flex):** Item names listed vertically on the left (one per line, full names), and item category pills stacked vertically on the right
+
+**Item category pills:** Derived from the item's `stats` data. Each pill represents a stat category the enemy is investing in — e.g., "AP", "Health", "Armor", "M.Pen", "Haste", "Antiheal", "AD", "MR". Only categories present in at least one item are shown. Pills stack vertically, centered in a right-aligned column, one per line. Early game might show 1-2 pills; full build 3-5. This fills the card's horizontal space proportionally and gives an at-a-glance read on what the enemy is building toward.
 
 **Narrow screens (<600px):** Enemy cards wrap to 2 columns.
 
 **Idle state:** Enemy strip is not shown.
 
+### In-Game/Idle Toggle
+
+Floats inside the content area (top-right of the feed), not fixed to the window. Toggles between in-game and idle views. For prototyping only — in the real app, this is driven by game state automatically.
+
 ### Proactive Content Styling
 
-All coach-initiated content (game plan card, augment offers, future item recommendations) gets a gold 1px border and a subtle gold-tinted header background. This visually distinguishes "the coach spoke unprompted" from "you asked a question."
+All coach-initiated content (game plan feed card, augment offers, future item recommendations) gets a gold 1px border and a subtle gold-tinted header background. This visually distinguishes "the coach spoke unprompted" from "you asked a question." The Game Plan side panel header uses a light purple color to differentiate it from the gold proactive feed cards.
+
+### Status Bar Details
+
+- KDA numbers are color-coded: green (kills), red (deaths), gray (assists) with bullet (•) separators between them
+- Pipe (|) separators between all other sections
+- All informational elements have tooltips with `cursor: help`: version ("League of Legends patch version"), KDA ("Kills / Deaths / Assists"), gold ("Current gold"), connection dot ("Connected to League client"), voice indicator ("Hold to ask your coach a question")
+- Voice indicator: empty circle (idle), red filled (recording)
 
 ### Hover States
 
@@ -92,12 +108,15 @@ All coach-initiated content (game plan card, augment offers, future item recomme
 - **Recommendation items:** background brightens
 - **Build path items:** background brightens, text goes full white
 - **Enemy cards:** border brightens
-- **All status bar tooltips:** `cursor: help` on hover
+- **Enemy item pills:** border brightens on hover
 
 ### Responsive Behavior
 
-- **Narrow (<600px):** Augment options stack vertically, enemy strip wraps to 2 columns, some status bar detail hidden, game plan panel collapses below the feed
-- **Medium-wide:** Full layout with enemy strip pinned at bottom, game plan panel on right
+- **Minimum window width:** 800px enforced via Electron's `BrowserWindow` `minWidth` config. Prevents the UI from reaching unusable states.
+- **Narrow (at min-width):** Augment options stack vertically, enemy item names may truncate (tooltips show full names on hover)
+- **Medium-wide:** Full layout with enemy strip pinned at bottom
+- **Game plan panel:** Always visible on the right side during in-game, never hidden at any viewport size. The feed area compresses to accommodate it.
+- **Enemy item names:** Each item has a tooltip with the full item name and `cursor: help`, ensuring truncated names are still readable on hover.
 
 ## Idle State
 
