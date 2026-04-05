@@ -759,9 +759,9 @@ describe("ReactiveEngine", () => {
       });
       await vi.advanceTimersByTimeAsync(0);
 
-      // State should be reset
-      expect(liveGameState$.getValue().gameTime).toBe(0);
-      expect(liveGameState$.getValue().activePlayer).toBeNull();
+      // State preserved during EndOfGame so end-of-game screen has data
+      expect(liveGameState$.getValue().gameTime).toBe(300);
+      expect(liveGameState$.getValue().activePlayer).not.toBeNull();
 
       // Second game
       bridge.setRiotApiResponse(
