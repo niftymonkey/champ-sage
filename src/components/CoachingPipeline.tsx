@@ -26,11 +26,14 @@ import { playerIntent$, manualInput$ } from "../lib/reactive";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
 import {
+  coachingFeed$,
   pushGamePlan,
   pushAugmentOffer,
   pushVoiceCoaching,
+  captureLastGameSnapshot,
   resetForNewGame,
 } from "../lib/reactive/coaching-feed";
+import type { VoiceCoachingEntry } from "../lib/reactive/coaching-feed-types";
 import { getLogger } from "../lib/logger";
 
 const reactiveLog = getLogger("coaching:reactive");
@@ -72,6 +75,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const liveGameState = useLiveGameState();
   const { mode, enemyStats } = useCoachingContext();
   const [chosenAugments, setChosenAugments] = useState<string[]>([]);
+  const wasInGameRef = useRef(false);
 
   const liveGameStateRef = useRef(liveGameState);
   const gameDataRef = useRef(gameData);
@@ -116,6 +120,51 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       `Conversation session created for ${mode.displayName} | ${liveGameState.activePlayer.championName}`
     );
   }, [mode, gameData, liveGameState.activePlayer?.championName]);
+
+  // Capture last game snapshot when transitioning out of a game
+  useEffect(() => {
+    const inGame = liveGameState.activePlayer !== null;
+
+    if (inGame) {
+      wasInGameRef.current = true;
+      return;
+    }
+
+    if (!wasInGameRef.current) return;
+    wasInGameRef.current = false;
+
+    // Game just ended — capture snapshot from current feed and eog stats
+    const feed = coachingFeed$.getValue();
+    const activeInfo = liveGameState.players.find((p) => p.isActivePlayer);
+    const eog = liveGameState.eogStats;
+
+    // Extract last 3 voice coaching exchanges for the idle card
+    const voiceEntries = feed.filter(
+      (e): e is VoiceCoachingEntry => e.type === "voice-coaching"
+    );
+    const recentExchanges = voiceEntries.slice(-3).map((e) => ({
+      question: e.question,
+      answer: e.answer,
+    }));
+
+    captureLastGameSnapshot({
+      championName:
+        activeInfo?.championName ??
+        liveGameState.activePlayer?.championName ??
+        "Unknown",
+      isWin: eog?.isWin ?? false,
+      kills: activeInfo?.kills ?? 0,
+      deaths: activeInfo?.deaths ?? 0,
+      assists: activeInfo?.assists ?? 0,
+      gameTime: eog?.gameLength ?? liveGameState.gameTime,
+      gameMode: liveGameState.gameMode || eog?.gameMode || "",
+      items: activeInfo?.items.map((i) => i.name) ?? [],
+      augments: [],
+      recentExchanges,
+    });
+
+    reactiveLog.info("Last game snapshot captured");
+  }, [liveGameState.activePlayer]);
 
   // Auto-generate opening game plan once first full data arrives
   useEffect(() => {

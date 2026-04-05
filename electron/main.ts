@@ -333,6 +333,7 @@ function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1200,
     height: 900,
+    minWidth: 800,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
