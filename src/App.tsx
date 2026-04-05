@@ -16,6 +16,10 @@ import {
   WhisperProvider,
   LocalWhisperProvider,
 } from "./lib/voice/stt-provider";
+import { StatusBar } from "./components/StatusBar";
+import { InGameView } from "./components/InGameView";
+import { LastGameCard } from "./components/coaching";
+import { CoachingPipeline } from "./components/CoachingPipeline";
 import { DataBrowser } from "./components/DataBrowser";
 import {
   createModeRegistry,
@@ -36,14 +40,13 @@ registry.register(classicMode);
 
 function App() {
   const engineRef = useRef<ReactiveEngine | null>(null);
-
   const gepCleanupRef = useRef<(() => void) | null>(null);
+  const [devMode, setDevMode] = useState(false);
 
   useEffect(() => {
     let disposed = false;
     engineRef.current = initializeReactiveEngine();
 
-    // Initialize GEP bridge for augment detection (no-op if not ow-electron)
     import("./lib/reactive/gep-bridge")
       .then(({ initGepBridge }) => {
         if (disposed) return;
@@ -62,14 +65,24 @@ function App() {
     };
   }, []);
 
-  const { data, loading, error, refreshState, refresh } = useGameData();
+  // Ctrl+D toggles dev mode (data browser)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey && e.key === "d") {
+        e.preventDefault();
+        setDevMode((prev) => !prev);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const { data, loading, error } = useGameData();
   const lifecycle = useGameLifecycle();
   const liveGame = useLiveGameState();
   const { submit } = useUserInput();
-  const { zoom, resetZoom } = useZoom();
+  useZoom();
 
-  // Voice input STT provider. Prefers local Whisper container when available,
-  // falls back to OpenAI Whisper API.
   const whisperProvider = useMemo(() => {
     const localUrl = import.meta.env.VITE_LOCAL_WHISPER_URL as
       | string
@@ -127,7 +140,6 @@ function App() {
     const sub = userInput$.subscribe((event) => {
       if (event.type === "augment") {
         setSelectedAugments((prev) => {
-          // Deduplicate: don't add if already selected (by name)
           if (prev.some((a) => a.name === event.augment.name)) return prev;
           return [...prev, event.augment];
         });
@@ -164,14 +176,6 @@ function App() {
     gameTime: liveGame.gameTime,
   };
 
-  const prevGameModeRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!data || gameState.status !== "connected") return;
-    const mode = gameState.gameMode;
-    if (mode === prevGameModeRef.current) return;
-    prevGameModeRef.current = mode;
-  }, [data, gameState]);
-
   const detectedMode = useMemo(() => {
     if (!data || gameState.status !== "connected") return null;
     return registry.detect(gameState.gameMode);
@@ -201,6 +205,8 @@ function App() {
     return buildEffectiveGameState(gameState, modeContext);
   }, [gameState, data, selectedAugments, detectedMode]);
 
+  const inGame = liveGame.activePlayer !== null;
+
   const augmentSelection = {
     selectedAugments,
     select: selectAugment,
@@ -208,76 +214,54 @@ function App() {
     reset: resetAugments,
   };
 
+  if (loading && !data) {
+    return (
+      <main className="app-root">
+        <StatusBar isRecording={voice.isRecording} dataVersion="" />
+        <div className="app-loading">Loading game data...</div>
+      </main>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <main className="app-root">
+        <StatusBar isRecording={voice.isRecording} dataVersion="" />
+        <div className="app-error">Error: {error}</div>
+      </main>
+    );
+  }
+
+  if (!data) return null;
+
   return (
-    <main className="container">
-      <div className="app-header">
-        <div className="header-row">
-          <h1>Champ Sage</h1>
-          {data && (
-            <button
-              className="refresh-btn"
-              onClick={(e) => refresh(e.ctrlKey || e.metaKey)}
-              disabled={loading || refreshState !== "idle"}
-              title="Ctrl+click to force refresh"
-            >
-              {refreshState === "checking"
-                ? "Checking..."
-                : refreshState === "refreshing"
-                  ? "Updating..."
-                  : loading
-                    ? "Loading..."
-                    : "Refresh"}
-            </button>
+    <main className="app-root">
+      <StatusBar isRecording={voice.isRecording} dataVersion={data.version} />
+      <CoachingProvider
+        mode={detectedMode}
+        liveGameState={liveGame}
+        gameData={data}
+      >
+        <CoachingPipeline gameData={data} />
+        <div className="app-body">
+          {devMode ? (
+            <DataBrowser
+              data={data}
+              effectiveState={effectiveState}
+              augmentSelection={augmentSelection}
+            />
+          ) : inGame ? (
+            <InGameView state={effectiveState} gameData={data} />
+          ) : (
+            <LastGameCard
+              dataVersion={data.version}
+              championCount={data.champions.size}
+              itemCount={data.items.size}
+              augmentCount={data.augments.size}
+            />
           )}
         </div>
-        {loading && !data && <p>Loading game data...</p>}
-        {error && <p className="error">Error: {error}</p>}
-        <div className="header-row">
-          {data && <p className="version">Patch {data.version}</p>}
-          {zoom !== 1.0 && (
-            <button className="zoom-indicator" onClick={resetZoom}>
-              {Math.round(zoom * 100)}%
-            </button>
-          )}
-          <span
-            className="voice-indicator"
-            style={{
-              color: voice.isRecording
-                ? "#ef4444"
-                : voice.isTranscribing
-                  ? "#f59e0b"
-                  : "#6b7280",
-              marginLeft: "8px",
-            }}
-          >
-            {voice.isRecording
-              ? "Recording..."
-              : voice.isTranscribing
-                ? "Transcribing..."
-                : `Voice: Num-`}
-          </span>
-          <button
-            style={{ marginLeft: "8px", fontSize: "12px" }}
-            onMouseDown={() => voice.startRecording()}
-            onMouseUp={() => voice.stopAndTranscribe()}
-          >
-            Hold to Talk
-          </button>
-        </div>
-      </div>
-      {data && (
-        <CoachingProvider
-          mode={detectedMode}
-          liveGameState={liveGame}
-          gameData={data}
-        >
-          <DataBrowser
-            data={data}
-            effectiveState={effectiveState}
-            augmentSelection={augmentSelection}
-          />
-        </CoachingProvider>
-      )}
+      </CoachingProvider>
     </main>
   );
 }

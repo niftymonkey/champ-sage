@@ -1,0 +1,407 @@
+/**
+ * Headless component that manages the coaching pipeline.
+ *
+ * Handles conversation sessions, voice intent subscription, GEP augment
+ * coaching, and the "update game plan" voice command. Pushes results
+ * into coachingFeed$ and gamePlan$ rather than rendering its own UI.
+ *
+ * Must be mounted inside CoachingProvider.
+ */
+
+import { useState, useCallback, useRef, useEffect } from "react";
+import type { CoachingQuery } from "../lib/ai/types";
+import type { LoadedGameData } from "../lib/data-ingest";
+import type { GameState } from "../lib/game-state/types";
+import type { ConversationSession } from "../lib/ai/conversation-session";
+import { useCoachingContext } from "../hooks/useCoachingContext";
+import { useLiveGameState } from "../hooks/useLiveGameState";
+import { getMultiTurnCoachingResponse } from "../lib/ai/recommendation-engine";
+import { createConversationSession } from "../lib/ai/conversation-session";
+import { buildGameSystemPrompt } from "../lib/ai/prompts";
+import {
+  takeGameSnapshot,
+  formatStateSnapshot,
+} from "../lib/ai/state-formatter";
+import { playerIntent$, manualInput$ } from "../lib/reactive";
+import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
+import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
+import {
+  pushGamePlan,
+  pushAugmentOffer,
+  pushVoiceCoaching,
+  resetForNewGame,
+} from "../lib/reactive/coaching-feed";
+import { getLogger } from "../lib/logger";
+
+const reactiveLog = getLogger("coaching:reactive");
+const proactiveLog = getLogger("coaching:proactive");
+
+interface CoachingPipelineProps {
+  gameData: LoadedGameData;
+}
+
+/** Detect "update game plan" voice command (case-insensitive) */
+const UPDATE_PLAN_PATTERN = /^update\s+(?:game\s+)?plan$/i;
+
+function extractAugmentOptions(
+  question: string,
+  gameData: LoadedGameData
+): CoachingQuery["augmentOptions"] {
+  const matches = gameData.dictionary.findInText(question);
+  const augmentMatches = matches.filter((m) => m.type === "augment");
+
+  if (augmentMatches.length === 0) return undefined;
+
+  const options: NonNullable<CoachingQuery["augmentOptions"]> = [];
+  for (const match of augmentMatches) {
+    const augment = gameData.augments.get(match.name.toLowerCase());
+    if (augment) {
+      options.push({
+        name: augment.name,
+        description: augment.description,
+        tier: augment.tier,
+        sets: augment.sets,
+      });
+    }
+  }
+
+  return options.length > 0 ? options : undefined;
+}
+
+export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
+  const liveGameState = useLiveGameState();
+  const { mode, enemyStats } = useCoachingContext();
+  const [chosenAugments, setChosenAugments] = useState<string[]>([]);
+
+  const liveGameStateRef = useRef(liveGameState);
+  const gameDataRef = useRef(gameData);
+  const modeRef = useRef(mode);
+  const enemyStatsRef = useRef(enemyStats);
+  const chosenAugmentsRef = useRef(chosenAugments);
+  const sessionRef = useRef<ConversationSession | null>(null);
+  const gamePlanFiredRef = useRef(false);
+
+  liveGameStateRef.current = liveGameState;
+  gameDataRef.current = gameData;
+  modeRef.current = mode;
+  enemyStatsRef.current = enemyStats;
+  chosenAugmentsRef.current = chosenAugments;
+
+  const apiKey =
+    import.meta.env.VITE_OPENROUTER_API_KEY ??
+    import.meta.env.VITE_OPENAI_API_KEY;
+
+  // Create/reset conversation session when mode changes (new game detected)
+  useEffect(() => {
+    if (!mode || !liveGameState.activePlayer) {
+      sessionRef.current = null;
+      return;
+    }
+
+    const gameState: GameState = {
+      status: "connected",
+      activePlayer: liveGameState.activePlayer,
+      players: liveGameState.players,
+      gameMode: liveGameState.gameMode,
+      gameTime: liveGameState.gameTime,
+    };
+
+    const systemPrompt = buildGameSystemPrompt(mode, gameData, gameState);
+    sessionRef.current = createConversationSession(systemPrompt);
+    setChosenAugments([]);
+    gamePlanFiredRef.current = false;
+    resetForNewGame();
+
+    reactiveLog.info(
+      `Conversation session created for ${mode.displayName} | ${liveGameState.activePlayer.championName}`
+    );
+  }, [mode, gameData, liveGameState.activePlayer?.championName]);
+
+  // Auto-generate opening game plan once first full data arrives
+  useEffect(() => {
+    if (
+      !sessionRef.current ||
+      !apiKey ||
+      gamePlanFiredRef.current ||
+      !liveGameState.activePlayer ||
+      liveGameState.players.length === 0
+    ) {
+      return;
+    }
+
+    gamePlanFiredRef.current = true;
+    const gameTime = liveGameState.gameTime;
+
+    proactiveLog.info("Generating opening game plan");
+
+    submitGamePlanQuery(gameTime).catch((err) => {
+      proactiveLog.error(`Opening game plan failed: ${err}`);
+    });
+  }, [apiKey, liveGameState.activePlayer, liveGameState.players.length]);
+
+  const submitGamePlanQuery = useCallback(
+    async (gameTime: number) => {
+      if (!sessionRef.current || !apiKey) return;
+
+      const snapshot = takeGameSnapshot(
+        liveGameStateRef.current,
+        enemyStatsRef.current,
+        gameDataRef.current,
+        chosenAugmentsRef.current
+      );
+      const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
+
+      const planQuestion =
+        "This is the start of the game. Based on my champion, the enemy team comp, and the game mode, give me my game plan: what to watch out for, who to focus, and my recommended 6-item build path in order.";
+
+      sessionRef.current.addUserMessage(stateText, planQuestion);
+
+      try {
+        const response = await getMultiTurnCoachingResponse(
+          sessionRef.current,
+          apiKey
+        );
+
+        sessionRef.current.addAssistantMessage(JSON.stringify(response));
+
+        // Extract build path from recommendations or use item names
+        const buildPath = response.recommendations.map((r) => r.name);
+
+        pushGamePlan(response.answer, buildPath, gameTime);
+
+        // Relay to overlay
+        window.electronAPI?.sendCoachingResponse({
+          ...response,
+          source: "plan",
+        });
+      } catch (err) {
+        try {
+          sessionRef.current.removeLastUserMessage();
+        } catch {
+          // Session may have been reset
+        }
+        throw err;
+      }
+    },
+    [apiKey]
+  );
+
+  const submitQuestion = useCallback(
+    async (question: string, options?: { signal?: AbortSignal }) => {
+      if (!sessionRef.current || !apiKey || !question.trim()) {
+        const reason = !sessionRef.current
+          ? "no session"
+          : !apiKey
+            ? "no API key"
+            : "empty question";
+        reactiveLog.warn(`Coaching skipped: ${reason}`);
+        return;
+      }
+
+      // Check for "update game plan" voice command
+      if (UPDATE_PLAN_PATTERN.test(question.trim())) {
+        proactiveLog.info("Voice command: update game plan");
+        const gameTime = liveGameStateRef.current.gameTime;
+        try {
+          await submitGamePlanQuery(gameTime);
+          // Also push as a voice coaching entry for the feed narrative
+          const plan = (
+            await import("../lib/reactive/coaching-feed")
+          ).gamePlan$.getValue();
+          if (plan) {
+            pushVoiceCoaching(
+              question,
+              plan.summary,
+              plan.buildPath.map((item) => ({
+                name: item,
+                reasoning: "",
+              })),
+              gameTime
+            );
+          }
+        } catch (err) {
+          if (err instanceof Error && err.name !== "AbortError") {
+            reactiveLog.error(`Update game plan failed: ${err}`);
+          }
+        }
+        return;
+      }
+
+      // Track augment selections from voice input ("I chose X")
+      const selectionPattern =
+        /i (?:chose|picked|took|selected|went with)\s+(.+)/i;
+      const selectionMatch = question.match(selectionPattern);
+      if (selectionMatch) {
+        const mentioned = gameDataRef.current.dictionary
+          .findInText(selectionMatch[1])
+          .filter((m) => m.type === "augment");
+        if (mentioned.length > 0) {
+          const newAugmentName = mentioned[0].name;
+          if (!chosenAugmentsRef.current.includes(newAugmentName)) {
+            const next = [...chosenAugmentsRef.current, newAugmentName];
+            chosenAugmentsRef.current = next;
+            setChosenAugments(next);
+            const augmentData = gameDataRef.current.augments.get(
+              newAugmentName.toLowerCase()
+            );
+            if (augmentData) {
+              manualInput$.next({ type: "augment", augment: augmentData });
+            }
+            reactiveLog.info(
+              `Augment selected: ${newAugmentName} (total: ${next.length})`
+            );
+          }
+        }
+      }
+
+      // Build state snapshot
+      const snapshot = takeGameSnapshot(
+        liveGameStateRef.current,
+        enemyStatsRef.current,
+        gameDataRef.current,
+        chosenAugmentsRef.current
+      );
+      const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
+
+      const augmentOptions = extractAugmentOptions(
+        question,
+        gameDataRef.current
+      );
+      let questionText = question;
+      if (augmentOptions && augmentOptions.length > 0) {
+        const augmentLines = augmentOptions.map(
+          (opt) => `- **${opt.name}** [${opt.tier}]: ${opt.description}`
+        );
+        questionText = `${question}\n\nAugment options:\n${augmentLines.join("\n")}`;
+      }
+
+      sessionRef.current.addUserMessage(stateText, questionText);
+
+      const isAugmentQuery = question.startsWith(
+        "I'm being offered these augments:"
+      );
+      const source = isAugmentQuery ? "augment" : "reactive";
+
+      if (source === "reactive") {
+        window.electronAPI?.sendCoachingRequest();
+      }
+
+      try {
+        const response = await getMultiTurnCoachingResponse(
+          sessionRef.current,
+          apiKey,
+          { signal: options?.signal }
+        );
+
+        sessionRef.current.addAssistantMessage(JSON.stringify(response));
+
+        // Push to coaching feed
+        const gameTime = liveGameStateRef.current.gameTime;
+        if (source === "reactive") {
+          pushVoiceCoaching(
+            question,
+            response.answer,
+            response.recommendations.map((r) => ({
+              name: r.name,
+              reasoning: r.reasoning,
+            })),
+            gameTime
+          );
+        }
+
+        // Relay to overlay
+        window.electronAPI?.sendCoachingResponse({ ...response, source });
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          reactiveLog.debug(
+            "Coaching request cancelled — removing orphaned message"
+          );
+          try {
+            sessionRef.current.removeLastUserMessage();
+          } catch {
+            // Session may have been reset
+          }
+        } else {
+          try {
+            sessionRef.current.removeLastUserMessage();
+          } catch {
+            // Ignore if session was reset
+          }
+          const msg = err instanceof Error ? err.message : "Request failed";
+          reactiveLog.error(`Coaching error: ${msg}`);
+        }
+      }
+    },
+    [apiKey, submitGamePlanQuery]
+  );
+
+  // Subscribe to voice intent
+  useEffect(() => {
+    const sub = playerIntent$.subscribe((event) => {
+      if (event.type === "query" && event.text.trim()) {
+        submitQuestion(event.text);
+      }
+    });
+    return () => sub.unsubscribe();
+  }, [submitQuestion]);
+
+  // GEP augment coaching controller — pushes offers into feed
+  useEffect(() => {
+    const ctrl = createAugmentCoachingController(
+      augmentOffer$,
+      augmentPicked$,
+      {
+        submitQuery: async (names, signal) => {
+          const gameTime = liveGameStateRef.current.gameTime;
+
+          // Push augment offer to feed immediately (before coaching response)
+          const entry = pushAugmentOffer(
+            names.map((name, i) => ({
+              name,
+              rank: i + 1,
+              reasoning: "",
+            })),
+            gameTime
+          );
+
+          const question = `I'm being offered these augments: ${names.join(", ")}. Which should I pick and which should I re-roll?`;
+          proactiveLog.info(
+            `Auto-querying coaching for augment offer: ${names.join(", ")}`
+          );
+          await submitQuestion(question, { signal });
+
+          // After coaching response, the augment offer in the feed will have
+          // generic reasoning. The overlay handles the detailed display.
+          // TODO: update the feed entry with coaching response rankings
+          void entry;
+        },
+        onPicked: (name) => {
+          if (chosenAugmentsRef.current.includes(name)) return;
+          const next = [...chosenAugmentsRef.current, name];
+          chosenAugmentsRef.current = next;
+          setChosenAugments(next);
+          const augmentData = gameDataRef.current.augments.get(
+            name.toLowerCase()
+          );
+          if (augmentData) {
+            manualInput$.next({ type: "augment", augment: augmentData });
+          }
+          proactiveLog.info(`Augment added to build: ${name}`);
+        },
+      }
+    );
+
+    return () => ctrl.dispose();
+  }, [submitQuestion]);
+
+  useEffect(() => {
+    if (!apiKey) {
+      reactiveLog.warn(
+        "No API key configured. Set VITE_OPENROUTER_API_KEY or VITE_OPENAI_API_KEY in .env"
+      );
+    }
+  }, [apiKey]);
+
+  // Headless — no UI output
+  return null;
+}

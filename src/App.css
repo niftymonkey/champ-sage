@@ -1,14 +1,15 @@
 :root {
   font-family:
+    "DM Sans",
     system-ui,
     -apple-system,
     sans-serif;
   /* Base font size — zoomed via document.documentElement.style.fontSize in useZoom.
      Use Ctrl+=/- to adjust, persisted to localStorage across restarts. */
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
-  color: #e0e0e0;
-  background-color: #1a1a1a;
+  color: #e2e6ef;
+  background-color: #0a0c10;
 }
 
 html,
@@ -17,6 +18,52 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
+}
+
+/* ─── App layout ─── */
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.app-loading,
+.app-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: #565e74;
+  font-size: 0.9rem;
+}
+
+.app-error {
+  color: #f87171;
+}
+
+/* Subtle grid texture background */
+.app-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(42, 47, 62, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42, 47, 62, 0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-root > * {
+  position: relative;
+  z-index: 1;
 }
 
 .container {
