@@ -81,6 +81,11 @@ function createSnapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
 }
 
 describe("formatStateSnapshot", () => {
+  it("includes game time", () => {
+    const output = formatStateSnapshot(createSnapshot());
+    expect(output).toContain("Game Time: 10:00");
+  });
+
   it("includes player champion name and level", () => {
     const output = formatStateSnapshot(createSnapshot());
     expect(output).toContain("Player Champion: Ahri (Level 10)");
@@ -143,10 +148,10 @@ describe("formatStateSnapshot", () => {
     const output = formatStateSnapshot(createSnapshot());
     expect(output).toContain("Enemy Team:");
     expect(output).toContain(
-      "- Zed (Level 11, 8/1/3): 180 AD, 0 AP, 75 Armor, 42 MR, 380 MS, 2000 HP — Duskblade of Draktharr, Edge of Night"
+      "- Zed (Level 11, 8/1/3): 180 AD, 0 AP, 75 Armor, 42 MR, 1.10 AS, 380 MS, 2000 HP — Duskblade of Draktharr, Edge of Night"
     );
     expect(output).toContain(
-      "- Sona (Level 8, 1/5/12): 55 AD, 120 AP, 35 Armor, 38 MR, 340 MS, 1400 HP — Ardent Censer"
+      "- Sona (Level 8, 1/5/12): 55 AD, 120 AP, 35 Armor, 38 MR, 0.70 AS, 340 MS, 1400 HP — Ardent Censer"
     );
   });
 

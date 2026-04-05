@@ -7,6 +7,7 @@
 
 import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
+import type { Augment } from "../data-ingest/types";
 import type { GameMode, ModeContext, PlayerModeContext } from "./types";
 import { GAME_MODE_ARAM } from "./types";
 import { filterItemsByMode, buildTeamComposition } from "./utils";
@@ -56,7 +57,7 @@ export const aramMode: GameMode = {
       mode: aramMode,
       playerContexts,
       modeItems: filterItemsByMode(gameData.items, "aram"),
-      modeAugments: new Map(), // No augments in straight ARAM
+      modeAugments: new Map<string, Augment>(),
       augmentSets: [], // No sets in straight ARAM
       allyTeamComp: buildTeamComposition(allyPlayers),
       enemyTeamComp: buildTeamComposition(enemyPlayers),

@@ -106,6 +106,11 @@ export function takeGameSnapshot(
 export function formatStateSnapshot(snapshot: GameSnapshot): string {
   const sections: string[] = [];
 
+  sections.push(
+    `Game Time: ${Math.floor(snapshot.gameTime / 60)}:${String(Math.floor(snapshot.gameTime) % 60).padStart(2, "0")}`
+  );
+  sections.push("");
+
   // Player champion
   const p = snapshot.player;
   const kda = `${p.kda.kills}/${p.kda.deaths}/${p.kda.assists}`;
@@ -173,6 +178,7 @@ function formatEnemyLine(enemy: EnemySnapshot): string {
       `${enemy.stats.abilityPower} AP`,
       `${enemy.stats.armor} Armor`,
       `${enemy.stats.magicResist} MR`,
+      `${enemy.stats.attackSpeed.toFixed(2)} AS`,
       `${enemy.stats.moveSpeed} MS`,
       `${enemy.stats.maxHealth} HP`,
     ].join(", ");

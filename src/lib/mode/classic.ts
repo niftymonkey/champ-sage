@@ -6,6 +6,7 @@
 
 import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
+import type { Augment } from "../data-ingest/types";
 import type { GameMode, ModeContext, PlayerModeContext } from "./types";
 import { GAME_MODE_CLASSIC } from "./types";
 import { filterItemsByMode, buildTeamComposition } from "./utils";
@@ -55,7 +56,7 @@ export const classicMode: GameMode = {
       mode: classicMode,
       playerContexts,
       modeItems: filterItemsByMode(gameData.items, "standard"),
-      modeAugments: new Map(),
+      modeAugments: new Map<string, Augment>(),
       augmentSets: [],
       allyTeamComp: buildTeamComposition(allyPlayers),
       enemyTeamComp: buildTeamComposition(enemyPlayers),
