@@ -10,6 +10,30 @@ export type {
   AppNotification,
 } from "./types";
 
+export type {
+  FeedEntry,
+  GamePlanEntry,
+  AugmentOfferEntry,
+  AugmentOption,
+  VoiceCoachingEntry,
+  VoiceRecommendation,
+  AnyFeedEntry,
+  GamePlan,
+  LastGameSnapshot,
+} from "./coaching-feed-types";
+
+export {
+  coachingFeed$,
+  gamePlan$,
+  lastGameSnapshot$,
+  pushGamePlan,
+  pushAugmentOffer,
+  markAugmentPicked,
+  pushVoiceCoaching,
+  captureLastGameSnapshot,
+  resetForNewGame,
+} from "./coaching-feed";
+
 export {
   gameLifecycle$,
   liveGameState$,
