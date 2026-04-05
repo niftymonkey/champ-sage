@@ -213,6 +213,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
       sessionRef.current.addUserMessage(stateText, planQuestion);
 
+      proactiveLog.info(`Game plan query: "${planQuestion}"`);
+
       try {
         const response = await getMultiTurnCoachingResponse(
           sessionRef.current,
@@ -223,6 +225,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
         // Extract build path from recommendations or use item names
         const buildPath = response.recommendations.map((r) => r.name);
+
+        proactiveLog.info(
+          `Game plan response: ${response.answer.substring(0, 200)}...`
+        );
+        proactiveLog.info(`Game plan build path: ${buildPath.join(" → ")}`);
 
         pushGamePlan(response.answer, buildPath, gameTime);
 

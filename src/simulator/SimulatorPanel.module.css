@@ -1,0 +1,131 @@
+.panel {
+  background: #1a1a2e;
+  border-left: 1px solid #333;
+  padding: 12px;
+  overflow-y: auto;
+  font-size: 13px;
+  color: #ccc;
+  width: 320px;
+  flex-shrink: 0;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+
+.btn {
+  background: #2d2d4a;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: #3d3d5a;
+  border-color: #666;
+}
+
+.btnPrimary {
+  composes: btn;
+  background: #1a5c3a;
+  border-color: #2a7c4a;
+}
+
+.btnPrimary:hover {
+  background: #2a7c4a;
+}
+
+.btnDanger {
+  composes: btn;
+  background: #5c1a1a;
+  border-color: #7c2a2a;
+}
+
+.btnDanger:hover {
+  background: #7c2a2a;
+}
+
+.input {
+  background: #222;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  width: 100%;
+}
+
+.select {
+  composes: input;
+  cursor: pointer;
+}
+
+.inputSmall {
+  composes: input;
+  width: 70px;
+}
+
+.label {
+  font-size: 11px;
+  color: #999;
+  min-width: 50px;
+}
+
+.presetGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.presetBtn {
+  composes: btn;
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.status {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.statusActive {
+  color: #22c55e;
+}
+
+.augmentRow {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.augmentInput {
+  composes: input;
+  flex: 1;
+}
+
+.augmentPickBtn {
+  composes: btn;
+  font-size: 11px;
+  padding: 2px 6px;
+}

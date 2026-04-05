@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { CoachingProvider } from "./hooks/useCoachingContext";
 import { useGameData } from "./hooks/useGameData";
 import { useGameLifecycle } from "./hooks/useGameLifecycle";
@@ -20,7 +20,7 @@ import { StatusBar } from "./components/StatusBar";
 import { InGameView } from "./components/InGameView";
 import { LastGameCard } from "./components/coaching";
 import { CoachingPipeline } from "./components/CoachingPipeline";
-import { DataBrowser } from "./components/DataBrowser";
+import { SimulatorPanel } from "./simulator/SimulatorPanel";
 import {
   createModeRegistry,
   aramMayhemMode,
@@ -80,7 +80,7 @@ function App() {
   const { data, loading, error } = useGameData();
   const lifecycle = useGameLifecycle();
   const liveGame = useLiveGameState();
-  const { submit } = useUserInput();
+  useUserInput();
   useZoom();
 
   const whisperProvider = useMemo(() => {
@@ -148,28 +148,14 @@ function App() {
     return () => sub.unsubscribe();
   }, []);
 
-  const selectAugment = useCallback(
-    (augment: Augment) => {
-      submit({ type: "augment", augment });
-    },
-    [submit]
-  );
-
-  const removeLast = useCallback(() => {
-    setSelectedAugments((prev) => prev.slice(0, -1));
-  }, []);
-
-  const resetAugments = useCallback(() => {
-    setSelectedAugments([]);
-  }, []);
-
+  // Status is "connected" if either the LCU is connected OR the simulator
+  // has injected game state (activePlayer present without LCU).
   const gameState: GameState = {
-    status:
-      lifecycle.type === "connection" && !lifecycle.connected
+    status: liveGame.activePlayer
+      ? "connected"
+      : lifecycle.type === "connection" && !lifecycle.connected
         ? "disconnected"
-        : liveGame.activePlayer
-          ? "connected"
-          : "disconnected",
+        : "disconnected",
     activePlayer: liveGame.activePlayer,
     players: liveGame.players,
     gameMode: liveGame.gameMode,
@@ -207,13 +193,6 @@ function App() {
 
   const inGame = liveGame.activePlayer !== null;
 
-  const augmentSelection = {
-    selectedAugments,
-    select: selectAugment,
-    removeLast,
-    reset: resetAugments,
-  };
-
   if (loading && !data) {
     return (
       <main className="app-root">
@@ -244,13 +223,7 @@ function App() {
       >
         <CoachingPipeline gameData={data} />
         <div className="app-body">
-          {devMode ? (
-            <DataBrowser
-              data={data}
-              effectiveState={effectiveState}
-              augmentSelection={augmentSelection}
-            />
-          ) : inGame ? (
+          {inGame ? (
             <InGameView state={effectiveState} gameData={data} />
           ) : (
             <LastGameCard
@@ -260,6 +233,7 @@ function App() {
               augmentCount={data.augments.size}
             />
           )}
+          {devMode && <SimulatorPanel gameData={data} />}
         </div>
       </CoachingProvider>
     </main>
