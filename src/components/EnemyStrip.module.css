@@ -1,0 +1,120 @@
+.strip {
+  border-top: 1px solid #2a2f3e;
+  background: #12151c;
+  padding: 0.4rem 1rem;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #565e74;
+  margin-bottom: 0.3rem;
+}
+
+.grid {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.card {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  background: #181c26;
+  border: 1px solid #2a2f3e;
+  border-radius: 0.2rem;
+  transition: border-color 0.15s;
+}
+
+.card:hover {
+  border-color: #3d4560;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid #2a2f3e;
+}
+
+.champName {
+  font-weight: 600;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.level {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.65rem;
+  color: #565e74;
+  flex-shrink: 0;
+}
+
+.body {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.item {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.65rem;
+  color: #8890a4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  cursor: help;
+}
+
+.pills {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.15rem 0.2rem;
+}
+
+.pill {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.55rem;
+  color: #8890a4;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid #2a2f3e;
+  border-radius: 0.6rem;
+  padding: 0.08rem 0.4rem;
+  white-space: nowrap;
+  text-align: center;
+  transition: border-color 0.15s;
+}
+
+.pill:hover {
+  border-color: #3d4560;
+}
+
+@media (max-width: 600px) {
+  .grid {
+    flex-wrap: wrap;
+  }
+
+  .card {
+    flex: 1 1 calc(50% - 0.2rem);
+    min-width: calc(50% - 0.2rem);
+  }
+}
