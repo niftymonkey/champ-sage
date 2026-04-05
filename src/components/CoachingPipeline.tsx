@@ -280,7 +280,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
                 name: item,
                 reasoning: "",
               })),
-              gameTime
+              gameTime,
+              "plan"
             );
           }
         } catch (err) {
@@ -361,6 +362,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
         // Push to coaching feed (both reactive and augment queries)
         const gameTime = liveGameStateRef.current.gameTime;
+        const feedSource = isAugmentQuery ? "augment" : "voice";
         pushVoiceCoaching(
           question,
           response.answer,
@@ -368,7 +370,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
             name: r.name,
             reasoning: r.reasoning,
           })),
-          gameTime
+          gameTime,
+          feedSource
         );
 
         // Relay to overlay

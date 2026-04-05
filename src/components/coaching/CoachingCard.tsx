@@ -4,6 +4,8 @@ import type {
   AugmentOfferEntry,
   VoiceCoachingEntry,
 } from "../../lib/reactive/coaching-feed-types";
+import { useCoachingContext } from "../../hooks/useCoachingContext";
+import { AugmentCard } from "../AugmentCard";
 import styles from "./CoachingCard.module.css";
 
 interface CoachingCardProps {
@@ -38,8 +40,12 @@ function GamePlanCard({ entry }: { entry: GamePlanEntry }) {
 /* ─── Augment Offer Card ─── */
 
 function AugmentOfferCard({ entry }: { entry: AugmentOfferEntry }) {
+  const { gameData } = useCoachingContext();
+
   return (
-    <div className={`${styles.card} ${styles.proactive}`}>
+    <div
+      className={`${styles.card} ${styles.proactive} ${styles.augmentOfferCard}`}
+    >
       <CardHeader
         type="augment"
         label="Augment offer"
@@ -47,20 +53,26 @@ function AugmentOfferCard({ entry }: { entry: AugmentOfferEntry }) {
       />
       <div className={styles.body}>
         <div className={styles.augmentOffer}>
-          {entry.options.map((opt) => (
-            <div
-              key={opt.name}
-              className={`${styles.augmentOption} ${opt.rank === 1 ? styles.augmentPick : ""}`}
-            >
-              <span
-                className={`${styles.augmentRankBadge} ${rankBadgeClass(opt.rank)}`}
+          {entry.options.map((opt) => {
+            const augment = gameData?.augments.get(opt.name.toLowerCase());
+            return (
+              <div
+                key={opt.name}
+                className={`${styles.augmentOption} ${opt.rank === 1 ? styles.augmentPick : ""}`}
               >
-                {opt.rank}
-              </span>
-              <div className={styles.augmentName}>{opt.name}</div>
-              <div className={styles.augmentReason}>{opt.reasoning}</div>
-            </div>
-          ))}
+                <span
+                  className={`${styles.augmentRankBadge} ${rankBadgeClass(opt.rank)}`}
+                >
+                  {opt.rank}
+                </span>
+                {augment ? (
+                  <AugmentCard augment={augment} />
+                ) : (
+                  <div className={styles.augmentName}>{opt.name}</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -69,12 +81,21 @@ function AugmentOfferCard({ entry }: { entry: AugmentOfferEntry }) {
 
 /* ─── Voice Coaching Card ─── */
 
+const SOURCE_LABELS: Record<VoiceCoachingEntry["source"], string> = {
+  voice: "Voice query",
+  augment: "Augment coaching",
+  plan: "Game plan update",
+};
+
 function VoiceCoachingCard({ entry }: { entry: VoiceCoachingEntry }) {
+  const label = SOURCE_LABELS[entry.source] ?? "Coaching";
   return (
-    <div className={styles.card}>
+    <div
+      className={`${styles.card} ${entry.source !== "voice" ? styles.proactive : ""}`}
+    >
       <CardHeader
-        type="voice"
-        label="Voice query"
+        type={entry.source === "voice" ? "voice" : "augment"}
+        label={label}
         timestamp={entry.timestamp}
       />
       <div className={styles.body}>

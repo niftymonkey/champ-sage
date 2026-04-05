@@ -88,13 +88,15 @@ export function pushVoiceCoaching(
   question: string,
   answer: string,
   recommendations: VoiceCoachingEntry["recommendations"],
-  gameTime: number
+  gameTime: number,
+  source: VoiceCoachingEntry["source"] = "voice"
 ): VoiceCoachingEntry {
   const entry: VoiceCoachingEntry = {
     id: nextFeedId(),
     type: "voice-coaching",
     timestamp: gameTime,
-    proactive: false,
+    proactive: source !== "voice",
+    source,
     question,
     answer,
     recommendations,

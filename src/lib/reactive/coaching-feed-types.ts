@@ -39,6 +39,8 @@ export interface AugmentOption {
 /** Voice query and coaching response */
 export interface VoiceCoachingEntry extends FeedEntry {
   type: "voice-coaching";
+  /** Where this coaching request originated */
+  source: "voice" | "augment" | "plan";
   question: string;
   answer: string;
   recommendations: VoiceRecommendation[];

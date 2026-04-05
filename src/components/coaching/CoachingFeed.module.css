@@ -4,8 +4,14 @@
   padding: 1rem;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 0.7rem;
   min-width: 0;
+}
+
+.feed > * {
+  width: 90%;
+  max-width: 1100px;
 }
 
 .feed::-webkit-scrollbar {
