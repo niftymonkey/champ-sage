@@ -43,6 +43,9 @@ import { scoreBrevity, scoreDecisiveness } from "./scorers/response-format";
 import { scoreConversationalContinuity } from "./scorers/conversational-continuity";
 import { scoreGoldAwareness } from "./scorers/gold-awareness";
 import { scoreUnnecessaryWarnings } from "./scorers/unnecessary-warnings";
+import { scoreStateAwareness } from "./scorers/state-awareness";
+import { scorePivotExplanation } from "./scorers/pivot-explanation";
+import { scoreGoldAwareRecommendations } from "./scorers/gold-aware-recommendations";
 
 // --- Types ---
 
@@ -76,6 +79,17 @@ interface EvalInput {
   userPrompt: string;
   history: Array<{ question: string; answer: string }>;
   expectedReferences?: string[];
+  scorerHints?: ScorerHints;
+  enemyChampions: string[];
+}
+
+interface ScorerHints {
+  stateAwareness?: Array<
+    "grievous-wounds" | "mr-needed" | "enemy-comp" | "existing-items"
+  >;
+  pivotExpected?: boolean;
+  priorRecommendation?: string;
+  goldAware?: boolean;
 }
 
 interface EvalOutput {
@@ -123,6 +137,7 @@ function gameFixtureToInput(f: GameFixture): EvalInput {
     userPrompt,
     history: f.query.history ?? [],
     expectedReferences: f.expectedReferences,
+    enemyChampions: f.context.enemyTeam.map((e) => e.champion),
   };
 }
 
@@ -150,11 +165,12 @@ for (const input of validGameInputs) {
 // --- Model setup ---
 
 const openaiKey = process.env.VITE_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
-const openrouterKey = process.env.OPENROUTER_API_KEY;
+const openrouterKey =
+  process.env.VITE_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY;
 
 if (!openaiKey && !openrouterKey) {
   throw new Error(
-    "At least one API key required in .env: VITE_OPENAI_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY"
+    "At least one API key required in .env: VITE_OPENAI_API_KEY, OPENAI_API_KEY, VITE_OPENROUTER_API_KEY, or OPENROUTER_API_KEY"
   );
 }
 
@@ -175,7 +191,8 @@ interface ModelCandidate {
 // Models to evaluate across providers and tiers.
 // Comment/uncomment to control which models run.
 const models: ModelCandidate[] = [
-  { name: "GPT 5.4 mini", id: "gpt-5.4-mini", provider: "openai" },
+  { name: "GPT 5.4 mini", id: "openai/gpt-5.4-mini", provider: "openrouter" },
+  // { name: "GPT 5.4 mini", id: "gpt-5.4-mini", provider: "openai" },
   // { name: "GPT 5.4", id: "openai/gpt-5.4", provider: "openrouter" },
   // { name: "Gemini 2.5 Pro", id: "google/gemini-2.5-pro", provider: "openrouter" },
   // { name: "Claude Sonnet 4.6", id: "anthropic/claude-sonnet-4.6", provider: "openrouter" },
@@ -188,7 +205,7 @@ function getModel(candidate: ModelCandidate) {
   }
   if (!openrouter)
     throw new Error(`OpenRouter key required for ${candidate.name}`);
-  return openrouter(candidate.id);
+  return openrouter.chat(candidate.id);
 }
 
 // --- Scorers ---
@@ -272,13 +289,61 @@ const unnecessaryWarnings = createScorer<EvalInput, EvalOutput>({
   },
 });
 
-const GATE_SCORERS = [itemAwareness, structuredOutput, augmentRerollAccuracy];
+const stateAwareness = createScorer<EvalInput, EvalOutput>({
+  name: "State Awareness",
+  description:
+    "Checks that the model references relevant game state (enemy comp, items, resistances)",
+  scorer: ({ input, output }) => {
+    return scoreStateAwareness(
+      output.answer,
+      input.scorerHints?.stateAwareness,
+      input.items,
+      input.enemyChampions
+    );
+  },
+});
+
+const pivotExplanation = createScorer<EvalInput, EvalOutput>({
+  name: "Pivot Explanation",
+  description:
+    "Checks that recommendation changes from prior turns are explained",
+  scorer: ({ input, output }) => {
+    return scorePivotExplanation(
+      output.answer,
+      input.scorerHints?.pivotExpected,
+      input.scorerHints?.priorRecommendation,
+      input.history
+    );
+  },
+});
+
+const goldAwareRecommendations = createScorer<EvalInput, EvalOutput>({
+  name: "Gold-Aware Recommendations",
+  description:
+    "Checks that item recommendations follow the destination + component format",
+  scorer: ({ input, output }) => {
+    return scoreGoldAwareRecommendations(
+      output.answer,
+      input.gold,
+      input.question
+    );
+  },
+});
+
+const GATE_SCORERS = [
+  itemAwareness,
+  structuredOutput,
+  augmentRerollAccuracy,
+  stateAwareness,
+  goldAwareRecommendations,
+];
 const RANKING_SCORERS = [
   brevity,
   decisiveness,
   conversationalContinuity,
   goldAwareness,
   unnecessaryWarnings,
+  pivotExplanation,
 ];
 const ALL_SCORERS = [...GATE_SCORERS, ...RANKING_SCORERS];
 
@@ -353,6 +418,7 @@ interface MultiTurnFixture {
   } | null;
   error: string | null;
   expectedReferences?: string[];
+  scorerHints?: ScorerHints;
   scorerContext: {
     items: string[];
     gold: number;
@@ -469,6 +535,8 @@ if (existsSync(multiTurnFixturesDir)) {
       userPrompt: "", // not used in multi-turn — messages carry the content
       history: f.query.history ?? [],
       expectedReferences: f.expectedReferences,
+      scorerHints: f.scorerHints,
+      enemyChampions: enemyPlayers.map((p) => p.championName),
       messages: [...session.messages],
     };
   }

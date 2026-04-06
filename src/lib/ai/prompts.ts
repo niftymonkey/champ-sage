@@ -6,6 +6,9 @@ import type { GameState } from "../game-state/types";
 import { formatGameTime, formatModifier } from "../format";
 import { GAME_MODE_MAYHEM, GAME_MODE_ARAM } from "../mode/types";
 
+const ITEM_RECOMMENDATIONS_RULE =
+  "ITEM RECOMMENDATIONS: Always name the destination (completed) item AND a buildable component. If the player can afford a component: 'Build toward Rabadon's Deathcap. You can get a Needlessly Large Rod now.' If not: 'Build toward Rabadon's Deathcap. You can get a Needlessly Large Rod at 1250g.' Name the most expensive component the player can currently afford. If no component is affordable, name the cheapest and its gold threshold. Never recommend unrelated filler items just to spend gold.";
+
 export function buildSystemPrompt(context: {
   gameMode: string;
   lcuGameMode: string;
@@ -16,7 +19,7 @@ export function buildSystemPrompt(context: {
     "",
     "ITEM AWARENESS: Do not recommend purchasing items already listed in the player's inventory.",
     "GOLD AWARENESS: The gold amount shown is the player's exact current gold. Use it to determine what they can afford. Do not hedge with 'if you can buy' when the gold amount is visible.",
-    "ITEM RECOMMENDATIONS: Always name the full target item you're building toward AND the immediate component to buy. Example: 'Build toward Rabadon's Deathcap — buy Needlessly Large Rod next (1250g).' Players think in terms of completed items, not components.",
+    ITEM_RECOMMENDATIONS_RULE,
     "",
     "RESPONSE RULES:",
     "- Be extremely concise. Sacrifice grammar for concision.",
@@ -264,9 +267,7 @@ export function buildGameSystemPrompt(
   sections.push(
     "GOLD AWARENESS: The gold amount shown is the player's exact current gold. Use it to determine what they can afford. Do not hedge with 'if you can buy' when the gold amount is visible."
   );
-  sections.push(
-    "ITEM RECOMMENDATIONS: Always name the full target item you're building toward AND the immediate component to buy. Example: 'Build toward Rabadon's Deathcap — buy Needlessly Large Rod next (1250g).' Players think in terms of completed items, not components."
-  );
+  sections.push(ITEM_RECOMMENDATIONS_RULE);
   sections.push("");
   sections.push("RESPONSE RULES:");
   sections.push("- Be extremely concise. Sacrifice grammar for concision.");

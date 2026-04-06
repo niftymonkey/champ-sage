@@ -108,6 +108,23 @@ describe("buildSystemPrompt", () => {
     expect(prompt).not.toContain("re-roll");
   });
 
+  it("includes gold-aware item recommendation format", () => {
+    const prompt = buildSystemPrompt({
+      gameMode: "CLASSIC",
+      lcuGameMode: "CLASSIC",
+    });
+    expect(prompt).toContain(
+      "Build toward Rabadon's Deathcap. You can get a Needlessly Large Rod now"
+    );
+    expect(prompt).toContain(
+      "Build toward Rabadon's Deathcap. You can get a Needlessly Large Rod at 1250g"
+    );
+    expect(prompt).toContain(
+      "most expensive component the player can currently afford"
+    );
+    expect(prompt).not.toContain("buy Needlessly Large Rod next (1250g)");
+  });
+
   it("excludes augment rules for non-ARAM modes", () => {
     const prompt = buildSystemPrompt({
       gameMode: "CLASSIC",
@@ -593,6 +610,24 @@ describe("buildGameSystemPrompt", () => {
     expect(prompt).toContain("ITEM AWARENESS");
     expect(prompt).toContain("GOLD AWARENESS");
     expect(prompt).toContain("RESPONSE RULES");
+  });
+
+  it("includes gold-aware item recommendation format", () => {
+    const prompt = buildGameSystemPrompt(
+      createStubMode(),
+      createStubGameData(),
+      createGameState()
+    );
+    expect(prompt).toContain(
+      "Build toward Rabadon's Deathcap. You can get a Needlessly Large Rod now"
+    );
+    expect(prompt).toContain(
+      "Build toward Rabadon's Deathcap. You can get a Needlessly Large Rod at 1250g"
+    );
+    expect(prompt).toContain(
+      "most expensive component the player can currently afford"
+    );
+    expect(prompt).not.toContain("buy Needlessly Large Rod next (1250g)");
   });
 
   it("includes state snapshot format instructions", () => {
