@@ -21,7 +21,6 @@
     "inspect-evals": "tsx scripts/inspect-evals.ts",
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
     "prepare": "husky",
-    "preview-prompts": "tsx scripts/preview-prompts.ts",
     "preview": "vite preview",
     "start:electron": "ow-electron .",
     "test": "vitest run",

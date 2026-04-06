@@ -7,6 +7,6 @@ export type {
 } from "./types";
 export { MODEL_CONFIG, createCoachingModel } from "./model-config";
 export { coachingResponseSchema } from "./schemas";
-export { buildSystemPrompt, buildUserPrompt } from "./prompts";
+export { buildGameSystemPrompt } from "./prompts";
 export { assembleContext } from "./context-assembler";
-export { getCoachingResponse } from "./recommendation-engine";
+export { getMultiTurnCoachingResponse } from "./recommendation-engine";
