@@ -114,6 +114,17 @@ describe("scorePivotExplanation", () => {
     ).toBe(0.5);
   });
 
+  it("returns 0.5 when pivot expected but response reaffirms prior item with causal language", () => {
+    expect(
+      scorePivotExplanation(
+        "Keep Thornmail because it gives you armor and anti-heal.",
+        true,
+        "Thornmail",
+        emptyHistory
+      )
+    ).toBe(0.5);
+  });
+
   it("returns 1 with explanation using 'instead' for pivot", () => {
     expect(
       scorePivotExplanation(

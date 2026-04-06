@@ -557,6 +557,14 @@ The AI module (`src/lib/ai/`) uses Vercel AI SDK v6 with OpenAI's GPT-5.4 Mini f
 
 GPT-5.4 Mini was selected via PickAI discovery (see `scripts/discover-candidates.ts`). Selected for cost/speed balance suitable for real-time coaching during gameplay.
 
+### Eval pipeline — OpenRouter support
+
+The eval pipeline (`src/lib/ai/coaching.eval.ts`) supports both OpenAI direct and OpenRouter as providers. Key details:
+
+- **Env vars:** `VITE_OPENAI_API_KEY` / `OPENAI_API_KEY` for OpenAI direct, `VITE_OPENROUTER_API_KEY` / `OPENROUTER_API_KEY` for OpenRouter. At least one must be set.
+- **API compatibility:** AI SDK 5 (`@ai-sdk/openai` v3+) defaults to the OpenAI Responses API, which OpenRouter doesn't support. Use `.chat()` (e.g., `openrouter.chat(modelId)`) to force the Chat Completions API when routing through OpenRouter.
+- **Model IDs:** OpenRouter requires the `provider/model` format (e.g., `openai/gpt-5.4-mini`), while OpenAI direct uses just the model name (e.g., `gpt-5.4-mini`).
+
 ### Eval scorer patterns
 
 - **Gate scorers** return 0 or 1 (pass/fail). Used for non-negotiable requirements (item awareness, structured output, augment re-roll mechanics, state awareness, gold-aware format).

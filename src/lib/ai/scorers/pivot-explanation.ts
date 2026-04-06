@@ -6,8 +6,8 @@
  * conversations reduce the "whiplash" problem.
  */
 
-// Causal language patterns that indicate the LLM is explaining a change
-const CAUSAL_PATTERNS = [
+// Patterns that indicate the LLM is explaining a change in recommendation
+const EXPLANATION_PATTERNS = [
   "because",
   "since ",
   "now that",
@@ -24,6 +24,20 @@ const CAUSAL_PATTERNS = [
   "synergy",
   "given that",
   "due to",
+];
+
+// Subset of explanation patterns that indicate the prior item is being
+// dismissed rather than reaffirmed. "Keep Thornmail because it's great"
+// should NOT count as a dismissal, but "Thornmail is no longer useful"
+// should.
+const DISMISSAL_PATTERNS = [
+  "instead",
+  "switched",
+  "pivot",
+  "no longer",
+  "doesn't make sense",
+  "less valuable",
+  "rather than",
 ];
 
 /**
@@ -50,10 +64,11 @@ export function scorePivotExplanation(
   const priorLower = priorRecommendation.toLowerCase();
 
   // Check if the response still recommends the same item.
-  // Mentioning the prior item in a dismissive context ("less valuable",
-  // "no longer", "instead of") doesn't count as still recommending it.
+  // Mentioning the prior item alongside dismissal language ("no longer",
+  // "instead", "less valuable") counts as pivoting away, not reaffirming.
+  // But "keep Thornmail because..." is reaffirming despite causal language.
   const mentionsPrior = lower.includes(priorLower);
-  const dismissesIt = CAUSAL_PATTERNS.some((p) => lower.includes(p));
+  const dismissesIt = DISMISSAL_PATTERNS.some((p) => lower.includes(p));
   const stillRecommendsSame = mentionsPrior && !dismissesIt;
 
   if (pivotExpected && stillRecommendsSame) {
@@ -66,8 +81,9 @@ export function scorePivotExplanation(
     return 1;
   }
 
-  // Pivot detected (pivotExpected=true and response doesn't mention prior item)
+  // Pivot detected (pivotExpected=true and response doesn't mention prior item,
+  // or mentions it in a dismissive context)
   // Check for causal explanation
-  const hasExplanation = CAUSAL_PATTERNS.some((p) => lower.includes(p));
+  const hasExplanation = EXPLANATION_PATTERNS.some((p) => lower.includes(p));
   return hasExplanation ? 1 : 0;
 }

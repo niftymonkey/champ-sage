@@ -1114,7 +1114,7 @@
         },
         {
           "question": "What about Thornmail?",
-          "answer": "Yes, build Thornmail. They have lots of healing with Soraka."
+          "answer": "Yes, build Thornmail. They have lots of healing with Viego's passive."
         },
         {
           "question": "Scopier Weapons, Goredrink, or Blunt Force?",
@@ -1134,7 +1134,7 @@
       "items": ["Mercury's Treads", "Titanic Hydra", "Sunfire Aegis"],
       "gold": 800,
       "champion": "Warwick",
-      "gameTime": "14:00"
+      "gameTime": "12:00"
     }
   },
   {
@@ -1385,7 +1385,7 @@
     "expectedReferences": ["Overflow", "healing", "sustain"],
     "scorerContext": {
       "items": ["Mercury's Treads", "Titanic Hydra", "Sunfire Aegis"],
-      "gold": 1200,
+      "gold": 800,
       "champion": "Warwick",
       "gameTime": "12:00"
     }
@@ -1624,7 +1624,7 @@
         },
         {
           "question": "What item should I build next?",
-          "answer": "Build Thornmail. They have Soraka and Aatrox \u2014 you need anti-heal."
+          "answer": "Build Thornmail. Viego has strong sustain \u2014 you need anti-heal."
         },
         {
           "question": "Recursion, Overflow, or Bread and Cheese?",
@@ -1654,9 +1654,9 @@
     "expectedReferences": ["tank", "Thornmail", "Outlaw"],
     "scorerContext": {
       "items": ["Mercury's Treads", "Titanic Hydra", "Sunfire Aegis"],
-      "gold": 900,
+      "gold": 800,
       "champion": "Warwick",
-      "gameTime": "13:00"
+      "gameTime": "12:00"
     }
   }
 ]
