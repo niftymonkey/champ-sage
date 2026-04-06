@@ -548,7 +548,7 @@ The AI module (`src/lib/ai/`) uses Vercel AI SDK v6 with OpenAI's GPT-5.4 Mini f
 ### Key design decisions
 
 - **Context assembly is a pure function** — `assembleContext()` transforms `LiveGameState` + `LoadedGameData` into a flat `CoachingContext` suitable for LLM consumption. No side effects, fully testable.
-- **Prompt construction is pure** — `buildSystemPrompt()` and `buildUserPrompt()` are deterministic given inputs. Tested via string containment assertions.
+- **Prompt construction is pure** — `buildGameSystemPrompt()` is deterministic given inputs. Tested via string containment assertions. Single-turn `buildSystemPrompt`/`buildUserPrompt` were removed — the app exclusively uses multi-turn sessions.
 - **The recommendation engine is NOT unit tested** — it calls a real LLM. Only the pure functions around it are tested.
 - **Balance overrides are formatted as human-readable text** for the LLM (e.g., "Damage taken: -5%"), not raw multipliers (0.95).
 - **API key is via Vite env var** — `VITE_OPENAI_API_KEY` in `.env`, following the existing pattern for client-side env vars in Tauri apps.

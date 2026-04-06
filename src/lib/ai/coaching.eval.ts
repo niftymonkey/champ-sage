@@ -1,9 +1,9 @@
 /**
  * Coaching evaluation pipeline.
  *
- * Replays real coaching prompts from game sessions against model candidates
- * and scores the responses using the same buildSystemPrompt/buildUserPrompt
- * functions the app uses in production.
+ * Replays coaching sessions from multi-turn fixtures against model candidates
+ * and scores the responses using the same buildGameSystemPrompt function
+ * the app uses in production.
  *
  * Usage:
  *   npx evalite src/lib/ai/coaching.eval.ts
@@ -21,19 +21,14 @@ import { evalite } from "evalite";
 import { createScorer } from "evalite";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output, type ModelMessage } from "ai";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { coachingResponseSchema } from "./schemas";
-import {
-  buildSystemPrompt,
-  buildUserPrompt,
-  buildGameSystemPrompt,
-} from "./prompts";
+import { buildGameSystemPrompt } from "./prompts";
 import { formatStateSnapshot, takeGameSnapshot } from "./state-formatter";
 import { createConversationSession } from "./conversation-session";
 import { computeEnemyStats } from "./enemy-stats";
 import { aramMayhemMode, aramMode, classicMode } from "../mode";
 import type { GameMode } from "../mode/types";
-import type { CoachingContext, CoachingQuery } from "./types";
 import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
 import type { LiveGameState } from "../reactive/types";
@@ -48,24 +43,6 @@ import { scorePivotExplanation } from "./scorers/pivot-explanation";
 import { scoreGoldAwareRecommendations } from "./scorers/gold-aware-recommendations";
 
 // --- Types ---
-
-interface GameFixture {
-  label: string;
-  index: number;
-  timestamp: string;
-  model: string;
-  context: CoachingContext;
-  query: CoachingQuery;
-  response: {
-    answer: string;
-    latencyMs: number;
-    tokensIn: number;
-    tokensOut: number;
-  } | null;
-  error: string | null;
-  expectedReferences?: string[];
-  category?: "common" | "mayhem" | "sr" | "arena";
-}
 
 interface EvalInput {
   label: string;
@@ -97,70 +74,12 @@ interface EvalOutput {
   recommendations: Array<{ name: string; reasoning: string }>;
 }
 
-// --- Load fixtures ---
-
-// Load all game fixture files (coaching-*.json) and the continuity tests
-import { readdirSync } from "fs";
-
-const fixturesDir = resolve("fixtures/coaching-sessions");
-const gameFixtureFiles = readdirSync(fixturesDir).filter((f) =>
-  f.endsWith(".json")
-);
-
-const gameFixtures: GameFixture[] = gameFixtureFiles.flatMap((file) =>
-  JSON.parse(readFileSync(resolve(fixturesDir, file), "utf-8"))
-);
-
-// Build eval inputs from game fixtures using real app functions
-function gameFixtureToInput(f: GameFixture): EvalInput {
-  const hasAugmentOptions =
-    f.query.augmentOptions != null && f.query.augmentOptions.length > 0;
-  const systemPrompt = buildSystemPrompt({
-    gameMode: f.context.gameMode,
-    lcuGameMode: f.context.lcuGameMode,
-    hasAugmentOptions,
-  });
-  const userPrompt = buildUserPrompt(f.context, f.query);
-
-  const mins = Math.floor(f.context.gameTime / 60);
-  const secs = f.context.gameTime % 60;
-
-  return {
-    label: f.label,
-    category: f.category ?? "common",
-    question: f.query.question,
-    champion: f.context.champion.name,
-    gameTime: `${mins}:${String(secs).padStart(2, "0")}`,
-    items: f.context.currentItems.map((i) => i.name),
-    gold: f.context.currentGold,
-    systemPrompt,
-    userPrompt,
-    history: f.query.history ?? [],
-    expectedReferences: f.expectedReferences,
-    enemyChampions: f.context.enemyTeam.map((e) => e.champion),
-  };
-}
-
-// Filter out errors and noise, but keep synthetic fixtures (response === null is OK)
-const validGameInputs = gameFixtures
-  .filter((f) => f.error === null && f.query.question.length > 5)
-  .map(gameFixtureToInput);
-
-// Categorize using the fixture's category field
 const CATEGORY_LABELS: Record<string, string> = {
   common: "Common",
   mayhem: "Mayhem",
   sr: "SR",
   arena: "Arena",
 };
-
-const inputsByCategory = new Map<string, EvalInput[]>();
-for (const input of validGameInputs) {
-  const category = CATEGORY_LABELS[input.category] ?? "Common";
-  const list = inputsByCategory.get(category) ?? [];
-  list.push(input);
-  inputsByCategory.set(category, list);
-}
 
 // --- Model setup ---
 
@@ -347,49 +266,7 @@ const RANKING_SCORERS = [
 ];
 const ALL_SCORERS = [...GATE_SCORERS, ...RANKING_SCORERS];
 
-// --- Register single-turn evals ---
-
-for (const model of models) {
-  for (const [category, inputs] of inputsByCategory) {
-    if (inputs.length === 0) continue;
-
-    evalite(`${model.name} / ${category}`, {
-      data: () => inputs.map((input) => ({ input })),
-
-      task: async (input: EvalInput): Promise<EvalOutput> => {
-        const result = await generateText({
-          model: getModel(model),
-          system: input.systemPrompt,
-          prompt: input.userPrompt,
-          output: Output.object({ schema: coachingResponseSchema }),
-          maxOutputTokens: 4096,
-        });
-
-        return result.output;
-      },
-
-      scorers: ALL_SCORERS,
-
-      columns: (result) => [
-        { label: "Category", value: category },
-        {
-          label: "Champion",
-          value: `${result.input.champion} @${result.input.gameTime}`,
-        },
-        {
-          label: "Question",
-          value: result.input.question.substring(0, 45),
-        },
-        {
-          label: "Context",
-          value: `${result.input.items.length} items, ${result.input.gold}g`,
-        },
-      ],
-    });
-  }
-}
-
-// --- Multi-turn eval types and registration ---
+// --- Multi-turn fixture types ---
 
 interface MultiTurnFixture {
   label: string;
@@ -437,162 +314,152 @@ const MODE_MAP: Record<string, GameMode> = {
   classic: classicMode,
 };
 
-const multiTurnFixturesDir = resolve("fixtures/coaching-sessions-v2");
+// --- Load fixtures and register evals ---
 
-if (existsSync(multiTurnFixturesDir)) {
-  const { loadGameData } = await import("../data-ingest");
-  const gameData = await loadGameData();
+const fixturesDir = resolve("fixtures/coaching-sessions-v2");
+const { loadGameData } = await import("../data-ingest");
+const gameData = await loadGameData();
 
-  const mtFixtureFiles = readdirSync(multiTurnFixturesDir).filter((f) =>
-    f.endsWith(".json")
-  );
-  const mtFixtures: MultiTurnFixture[] = mtFixtureFiles.flatMap((file) =>
-    JSON.parse(readFileSync(resolve(multiTurnFixturesDir, file), "utf-8"))
-  );
+const fixtureFiles = readdirSync(fixturesDir).filter((f) =>
+  f.endsWith(".json")
+);
+const fixtures: MultiTurnFixture[] = fixtureFiles.flatMap((file) =>
+  JSON.parse(readFileSync(resolve(fixturesDir, file), "utf-8"))
+);
 
-  const validMtFixtures = mtFixtures.filter(
-    (f) => f.error === null && f.query.question.length > 5
-  );
+const validFixtures = fixtures.filter(
+  (f) => f.error === null && f.query.question.length > 5
+);
 
-  function buildMultiTurnInput(
-    f: MultiTurnFixture,
-    gameData: LoadedGameData
-  ): MultiTurnEvalInput {
-    const mode = MODE_MAP[f.gameModeId];
-    if (!mode) {
-      throw new Error(`Unknown gameModeId: ${f.gameModeId}`);
-    }
+function buildEvalInput(
+  f: MultiTurnFixture,
+  gameData: LoadedGameData
+): MultiTurnEvalInput {
+  const mode = MODE_MAP[f.gameModeId];
+  if (!mode) {
+    throw new Error(`Unknown gameModeId: ${f.gameModeId}`);
+  }
 
-    // Build the system prompt using real function
-    const systemPrompt = buildGameSystemPrompt(mode, gameData, f.gameState);
+  // Build the system prompt using real function
+  const systemPrompt = buildGameSystemPrompt(mode, gameData, f.gameState);
 
-    // Compute enemy stats for each enemy player
-    const activePlayerInfo = f.gameState.players.find((p) => p.isActivePlayer);
-    const activeTeam = activePlayerInfo?.team ?? "ORDER";
-    const enemyPlayers = f.gameState.players.filter(
-      (p) => p.team !== activeTeam
-    );
+  // Compute enemy stats for each enemy player
+  const activePlayerInfo = f.gameState.players.find((p) => p.isActivePlayer);
+  const activeTeam = activePlayerInfo?.team ?? "ORDER";
+  const enemyPlayers = f.gameState.players.filter((p) => p.team !== activeTeam);
 
-    const enemyStats = new Map<string, ReturnType<typeof computeEnemyStats>>();
-    for (const enemy of enemyPlayers) {
-      const champData = gameData.champions.get(
-        enemy.championName.toLowerCase()
+  const enemyStats = new Map<string, ReturnType<typeof computeEnemyStats>>();
+  for (const enemy of enemyPlayers) {
+    const champData = gameData.champions.get(enemy.championName.toLowerCase());
+    if (champData) {
+      const enemyItems = enemy.items
+        .map((item) => gameData.items.get(item.id))
+        .filter((item): item is NonNullable<typeof item> => item != null);
+      enemyStats.set(
+        enemy.championName,
+        computeEnemyStats(champData.stats, enemy.level, enemyItems)
       );
-      if (champData) {
-        const enemyItems = enemy.items
-          .map((item) => gameData.items.get(item.id))
-          .filter((item): item is NonNullable<typeof item> => item != null);
-        enemyStats.set(
-          enemy.championName,
-          computeEnemyStats(champData.stats, enemy.level, enemyItems)
-        );
-      }
-    }
-
-    // Build LiveGameState from GameState
-    const liveGameState: LiveGameState = {
-      activePlayer: f.gameState.activePlayer,
-      players: f.gameState.players,
-      gameMode: f.gameState.gameMode,
-      lcuGameMode:
-        f.gameModeId === "aram-mayhem" ? "KIWI" : f.gameState.gameMode,
-      gameTime: f.gameState.gameTime,
-      champSelect: null,
-      eogStats: null,
-    };
-
-    // Build snapshot and format it
-    const snapshot = takeGameSnapshot(
-      liveGameState,
-      enemyStats,
-      gameData,
-      f.chosenAugments
-    );
-    const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
-
-    // Build conversation session with history
-    const session = createConversationSession(systemPrompt);
-
-    if (f.query.history) {
-      for (const exchange of f.query.history) {
-        session.addUserMessage(stateText, exchange.question);
-        session.addAssistantMessage(exchange.answer);
-      }
-    }
-
-    // Add current question
-    session.addUserMessage(stateText, f.query.question);
-
-    return {
-      label: f.label,
-      category: f.category,
-      question: f.query.question,
-      champion: f.scorerContext.champion,
-      gameTime: f.scorerContext.gameTime,
-      items: f.scorerContext.items,
-      gold: f.scorerContext.gold,
-      systemPrompt: session.systemPrompt,
-      userPrompt: "", // not used in multi-turn — messages carry the content
-      history: f.query.history ?? [],
-      expectedReferences: f.expectedReferences,
-      scorerHints: f.scorerHints,
-      enemyChampions: enemyPlayers.map((p) => p.championName),
-      messages: [...session.messages],
-    };
-  }
-
-  // Group multi-turn inputs by category
-  const mtInputsByCategory = new Map<string, MultiTurnEvalInput[]>();
-  for (const f of validMtFixtures) {
-    const input = buildMultiTurnInput(f, gameData);
-    const categoryLabel = CATEGORY_LABELS[input.category] ?? input.category;
-    const list = mtInputsByCategory.get(categoryLabel) ?? [];
-    list.push(input);
-    mtInputsByCategory.set(categoryLabel, list);
-  }
-
-  // Register multi-turn evals
-  for (const model of models) {
-    for (const [category, inputs] of mtInputsByCategory) {
-      if (inputs.length === 0) continue;
-
-      evalite(`${model.name} / ${category} [multi-turn]`, {
-        data: () => inputs.map((input) => ({ input })),
-
-        task: async (input: MultiTurnEvalInput): Promise<EvalOutput> => {
-          const result = await generateText({
-            model: getModel(model),
-            system: input.systemPrompt,
-            messages: input.messages,
-            output: Output.object({ schema: coachingResponseSchema }),
-            maxOutputTokens: 4096,
-          });
-
-          return result.output;
-        },
-
-        scorers: ALL_SCORERS,
-
-        columns: (result) => [
-          { label: "Category", value: `${category} [MT]` },
-          {
-            label: "Champion",
-            value: `${result.input.champion} @${result.input.gameTime}`,
-          },
-          {
-            label: "Question",
-            value: result.input.question.substring(0, 45),
-          },
-          {
-            label: "Context",
-            value: `${result.input.items.length} items, ${result.input.gold}g`,
-          },
-        ],
-      });
     }
   }
-} else {
-  console.log(
-    "Multi-turn fixtures not found at fixtures/coaching-sessions-v2/ — skipping multi-turn evals"
+
+  // Build LiveGameState from GameState
+  const liveGameState: LiveGameState = {
+    activePlayer: f.gameState.activePlayer,
+    players: f.gameState.players,
+    gameMode: f.gameState.gameMode,
+    lcuGameMode: f.gameModeId === "aram-mayhem" ? "KIWI" : f.gameState.gameMode,
+    gameTime: f.gameState.gameTime,
+    champSelect: null,
+    eogStats: null,
+  };
+
+  // Build snapshot and format it
+  const snapshot = takeGameSnapshot(
+    liveGameState,
+    enemyStats,
+    gameData,
+    f.chosenAugments
   );
+  const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
+
+  // Build conversation session with history
+  const session = createConversationSession(systemPrompt);
+
+  if (f.query.history) {
+    for (const exchange of f.query.history) {
+      session.addUserMessage(stateText, exchange.question);
+      session.addAssistantMessage(exchange.answer);
+    }
+  }
+
+  // Add current question
+  session.addUserMessage(stateText, f.query.question);
+
+  return {
+    label: f.label,
+    category: f.category,
+    question: f.query.question,
+    champion: f.scorerContext.champion,
+    gameTime: f.scorerContext.gameTime,
+    items: f.scorerContext.items,
+    gold: f.scorerContext.gold,
+    systemPrompt: session.systemPrompt,
+    userPrompt: "", // not used — messages carry the content
+    history: f.query.history ?? [],
+    expectedReferences: f.expectedReferences,
+    scorerHints: f.scorerHints,
+    enemyChampions: enemyPlayers.map((p) => p.championName),
+    messages: [...session.messages],
+  };
+}
+
+// Group inputs by category
+const inputsByCategory = new Map<string, MultiTurnEvalInput[]>();
+for (const f of validFixtures) {
+  const input = buildEvalInput(f, gameData);
+  const categoryLabel = CATEGORY_LABELS[input.category] ?? input.category;
+  const list = inputsByCategory.get(categoryLabel) ?? [];
+  list.push(input);
+  inputsByCategory.set(categoryLabel, list);
+}
+
+// Register evals
+for (const model of models) {
+  for (const [category, inputs] of inputsByCategory) {
+    if (inputs.length === 0) continue;
+
+    evalite(`${model.name} / ${category}`, {
+      data: () => inputs.map((input) => ({ input })),
+
+      task: async (input: MultiTurnEvalInput): Promise<EvalOutput> => {
+        const result = await generateText({
+          model: getModel(model),
+          system: input.systemPrompt,
+          messages: input.messages,
+          output: Output.object({ schema: coachingResponseSchema }),
+          maxOutputTokens: 4096,
+        });
+
+        return result.output;
+      },
+
+      scorers: ALL_SCORERS,
+
+      columns: (result) => [
+        { label: "Category", value: category },
+        {
+          label: "Champion",
+          value: `${result.input.champion} @${result.input.gameTime}`,
+        },
+        {
+          label: "Question",
+          value: result.input.question.substring(0, 45),
+        },
+        {
+          label: "Context",
+          value: `${result.input.items.length} items, ${result.input.gold}g`,
+        },
+      ],
+    });
+  }
 }
