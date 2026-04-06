@@ -7,7 +7,7 @@ import {
 import type { ActivePlayerStats } from "../game-state/types";
 import type { LiveGameState } from "../reactive/types";
 import type { LoadedGameData } from "../data-ingest";
-import type { Item } from "../data-ingest/types";
+import type { Item, Augment, AugmentSet } from "../data-ingest/types";
 import type { ComputedStats } from "./enemy-stats";
 
 function createPlayerStats(): ActivePlayerStats {
@@ -76,6 +76,7 @@ function createSnapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
       },
     ],
     gameTime: 600,
+    augmentSetProgress: [],
     ...overrides,
   };
 }
@@ -127,16 +128,50 @@ describe("formatStateSnapshot", () => {
     );
   });
 
-  it("includes augments when present", () => {
+  it("includes augments with descriptions", () => {
     const snapshot = createSnapshot();
-    snapshot.player.augments = ["Jeweled Gauntlet", "Ethereal Blades"];
+    snapshot.player.augments = [
+      {
+        name: "Jeweled Gauntlet",
+        description: "Your abilities can critically strike.",
+        sets: [],
+      },
+      { name: "Ethereal Blades", description: "", sets: [] },
+    ];
     const output = formatStateSnapshot(snapshot);
-    expect(output).toContain("Augments: Jeweled Gauntlet, Ethereal Blades");
+    expect(output).toContain(
+      "- Jeweled Gauntlet: Your abilities can critically strike."
+    );
+    expect(output).toContain("- Ethereal Blades");
   });
 
-  it("omits augments line when empty", () => {
+  it("omits augments section when empty", () => {
     const output = formatStateSnapshot(createSnapshot());
     expect(output).not.toContain("Augments:");
+  });
+
+  it("includes set progress when augments have sets", () => {
+    const snapshot = createSnapshot({
+      augmentSetProgress: [
+        {
+          name: "Snowday",
+          count: 2,
+          nextThreshold: 3,
+          activeBonus: "Mark deals 30% increased damage",
+          nextBonus: "Mark deals 50% increased damage",
+        },
+      ],
+    });
+    const output = formatStateSnapshot(snapshot);
+    expect(output).toContain("Set Progress:");
+    expect(output).toContain(
+      "- Snowday (2/3) — Active: Mark deals 30% increased damage — Next at 3: Mark deals 50% increased damage"
+    );
+  });
+
+  it("omits set progress when empty", () => {
+    const output = formatStateSnapshot(createSnapshot());
+    expect(output).not.toContain("Set Progress:");
   });
 
   it("includes ally team", () => {
@@ -235,7 +270,10 @@ describe("takeGameSnapshot", () => {
     };
   }
 
-  function createGameData(): LoadedGameData {
+  function createGameData(overrides?: {
+    augments?: Map<string, Augment>;
+    augmentSets?: AugmentSet[];
+  }): LoadedGameData {
     const items = new Map<number, Item>([
       [
         3089,
@@ -258,8 +296,8 @@ describe("takeGameSnapshot", () => {
       champions: new Map(),
       items,
       runes: [],
-      augments: new Map(),
-      augmentSets: [],
+      augments: overrides?.augments ?? new Map(),
+      augmentSets: overrides?.augmentSets ?? [],
       dictionary: {
         allNames: [],
         champions: [],
@@ -346,16 +384,102 @@ describe("takeGameSnapshot", () => {
     expect(snapshot!.enemies[0].stats).toBeNull();
   });
 
-  it("includes chosen augments", () => {
+  it("resolves augment descriptions and sets from game data", () => {
+    const augments = new Map<string, Augment>([
+      [
+        "jeweled gauntlet",
+        {
+          name: "Jeweled Gauntlet",
+          description: "Your abilities can critically strike.",
+          tier: "Gold",
+          sets: ["Arcana"],
+          mode: "mayhem",
+        },
+      ],
+    ]);
+    const snapshot = takeGameSnapshot(
+      createLiveGameState(),
+      new Map(),
+      createGameData({ augments }),
+      ["Jeweled Gauntlet"]
+    );
+    expect(snapshot!.player.augments).toEqual([
+      {
+        name: "Jeweled Gauntlet",
+        description: "Your abilities can critically strike.",
+        sets: ["Arcana"],
+      },
+    ]);
+  });
+
+  it("handles augments not found in game data", () => {
     const snapshot = takeGameSnapshot(
       createLiveGameState(),
       new Map(),
       createGameData(),
-      ["Jeweled Gauntlet", "Ethereal Blades"]
+      ["Unknown Augment"]
     );
     expect(snapshot!.player.augments).toEqual([
-      "Jeweled Gauntlet",
-      "Ethereal Blades",
+      { name: "Unknown Augment", description: "", sets: [] },
     ]);
+  });
+
+  it("computes set progress from augment data", () => {
+    const augments = new Map<string, Augment>([
+      [
+        "snowball upgrade",
+        {
+          name: "Snowball Upgrade",
+          description: "Mark deals bonus damage.",
+          tier: "Silver",
+          sets: ["Snowday"],
+          mode: "mayhem",
+        },
+      ],
+      [
+        "biggest snowball ever",
+        {
+          name: "Biggest Snowball Ever",
+          description: "Mark grows as it travels.",
+          tier: "Silver",
+          sets: ["Snowday"],
+          mode: "mayhem",
+        },
+      ],
+    ]);
+    const augmentSets: AugmentSet[] = [
+      {
+        name: "Snowday",
+        bonuses: [
+          { threshold: 2, description: "Mark deals 30% increased damage" },
+          { threshold: 3, description: "Mark deals 50% increased damage" },
+        ],
+      },
+    ];
+    const snapshot = takeGameSnapshot(
+      createLiveGameState(),
+      new Map(),
+      createGameData({ augments, augmentSets }),
+      ["Snowball Upgrade", "Biggest Snowball Ever"]
+    );
+    expect(snapshot!.augmentSetProgress).toEqual([
+      {
+        name: "Snowday",
+        count: 2,
+        nextThreshold: 3,
+        activeBonus: "Mark deals 30% increased damage",
+        nextBonus: "Mark deals 50% increased damage",
+      },
+    ]);
+  });
+
+  it("returns empty set progress when no augments have sets", () => {
+    const snapshot = takeGameSnapshot(
+      createLiveGameState(),
+      new Map(),
+      createGameData(),
+      ["Some Augment"]
+    );
+    expect(snapshot!.augmentSetProgress).toEqual([]);
   });
 });

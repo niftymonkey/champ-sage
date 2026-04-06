@@ -91,6 +91,17 @@ export function buildGameSystemPrompt(
     sections.push(
       "- Use the augment descriptions provided in the prompt, not your general knowledge."
     );
+    sections.push("");
+    sections.push("SYNERGY COACHING:");
+    sections.push(
+      "- Look for unconventional build paths enabled by augment, set bonus, item, and stat anvil synergies. An AD champion with a tank augment like Goliath might pivot into a Heartsteel build. A mage with attack speed augments might go on-hit."
+    );
+    sections.push(
+      "- When an augment or set bonus changes what items are optimal, recommend the synergy build and explain WHY it works — the player needs to understand the reasoning, not just the pick."
+    );
+    sections.push(
+      "- Don't default to cookie-cutter builds. ARAM Mayhem rewards creative synergies that wouldn't work in standard modes."
+    );
   }
 
   // --- Game mode ---

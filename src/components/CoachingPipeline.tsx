@@ -22,6 +22,7 @@ import {
   takeGameSnapshot,
   formatStateSnapshot,
 } from "../lib/ai/state-formatter";
+import { formatAugmentOfferLines } from "../lib/ai/augment-offer-formatter";
 import { playerIntent$, manualInput$ } from "../lib/reactive";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
@@ -333,8 +334,10 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       );
       let questionText = question;
       if (augmentOptions && augmentOptions.length > 0) {
-        const augmentLines = augmentOptions.map(
-          (opt) => `- **${opt.name}** [${opt.tier}]: ${opt.description}`
+        const augmentLines = formatAugmentOfferLines(
+          augmentOptions,
+          chosenAugmentsRef.current,
+          gameDataRef.current
         );
         questionText = `${question}\n\nAugment options:\n${augmentLines.join("\n")}`;
       }

@@ -284,6 +284,36 @@ describe("buildGameSystemPrompt", () => {
     expect(prompt).toContain("re-roll");
   });
 
+  it("includes synergy coaching instruction when mode has augment-selection", () => {
+    const mode = createStubMode({
+      decisionTypes: [
+        "augment-selection",
+        "item-purchase",
+        "open-ended-coaching",
+      ],
+    });
+    const prompt = buildGameSystemPrompt(
+      mode,
+      createStubGameData(),
+      createGameState()
+    );
+    expect(prompt).toContain("SYNERGY COACHING");
+    expect(prompt).toContain("set bonus");
+    expect(prompt).toContain("unconventional");
+  });
+
+  it("excludes synergy coaching when mode lacks augment-selection", () => {
+    const mode = createStubMode({
+      decisionTypes: ["item-purchase", "open-ended-coaching"],
+    });
+    const prompt = buildGameSystemPrompt(
+      mode,
+      createStubGameData(),
+      createGameState()
+    );
+    expect(prompt).not.toContain("SYNERGY COACHING");
+  });
+
   it("excludes augment rules when mode lacks augment-selection", () => {
     const mode = createStubMode({
       decisionTypes: ["item-purchase", "open-ended-coaching"],
