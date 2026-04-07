@@ -12,6 +12,7 @@ import {
   takeGameSnapshot,
   formatStateSnapshot,
 } from "../lib/ai/state-formatter";
+import { formatAugmentOfferLines } from "../lib/ai/augment-offer-formatter";
 import { playerIntent$, manualInput$ } from "../lib/reactive";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
@@ -163,43 +164,11 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
       );
       let questionText = question;
       if (augmentOptions && augmentOptions.length > 0) {
-        const augmentLines = augmentOptions.map((opt) => {
-          let line = `- **${opt.name}** [${opt.tier}]: ${opt.description}`;
-          // Add set progress context if the augment belongs to any sets
-          if (opt.sets && opt.sets.length > 0) {
-            const setAnnotations = opt.sets.map((setName) => {
-              const currentCount = chosenAugmentsRef.current.filter((name) => {
-                const aug = gameDataRef.current.augments.get(
-                  name.toLowerCase()
-                );
-                return aug?.sets?.includes(setName);
-              }).length;
-              const wouldHave = currentCount + 1;
-              const setDef = gameDataRef.current.augmentSets.find(
-                (s) => s.name === setName
-              );
-              if (!setDef) return setName;
-              const activatedBonus = setDef.bonuses.find(
-                (b) => b.threshold === wouldHave
-              );
-              const maxThreshold = Math.max(
-                ...setDef.bonuses.map((b) => b.threshold)
-              );
-              if (activatedBonus) {
-                return `${setName} ${wouldHave}/${maxThreshold} — UNLOCKS: ${activatedBonus.description}`;
-              }
-              const nextBonus = setDef.bonuses.find(
-                (b) => b.threshold > wouldHave
-              );
-              if (nextBonus) {
-                return `${setName} ${wouldHave}/${nextBonus.threshold}`;
-              }
-              return setName;
-            });
-            line += ` (${setAnnotations.join("; ")})`;
-          }
-          return line;
-        });
+        const augmentLines = formatAugmentOfferLines(
+          augmentOptions,
+          chosenAugmentsRef.current,
+          gameDataRef.current
+        );
         questionText = `${question}\n\nAugment options:\n${augmentLines.join("\n")}`;
       }
 
