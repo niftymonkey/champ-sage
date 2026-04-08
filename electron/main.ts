@@ -154,8 +154,14 @@ function registerIpcHandlers(): void {
     "discover_lcu",
     quietHandler(async () => {
       const lockfilePath = resolveLockfilePath();
-      const content = readFileSync(lockfilePath, "utf-8");
-      return parseLockfile(content);
+      try {
+        const content = readFileSync(lockfilePath, "utf-8");
+        return parseLockfile(content);
+      } catch (err) {
+        throw new Error(
+          `Could not read lockfile at ${lockfilePath}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
     })
   );
 
@@ -558,10 +564,15 @@ function registerOverlayIpc(): void {
 
   // Relay coaching requests/responses from desktop window to overlay windows
   ipcMain.on("coaching-request", () => {
+    overlayLog.debug("Relaying coaching-request to all windows");
     sendToAllWindows("coaching-request", {});
   });
 
   ipcMain.on("coaching-response", (_event, data) => {
+    const source = (data as { source?: string })?.source ?? "unknown";
+    overlayLog.info(
+      `Relaying coaching-response to all windows (source=${source})`
+    );
     sendToAllWindows("coaching-response", data);
   });
 

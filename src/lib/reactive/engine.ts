@@ -53,11 +53,9 @@ const NOISE_PREFIXES = [
   "/lol-patch/",
   "/data-store/",
   "/entitlements/",
-  "/lol-honor-v2/",
   "/lol-chat/",
   "/lol-loot/",
   "/lol-regalia/",
-  "/lol-pre-end-of-game/",
   "/lol-champion-mastery/",
   "/lol-ranked/",
   "/lol-clash/",
@@ -271,8 +269,30 @@ export class ReactiveEngine {
     // Push phase events to gameLifecycle$
     this.subscription.add(
       gameflowPhase$.subscribe((phase) => {
+        engineLog.info(`Gameflow phase: ${phase}`);
         gameLifecycle$.next({ type: "phase", phase });
       })
+    );
+
+    // Log honor and pre-end-of-game events to understand post-game transitions
+    this.subscription.add(
+      wsFiltered$
+        .pipe(
+          filter(
+            (evt) =>
+              evt.uri.startsWith("/lol-honor-v2/") ||
+              evt.uri.startsWith("/lol-pre-end-of-game/") ||
+              evt.uri.startsWith("/lol-end-of-game/")
+          )
+        )
+        .subscribe((evt) => {
+          engineLog.info(`Post-game event: ${evt.uri}`, {
+            data:
+              typeof evt.data === "string"
+                ? evt.data
+                : JSON.stringify(evt.data)?.slice(0, 200),
+          });
+        })
     );
 
     // Push lobby events to gameLifecycle$ (deduplicated)

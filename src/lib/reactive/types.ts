@@ -8,6 +8,7 @@ export type GameflowPhase =
   | "Matchmaking"
   | "ReadyCheck"
   | "ChampSelect"
+  | "GameStart"
   | "InProgress"
   | "PreEndOfGame"
   | "EndOfGame"

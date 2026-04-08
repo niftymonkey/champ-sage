@@ -9,7 +9,7 @@ interface StatusBarProps {
 
 export function StatusBar({ isRecording, dataVersion }: StatusBarProps) {
   const liveGame = useLiveGameState();
-  const lifecycle = useGameLifecycle();
+  const { event: lifecycle } = useGameLifecycle();
 
   const isConnected =
     lifecycle.type === "connection" ? lifecycle.connected : true;

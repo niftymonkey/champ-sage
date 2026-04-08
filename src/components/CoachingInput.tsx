@@ -202,7 +202,15 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
         setLatestExchange({ question, response });
 
         // Relay to overlay
-        window.electronAPI?.sendCoachingResponse({ ...response, source });
+        const sentAt = Date.now();
+        reactiveLog.info(
+          `Sending coaching response to overlay (source=${source}, sentAt=${sentAt})`
+        );
+        window.electronAPI?.sendCoachingResponse({
+          ...response,
+          source,
+          sentAt,
+        });
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
           // Cancelled — remove the orphaned user message from the session
