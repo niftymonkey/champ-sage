@@ -26,7 +26,8 @@ export type LogModule =
   | "ui"
   | "ipc"
   | "overlay"
-  | "overlay:calibration";
+  | "overlay:calibration"
+  | "overlay:strip";
 
 export interface ScopedLogger {
   error: (...args: unknown[]) => void;

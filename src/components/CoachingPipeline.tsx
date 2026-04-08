@@ -236,9 +236,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         pushGamePlan(response.answer, buildPath, gameTime);
 
         // Relay to overlay
+        proactiveLog.info("Sending game plan response to overlay");
         window.electronAPI?.sendCoachingResponse({
           ...response,
           source: "plan",
+          sentAt: Date.now(),
         });
       } catch (err) {
         try {
@@ -377,7 +379,24 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         );
 
         // Relay to overlay
-        window.electronAPI?.sendCoachingResponse({ ...response, source });
+        const sentAt = Date.now();
+        const overlayPayload = {
+          ...response,
+          source,
+          sentAt,
+        };
+        reactiveLog.info(
+          `Sending coaching response to overlay (source=${source})`,
+          {
+            sentAt,
+            hasAnswer: !!overlayPayload.answer,
+            answerLength: overlayPayload.answer?.length ?? 0,
+            recNames: overlayPayload.recommendations?.map(
+              (r: { name: string }) => r.name
+            ),
+          }
+        );
+        window.electronAPI?.sendCoachingResponse(overlayPayload);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
           reactiveLog.debug(

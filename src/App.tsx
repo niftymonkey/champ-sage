@@ -20,6 +20,7 @@ import { StatusBar } from "./components/StatusBar";
 import { InGameView } from "./components/InGameView";
 import { LastGameCard } from "./components/coaching";
 import { CoachingPipeline } from "./components/CoachingPipeline";
+import { ConnectionStatus } from "./components/ConnectionStatus";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
 import {
   createModeRegistry,
@@ -78,7 +79,7 @@ function App() {
   }, []);
 
   const { data, loading, error } = useGameData();
-  const lifecycle = useGameLifecycle();
+  const { event: lifecycle, lastPhase } = useGameLifecycle();
   const liveGame = useLiveGameState();
   useUserInput();
   useZoom();
@@ -226,12 +227,15 @@ function App() {
           {inGame ? (
             <InGameView state={effectiveState} gameData={data} />
           ) : (
-            <LastGameCard
-              dataVersion={data.version}
-              championCount={data.champions.size}
-              itemCount={data.items.size}
-              augmentCount={data.augments.size}
-            />
+            <div className="app-idle">
+              <ConnectionStatus lifecycle={lifecycle} lastPhase={lastPhase} />
+              <LastGameCard
+                dataVersion={data.version}
+                championCount={data.champions.size}
+                itemCount={data.items.size}
+                augmentCount={data.augments.size}
+              />
+            </div>
           )}
           {devMode && <SimulatorPanel gameData={data} />}
         </div>

@@ -2,7 +2,7 @@
  * Main process logger setup.
  *
  * Configures electron-log with:
- * - NDJSON file transport (one file per day, 5-day retention)
+ * - NDJSON file transport (one file per session, 5-day retention)
  * - Pretty console transport for dev
  * - Persisted log level via electron-store or simple JSON file
  *
@@ -26,7 +26,7 @@ const LEVEL_MAP: Record<string, LogLevel> = {
 };
 
 const LOG_RETENTION_DAYS = 5;
-const LOG_FILENAME_PATTERN = /^champ-sage-\d{4}-\d{2}-\d{2}\.log$/;
+const LOG_FILENAME_PATTERN = /^champ-sage-\d{4}-\d{2}-\d{2}[T_-]?\d{0,6}\.log$/;
 
 // ---------------------------------------------------------------------------
 // Log level persistence
@@ -110,8 +110,12 @@ function pruneOldLogs(logsDir: string): void {
     for (const file of readdirSync(logsDir)) {
       if (!LOG_FILENAME_PATTERN.test(file)) continue;
 
-      // Extract date from filename: champ-sage-YYYY-MM-DD.log
-      const dateStr = file.slice("champ-sage-".length, -".log".length);
+      // Extract date from filename: champ-sage-YYYY-MM-DD_HHMMSS.log
+      // (also handles old format champ-sage-YYYY-MM-DD.log)
+      const dateStr = file.slice(
+        "champ-sage-".length,
+        "champ-sage-".length + 10
+      );
       const fileDate = new Date(dateStr + "T00:00:00Z").getTime();
 
       if (fileDate && fileDate < cutoff) {
@@ -138,9 +142,12 @@ export function initLogger(): void {
   // NDJSON format for the file transport
   log.transports.file.format = ndjsonFormat as unknown as string;
 
-  // Daily log files — use electron-log's built-in path resolution,
-  // only override the filename to include today's date
-  log.transports.file.fileName = `champ-sage-${new Date().toISOString().slice(0, 10)}.log`;
+  // Per-session log files — include date and time so multiple sessions
+  // in the same day don't overwrite each other
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const timeStr = now.toISOString().slice(11, 19).replace(/:/g, "");
+  log.transports.file.fileName = `champ-sage-${dateStr}_${timeStr}.log`;
 
   // Disable size-based rotation (we use time-based via filename)
   log.transports.file.maxSize = 0;

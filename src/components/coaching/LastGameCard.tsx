@@ -18,11 +18,7 @@ export function LastGameCard({
 
   return (
     <div className={styles.container}>
-      {snapshot ? (
-        <GameSummary snapshot={snapshot} />
-      ) : (
-        <div className={styles.waiting}>Waiting for game...</div>
-      )}
+      {snapshot && <GameSummary snapshot={snapshot} />}
       <div className={styles.meta}>
         Patch {dataVersion} — {championCount} champions · {itemCount} items ·{" "}
         {augmentCount} augments
@@ -50,6 +46,7 @@ function GameSummary({ snapshot }: GameSummaryProps) {
 
   return (
     <div className={styles.card}>
+      <div className={styles.cardLabel}>Last Game</div>
       <div className={styles.header}>
         <span className={styles.champName}>{snapshot.championName}</span>
         <span

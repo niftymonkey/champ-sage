@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connection Status — All States</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Marcellus&family=JetBrains+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #0a0c10;
+        color: #e2e6ef;
+        font-family: system-ui, sans-serif;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(42, 47, 62, 0.3) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(42, 47, 62, 0.3) 1px, transparent 1px);
+        background-size: 40px 40px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .page {
+        position: relative;
+        z-index: 1;
+        padding: 2rem;
+      }
+
+      h1 {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.8rem;
+        color: #565e74;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 2rem;
+        text-align: center;
+      }
+
+      .states-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        gap: 1rem;
+      }
+
+      .state-card {
+        border: 1px solid #1a1f2e;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      .state-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.65rem;
+        color: #565e74;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 0.5rem 0.75rem;
+        background: #0d0f14;
+        border-bottom: 1px solid #1a1f2e;
+      }
+
+      .viewport {
+        width: 100%;
+        height: 420px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+
+      /* --- Connection Status --- */
+
+      .status-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.2rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .rune-circle {
+        position: relative;
+        width: 7rem;
+        height: 7rem;
+      }
+
+      .outer-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 1px solid rgba(200, 155, 60, 0.2);
+        animation: spin-slow 20s linear infinite;
+      }
+
+      .outer-ring::before {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        border-radius: 50%;
+        border: 1px dashed rgba(200, 155, 60, 0.15);
+      }
+
+      .inner-ring {
+        position: absolute;
+        inset: 0.75rem;
+        border-radius: 50%;
+        border: 1px solid rgba(200, 155, 60, 0.12);
+        animation: spin-reverse 14s linear infinite;
+      }
+
+      .inner-ring::before {
+        content: "";
+        position: absolute;
+        inset: 0.4rem;
+        border-radius: 50%;
+        border: 1px solid rgba(200, 155, 60, 0.08);
+      }
+
+      .gem {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 1.4rem;
+        height: 1.4rem;
+        transform: translate(-50%, -50%) rotate(45deg);
+        border: 2px solid rgba(200, 155, 60, 0.6);
+        background: radial-gradient(
+          circle at 40% 40%,
+          rgba(200, 155, 60, 0.2),
+          rgba(10, 12, 16, 0.8)
+        );
+      }
+
+      .gem::after {
+        content: "";
+        position: absolute;
+        inset: -1rem;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(200, 155, 60, 0.15),
+          transparent 70%
+        );
+        transform: rotate(-45deg);
+      }
+
+      .cardinal {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: rgba(200, 155, 60, 0.5);
+        border-radius: 50%;
+      }
+      .cardinal.n {
+        top: -1px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .cardinal.s {
+        bottom: -1px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .cardinal.e {
+        right: -1px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .cardinal.w {
+        left: -1px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .status-label-text {
+        font-family: "Marcellus", Georgia, serif;
+        font-size: 1.6rem;
+        font-weight: 400;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        text-align: center;
+      }
+
+      .status-detail {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9rem;
+        color: #6b7280;
+        text-align: center;
+        letter-spacing: 0.03em;
+      }
+
+      .meta {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.7rem;
+        color: #565e74;
+        text-align: center;
+      }
+
+      /* ================================================================
+     STATE COLORS
+     ================================================================ */
+
+      /* --- Waiting: slate blue-gray --- */
+      .state-waiting .outer-ring {
+        border-color: rgba(120, 140, 170, 0.2);
+        animation-duration: 24s;
+      }
+      .state-waiting .outer-ring::before {
+        border-color: rgba(120, 140, 170, 0.12);
+      }
+      .state-waiting .inner-ring {
+        border-color: rgba(120, 140, 170, 0.12);
+      }
+      .state-waiting .inner-ring::before {
+        border-color: rgba(120, 140, 170, 0.06);
+      }
+      .state-waiting .gem {
+        border-color: rgba(120, 140, 170, 0.4);
+        background: radial-gradient(
+          circle at 40% 40%,
+          rgba(120, 140, 170, 0.15),
+          rgba(10, 12, 16, 0.8)
+        );
+        animation: gem-pulse-waiting 3s ease-in-out infinite;
+      }
+      .state-waiting .gem::after {
+        background: radial-gradient(
+          circle,
+          rgba(120, 140, 170, 0.1),
+          transparent 70%
+        );
+      }
+      .state-waiting .cardinal {
+        background: rgba(120, 140, 170, 0.3);
+      }
+      .state-waiting .status-label-text {
+        color: #8896aa;
+      }
+
+      /* --- Connected: soft purple --- */
+      .state-connected .outer-ring {
+        border-color: rgba(160, 120, 200, 0.25);
+      }
+      .state-connected .outer-ring::before {
+        border-color: rgba(160, 120, 200, 0.15);
+      }
+      .state-connected .inner-ring {
+        border-color: rgba(160, 120, 200, 0.15);
+      }
+      .state-connected .inner-ring::before {
+        border-color: rgba(160, 120, 200, 0.08);
+      }
+      .state-connected .gem {
+        border-color: rgba(160, 120, 200, 0.6);
+        background: radial-gradient(
+          circle at 40% 40%,
+          rgba(160, 120, 200, 0.25),
+          rgba(10, 12, 16, 0.8)
+        );
+      }
+      .state-connected .gem::after {
+        background: radial-gradient(
+          circle,
+          rgba(160, 120, 200, 0.15),
+          transparent 70%
+        );
+      }
+      .state-connected .cardinal {
+        background: rgba(160, 120, 200, 0.5);
+      }
+      .state-connected .status-label-text {
+        color: #b898d8;
+      }
+
+      /* --- Lobby: cool blue --- */
+      .state-lobby .outer-ring {
+        border-color: rgba(100, 160, 220, 0.25);
+      }
+      .state-lobby .outer-ring::before {
+        border-color: rgba(100, 160, 220, 0.15);
+      }
+      .state-lobby .inner-ring {
+        border-color: rgba(100, 160, 220, 0.15);
+      }
+      .state-lobby .inner-ring::before {
+        border-color: rgba(100, 160, 220, 0.08);
+      }
+      .state-lobby .gem {
+        border-color: rgba(100, 160, 220, 0.6);
+        background: radial-gradient(
+          circle at 40% 40%,
+          rgba(100, 160, 220, 0.2),
+          rgba(10, 12, 16, 0.8)
+        );
+      }
+      .state-lobby .gem::after {
+        background: radial-gradient(
+          circle,
+          rgba(100, 160, 220, 0.12),
+          transparent 70%
+        );
+      }
+      .state-lobby .cardinal {
+        background: rgba(100, 160, 220, 0.5);
+      }
+      .state-lobby .status-label-text {
+        color: #7ab4e0;
+      }
+
+      /* --- Active (matchmaking, champ select, loading): green --- */
+      .state-active .outer-ring {
+        border-color: rgba(74, 222, 128, 0.25);
+        animation-duration: 12s;
+      }
+      .state-active .outer-ring::before {
+        border-color: rgba(74, 222, 128, 0.15);
+      }
+      .state-active .inner-ring {
+        border-color: rgba(74, 222, 128, 0.15);
+        animation-duration: 8s;
+      }
+      .state-active .inner-ring::before {
+        border-color: rgba(74, 222, 128, 0.08);
+      }
+      .state-active .gem {
+        border-color: rgba(74, 222, 128, 0.7);
+        background: radial-gradient(
+          circle at 40% 40%,
+          rgba(74, 222, 128, 0.25),
+          rgba(10, 12, 16, 0.8)
+        );
+        animation: gem-pulse-active 2s ease-in-out infinite;
+      }
+      .state-active .gem::after {
+        background: radial-gradient(
+          circle,
+          rgba(74, 222, 128, 0.15),
+          transparent 70%
+        );
+      }
+      .state-active .cardinal {
+        background: rgba(74, 222, 128, 0.5);
+      }
+      .state-active .status-label-text {
+        color: #6ee7a0;
+      }
+
+      /* --- Post-game: same slate blue-gray as waiting --- */
+      .state-postgame .outer-ring {
+        border-color: rgba(120, 140, 170, 0.2);
+        animation-duration: 30s;
+      }
+      .state-postgame .outer-ring::before {
+        border-color: rgba(120, 140, 170, 0.12);
+      }
+      .state-postgame .inner-ring {
+        border-color: rgba(120, 140, 170, 0.12);
+      }
+      .state-postgame .inner-ring::before {
+        border-color: rgba(120, 140, 170, 0.06);
+      }
+      .state-postgame .gem {
+        border-color: rgba(120, 140, 170, 0.4);
+        background: radial-gradient(
+          circle at 40% 40%,
+          rgba(120, 140, 170, 0.15),
+          rgba(10, 12, 16, 0.8)
+        );
+      }
+      .state-postgame .gem::after {
+        background: radial-gradient(
+          circle,
+          rgba(120, 140, 170, 0.1),
+          transparent 70%
+        );
+      }
+      .state-postgame .cardinal {
+        background: rgba(120, 140, 170, 0.3);
+      }
+      .state-postgame .status-label-text {
+        color: #8896aa;
+      }
+
+      /* --- Error: red --- */
+      .state-error .outer-ring {
+        border-color: rgba(248, 113, 113, 0.3);
+        animation: none;
+      }
+      .state-error .outer-ring::before {
+        border-color: rgba(248, 113, 113, 0.18);
+      }
+      .state-error .inner-ring {
+        border-color: rgba(248, 113, 113, 0.15);
+        animation: none;
+      }
+      .state-error .inner-ring::before {
+        border-color: rgba(248, 113, 113, 0.08);
+      }
+      .state-error .gem {
+        border-color: rgba(248, 113, 113, 0.6);
+        background: radial-gradient(
+          circle at 40% 40%,
+          rgba(248, 113, 113, 0.2),
+          rgba(10, 12, 16, 0.8)
+        );
+      }
+      .state-error .gem::after {
+        background: radial-gradient(
+          circle,
+          rgba(248, 113, 113, 0.12),
+          transparent 70%
+        );
+      }
+      .state-error .cardinal {
+        background: rgba(248, 113, 113, 0.5);
+      }
+      .state-error .status-label-text {
+        color: #f87171;
+      }
+
+      /* --- Keyframes --- */
+      @keyframes spin-slow {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes spin-reverse {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(-360deg);
+        }
+      }
+      @keyframes gem-pulse-waiting {
+        0%,
+        100% {
+          box-shadow:
+            0 0 6px rgba(120, 140, 170, 0.1),
+            0 0 20px rgba(120, 140, 170, 0.04);
+        }
+        50% {
+          box-shadow:
+            0 0 10px rgba(120, 140, 170, 0.25),
+            0 0 30px rgba(120, 140, 170, 0.08);
+        }
+      }
+      @keyframes gem-pulse-active {
+        0%,
+        100% {
+          box-shadow:
+            0 0 8px rgba(74, 222, 128, 0.15),
+            0 0 24px rgba(74, 222, 128, 0.05);
+        }
+        50% {
+          box-shadow:
+            0 0 14px rgba(74, 222, 128, 0.4),
+            0 0 40px rgba(74, 222, 128, 0.12);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <h1>Connection Status — All States (Marcellus)</h1>
+      <div class="states-grid">
+        <div class="state-card">
+          <div class="state-label">Stage 1-2: Waiting for League Client</div>
+          <div class="viewport state-waiting">
+            <div class="status-container">
+              <div class="rune-circle">
+                <div class="outer-ring">
+                  <span class="cardinal n"></span
+                  ><span class="cardinal s"></span
+                  ><span class="cardinal e"></span
+                  ><span class="cardinal w"></span>
+                </div>
+                <div class="inner-ring"></div>
+                <div class="gem"></div>
+              </div>
+              <div class="status-label-text">Waiting for League Client</div>
+              <div class="status-detail">
+                Launch League of Legends to get started
+              </div>
+            </div>
+            <div class="meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+
+        <div class="state-card">
+          <div class="state-label">Stage 3: League Client Connected</div>
+          <div class="viewport state-connected">
+            <div class="status-container">
+              <div class="rune-circle">
+                <div class="outer-ring">
+                  <span class="cardinal n"></span
+                  ><span class="cardinal s"></span
+                  ><span class="cardinal e"></span
+                  ><span class="cardinal w"></span>
+                </div>
+                <div class="inner-ring"></div>
+                <div class="gem"></div>
+              </div>
+              <div class="status-label-text">League Client</div>
+              <div class="status-detail">Connected</div>
+            </div>
+            <div class="meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+
+        <div class="state-card">
+          <div class="state-label">Stage 4a: Lobby</div>
+          <div class="viewport state-lobby">
+            <div class="status-container">
+              <div class="rune-circle">
+                <div class="outer-ring">
+                  <span class="cardinal n"></span
+                  ><span class="cardinal s"></span
+                  ><span class="cardinal e"></span
+                  ><span class="cardinal w"></span>
+                </div>
+                <div class="inner-ring"></div>
+                <div class="gem"></div>
+              </div>
+              <div class="status-label-text">Lobby</div>
+              <div class="status-detail">Selecting game mode</div>
+            </div>
+            <div class="meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+
+        <div class="state-card">
+          <div class="state-label">Stage 4b: Matchmaking</div>
+          <div class="viewport state-active">
+            <div class="status-container">
+              <div class="rune-circle">
+                <div class="outer-ring">
+                  <span class="cardinal n"></span
+                  ><span class="cardinal s"></span
+                  ><span class="cardinal e"></span
+                  ><span class="cardinal w"></span>
+                </div>
+                <div class="inner-ring"></div>
+                <div class="gem"></div>
+              </div>
+              <div class="status-label-text">Matchmaking</div>
+              <div class="status-detail">Searching for a game</div>
+            </div>
+            <div class="meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+
+        <div class="state-card">
+          <div class="state-label">Stage 4c: Champion Select</div>
+          <div class="viewport state-active">
+            <div class="status-container">
+              <div class="rune-circle">
+                <div class="outer-ring">
+                  <span class="cardinal n"></span
+                  ><span class="cardinal s"></span
+                  ><span class="cardinal e"></span
+                  ><span class="cardinal w"></span>
+                </div>
+                <div class="inner-ring"></div>
+                <div class="gem"></div>
+              </div>
+              <div class="status-label-text">Champion Select</div>
+              <div class="status-detail">Pick your champion</div>
+            </div>
+            <div class="meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+
+        <div class="state-card">
+          <div class="state-label">Stage 5: Loading Screen</div>
+          <div class="viewport state-active">
+            <div class="status-container">
+              <div class="rune-circle">
+                <div class="outer-ring">
+                  <span class="cardinal n"></span
+                  ><span class="cardinal s"></span
+                  ><span class="cardinal e"></span
+                  ><span class="cardinal w"></span>
+                </div>
+                <div class="inner-ring"></div>
+                <div class="gem"></div>
+              </div>
+              <div class="status-label-text">Loading</div>
+              <div class="status-detail">Loading into game</div>
+            </div>
+            <div class="meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+
+        <div class="state-card">
+          <div class="state-label">Stage 7: Post-Game</div>
+          <div class="viewport state-postgame">
+            <div class="status-container">
+              <div class="rune-circle">
+                <div class="outer-ring">
+                  <span class="cardinal n"></span
+                  ><span class="cardinal s"></span
+                  ><span class="cardinal e"></span
+                  ><span class="cardinal w"></span>
+                </div>
+                <div class="inner-ring"></div>
+                <div class="gem"></div>
+              </div>
+              <div class="status-label-text">Post-Game</div>
+              <div class="status-detail">Game ended</div>
+            </div>
+            <div class="meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+
+        <div class="state-card">
+          <div class="state-label">Error State</div>
+          <div class="viewport state-error">
+            <div class="status-container">
+              <div class="rune-circle">
+                <div class="outer-ring">
+                  <span class="cardinal n"></span
+                  ><span class="cardinal s"></span
+                  ><span class="cardinal e"></span
+                  ><span class="cardinal w"></span>
+                </div>
+                <div class="inner-ring"></div>
+                <div class="gem"></div>
+              </div>
+              <div class="status-label-text">Error</div>
+              <div class="status-detail">Game terminated unexpectedly</div>
+            </div>
+            <div class="meta">
+              Patch 16.7.1 — 172 champions · 648 items · 396 augments
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,4 +1,11 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { AugmentBadges } from "./AugmentBadges";
 import type { CoachingResponse } from "../lib/ai/types";
 import { getLogger } from "../lib/logger";
@@ -7,6 +14,9 @@ const overlayLog = getLogger("overlay");
 
 /** Enable calibration grid + F8 screenshots via VITE_DEBUG_OVERLAY=1 */
 const DEBUG_OVERLAY = import.meta.env.VITE_DEBUG_OVERLAY === "1";
+
+/** Safety timeout — if no coaching response arrives, stop showing "Analyzing" */
+const ANALYZING_TIMEOUT_MS = 12_000;
 
 /**
  * Root component for the overlay window. Renders augment badges and
@@ -20,6 +30,13 @@ export function OverlayApp() {
   );
   const [augmentOffer, setAugmentOffer] = useState<string[] | null>(null);
 
+  // Track which offer the coaching response should match.
+  // When a new offer arrives, we increment the ID. When a response arrives,
+  // we only apply it if it was requested for the current offer.
+  const offerIdRef = useRef(0);
+  const offerNamesRef = useRef<string[] | null>(null);
+  const analyzingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Listen for edit mode toggle (Tab hotkey)
   useEffect(() => {
     const api = window.electronAPI;
@@ -28,6 +45,27 @@ export function OverlayApp() {
     const unlisten = api.onOverlayEditMode(({ editing: isEditing }) => {
       setEditing(isEditing);
       overlayLog.info(`Edit mode: ${isEditing ? "ON" : "OFF"}`);
+    });
+
+    return () => unlisten();
+  }, []);
+
+  // Clear augment state when the game exits — prevents stale badges
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.onOverlayStatus) return;
+
+    const unlisten = api.onOverlayStatus((payload: unknown) => {
+      const status = payload as { active?: boolean };
+      if (status.active === false) {
+        overlayLog.info("Game exited — clearing augment overlay state");
+        setAugmentOffer(null);
+        setCoachingData(null);
+        if (analyzingTimerRef.current) {
+          clearTimeout(analyzingTimerRef.current);
+          analyzingTimerRef.current = null;
+        }
+      }
     });
 
     return () => unlisten();
@@ -44,7 +82,22 @@ export function OverlayApp() {
       // Only display augment responses — reactive (voice) responses go to coaching strip
       if (response.source !== "augment") return;
 
-      overlayLog.info("Augment coaching response received for overlay");
+      const sentAt = (response as unknown as { sentAt?: number }).sentAt;
+      const delay = sentAt ? Date.now() - sentAt : null;
+      const recNames = response.recommendations?.map(
+        (r: { name: string }) => r.name
+      );
+
+      overlayLog.info(
+        `Augment coaching received (${delay}ms delay, recs: ${recNames?.join(", ")})`
+      );
+
+      // Clear analyzing timeout — response arrived
+      if (analyzingTimerRef.current) {
+        clearTimeout(analyzingTimerRef.current);
+        analyzingTimerRef.current = null;
+      }
+
       setCoachingData(response);
     });
 
@@ -53,14 +106,54 @@ export function OverlayApp() {
 
   // Listen for augment offers from GEP
   const handleAugmentOffer = useCallback((names: string[]) => {
+    overlayLog.info(`Augment offer received: ${names.join(", ")}`);
+    offerIdRef.current += 1;
+    offerNamesRef.current = names;
     setAugmentOffer(names);
     // Clear previous coaching data — new offer means new recommendations
     setCoachingData(null);
+
+    // Safety timeout — stop showing "Analyzing" if coaching never arrives
+    if (analyzingTimerRef.current) clearTimeout(analyzingTimerRef.current);
+    analyzingTimerRef.current = setTimeout(() => {
+      overlayLog.warn(
+        `Analyzing timeout after ${ANALYZING_TIMEOUT_MS}ms — no coaching response, hiding badges`
+      );
+      setAugmentOffer(null);
+      setCoachingData(null);
+    }, ANALYZING_TIMEOUT_MS);
   }, []);
 
   const handleAugmentPicked = useCallback(() => {
+    overlayLog.info("Augment picked — clearing offer and coaching data");
     setAugmentOffer(null);
     setCoachingData(null);
+    if (analyzingTimerRef.current) {
+      clearTimeout(analyzingTimerRef.current);
+      analyzingTimerRef.current = null;
+    }
+  }, []);
+
+  // Log state changes for debugging stale badge issues.
+  // This is what determines whether "Analyzing" or actual badges render —
+  // offer != null && coaching == null → "Analyzing" boxes shown
+  // offer != null && coaching != null → ranked badges shown
+  useEffect(() => {
+    const showing = augmentOffer
+      ? coachingData
+        ? "badges"
+        : "analyzing"
+      : "hidden";
+    overlayLog.info(
+      `Badge render state: ${showing} (offer=${augmentOffer?.length ?? "none"}, coaching=${coachingData ? "yes" : "none"})`
+    );
+  }, [augmentOffer, coachingData]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (analyzingTimerRef.current) clearTimeout(analyzingTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -79,7 +172,10 @@ export function OverlayApp() {
       if (update.feature === "augments" && update.key === "me") {
         // Deduplicate GEP double-fires
         const offerKey = typeof update.value === "string" ? update.value : "";
-        if (offerKey === lastOfferKey) return;
+        if (offerKey === lastOfferKey) {
+          overlayLog.debug("GEP augment offer deduplicated — skipping");
+          return;
+        }
         lastOfferKey = offerKey;
 
         try {
@@ -95,7 +191,7 @@ export function OverlayApp() {
 
           handleAugmentOffer(names);
         } catch {
-          // Bad parse — ignore
+          overlayLog.warn("Failed to parse GEP augment offer payload");
         }
       }
 

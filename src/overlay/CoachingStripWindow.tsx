@@ -6,6 +6,9 @@ import {
   useState,
 } from "react";
 import type { CoachingResponse } from "../lib/ai/types";
+import { getLogger } from "../lib/logger";
+
+const stripLog = getLogger("overlay:strip");
 
 /** Strip markdown bold/italic markers from LLM output */
 function stripMarkdown(text: string): string {
@@ -14,6 +17,9 @@ function stripMarkdown(text: string): string {
 
 /** How long text stays visible before dimming */
 const FRESH_DURATION_MS = 8_000;
+
+/** Safety timeout for thinking state — if no response arrives, stop showing "Analyzing" */
+const THINKING_TIMEOUT_MS = 15_000;
 
 const MAX_FONT_SIZE = 16;
 const MIN_FONT_SIZE = 9;
@@ -38,6 +44,7 @@ export function CoachingStripWindow() {
   const [editing, setEditing] = useState(false);
   const [fontSize, setFontSize] = useState(MAX_FONT_SIZE);
   const freshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -47,10 +54,22 @@ export function CoachingStripWindow() {
     if (!api?.onCoachingRequest) return;
 
     const unlisten = api.onCoachingRequest(() => {
+      stripLog.info("Coaching request received — entering thinking state");
       setThinking(true);
       setVisible(true);
       setFresh(true);
-      if (freshTimerRef.current) clearTimeout(freshTimerRef.current);
+      if (freshTimerRef.current) {
+        stripLog.debug("Clearing existing fresh timer (request supersedes)");
+        clearTimeout(freshTimerRef.current);
+      }
+      // Safety timeout — if no response arrives, stop showing "Analyzing"
+      if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
+      thinkingTimerRef.current = setTimeout(() => {
+        stripLog.warn(
+          `Thinking timeout after ${THINKING_TIMEOUT_MS}ms — no response received, clearing thinking state`
+        );
+        setThinking(false);
+      }, THINKING_TIMEOUT_MS);
     });
 
     return () => unlisten();
@@ -63,16 +82,35 @@ export function CoachingStripWindow() {
 
     const unlisten = api.onCoachingResponse((data: unknown) => {
       const response = data as CoachingResponse & { source?: string };
-      if (!response?.answer) return;
+      if (!response?.answer) {
+        stripLog.warn("Response received with no answer — ignoring", {
+          hasResponse: !!response,
+          source: response?.source,
+        });
+        return;
+      }
       if (response.source === "augment") return;
 
+      const sentAt = (response as unknown as { sentAt?: number }).sentAt;
+      const delay = sentAt ? Date.now() - sentAt : null;
+      stripLog.info(
+        `Coaching response received (source=${response.source ?? "unknown"}) — updating strip`,
+        { answerLength: response.answer.length, delayMs: delay }
+      );
       setText(stripMarkdown(response.answer));
       setThinking(false);
+      if (thinkingTimerRef.current) {
+        clearTimeout(thinkingTimerRef.current);
+        thinkingTimerRef.current = null;
+      }
       setVisible(true);
       setFresh(true);
 
       if (freshTimerRef.current) clearTimeout(freshTimerRef.current);
       freshTimerRef.current = setTimeout(() => {
+        stripLog.debug(
+          `Fresh timer expired after ${FRESH_DURATION_MS}ms — dimming`
+        );
         setFresh(false);
       }, FRESH_DURATION_MS);
     });
@@ -88,6 +126,7 @@ export function CoachingStripWindow() {
     if (!api?.onOverlayEditMode) return;
 
     const unlisten = api.onOverlayEditMode(({ editing: isEditing }) => {
+      stripLog.debug(`Edit mode: ${isEditing ? "ON" : "OFF"}`);
       setEditing(isEditing);
       if (!isEditing) {
         setHovering(false);
@@ -96,6 +135,13 @@ export function CoachingStripWindow() {
 
     return () => unlisten();
   }, []);
+
+  // Log significant state changes (thinking/visible transitions, not hover)
+  useEffect(() => {
+    stripLog.debug(
+      `Strip: thinking=${thinking}, fresh=${fresh}, visible=${visible}`
+    );
+  }, [visible, thinking, fresh]);
 
   // Auto-size font to fit container
   useLayoutEffect(() => {
@@ -128,6 +174,7 @@ export function CoachingStripWindow() {
   useEffect(() => {
     return () => {
       if (freshTimerRef.current) clearTimeout(freshTimerRef.current);
+      if (thinkingTimerRef.current) clearTimeout(thinkingTimerRef.current);
     };
   }, []);
 
