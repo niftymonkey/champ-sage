@@ -3,7 +3,14 @@ import type { GameLifecycleEvent } from "../lib/reactive";
 import type { GameflowPhase } from "../lib/reactive/types";
 import { gameLifecycle$, liveGameState$ } from "../lib/reactive";
 import { resolveChampionName } from "../lib/data-ingest/champion-id-map";
-import { debounceTime, filter, merge, map, distinctUntilChanged } from "rxjs";
+import {
+  combineLatest,
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  map,
+  merge,
+} from "rxjs";
 
 /**
  * Subscribe to game lifecycle events.
@@ -62,11 +69,15 @@ export function useGameLifecycle(): {
       setEvent(e);
     });
 
-    // Derive champion name from champ select data, only during ChampSelect phase
-    const championSub = liveGameState$
+    // Derive champion name when either phase or champ select data changes
+    const phase$ = gameLifecycle$.pipe(
+      filter((e) => e.type === "phase"),
+      map((e) => (e as { type: "phase"; phase: GameflowPhase }).phase)
+    );
+    const championSub = combineLatest([phase$, liveGameState$])
       .pipe(
-        map((state) =>
-          lastPhaseRef.current === "ChampSelect"
+        map(([phase, state]) =>
+          phase === "ChampSelect"
             ? getLocalChampionName(state.champSelect)
             : null
         ),
