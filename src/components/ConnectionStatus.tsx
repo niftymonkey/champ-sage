@@ -8,6 +8,7 @@ const statusLog = getLogger("ui");
 interface ConnectionStatusProps {
   lifecycle: GameLifecycleEvent;
   lastPhase: GameflowPhase | null;
+  championName: string | null;
 }
 
 type Variant =
@@ -34,7 +35,8 @@ interface StatusInfo {
  */
 function getStatus(
   lifecycle: GameLifecycleEvent,
-  lastPhase: GameflowPhase | null
+  lastPhase: GameflowPhase | null,
+  championName: string | null
 ): StatusInfo {
   if (lifecycle.type === "connection") {
     if (lifecycle.connected) {
@@ -105,7 +107,7 @@ function getStatus(
         return {
           variant: "active",
           label: "Champion Select",
-          detail: "Pick your champion",
+          detail: championName ?? "Pick your champion",
         };
       case "GameStart":
       case "InProgress":
@@ -139,7 +141,11 @@ function getStatus(
 
   // Non-phase event that doesn't match the current phase — fall back to phase
   if (lastPhase) {
-    return getStatus({ type: "phase", phase: lastPhase }, lastPhase);
+    return getStatus(
+      { type: "phase", phase: lastPhase },
+      lastPhase,
+      championName
+    );
   }
 
   return {
@@ -158,10 +164,11 @@ function describeEvent(event: GameLifecycleEvent): string {
 export function ConnectionStatus({
   lifecycle,
   lastPhase,
+  championName,
 }: ConnectionStatusProps) {
   const prevStatusRef = useRef<string | null>(null);
 
-  const status = getStatus(lifecycle, lastPhase);
+  const status = getStatus(lifecycle, lastPhase, championName);
 
   const statusKey = `${status.variant}:${status.label}`;
   if (statusKey !== prevStatusRef.current) {
