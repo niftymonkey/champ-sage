@@ -79,7 +79,7 @@ function App() {
   }, []);
 
   const { data, loading, error } = useGameData();
-  const { event: lifecycle, lastPhase } = useGameLifecycle();
+  const { event: lifecycle, lastPhase, championName } = useGameLifecycle();
   const liveGame = useLiveGameState();
   useUserInput();
   useZoom();
@@ -228,7 +228,11 @@ function App() {
             <InGameView state={effectiveState} gameData={data} />
           ) : (
             <div className="app-idle">
-              <ConnectionStatus lifecycle={lifecycle} lastPhase={lastPhase} />
+              <ConnectionStatus
+                lifecycle={lifecycle}
+                lastPhase={lastPhase}
+                championName={championName}
+              />
               <LastGameCard
                 dataVersion={data.version}
                 championCount={data.champions.size}

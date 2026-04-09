@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import type { GameLifecycleEvent } from "../lib/reactive";
 import type { GameflowPhase } from "../lib/reactive/types";
-import { gameLifecycle$ } from "../lib/reactive";
-import { debounceTime, filter, merge } from "rxjs";
+import { gameLifecycle$, liveGameState$ } from "../lib/reactive";
+import { resolveChampionName } from "../lib/data-ingest/champion-id-map";
+import { debounceTime, filter, merge, map, distinctUntilChanged } from "rxjs";
 
 /**
  * Subscribe to game lifecycle events.
@@ -13,15 +14,33 @@ import { debounceTime, filter, merge } from "rxjs";
  */
 const DEBOUNCE_MS = 400;
 
+/** Extract the local player's champion name from raw champ select session data. */
+function getLocalChampionName(champSelect: unknown): string | null {
+  if (champSelect == null || typeof champSelect !== "object") return null;
+  const cs = champSelect as Record<string, unknown>;
+  const localCellId = cs.localPlayerCellId as number | undefined;
+  const myTeam = cs.myTeam as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(myTeam)) return null;
+  const local = myTeam.find((m) => m.cellId === localCellId);
+  if (!local) return null;
+  const lockedId = local.championId as number;
+  if (lockedId > 0) return resolveChampionName(lockedId) ?? null;
+  const hoverId = local.championPickIntent as number;
+  if (hoverId > 0) return resolveChampionName(hoverId) ?? null;
+  return null;
+}
+
 export function useGameLifecycle(): {
   event: GameLifecycleEvent;
   lastPhase: GameflowPhase | null;
+  championName: string | null;
 } {
   const [event, setEvent] = useState<GameLifecycleEvent>(
     gameLifecycle$.getValue()
   );
   const lastPhaseRef = useRef<GameflowPhase | null>(null);
   const [lastPhase, setLastPhase] = useState<GameflowPhase | null>(null);
+  const [championName, setChampionName] = useState<string | null>(null);
 
   useEffect(() => {
     // Phase and connection events: deliver immediately
@@ -35,7 +54,7 @@ export function useGameLifecycle(): {
       debounceTime(DEBOUNCE_MS)
     );
 
-    const sub = merge(immediate$, debounced$).subscribe((e) => {
+    const lifecycleSub = merge(immediate$, debounced$).subscribe((e) => {
       if (e.type === "phase") {
         lastPhaseRef.current = e.phase;
         setLastPhase(e.phase);
@@ -43,8 +62,23 @@ export function useGameLifecycle(): {
       setEvent(e);
     });
 
-    return () => sub.unsubscribe();
+    // Derive champion name from champ select data, only during ChampSelect phase
+    const championSub = liveGameState$
+      .pipe(
+        map((state) =>
+          lastPhaseRef.current === "ChampSelect"
+            ? getLocalChampionName(state.champSelect)
+            : null
+        ),
+        distinctUntilChanged()
+      )
+      .subscribe(setChampionName);
+
+    return () => {
+      lifecycleSub.unsubscribe();
+      championSub.unsubscribe();
+    };
   }, []);
 
-  return { event, lastPhase };
+  return { event, lastPhase, championName };
 }
