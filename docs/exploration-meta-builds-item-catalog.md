@@ -85,15 +85,31 @@ A TypeScript script in `scripts/` that fetches match data from the Riot Match-v5
 | --------------- | -------- | ----------------------------------- |
 | Ranked Solo/Duo | 420      | `data/meta-builds/ranked-solo.json` |
 | ARAM            | 450      | `data/meta-builds/aram.json`        |
-| ARAM: Mayhem    | 2400     | `data/meta-builds/mayhem.json`      |
 | Arena           | 1700     | `data/meta-builds/arena.json`       |
+
+**ARAM: Mayhem is NOT collected.** See "Mayhem Data Limitation" below.
+
+### Mayhem Data Limitation
+
+ARAM: Mayhem match data is not accessible through the Riot public API. This was confirmed by Riot representatives in [developer-relations issue #1109](https://github.com/RiotGames/developer-relations/issues/1109):
+
+- Direct queries to Match-v5 with a Mayhem match ID return **403 Forbidden**
+- Filtering `matches/by-puuid` by queue ID 2400 returns an empty list for everyone
+- Recent Mayhem games played by real users appear in the API as queue 450 ("ARAM") with augment data stripped from the response — there is no way to distinguish them from standard ARAM games
+- This policy also applies to other rotating/limited modes like Brawl and Doom Bots — Riot has stated they do not intend to expose data for these modes through the public API
+
+**Decision:** Use ARAM meta build data as the baseline for Mayhem coaching. This matches how players approach Mayhem in practice — start from a proven ARAM build, then adapt item choices based on augment synergies during the game. The LLM reasons about augment-specific tweaks using its general item knowledge; the ARAM item pool gives it a current-patch-accurate starting point.
+
+The coaching prompt should load `aram.json` for both standard ARAM and Mayhem games. Mode-specific behavior (e.g., augment-aware reasoning) is handled elsewhere in the prompt, not by having separate meta build data.
 
 ### Data Collection Strategy
 
 - **Region:** NA only (expandable later)
-- **Rank tier:** Diamond+ (Challenger, Grandmaster, Master, Diamond) for ranked. High MMR for ARAM/Mayhem/Arena.
+- **Rank tier:** Challenger/Grandmaster/Master/Diamond I for ranked-solo. Same high-elo pool used as snowball seeds for ARAM and Arena.
 - **Sample target:** Enough matches to get statistically meaningful data for all 172 champions, including rare picks. Targeting several hundred games minimum per champion.
-- **Approach:** Fetch high-elo player lists, then their recent match histories filtered by queue type. Deduplicate match IDs, fetch match details, bucket by champion.
+- **Approach for ranked-solo:** Fetch high-elo player list → get each player's match IDs for the queue → fetch match details → bucket by champion.
+- **Approach for casual queues (ARAM, Arena):** Interleaved snowball. Take a seed PUUID, fetch their match IDs, fetch details for each new match, add all 10 participants to the queue for future processing. This snowballs: each match reveals 9 new players who actually play the mode, accelerating discovery beyond the initial seed list.
+- **Priority seed (optional):** A Riot ID can be provided via `RIOT_SEED_ID` in `.env` (format: `gameName#tagLine`). If set, the script resolves it to a PUUID via Account-v1 and prepends it to the snowball queue. Useful if the primary user plays the target modes and their match history makes a good starting point.
 - **Estimated runtime:** 30-60 minutes per queue type with a development API key (20 req/sec).
 - **When to run:** Manually after each patch (every ~2 weeks), once enough match data exists (1-2 days after patch).
 
