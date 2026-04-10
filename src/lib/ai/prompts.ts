@@ -4,6 +4,7 @@ import type { AramOverrides, Champion } from "../data-ingest/types";
 import type { GameState } from "../game-state/types";
 import { formatModifier } from "../format";
 import { GAME_MODE_MAYHEM, GAME_MODE_ARAM } from "../mode/types";
+import { buildItemCatalogSections } from "./item-catalog";
 
 const ITEM_RECOMMENDATIONS_RULE =
   "ITEM RECOMMENDATIONS: When recommending an item purchase, always name the destination (completed) item AND a buildable component. If the player can afford a component: 'Build toward Rabadon's Deathcap. You can get a Needlessly Large Rod now.' If not: 'Build toward Rabadon's Deathcap. You can get a Needlessly Large Rod at 1250g.' Name the most expensive component the player can currently afford. If no component is affordable, name the cheapest and its gold threshold. Never recommend unrelated filler items just to spend gold. For non-purchase responses (strategy, positioning, augments), just name items naturally without this format.";
@@ -57,6 +58,10 @@ export function buildGameSystemPrompt(
   sections.push("");
   sections.push(
     "PROACTIVE AWARENESS: Before answering any item question, check the enemy team composition. If the enemy has heavy healing (Soraka, Aatrox, Yuumi, Warwick, Dr. Mundo), mention grievous wounds. If 3+ enemies deal magic damage, mention magic resist. If you notice other build gaps (missing resistances, unusually high unspent gold), flag them briefly."
+  );
+  sections.push("");
+  sections.push(
+    "ITEM POOL USAGE: When an item pool is provided for the player's champion, treat it as a curated set of viable items — NOT as a build order or a list to regurgitate. Choose items from the pool that specifically counter the enemy team composition and address the player's current game state. Different matchups should produce different recommendations from the same pool. If the enemy comp or game state calls for something outside the pool (grievous wounds, specific defensive items, matchup counters), recommend from the broader available items instead — do not restrict yourself to the pool."
   );
 
   // --- Augment rules (conditional on mode) ---
@@ -149,6 +154,19 @@ export function buildGameSystemPrompt(
     sections.push(
       `Runes: ${runes.keystone} (${runes.primaryTree} / ${runes.secondaryTree})`
     );
+
+    // --- Item catalog (tier 1: meta-derived, tier 2: mode-valid fallback) ---
+    // Reuse the `champion` resolved above rather than re-looking it up.
+    const itemCatalog = buildItemCatalogSections(
+      mode,
+      champion,
+      gameData.items,
+      gameData.metaBuilds
+    );
+    if (itemCatalog.text) {
+      sections.push("");
+      sections.push(itemCatalog.text);
+    }
   }
 
   // --- All champions in the match ---
