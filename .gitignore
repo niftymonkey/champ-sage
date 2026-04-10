@@ -35,6 +35,10 @@ vite.config.ts.timestamp-*
 # Data dumps
 data-dump/
 
+# Meta build cache (intermediate API data, not the final output)
+data/meta-builds/.cache/
+data/meta-builds/.cache.bak/
+
 # "Current status" files
 **/STATUS.md
 *.pdf
