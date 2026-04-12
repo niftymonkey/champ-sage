@@ -445,7 +445,7 @@ describe("buildItemCatalogSections", () => {
     );
 
     expect(result.text).toContain("Kraken Slayer");
-    expect(result.text).not.toContain(/\bBoots\b/);
+    expect(result.text).not.toMatch(/\bBoots\b/);
     expect(result.tier1Count).toBe(1);
   });
 });
