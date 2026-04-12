@@ -19,7 +19,7 @@ config({ path: resolve(__dirname, "../../../.env"), override: true });
 
 import { evalite } from "evalite";
 import { createScorer } from "evalite";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText, Output, type ModelMessage } from "ai";
 import { readFileSync, readdirSync } from "fs";
 import { coachingResponseSchema } from "./schemas";
@@ -82,48 +82,32 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 // --- Model setup ---
+//
+// Evals always use OpenRouter via EVAL_OPENROUTER_API_KEY. This keeps eval
+// costs separate from the app's VITE_OPENAI_API_KEY.
 
-const openaiKey = process.env.VITE_OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
-const openrouterKey =
-  process.env.VITE_OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY;
+const openrouterKey = process.env.EVAL_OPENROUTER_API_KEY;
 
-if (!openaiKey && !openrouterKey) {
-  throw new Error(
-    "At least one API key required in .env: VITE_OPENAI_API_KEY, OPENAI_API_KEY, VITE_OPENROUTER_API_KEY, or OPENROUTER_API_KEY"
-  );
+if (!openrouterKey) {
+  throw new Error("EVAL_OPENROUTER_API_KEY required in .env for evalite runs");
 }
 
-const openai = openaiKey ? createOpenAI({ apiKey: openaiKey }) : null;
-const openrouter = openrouterKey
-  ? createOpenAI({
-      apiKey: openrouterKey,
-      baseURL: "https://openrouter.ai/api/v1",
-    })
-  : null;
+const openrouter = createOpenRouter({ apiKey: openrouterKey });
 
 interface ModelCandidate {
   name: string;
   id: string;
-  provider: "openai" | "openrouter";
 }
 
-// Models to evaluate across providers and tiers.
-// Comment/uncomment to control which models run.
+// Models to evaluate. Comment/uncomment to control which models run.
 const models: ModelCandidate[] = [
-  { name: "GPT 5.4 mini", id: "openai/gpt-5.4-mini", provider: "openrouter" },
-  // { name: "GPT 5.4 mini", id: "gpt-5.4-mini", provider: "openai" },
-  // { name: "GPT 5.4", id: "openai/gpt-5.4", provider: "openrouter" },
-  // { name: "Gemini 2.5 Pro", id: "google/gemini-2.5-pro", provider: "openrouter" },
-  // { name: "Claude Sonnet 4.6", id: "anthropic/claude-sonnet-4.6", provider: "openrouter" },
+  { name: "GPT 5.4 mini", id: "openai/gpt-5.4-mini" },
+  // { name: "GPT 5.4", id: "openai/gpt-5.4" },
+  // { name: "Gemini 2.5 Pro", id: "google/gemini-2.5-pro" },
+  // { name: "Claude Sonnet 4.6", id: "anthropic/claude-sonnet-4.6" },
 ];
 
 function getModel(candidate: ModelCandidate) {
-  if (candidate.provider === "openai") {
-    if (!openai) throw new Error(`OpenAI key required for ${candidate.name}`);
-    return openai(candidate.id);
-  }
-  if (!openrouter)
-    throw new Error(`OpenRouter key required for ${candidate.name}`);
   return openrouter.chat(candidate.id);
 }
 

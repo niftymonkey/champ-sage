@@ -18,6 +18,7 @@
     "eval:serve": "evalite serve",
     "eval:watch": "evalite watch src/lib/ai/coaching.eval.ts",
     "extract-fixtures": "tsx scripts/extract-fixtures.ts",
+    "fetch-meta": "tsx scripts/fetch-meta-builds.ts",
     "inspect-evals": "tsx scripts/inspect-evals.ts",
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
     "prepare": "husky",

@@ -22,6 +22,7 @@ import { getMayhemAugmentSets } from "./sources/mayhem-augment-sets";
 import { enrichQuestAugments } from "./sources/quest-augment-rewards";
 import { readCache, writeCache, mapToObject, objectToMap } from "./cache";
 import { buildEntityDictionary } from "./entity-dictionary";
+import { loadMetaBuilds, type MetaBuildIndex } from "./meta-builds";
 
 const CACHE_KEY = "game-data";
 
@@ -37,12 +38,20 @@ interface CachedGameData {
 
 export interface LoadedGameData extends GameData {
   dictionary: EntityDictionary;
+  /**
+   * Per-queue meta build data loaded from `src/data/meta-builds/*.json`.
+   * Optional because the data may not be collected yet — callers must
+   * handle the `undefined` case gracefully.
+   */
+  metaBuilds?: MetaBuildIndex;
 }
 
 export async function loadCachedGameData(): Promise<LoadedGameData | null> {
   const cached = await readCache<CachedGameData>(CACHE_KEY);
   if (!cached) return null;
-  return fromCached(cached);
+  const data = fromCached(cached);
+  data.metaBuilds = await loadMetaBuilds();
+  return data;
 }
 
 export async function checkForNewVersion(
@@ -67,7 +76,9 @@ export async function loadGameData(): Promise<LoadedGameData> {
 
   const cached = await readCache<CachedGameData>(CACHE_KEY);
   if (cached) {
-    return fromCached(cached);
+    const data = fromCached(cached);
+    data.metaBuilds = await loadMetaBuilds();
+    return data;
   }
 
   return fetchAndCache();
@@ -126,7 +137,9 @@ export async function fetchAndCache(): Promise<LoadedGameData> {
 
   await writeCache(CACHE_KEY, data);
 
-  return fromCached(data);
+  const loaded = fromCached(data);
+  loaded.metaBuilds = await loadMetaBuilds();
+  return loaded;
 }
 
 function mergeAramOverrides(
