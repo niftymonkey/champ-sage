@@ -178,12 +178,54 @@ describe("buildItemCatalogSections", () => {
     mode: "standard", // NOT in aram mode
     gold: { base: 450, total: 450, sell: 180, purchasable: true },
   });
+  const refillablePotion = createItem({
+    id: 2031,
+    name: "Refillable Potion",
+    mode: "aram",
+    gold: { base: 150, total: 150, sell: 60, purchasable: true },
+    into: [2033],
+  });
+  const longSword = createItem({
+    id: 1036,
+    name: "Long Sword",
+    mode: "aram",
+    gold: { base: 350, total: 350, sell: 245, purchasable: true },
+    into: [3133, 3134, 6670],
+  });
+  const needlesslyLargeRod = createItem({
+    id: 1058,
+    name: "Needlessly Large Rod",
+    mode: "aram",
+    gold: { base: 1200, total: 1200, sell: 840, purchasable: true },
+    into: [3089, 3157, 4645],
+  });
+  const mercuryTreads = createItem({
+    id: 3111,
+    name: "Mercury's Treads",
+    mode: "aram",
+    gold: { base: 350, total: 1250, sell: 875, purchasable: true },
+    tags: ["Boots", "SpellBlock", "Tenacity"],
+    into: [3173],
+  });
+  const basicsBoots = createItem({
+    id: 1001,
+    name: "Boots",
+    mode: "aram",
+    gold: { base: 300, total: 300, sell: 210, purchasable: true },
+    tags: ["Boots"],
+    into: [3006, 3009, 3020, 3047, 3111],
+  });
 
   const allItems = new Map<number, Item>([
     [kraken.id, kraken],
     [galeforce.id, galeforce],
     [zhonyas.id, zhonyas],
     [jungleItem.id, jungleItem],
+    [refillablePotion.id, refillablePotion],
+    [longSword.id, longSword],
+    [needlesslyLargeRod.id, needlesslyLargeRod],
+    [mercuryTreads.id, mercuryTreads],
+    [basicsBoots.id, basicsBoots],
   ]);
 
   it("produces tier 1 items from meta builds for a known champion", () => {
@@ -316,5 +358,94 @@ describe("buildItemCatalogSections", () => {
 
     expect(result.tier1Count).toBe(1);
     expect(result.text).toContain("Kraken Slayer");
+  });
+
+  it("excludes consumables from tier 1 (gold < 500)", () => {
+    const metaFile = createMetaFile(jinx.key, "Jinx", [
+      [kraken.id, refillablePotion.id, longSword.id],
+    ]);
+    const index: MetaBuildIndex = {
+      aram: metaFile,
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      allItems,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).not.toContain("Refillable Potion");
+    expect(result.text).not.toContain("Long Sword");
+    expect(result.tier1Count).toBe(1);
+  });
+
+  it("excludes components from tier 1 (items that build into others)", () => {
+    const metaFile = createMetaFile(jinx.key, "Jinx", [
+      [kraken.id, needlesslyLargeRod.id],
+    ]);
+    const index: MetaBuildIndex = {
+      aram: metaFile,
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      allItems,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).not.toContain("Needlessly Large Rod");
+    expect(result.tier1Count).toBe(1);
+  });
+
+  it("includes upgraded boots in tier 1 despite having an 'into' array", () => {
+    const metaFile = createMetaFile(jinx.key, "Jinx", [
+      [kraken.id, mercuryTreads.id],
+    ]);
+    const index: MetaBuildIndex = {
+      aram: metaFile,
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      allItems,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).toContain("Mercury's Treads");
+    expect(result.tier1Count).toBe(2);
+  });
+
+  it("excludes base boots from tier 1 (gold < 500)", () => {
+    const metaFile = createMetaFile(jinx.key, "Jinx", [
+      [kraken.id, basicsBoots.id],
+    ]);
+    const index: MetaBuildIndex = {
+      aram: metaFile,
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      allItems,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).not.toContain(/\bBoots\b/);
+    expect(result.tier1Count).toBe(1);
   });
 });

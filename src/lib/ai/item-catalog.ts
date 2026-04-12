@@ -185,11 +185,18 @@ export function buildItemCatalogSections(
   const tier1Items: Item[] = [];
   for (const id of tier1Ids) {
     const item = allItems.get(id);
-    // Meta builds may reference items that aren't in the current mode filter
-    // (e.g. builds captured just before a patch shifted item availability).
-    // We still want to include them in tier 1 — the meta data is what matters
-    // for "proven on this champion", not the mode filter.
-    if (item) tier1Items.push(item);
+    if (!item) continue;
+    // Skip components and consumables. These show up in meta builds when
+    // players finish games with leftover inventory (Refillable Potion, Ruby
+    // Crystal, Long Sword, etc.). They pollute the tier 1 pool.
+    //
+    // A completed item either doesn't build into anything, or is boots
+    // (upgraded boots have `into` pointing at further upgrades but are
+    // still "completed" items — identified by the "Boots" tag).
+    if (item.gold.total < 500) continue;
+    const isBoots = item.tags.includes("Boots");
+    if (item.into && item.into.length > 0 && !isBoots) continue;
+    tier1Items.push(item);
   }
 
   // Tier 2 = mode-valid items minus tier 1 items. Sort alphabetically for
