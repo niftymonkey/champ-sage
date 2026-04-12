@@ -37,6 +37,9 @@ data-dump/
 
 # Meta build cache (intermediate API data, not the final output)
 data/meta-builds/.cache/
+
+# Staging files for in-progress meta build collection runs
+src/data/meta-builds/*.new.json
 data/meta-builds/.cache.bak/
 
 # "Current status" files

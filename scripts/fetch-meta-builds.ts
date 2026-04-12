@@ -14,9 +14,18 @@
  */
 
 import { config } from "dotenv";
-import { resolve, dirname } from "path";
+import { basename, resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { createInterface } from "node:readline";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(__dirname, "..");
@@ -62,6 +71,15 @@ type QueueKey = keyof typeof QUEUES;
 
 const TEST_MODE = process.argv.includes("--test");
 
+/**
+ * When --reset-queries is passed, delete the queried-puuids and
+ * discovered-puuids caches so the snowball re-queries everyone with the
+ * current time window. Use this after changing MATCH_WINDOW_DAYS or when
+ * you want fresh data from the existing seed pool. Match data and fetched
+ * match IDs are preserved — we never throw away paid API work.
+ */
+const RESET_QUERIES = process.argv.includes("--reset-queries");
+
 /** How many match IDs to request per player (max 100) */
 const MATCHES_PER_PLAYER = TEST_MODE ? 20 : 100;
 
@@ -82,6 +100,62 @@ const TARGET_MATCHES = TEST_MODE ? 50 : 50_000;
  * earlier runs and gives breathing room for any unexpected hiccups.
  */
 const REQUEST_DELAY_MS = 2000;
+
+/**
+ * How far back in time to include matches. Matches older than this window are
+ * excluded via the Match-v5 API's `startTime` filter, so we never even fetch
+ * their details — this is what keeps the dataset scoped to the current patch.
+ *
+ * 60 days gives enough headroom for small/mid patches while still filtering
+ * out genuinely stale data from months ago. Large patch cycles with big item
+ * reworks may want a shorter window.
+ */
+const MATCH_WINDOW_DAYS = 60;
+const MATCH_WINDOW_SECONDS = MATCH_WINDOW_DAYS * 24 * 60 * 60;
+
+/**
+ * Epoch timestamp (seconds) marking the start of the collection window.
+ * Passed as the `startTime` parameter to `matches/by-puuid/{puuid}/ids` so
+ * we only get match IDs from the last MATCH_WINDOW_DAYS days. Computed once
+ * at script start so all queries use the same window.
+ */
+const startTimeEpoch = Math.floor(Date.now() / 1000) - MATCH_WINDOW_SECONDS;
+
+/**
+ * How many recent minor patches to include in aggregation. With a 60-day
+ * match window, a value of 2 typically covers the current and previous
+ * patch, giving us a meaningful dataset even right after a patch drops.
+ */
+const RECENT_PATCH_COUNT = 2;
+
+/**
+ * Fetch the most recent N unique major.minor patches from Data Dragon
+ * (e.g. ["16.7", "16.6"]). Matches whose gameVersion starts with any of
+ * these are included at aggregation time; older matches are excluded.
+ * Cached after first fetch.
+ */
+let recentPatchesCache: string[] | null = null;
+async function getRecentPatches(): Promise<string[]> {
+  if (recentPatchesCache) return recentPatchesCache;
+  const res = await fetch(
+    "https://ddragon.leagueoflegends.com/api/versions.json"
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to fetch Data Dragon version: ${res.status}`);
+  }
+  const versions: string[] = await res.json();
+
+  // versions.json is ordered newest-first. Walk it and collect unique
+  // major.minor prefixes until we have RECENT_PATCH_COUNT of them.
+  const seen: string[] = [];
+  for (const v of versions) {
+    const patch = v.split(".").slice(0, 2).join(".");
+    if (!seen.includes(patch)) seen.push(patch);
+    if (seen.length >= RECENT_PATCH_COUNT) break;
+  }
+  recentPatchesCache = seen;
+  return recentPatchesCache;
+}
 
 // ---------------------------------------------------------------------------
 // Rate limiter — steady delay
@@ -117,6 +191,28 @@ async function rateLimitedFetch(url: string, retries = 5): Promise<Response> {
     throw err;
   }
 
+  // Fatal auth errors — bail immediately. Dev API keys expire every 24 hours,
+  // and without this check the script would silently waste every remaining
+  // request against an expired key until hitting the 24-hour mark.
+  //
+  // 401: Unauthorized (key expired, malformed, or missing)
+  // 403: Forbidden (key rejected — can also happen for region-blocked resources
+  //      like Mayhem, but since we no longer query Mayhem, any 403 is fatal)
+  if (res.status === 401 || res.status === 403) {
+    console.error(
+      `\n\nFATAL: Riot API returned ${res.status} ${res.statusText} for ${url}`
+    );
+    console.error(
+      `  This almost always means your RIOT_API_KEY in .env has expired.`
+    );
+    console.error(`  Dev keys expire every 24 hours — grab a fresh one at:`);
+    console.error(`    https://developer.riotgames.com`);
+    console.error(
+      `  Then update .env and re-run \`pnpm fetch-meta\`. All progress is cached.\n`
+    );
+    process.exit(1);
+  }
+
   // Safety net: if we somehow still get rate limited, respect the Retry-After header
   if (res.status === 429) {
     const retryAfter = Number(res.headers.get("Retry-After") || "10");
@@ -140,6 +236,68 @@ async function rateLimitedFetch(url: string, retries = 5): Promise<Response> {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+// ---------------------------------------------------------------------------
+// Status line helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Clear the current line (progress counter) before printing a full line so
+ * the progress counter's `\r`-overwrite doesn't corrupt the output.
+ */
+function clearLine(): void {
+  process.stdout.write("\r\x1b[K");
+}
+
+/**
+ * Print a formatted summary line for one of the diagnostic events also
+ * written to the JSONL log file. Kept in the same file as the fetch logic
+ * (rather than a separate watch script) so one terminal shows everything.
+ */
+interface SummaryEvent {
+  playersQueried: number;
+  totalMatches: number;
+  queueSize: number;
+  last100: {
+    matchesAdded: number;
+    avgMatchesPerQuery: number;
+    bySource: Record<string, { queries: number; matchesAdded: number }>;
+    idsReturnedDistribution: Record<string, number>;
+    detailFailureRate: number;
+  };
+}
+
+function printSummary(e: SummaryEvent): void {
+  clearLine();
+  const bySource = Object.entries(e.last100.bySource)
+    .filter(([, v]) => v.queries > 0)
+    .map(([k, v]) => `${k}:${v.queries}q/${v.matchesAdded}m`)
+    .join(" ");
+  const ids = e.last100.idsReturnedDistribution;
+  const idsStr = `[0:${ids.zero} 1-10:${ids["1-10"]} 11-50:${ids["11-50"]} 51-99:${ids["51-99"]} 100:${ids["100"]}]`;
+  const avg = Math.round(e.last100.avgMatchesPerQuery * 100) / 100;
+  const failRate = Math.round(e.last100.detailFailureRate * 1000) / 10;
+  console.log(
+    `  📈 ${e.playersQueried} queried | ${e.totalMatches} matches | queue: ${e.queueSize}`
+  );
+  console.log(
+    `       last 100: +${e.last100.matchesAdded} matches (avg ${avg}/query, ${failRate}% fail)`
+  );
+  console.log(`       by source: ${bySource || "(none)"}`);
+  console.log(`       ids returned: ${idsStr}`);
+}
+
+function printPeriodicAggregation(
+  totalMatches: number,
+  championsCovered: number,
+  patch: string,
+  outputPath: string
+): void {
+  clearLine();
+  console.log(
+    `  📊 ${totalMatches} matches → ${championsCovered} champions covered (patch ${patch}) → ${outputPath}`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +392,72 @@ function loadJsonCache<T>(path: string, fallback: T): T {
 function saveJsonCache(path: string, data: unknown) {
   ensureDir(dirname(path));
   writeFileSync(path, JSON.stringify(data, null, 2));
+}
+
+// ---------------------------------------------------------------------------
+// JSONL cache for match data
+//
+// JSON arrays don't scale past ~25k matches because JSON.stringify hits
+// V8's max string length (~512MB). Match data is stored as newline-delimited
+// JSON instead: one match per line, appended immediately as it's fetched.
+// - No size limit (file system is the limit)
+// - Crash-safe (each match is durable the moment it's appended)
+// - Faster (no periodic full-file rewrites)
+// - Stream-readable on load (no giant string buffer)
+// ---------------------------------------------------------------------------
+
+/** Append a single match to a JSONL file (one line per match). */
+function appendMatchJsonl(path: string, match: MatchData): void {
+  ensureDir(dirname(path));
+  appendFileSync(path, JSON.stringify(match) + "\n");
+}
+
+/** Stream-load all matches from a JSONL file. */
+async function loadMatchesJsonl(path: string): Promise<MatchData[]> {
+  if (!existsSync(path)) return [];
+  const matches: MatchData[] = [];
+  const stream = createReadStream(path, { encoding: "utf-8" });
+  const rl = createInterface({ input: stream, crlfDelay: Infinity });
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+    try {
+      matches.push(JSON.parse(line) as MatchData);
+    } catch {
+      // Skip corrupted lines (e.g. partial writes from a crash mid-append).
+    }
+  }
+  return matches;
+}
+
+/**
+ * Migrate an existing legacy JSON array cache to JSONL format. Preserves
+ * the old file so the user can roll back; the migration is idempotent and
+ * only runs when the JSONL target doesn't exist yet.
+ */
+async function migrateLegacyMatchCache(
+  legacyJsonPath: string,
+  jsonlPath: string
+): Promise<void> {
+  if (existsSync(jsonlPath)) return;
+  if (!existsSync(legacyJsonPath)) return;
+
+  console.log(`  Migrating legacy match cache → ${basename(jsonlPath)}`);
+  const legacy = JSON.parse(readFileSync(legacyJsonPath, "utf-8"));
+  if (!Array.isArray(legacy)) return;
+
+  ensureDir(dirname(jsonlPath));
+  // Write each match as its own line. Chunk writes to keep memory reasonable.
+  const CHUNK = 1000;
+  for (let i = 0; i < legacy.length; i += CHUNK) {
+    const chunk = legacy
+      .slice(i, i + CHUNK)
+      .map((m) => JSON.stringify(m))
+      .join("\n");
+    appendFileSync(jsonlPath, chunk + "\n");
+  }
+  console.log(
+    `    Migrated ${legacy.length} matches. Legacy file preserved at ${basename(legacyJsonPath)} — delete when ready.`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -350,7 +574,7 @@ async function collectMatchIds(
 
     const url =
       `${CONTINENTAL_HOST}/lol/match/v5/matches/by-puuid/${puuid}/ids` +
-      `?queue=${queueId}&count=${MATCHES_PER_PLAYER}`;
+      `?queue=${queueId}&count=${MATCHES_PER_PLAYER}&startTime=${startTimeEpoch}`;
 
     const res = await rateLimitedFetch(url);
     queriedPuuids.add(puuid);
@@ -412,7 +636,8 @@ async function collectMatchIds(
 async function collectMatchesSnowball(
   prioritySeeds: string[],
   fallbackSeeds: string[],
-  queueKey: QueueKey
+  queueKey: QueueKey,
+  recentPatches: string[]
 ): Promise<MatchData[]> {
   const queueId = QUEUES[queueKey].id;
 
@@ -421,9 +646,14 @@ async function collectMatchesSnowball(
 
   const matchesDir = resolve(CACHE_DIR, `matches-${queueKey}`);
   ensureDir(matchesDir);
-  const matchesDataPath = resolve(matchesDir, "_data.json");
+  const matchesLegacyPath = resolve(matchesDir, "_data.json");
+  const matchesJsonlPath = resolve(matchesDir, "_data.jsonl");
   const matchesIndexPath = resolve(matchesDir, "_index.json");
-  const matches: MatchData[] = loadJsonCache<MatchData[]>(matchesDataPath, []);
+
+  // One-time migration from legacy JSON array format to JSONL.
+  await migrateLegacyMatchCache(matchesLegacyPath, matchesJsonlPath);
+
+  const matches: MatchData[] = await loadMatchesJsonl(matchesJsonlPath);
   const fetchedMatchIds = new Set<string>(
     loadJsonCache<string[]>(matchesIndexPath, [])
   );
@@ -448,30 +678,113 @@ async function collectMatchesSnowball(
     return matches;
   }
 
+  // Track which source each PUUID came from so we can understand snowball
+  // dynamics in the log output.
+  type PuuidSource = "priority" | "discovered" | "fallback" | "new";
+  const puuidSource = new Map<string, PuuidSource>();
+
   // Build initial queue: priority seeds first, then discovered, then fallback
   const puuidQueue: string[] = [];
   const queueSet = new Set<string>();
-  const enqueue = (puuid: string) => {
+  const enqueue = (puuid: string, source: PuuidSource) => {
     if (queriedPuuids.has(puuid)) return;
     if (queueSet.has(puuid)) return;
     puuidQueue.push(puuid);
     queueSet.add(puuid);
+    puuidSource.set(puuid, source);
   };
 
-  for (const p of prioritySeeds) enqueue(p);
-  for (const p of discoveredPuuids) enqueue(p);
-  for (const p of fallbackSeeds) enqueue(p);
+  for (const p of prioritySeeds) enqueue(p, "priority");
+  for (const p of discoveredPuuids) enqueue(p, "discovered");
+  for (const p of fallbackSeeds) enqueue(p, "fallback");
 
   console.log(
     `  Snowball collecting for ${queueKey} (have ${matches.length} matches, ${puuidQueue.length} PUUIDs to query)...`
   );
 
+  // --- Per-query diagnostic logging ---
+  //
+  // Writes one JSON line per query to a log file so we can analyze snowball
+  // efficiency offline (e.g. to spot saturation, where a batch of players is
+  // returning zero new matches). Tail the file while the script runs:
+  //   tail -f data/meta-builds/.cache/fetch-log-<queueKey>.jsonl
+  const logFilePath = resolve(CACHE_DIR, `fetch-log-${queueKey}.jsonl`);
+  appendFileSync(
+    logFilePath,
+    JSON.stringify({
+      t: new Date().toISOString(),
+      event: "start",
+      queueKey,
+      targetMatches: TARGET_MATCHES,
+      resumedMatches: matches.length,
+      resumedPlayersQueried: queriedPuuids.size,
+      seedsPending: puuidQueue.length,
+      sources: {
+        priority: prioritySeeds.length,
+        discovered: discoveredPuuids.size,
+        fallback: fallbackSeeds.length,
+      },
+    }) + "\n"
+  );
+
+  // Rolling window to detect saturation. If the last N queries produce zero
+  // new matches, something is wrong (or we've exhausted reachable space).
+  const EFFICIENCY_WINDOW = 100;
+  interface RollingEntry {
+    source: PuuidSource;
+    idsReturned: number;
+    matchesAdded: number;
+    detailsFetched: number;
+    detailsFailed: number;
+  }
+  const rollingWindow: RollingEntry[] = [];
+
+  const logQuery = (entry: Record<string, unknown>) => {
+    appendFileSync(
+      logFilePath,
+      JSON.stringify({ t: new Date().toISOString(), ...entry }) + "\n"
+    );
+  };
+
+  // Periodic aggregation: every time matches.length crosses a multiple of
+  // 1000, run aggregation and write to a staging file (e.g. `aram.new.json`)
+  // alongside the existing output (`aram.json`). The live app keeps using
+  // the existing file until the collection run is complete, at which point
+  // the user manually promotes the new file (delete old, rename .new). This
+  // keeps the app stable while new data is being built up.
+  let lastAggregatedAtCount = Math.floor(matches.length / 1000) * 1000;
+  const maybeAggregatePeriodically = () => {
+    const currentThousand = Math.floor(matches.length / 1000) * 1000;
+    if (currentThousand <= lastAggregatedAtCount) return;
+    lastAggregatedAtCount = currentThousand;
+
+    const output = aggregateBuilds(matches, queueKey, recentPatches);
+    const outputPath = resolve(OUTPUT_DIR, `${queueKey}.new.json`);
+    saveJsonCache(outputPath, output);
+
+    const champCount = Object.keys(output.champions).length;
+    logQuery({
+      event: "periodicAggregation",
+      totalMatches: matches.length,
+      championsCovered: champCount,
+      patch: output.patch,
+      outputPath: `${queueKey}.new.json`,
+    });
+    printPeriodicAggregation(
+      matches.length,
+      champCount,
+      output.patch,
+      `${queueKey}.new.json`
+    );
+  };
+
   let savedAt = Date.now();
   const SAVE_INTERVAL_MS = 30_000;
 
+  // Note: matches are appended to the JSONL file as they're fetched (below),
+  // not batched here. persist() only writes the small auxiliary state files.
   const persist = () => {
     saveJsonCache(matchIdsPath, [...matchIds]);
-    saveJsonCache(matchesDataPath, matches);
     saveJsonCache(matchesIndexPath, [...fetchedMatchIds]);
     saveJsonCache(queriedPath, [...queriedPuuids]);
     saveJsonCache(discoveredPath, [...discoveredPuuids]);
@@ -492,17 +805,41 @@ async function collectMatchesSnowball(
     const puuid = puuidQueue.shift()!;
     queueSet.delete(puuid);
     if (queriedPuuids.has(puuid)) continue;
+    const source = puuidSource.get(puuid) ?? "new";
 
     // Step 1: Fetch this player's match IDs for the queue
     const listUrl =
       `${CONTINENTAL_HOST}/lol/match/v5/matches/by-puuid/${puuid}/ids` +
-      `?queue=${queueId}&count=${MATCHES_PER_PLAYER}`;
+      `?queue=${queueId}&count=${MATCHES_PER_PLAYER}&startTime=${startTimeEpoch}`;
     const listRes = await rateLimitedFetch(listUrl);
     queriedPuuids.add(puuid);
     discoveredPuuids.delete(puuid);
     updateProgress();
 
+    const pushRolling = (entry: RollingEntry) => {
+      rollingWindow.push(entry);
+      if (rollingWindow.length > EFFICIENCY_WINDOW) rollingWindow.shift();
+    };
+
     if (!listRes.ok) {
+      logQuery({
+        event: "query",
+        puuid,
+        source,
+        status: listRes.status,
+        idsReturned: 0,
+        newIds: 0,
+        detailsFetched: 0,
+        matchesAfter: matches.length,
+        queueSizeAfter: puuidQueue.length,
+      });
+      pushRolling({
+        source,
+        idsReturned: 0,
+        matchesAdded: 0,
+        detailsFetched: 0,
+        detailsFailed: 0,
+      });
       maybePersist();
       continue;
     }
@@ -510,6 +847,10 @@ async function collectMatchesSnowball(
     const ids: string[] = await listRes.json();
     const newIds = ids.filter((id) => !matchIds.has(id));
     for (const id of ids) matchIds.add(id);
+
+    let detailsFetchedThisQuery = 0;
+    let detailsFailedThisQuery = 0;
+    const matchesBefore = matches.length;
 
     // Step 2: For each NEW match, fetch details immediately. This is where
     // new PUUIDs come from — participants of each match get added to the
@@ -521,8 +862,10 @@ async function collectMatchesSnowball(
       const detailUrl = `${CONTINENTAL_HOST}/lol/match/v5/matches/${matchId}`;
       const detailRes = await rateLimitedFetch(detailUrl);
       fetchedMatchIds.add(matchId);
+      detailsFetchedThisQuery++;
 
       if (!detailRes.ok) {
+        detailsFailedThisQuery++;
         maybePersist();
         continue;
       }
@@ -531,25 +874,143 @@ async function collectMatchesSnowball(
       const match = extractMatchData(matchId, raw);
       if (match) {
         matches.push(match);
+        appendMatchJsonl(matchesJsonlPath, match);
 
         // Add all participants to the queue (they've played this mode)
         for (const p of match.participants) {
           if (!queriedPuuids.has(p.puuid) && !queueSet.has(p.puuid)) {
             puuidQueue.push(p.puuid);
             queueSet.add(p.puuid);
+            puuidSource.set(p.puuid, "new");
             discoveredPuuids.add(p.puuid);
           }
         }
+
+        // Run aggregation every 1000 matches so the app has fresh data
+        // without waiting for the full collection to complete.
+        maybeAggregatePeriodically();
       }
 
       maybePersist();
       updateProgress();
     }
 
+    const matchesAddedThisQuery = matches.length - matchesBefore;
+    pushRolling({
+      source,
+      idsReturned: ids.length,
+      matchesAdded: matchesAddedThisQuery,
+      detailsFetched: detailsFetchedThisQuery,
+      detailsFailed: detailsFailedThisQuery,
+    });
+
+    logQuery({
+      event: "query",
+      puuid,
+      source,
+      status: 200,
+      idsReturned: ids.length,
+      newIds: newIds.length,
+      detailsFetched: detailsFetchedThisQuery,
+      detailsFailed: detailsFailedThisQuery,
+      matchesAdded: matchesAddedThisQuery,
+      matchesAfter: matches.length,
+      queueSizeAfter: puuidQueue.length,
+    });
+
+    // Every 100 queries, write a rich summary showing rolling efficiency
+    // broken down by source and ID-return distribution. This is the key
+    // diagnostic for spotting saturation and understanding which part of
+    // the queue is productive.
+    if (queriedPuuids.size % 100 === 0) {
+      const bySource: Record<
+        PuuidSource,
+        { queries: number; matchesAdded: number }
+      > = {
+        priority: { queries: 0, matchesAdded: 0 },
+        discovered: { queries: 0, matchesAdded: 0 },
+        fallback: { queries: 0, matchesAdded: 0 },
+        new: { queries: 0, matchesAdded: 0 },
+      };
+      const idBuckets = {
+        zero: 0,
+        "1-10": 0,
+        "11-50": 0,
+        "51-99": 0,
+        "100": 0,
+      };
+      let totalMatchesAdded = 0;
+      let totalDetailsFetched = 0;
+      let totalDetailsFailed = 0;
+
+      for (const entry of rollingWindow) {
+        bySource[entry.source].queries++;
+        bySource[entry.source].matchesAdded += entry.matchesAdded;
+        totalMatchesAdded += entry.matchesAdded;
+        totalDetailsFetched += entry.detailsFetched;
+        totalDetailsFailed += entry.detailsFailed;
+
+        if (entry.idsReturned === 0) idBuckets.zero++;
+        else if (entry.idsReturned <= 10) idBuckets["1-10"]++;
+        else if (entry.idsReturned <= 50) idBuckets["11-50"]++;
+        else if (entry.idsReturned < 100) idBuckets["51-99"]++;
+        else idBuckets["100"]++;
+      }
+
+      // Count remaining queue by source so we know what's left to process
+      const queueBySource: Record<PuuidSource, number> = {
+        priority: 0,
+        discovered: 0,
+        fallback: 0,
+        new: 0,
+      };
+      for (const p of puuidQueue) {
+        queueBySource[puuidSource.get(p) ?? "new"]++;
+      }
+
+      const summaryEvent: SummaryEvent = {
+        playersQueried: queriedPuuids.size,
+        totalMatches: matches.length,
+        queueSize: puuidQueue.length,
+        last100: {
+          matchesAdded: totalMatchesAdded,
+          avgMatchesPerQuery:
+            rollingWindow.length > 0
+              ? totalMatchesAdded / rollingWindow.length
+              : 0,
+          bySource,
+          idsReturnedDistribution: idBuckets,
+          detailFailureRate:
+            totalDetailsFetched > 0
+              ? totalDetailsFailed / totalDetailsFetched
+              : 0,
+        },
+      };
+      logQuery({
+        event: "summary",
+        ...summaryEvent,
+        queueBySource,
+        last100: {
+          ...summaryEvent.last100,
+          detailsFetched: totalDetailsFetched,
+          detailsFailed: totalDetailsFailed,
+        },
+      });
+      printSummary(summaryEvent);
+    }
+
     maybePersist();
   }
 
   persist();
+  logQuery({
+    event: "end",
+    totalMatches: matches.length,
+    totalPlayersQueried: queriedPuuids.size,
+    queueSize: puuidQueue.length,
+    reason:
+      matches.length >= TARGET_MATCHES ? "target-reached" : "queue-exhausted",
+  });
   console.log(`\n  Total matches for ${queueKey}: ${matches.length}`);
   return matches;
 }
@@ -570,9 +1031,11 @@ async function fetchMatchDetails(
   const indexPath = resolve(cacheDir, "_index.json");
   const fetchedIds = new Set<string>(loadJsonCache<string[]>(indexPath, []));
 
-  // Load existing match data
-  const dataPath = resolve(cacheDir, "_data.json");
-  const matches: MatchData[] = loadJsonCache<MatchData[]>(dataPath, []);
+  // Load existing match data (migrating from legacy JSON if needed)
+  const legacyDataPath = resolve(cacheDir, "_data.json");
+  const jsonlDataPath = resolve(cacheDir, "_data.jsonl");
+  await migrateLegacyMatchCache(legacyDataPath, jsonlDataPath);
+  const matches: MatchData[] = await loadMatchesJsonl(jsonlDataPath);
 
   const toFetch = matchIds.filter((id) => !fetchedIds.has(id));
 
@@ -610,6 +1073,7 @@ async function fetchMatchDetails(
     const match = extractMatchData(matchId, raw);
     if (match) {
       matches.push(match);
+      appendMatchJsonl(jsonlDataPath, match);
 
       // Discover new PUUIDs for snowball (save them for the snowball step)
       const discoveredPath = resolve(
@@ -631,16 +1095,14 @@ async function fetchMatchDetails(
     saveCounter++;
     if (saveCounter % 100 === 0) {
       saveJsonCache(indexPath, [...fetchedIds]);
-      saveJsonCache(dataPath, matches);
       process.stdout.write(
         `\r  ${matches.length} matches fetched (${saveCounter}/${toFetch.length})...`
       );
     }
   }
 
-  // Final save
+  // Final save (matches already persisted line-by-line via appendMatchJsonl)
   saveJsonCache(indexPath, [...fetchedIds]);
-  saveJsonCache(dataPath, matches);
   console.log(`\n  Total matches for ${queueKey}: ${matches.length}`);
   return matches;
 }
@@ -719,20 +1181,42 @@ function runeKey(perks: ParticipantData["perks"]): string {
   return perkIds.join(",");
 }
 
-/** Combined build+rune key for clustering */
+/**
+ * Cluster key for grouping "same build" participants. Items only — runes
+ * intentionally excluded because including them makes clusters too granular
+ * (a single stat shard difference produces a different cluster, so 134
+ * samples can spread across 130 distinct clusters and no cluster hits the
+ * minimum threshold). Rune data still collected and stored for future rune
+ * coaching work; we just don't cluster on it.
+ */
 function fullBuildKey(p: ParticipantData): string {
-  return `${buildKey(p.items)}|${runeKey(p.perks)}`;
+  return buildKey(p.items);
 }
+
+// Keep runeKey for potential future use (rune coaching) — not called here.
+void runeKey;
 
 function aggregateBuilds(
   matches: MatchData[],
-  queueKey: QueueKey
+  queueKey: QueueKey,
+  recentPatches: string[]
 ): MetaBuildOutput {
   const queue = QUEUES[queueKey];
+  const patchSet = new Set(recentPatches);
+
+  // Filter to only matches from recent patches. Matches in the cache from
+  // older patches are preserved (don't want to waste that data) but excluded
+  // from the output so the meta reflects what's actually current.
+  //
+  // gameVersion is like "16.7.123.456"; we match on the first two parts.
+  const filteredMatches = matches.filter((m) => {
+    const p = m.gameVersion.split(".").slice(0, 2).join(".");
+    return patchSet.has(p);
+  });
 
   // Group participant data by champion
   const byChampion = new Map<number, ParticipantData[]>();
-  for (const match of matches) {
+  for (const match of filteredMatches) {
     for (const p of match.participants) {
       // Skip participants with fewer than 3 completed items (remakes, early surrenders)
       const completedItems = p.items.slice(0, 6).filter((id) => id > 0).length;
@@ -744,26 +1228,9 @@ function aggregateBuilds(
     }
   }
 
-  // Determine patch from the most common game version
-  let patch = "unknown";
-  if (matches.length > 0) {
-    const versionCounts = new Map<string, number>();
-    for (const m of matches) {
-      // gameVersion is like "16.7.123.456" — first two parts are the patch
-      const patchVersion = m.gameVersion.split(".").slice(0, 2).join(".");
-      versionCounts.set(
-        patchVersion,
-        (versionCounts.get(patchVersion) ?? 0) + 1
-      );
-    }
-    let maxCount = 0;
-    for (const [v, c] of versionCounts) {
-      if (c > maxCount) {
-        patch = v;
-        maxCount = c;
-      }
-    }
-  }
+  // The output patch label is the most recent patch (first in the list).
+  // The aggregation itself may include matches from a few recent patches.
+  const patch = recentPatches[0] ?? "unknown";
 
   const champions: Record<string, ChampionBuilds> = {};
 
@@ -789,11 +1256,21 @@ function aggregateBuilds(
       }
     }
 
-    // Sort by games played (popularity), take top 5
+    // Filter out losing builds, then sort by popularity. Win rate is used
+    // as a quality filter, not a sort key — win rate sorting on small samples
+    // is mostly noise (n=5 has a 95% CI of ±44%). Popularity sorting gives
+    // a broader item pool, which is what we want for the LLM's tier 1 pool.
+    //
+    // Threshold of 2 games keeps noise low. 0.45 win rate excludes genuinely
+    // losing builds while giving small-sample builds some benefit of the doubt.
     const sorted = [...clusters.values()]
-      .filter((c) => c.games >= 5) // Need minimum sample
+      .filter((c) => {
+        if (c.games < 2) return false;
+        const winRate = c.wins / c.games;
+        return winRate >= 0.45;
+      })
       .sort((a, b) => b.games - a.games)
-      .slice(0, 5);
+      .slice(0, 10);
 
     if (sorted.length === 0) continue;
 
@@ -864,6 +1341,34 @@ async function main() {
     );
   }
 
+  // --reset-queries: move every PUUID we've ever queried back into the
+  // "discovered" pool so the snowball re-queries them with the current time
+  // window. We do NOT delete anything — we migrate. This preserves every
+  // PUUID we've discovered (including snowball expansions from prior runs)
+  // while marking them all as "not yet queried under the new filter."
+  if (RESET_QUERIES) {
+    console.log("  --reset-queries: moving queried PUUIDs back into discovery");
+    for (const qk of ["aram", "ranked-solo", "arena"] as const) {
+      const queriedPath = resolve(CACHE_DIR, `queried-puuids-${qk}.json`);
+      const discoveredPath = resolve(CACHE_DIR, `discovered-puuids-${qk}.json`);
+
+      const queried = loadJsonCache<string[]>(queriedPath, []);
+      const discovered = new Set(loadJsonCache<string[]>(discoveredPath, []));
+
+      // Migrate queried PUUIDs into discovered
+      for (const p of queried) discovered.add(p);
+      saveJsonCache(discoveredPath, [...discovered]);
+
+      // Clear the queried list so everyone gets re-queried
+      if (existsSync(queriedPath)) unlinkSync(queriedPath);
+
+      console.log(
+        `    ${qk}: migrated ${queried.length} queried → discovered now has ${discovered.size}`
+      );
+    }
+    console.log();
+  }
+
   // Step 0: Resolve priority seed from Riot ID if provided
   const prioritySeeds: string[] = [];
   const seedRiotId = process.env.RIOT_SEED_ID;
@@ -888,6 +1393,17 @@ async function main() {
   if (TEST_MODE) {
     highEloPuuids = highEloPuuids.slice(0, 10);
   }
+
+  // Fetch recent patches once — used for filtering matches during aggregation
+  // so the output only includes games on current + previous patches (item
+  // meta rarely shifts dramatically between minor patches in the same season).
+  const recentPatches = await getRecentPatches();
+  console.log(
+    `\nRecent patches (included in output): ${recentPatches.join(", ")}`
+  );
+  console.log(
+    `Match window: last ${MATCH_WINDOW_DAYS} days (startTime=${startTimeEpoch})\n`
+  );
 
   // Process each queue type sequentially — each completes fully (collection,
   // fetching, aggregation, output file) before moving to the next.
@@ -918,7 +1434,8 @@ async function main() {
       matches = await collectMatchesSnowball(
         prioritySeeds,
         highEloPuuids,
-        queueKey
+        queueKey,
+        recentPatches
       );
     }
 
@@ -927,11 +1444,13 @@ async function main() {
       continue;
     }
 
-    // Aggregate and output
+    // Aggregate and output. Writes to a staging file (`<queue>.new.json`)
+    // rather than clobbering the live file. After the run finishes, promote
+    // manually: delete the old file and rename the .new file in its place.
     console.log(`  Aggregating builds for ${queueKey}...`);
-    const output = aggregateBuilds(matches, queueKey);
+    const output = aggregateBuilds(matches, queueKey, recentPatches);
     const champCount = Object.keys(output.champions).length;
-    const outputPath = resolve(OUTPUT_DIR, `${queueKey}.json`);
+    const outputPath = resolve(OUTPUT_DIR, `${queueKey}.new.json`);
     saveJsonCache(outputPath, output);
     console.log(
       `  Wrote ${outputPath} (${champCount} champions, patch ${output.patch})`
@@ -939,6 +1458,10 @@ async function main() {
   }
 
   console.log("\n=== Done ===");
+  console.log("\nStaging files written to `src/data/meta-builds/*.new.json`.");
+  console.log(
+    "After reviewing, promote manually: delete the old .json and rename .new.json to .json."
+  );
 }
 
 main().catch((err) => {
