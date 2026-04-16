@@ -87,6 +87,12 @@ body,
   animation: aurora-shift 40s ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .app-root {
+    animation: none;
+  }
+}
+
 /* Noise dither — breaks up residual banding on 8-bit displays */
 .app-root::before {
   content: "";

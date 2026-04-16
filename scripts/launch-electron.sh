@@ -16,7 +16,7 @@ PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 PROJECT_WIN="$(wslpath -w "${PROJECT_ROOT}")"
 
 # Change to a Windows-compatible directory before running powershell.exe to avoid UNC path warnings
-cd /mnt/c
+cd /mnt/c || { echo "[launch-electron] Error: Cannot change to /mnt/c"; exit 1; }
 
 UTF8='[Console]::OutputEncoding = [System.Text.Encoding]::UTF8'
 

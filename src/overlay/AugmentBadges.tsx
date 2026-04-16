@@ -22,7 +22,6 @@ const CARD_POSITIONS = {
 interface AugmentBadgesProps {
   offer: string[] | null;
   coaching: CoachingResponse | null;
-  editing: boolean;
 }
 
 /**

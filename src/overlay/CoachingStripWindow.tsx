@@ -32,7 +32,7 @@ const DIMMED_OPACITY = 0.25;
  * overlay window. Click-through by default; draggable when Shift+Tab held.
  *
  * Opacity is a pure derivation:
- *   thinking OR fresh OR hovering → 0.9
+ *   thinking OR fresh OR editing  → 0.9
  *   otherwise                     → 0.25
  */
 export function CoachingStripWindow() {

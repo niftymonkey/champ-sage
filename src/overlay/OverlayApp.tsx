@@ -24,7 +24,6 @@ const ANALYZING_TIMEOUT_MS = 12_000;
  * by default; holding Tab enters edit mode for repositioning.
  */
 export function OverlayApp() {
-  const [editing, setEditing] = useState(false);
   const [coachingData, setCoachingData] = useState<CoachingResponse | null>(
     null
   );
@@ -43,7 +42,6 @@ export function OverlayApp() {
     if (!api?.onOverlayEditMode) return;
 
     const unlisten = api.onOverlayEditMode(({ editing: isEditing }) => {
-      setEditing(isEditing);
       overlayLog.info(`Edit mode: ${isEditing ? "ON" : "OFF"}`);
     });
 
@@ -245,11 +243,7 @@ export function OverlayApp() {
   return (
     <div style={rootStyle}>
       {DEBUG_OVERLAY && <DebugCalibration />}
-      <AugmentBadges
-        offer={augmentOffer}
-        coaching={coachingData}
-        editing={editing}
-      />
+      <AugmentBadges offer={augmentOffer} coaching={coachingData} />
     </div>
   );
 }
