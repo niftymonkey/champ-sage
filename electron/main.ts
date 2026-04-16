@@ -149,6 +149,46 @@ function sendToAllWindows(channel: string, data: unknown): void {
   }
 }
 
+/**
+ * Force a compositor paint flush on a transparent Overwolf passthrough
+ * overlay window. `webContents.invalidate()` is asynchronous and unreliable
+ * on this window type — it often gets coalesced away. This stacks three
+ * mechanisms to guarantee the compositor actually paints:
+ *   1. `invalidate()` — soft hint to Chromium
+ *   2. Opacity nudge (0.999 → original) — routes through alpha compositing
+ *   3. Content size nudge (h → h+1 → h) — forces full layout invalidation
+ * All three are imperceptible to the user but create cumulative pressure
+ * on the compositor to flush a fresh frame.
+ */
+function forceCompositorFlush(
+  win: Electron.BrowserWindow,
+  label: string
+): void {
+  try {
+    if (win.isDestroyed()) return;
+    win.webContents.invalidate();
+
+    const originalOpacity = win.getOpacity();
+    win.setOpacity(0.999);
+
+    const [w, h] = win.getContentSize();
+    win.setContentSize(w, h + 1);
+
+    setImmediate(() => {
+      try {
+        if (win.isDestroyed()) return;
+        win.setOpacity(originalOpacity);
+        win.setContentSize(w, h);
+        overlayLog.debug(`${label} overlay: compositor flush completed`);
+      } catch {
+        // Window destroyed between ticks
+      }
+    });
+  } catch {
+    // Window may be mid-destruction
+  }
+}
+
 function registerIpcHandlers(): void {
   ipcMain.handle(
     "discover_lcu",
@@ -340,6 +380,7 @@ function createMainWindow(): BrowserWindow {
     width: 1200,
     height: 900,
     minWidth: 800,
+    backgroundColor: "#000000",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -574,6 +615,13 @@ function registerOverlayIpc(): void {
       `Relaying coaching-response to all windows (source=${source})`
     );
     sendToAllWindows("coaching-response", data);
+
+    if (source === "augment" && badgeOverlay?.window) {
+      forceCompositorFlush(badgeOverlay.window, "badge");
+    }
+    if (stripOverlay?.window) {
+      forceCompositorFlush(stripOverlay.window, "strip");
+    }
   });
 
   // Coaching strip drag — renderer sends mousedown, we call startDragging()

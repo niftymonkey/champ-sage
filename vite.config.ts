@@ -6,6 +6,9 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  // Relative base so file:// loaded HTML in production can find its assets.
+  // Required for `loadFile(...dist/index.html)` from the Electron main process.
+  base: "./",
   build: {
     rollupOptions: {
       input: {
