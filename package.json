@@ -13,6 +13,7 @@
     "convert-fixtures": "tsx scripts/convert-fixtures-multiturn.ts",
     "dev": "vite",
     "dev:electron": "tsup --config electron/tsup.config.ts && concurrently -k \"vite\" \"scripts/launch-electron.sh\"",
+    "prod:electron": "pnpm build:electron && scripts/launch-electron.sh --prod",
     "discover-candidates": "tsx scripts/discover-candidates.ts",
     "eval": "evalite src/lib/ai/coaching.eval.ts",
     "eval:serve": "evalite serve",

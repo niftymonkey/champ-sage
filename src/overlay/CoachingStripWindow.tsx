@@ -32,7 +32,7 @@ const DIMMED_OPACITY = 0.25;
  * overlay window. Click-through by default; draggable when Shift+Tab held.
  *
  * Opacity is a pure derivation:
- *   thinking OR fresh OR hovering → 0.9
+ *   thinking OR fresh OR editing  → 0.9
  *   otherwise                     → 0.25
  */
 export function CoachingStripWindow() {
@@ -40,7 +40,6 @@ export function CoachingStripWindow() {
   const [thinking, setThinking] = useState(false);
   const [visible, setVisible] = useState(false);
   const [fresh, setFresh] = useState(false);
-  const [hovering, setHovering] = useState(false);
   const [editing, setEditing] = useState(false);
   const [fontSize, setFontSize] = useState(MAX_FONT_SIZE);
   const freshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,8 +118,6 @@ export function CoachingStripWindow() {
   }, []);
 
   // Listen for edit mode toggle (Shift+Tab)
-  // When edit mode ends, force hovering to false — the window goes back to
-  // ignoring mouse events at the OS level, so mouseleave will never fire.
   useEffect(() => {
     const api = window.electronAPI;
     if (!api?.onOverlayEditMode) return;
@@ -128,9 +125,6 @@ export function CoachingStripWindow() {
     const unlisten = api.onOverlayEditMode(({ editing: isEditing }) => {
       stripLog.debug(`Edit mode: ${isEditing ? "ON" : "OFF"}`);
       setEditing(isEditing);
-      if (!isEditing) {
-        setHovering(false);
-      }
     });
 
     return () => unlisten();
@@ -181,7 +175,7 @@ export function CoachingStripWindow() {
   if (!visible) return null;
 
   const opacity =
-    thinking || fresh || hovering ? VISIBLE_OPACITY : DIMMED_OPACITY;
+    thinking || fresh || editing ? VISIBLE_OPACITY : DIMMED_OPACITY;
 
   return (
     <div
@@ -194,8 +188,6 @@ export function CoachingStripWindow() {
         boxShadow: editing ? "inset 0 0 0 2px rgba(255, 165, 0, 0.8)" : "none",
       }}
       onMouseDown={handleMouseDown}
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
     >
       {editing && <div style={dragHandleStyle}>DRAG TO MOVE</div>}
       {thinking ? (

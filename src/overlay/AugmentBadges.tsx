@@ -22,7 +22,6 @@ const CARD_POSITIONS = {
 interface AugmentBadgesProps {
   offer: string[] | null;
   coaching: CoachingResponse | null;
-  editing: boolean;
 }
 
 /**
@@ -33,11 +32,25 @@ interface AugmentBadgesProps {
 export function AugmentBadges({ offer, coaching }: AugmentBadgesProps) {
   if (!offer) return null;
 
-  // Offer is active but coaching hasn't responded yet — show loading
-  if (!coaching) {
-    return (
-      <>
-        {offer.map((_, i) => {
+  // Match coaching recommendations to offer positions by name. Slots whose
+  // augment name is in the coaching response get a ranked Badge; slots whose
+  // name is absent (a rerolled-in card waiting for new coaching) get a
+  // ThinkingIndicator. This lets kept cards stay on screen during a reroll
+  // while only the changed slot briefly shows "analyzing." (#98)
+  const rankMap = new Map<string, { rank: number; reasoning: string }>();
+  coaching?.recommendations.forEach((rec, i) => {
+    rankMap.set(rec.name.toLowerCase(), {
+      rank: i + 1,
+      reasoning: rec.reasoning,
+    });
+  });
+
+  return (
+    <>
+      {offer.map((name, i) => {
+        const match = rankMap.get(name.toLowerCase());
+
+        if (!match) {
           const cx = CARD_POSITIONS.cardCenters[i];
           return (
             <ThinkingIndicator
@@ -49,32 +62,19 @@ export function AugmentBadges({ offer, coaching }: AugmentBadgesProps) {
               height={100}
             />
           );
-        })}
-      </>
-    );
-  }
+        }
 
-  // Match coaching recommendations to offer positions.
-  // coaching.recommendations is rank-ordered (best first).
-  const rankMap = new Map<string, { rank: number; reasoning: string }>();
-  coaching.recommendations.forEach((rec, i) => {
-    rankMap.set(rec.name.toLowerCase(), {
-      rank: i + 1,
-      reasoning: rec.reasoning,
-    });
-  });
-
-  const badges = offer.map((name, i) => {
-    const match = rankMap.get(name.toLowerCase());
-    const rank = match?.rank ?? i + 1;
-    const reason = stripMarkdown(match?.reasoning ?? "");
-
-    return (
-      <Badge key={`badge-${i}`} rank={rank} reason={reason} slotIndex={i} />
-    );
-  });
-
-  return <>{badges}</>;
+        return (
+          <Badge
+            key={`badge-${i}`}
+            rank={match.rank}
+            reason={stripMarkdown(match.reasoning)}
+            slotIndex={i}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 interface BadgeProps {

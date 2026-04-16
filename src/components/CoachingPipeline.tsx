@@ -118,7 +118,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       gameTime: liveGameState.gameTime,
     };
 
-    const systemPrompt = buildGameSystemPrompt(mode, gameData, gameState);
+    const systemPrompt = buildGameSystemPrompt(
+      mode,
+      gameDataRef.current,
+      gameState
+    );
     sessionRef.current = createConversationSession(systemPrompt);
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
@@ -127,7 +131,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     reactiveLog.info(
       `Conversation session created for ${mode.displayName} | ${liveGameState.activePlayer.championName}`
     );
-  }, [mode, gameData, liveGameState.activePlayer?.championName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- gameData excluded
+    // intentionally: background data refresh should NOT reset the mid-game
+    // conversation session. gameDataRef.current provides the latest data
+    // without triggering a session reset.
+  }, [mode, liveGameState.activePlayer?.championName]);
 
   // Capture last game snapshot when transitioning out of a game
   useEffect(() => {

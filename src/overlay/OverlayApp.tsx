@@ -24,7 +24,6 @@ const ANALYZING_TIMEOUT_MS = 12_000;
  * by default; holding Tab enters edit mode for repositioning.
  */
 export function OverlayApp() {
-  const [editing, setEditing] = useState(false);
   const [coachingData, setCoachingData] = useState<CoachingResponse | null>(
     null
   );
@@ -43,7 +42,6 @@ export function OverlayApp() {
     if (!api?.onOverlayEditMode) return;
 
     const unlisten = api.onOverlayEditMode(({ editing: isEditing }) => {
-      setEditing(isEditing);
       overlayLog.info(`Edit mode: ${isEditing ? "ON" : "OFF"}`);
     });
 
@@ -71,6 +69,23 @@ export function OverlayApp() {
     return () => unlisten();
   }, []);
 
+  // Force a paint by toggling a compositor-layer property on the overlay
+  // root across two animation frames. The Overwolf passthrough compositor
+  // often coalesces DOM mutations and skips paints; promoting and releasing
+  // a compositor layer routes through the same paint path as a real DOM
+  // change. Call after any state transition that changes what should be
+  // visible. (#98)
+  const forcePaintNudge = useCallback(() => {
+    requestAnimationFrame(() => {
+      const root = document.getElementById("overlay-root");
+      if (!root) return;
+      root.style.transform = "translateZ(0)";
+      requestAnimationFrame(() => {
+        root.style.transform = "";
+      });
+    });
+  }, []);
+
   // Listen for coaching responses relayed from desktop window
   useEffect(() => {
     const api = window.electronAPI;
@@ -92,47 +107,69 @@ export function OverlayApp() {
         `Augment coaching received (${delay}ms delay, recs: ${recNames?.join(", ")})`
       );
 
-      // Clear analyzing timeout — response arrived
       if (analyzingTimerRef.current) {
         clearTimeout(analyzingTimerRef.current);
         analyzingTimerRef.current = null;
       }
 
       setCoachingData(response);
+      forcePaintNudge();
     });
 
     return () => unlisten();
-  }, []);
+  }, [forcePaintNudge]);
 
   // Listen for augment offers from GEP
-  const handleAugmentOffer = useCallback((names: string[]) => {
-    overlayLog.info(`Augment offer received: ${names.join(", ")}`);
-    offerIdRef.current += 1;
-    offerNamesRef.current = names;
-    setAugmentOffer(names);
-    // Clear previous coaching data — new offer means new recommendations
-    setCoachingData(null);
+  const handleAugmentOffer = useCallback(
+    (names: string[]) => {
+      // Skip if the offer payload is identical to the current one. GEP can
+      // fire duplicate events that differ only at the object level (same
+      // augment names, different refs). Nulling coaching data on these
+      // creates state churn and spurious re-renders for no user-visible
+      // change. (#98)
+      const prev = offerNamesRef.current;
+      if (
+        prev &&
+        prev.length === names.length &&
+        prev.every((n, i) => n === names[i])
+      ) {
+        overlayLog.debug(
+          `Augment offer identical to current (${names.join(", ")}) — skipping state update`
+        );
+        return;
+      }
 
-    // Safety timeout — stop showing "Analyzing" if coaching never arrives
-    if (analyzingTimerRef.current) clearTimeout(analyzingTimerRef.current);
-    analyzingTimerRef.current = setTimeout(() => {
-      overlayLog.warn(
-        `Analyzing timeout after ${ANALYZING_TIMEOUT_MS}ms — no coaching response, hiding badges`
-      );
-      setAugmentOffer(null);
-      setCoachingData(null);
-    }, ANALYZING_TIMEOUT_MS);
-  }, []);
+      overlayLog.info(`Augment offer received: ${names.join(", ")}`);
+      offerIdRef.current += 1;
+      offerNamesRef.current = names;
+      setAugmentOffer(names);
+      forcePaintNudge();
+
+      // Safety timeout — stop showing "Analyzing" if coaching never arrives
+      if (analyzingTimerRef.current) clearTimeout(analyzingTimerRef.current);
+      analyzingTimerRef.current = setTimeout(() => {
+        overlayLog.warn(
+          `Analyzing timeout after ${ANALYZING_TIMEOUT_MS}ms — no coaching response, hiding badges`
+        );
+        setAugmentOffer(null);
+        setCoachingData(null);
+        forcePaintNudge();
+      }, ANALYZING_TIMEOUT_MS);
+    },
+    [forcePaintNudge]
+  );
 
   const handleAugmentPicked = useCallback(() => {
     overlayLog.info("Augment picked — clearing offer and coaching data");
+    offerNamesRef.current = null;
     setAugmentOffer(null);
     setCoachingData(null);
     if (analyzingTimerRef.current) {
       clearTimeout(analyzingTimerRef.current);
       analyzingTimerRef.current = null;
     }
-  }, []);
+    forcePaintNudge();
+  }, [forcePaintNudge]);
 
   // Log state changes for debugging stale badge issues.
   // This is what determines whether "Analyzing" or actual badges render —
@@ -206,11 +243,7 @@ export function OverlayApp() {
   return (
     <div style={rootStyle}>
       {DEBUG_OVERLAY && <DebugCalibration />}
-      <AugmentBadges
-        offer={augmentOffer}
-        coaching={coachingData}
-        editing={editing}
-      />
+      <AugmentBadges offer={augmentOffer} coaching={coachingData} />
     </div>
   );
 }

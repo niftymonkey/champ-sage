@@ -32,7 +32,7 @@ export function buildGameSystemPrompt(
   );
   sections.push("");
   sections.push(
-    "ITEM AWARENESS: Do not recommend purchasing items already listed in the player's inventory."
+    "ITEM AWARENESS: Do not recommend purchasing items already listed in the player's inventory. Only recommend items that exist in the Item Catalog sections below — if a name does not appear there, it is NOT a purchasable item. Augments listed in the player's state are passive bonuses, not items — never recommend an augment name as an item to buy."
   );
   sections.push(
     "GOLD AWARENESS: The gold amount shown is the player's exact current gold. Use it to determine what they can afford. Do not hedge with 'if you can buy' when the gold amount is visible."
@@ -76,6 +76,9 @@ export function buildGameSystemPrompt(
     );
     sections.push(
       "- Round 1: Recommend the best card. Tell player to re-roll the other two."
+    );
+    sections.push(
+      "- ALWAYS return all 3 offered augments in the recommendations array, ranked best to worst. Include the top pick AND the two you're telling the player to re-roll, each with its own reasoning. The UI needs all three to render rank badges on every card."
     );
     sections.push(
       "- Round 2: 2 new cards replace the re-rolled ones. Only the kept card still has its re-roll."
