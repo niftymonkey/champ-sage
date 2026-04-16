@@ -163,13 +163,42 @@ async function getRecentPatches(): Promise<string[]> {
 
 let lastRequestTime = 0;
 
-async function rateLimitedFetch(url: string, retries = 5): Promise<Response> {
+/**
+ * Unified result type from `rateLimitedFetch`. The body is read inside the
+ * helper so body-read errors (socket closed mid-stream, etc.) get caught by
+ * the same retry loop as connection errors — previously these escaped.
+ *
+ * - `ok: true` → request succeeded, `data` is the parsed JSON response
+ * - `ok: false` → non-retryable HTTP error (404 typically), `status` set
+ */
+interface FetchResult {
+  ok: boolean;
+  status: number;
+  data: unknown;
+}
+
+async function rateLimitedFetch(
+  url: string,
+  retries = 5
+): Promise<FetchResult> {
   const now = Date.now();
   const elapsed = now - lastRequestTime;
   if (elapsed < REQUEST_DELAY_MS) {
     await sleep(REQUEST_DELAY_MS - elapsed);
   }
   lastRequestTime = Date.now();
+
+  const retryOnError = async (err: Error): Promise<FetchResult> => {
+    if (retries > 0) {
+      const backoffSec = (6 - retries) * 5; // 5s, 10s, 15s, 20s, 25s
+      console.warn(
+        `  Network error: ${err.message}. Retrying in ${backoffSec}s... (${retries} retries left)`
+      );
+      await sleep(backoffSec * 1000);
+      return rateLimitedFetch(url, retries - 1);
+    }
+    throw err;
+  };
 
   let res: Response;
   try {
@@ -179,16 +208,8 @@ async function rateLimitedFetch(url: string, retries = 5): Promise<Response> {
       signal: AbortSignal.timeout(30_000),
     });
   } catch (err) {
-    // Network errors, timeouts, connection resets — retry with backoff
-    if (retries > 0) {
-      const backoffSec = (6 - retries) * 5; // 5s, 10s, 15s, 20s, 25s
-      console.warn(
-        `  Network error: ${(err as Error).message}. Retrying in ${backoffSec}s... (${retries} retries left)`
-      );
-      await sleep(backoffSec * 1000);
-      return rateLimitedFetch(url, retries - 1);
-    }
-    throw err;
+    // Connection-level errors: network, timeout, reset
+    return retryOnError(err as Error);
   }
 
   // Fatal auth errors — bail immediately. Dev API keys expire every 24 hours,
@@ -222,16 +243,32 @@ async function rateLimitedFetch(url: string, retries = 5): Promise<Response> {
   }
 
   // Transient server errors — retry with backoff
-  if (res.status >= 500 && res.status < 600 && retries > 0) {
-    const backoffSec = (6 - retries) * 5;
-    console.warn(
-      `  Server error ${res.status}. Retrying in ${backoffSec}s... (${retries} retries left)`
-    );
-    await sleep(backoffSec * 1000);
-    return rateLimitedFetch(url, retries - 1);
+  if (res.status >= 500 && res.status < 600) {
+    if (retries > 0) {
+      const backoffSec = (6 - retries) * 5;
+      console.warn(
+        `  Server error ${res.status}. Retrying in ${backoffSec}s... (${retries} retries left)`
+      );
+      await sleep(backoffSec * 1000);
+      return rateLimitedFetch(url, retries - 1);
+    }
+    return { ok: false, status: res.status, data: null };
   }
 
-  return res;
+  // Non-retryable HTTP error (404 etc.) — return without a body read
+  if (!res.ok) {
+    return { ok: false, status: res.status, data: null };
+  }
+
+  // Read the body. Socket errors mid-stream (SocketError: other side closed,
+  // Fetch.onAborted) throw here, NOT from the fetch() call above. Catch them
+  // the same way as connection errors so they retry.
+  try {
+    const data = await res.json();
+    return { ok: true, status: res.status, data };
+  } catch (err) {
+    return retryOnError(err as Error);
+  }
 }
 
 function sleep(ms: number): Promise<void> {
@@ -481,8 +518,8 @@ async function resolvePuuidFromRiotId(riotId: string): Promise<string | null> {
     console.warn(`  Failed to resolve Riot ID "${riotId}": ${res.status}`);
     return null;
   }
-  const data = await res.json();
-  return data.puuid as string;
+  const data = res.data as { puuid: string };
+  return data.puuid;
 }
 
 // ---------------------------------------------------------------------------
@@ -512,7 +549,7 @@ async function discoverHighEloPuuids(): Promise<string[]> {
       console.error(`  Failed to fetch ${tier}: ${res.status}`);
       continue;
     }
-    const data = await res.json();
+    const data = res.data as { entries?: Array<{ puuid?: string }> };
     for (const entry of data.entries ?? []) {
       if (entry.puuid) puuids.add(entry.puuid);
     }
@@ -525,7 +562,7 @@ async function discoverHighEloPuuids(): Promise<string[]> {
     const url = `${REGIONAL_HOST}/lol/league/v4/entries/RANKED_SOLO_5x5/DIAMOND/I?page=${page}`;
     const res = await rateLimitedFetch(url);
     if (!res.ok) break;
-    const entries = await res.json();
+    const entries = res.data as Array<{ puuid?: string }>;
     if (!Array.isArray(entries) || entries.length === 0) break;
     for (const entry of entries) {
       if (entry.puuid) puuids.add(entry.puuid);
@@ -585,7 +622,7 @@ async function collectMatchIds(
       continue;
     }
 
-    const ids: string[] = await res.json();
+    const ids = res.data as string[];
     for (const id of ids) matchIds.add(id);
 
     // Persist incrementally every 50 players
@@ -844,7 +881,7 @@ async function collectMatchesSnowball(
       continue;
     }
 
-    const ids: string[] = await listRes.json();
+    const ids = listRes.data as string[];
     const newIds = ids.filter((id) => !matchIds.has(id));
     for (const id of ids) matchIds.add(id);
 
@@ -870,7 +907,7 @@ async function collectMatchesSnowball(
         continue;
       }
 
-      const raw = await detailRes.json();
+      const raw = detailRes.data as Record<string, unknown>;
       const match = extractMatchData(matchId, raw);
       if (match) {
         matches.push(match);
@@ -1069,7 +1106,7 @@ async function fetchMatchDetails(
       continue;
     }
 
-    const raw = await res.json();
+    const raw = res.data as Record<string, unknown>;
     const match = extractMatchData(matchId, raw);
     if (match) {
       matches.push(match);
