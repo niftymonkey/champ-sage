@@ -1,14 +1,18 @@
+export type FitRating = "exceptional" | "strong" | "situational" | "weak";
+
 export interface CoachingResponse {
   /** Direct answer to the player's question */
   answer: string;
-  /** Ranked recommendations, if applicable (augments, items, etc.) */
+  /** Recommendations with independent fit ratings, if applicable (augments, items, etc.) */
   recommendations: Recommendation[];
 }
 
 export interface Recommendation {
   /** Name of the recommended option */
   name: string;
-  /** Why this option is recommended in this context */
+  /** Independent fit rating for this option */
+  fit: FitRating;
+  /** Why this option fits (or doesn't) the current state */
   reasoning: string;
 }
 

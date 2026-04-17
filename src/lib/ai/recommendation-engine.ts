@@ -44,7 +44,7 @@ export async function getMultiTurnCoachingResponse(
       `Response (${elapsedMs}ms): ${usage.inputTokens ?? "?"}in/${usage.outputTokens ?? "?"}out`,
       {
         answer: result.output.answer,
-        recommendations: recs.map((r) => r.name),
+        recommendations: recs.map((r) => `${r.name} [${r.fit}]`),
       }
     );
 

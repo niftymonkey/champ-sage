@@ -9,7 +9,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import type { CoachingQuery } from "../lib/ai/types";
+import type { CoachingQuery, CoachingResponse } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { ConversationSession } from "../lib/ai/conversation-session";
@@ -31,11 +31,11 @@ import {
   gamePlan$,
   pushGamePlan,
   pushAugmentOffer,
-  pushVoiceCoaching,
+  pushCoachingExchange,
   captureLastGameSnapshot,
   resetForNewGame,
 } from "../lib/reactive/coaching-feed";
-import type { VoiceCoachingEntry } from "../lib/reactive/coaching-feed-types";
+import type { CoachingExchangeEntry } from "../lib/reactive/coaching-feed-types";
 import { getLogger } from "../lib/logger";
 
 const reactiveLog = getLogger("coaching:reactive");
@@ -89,6 +89,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const chosenAugmentsRef = useRef(chosenAugments);
   const sessionRef = useRef<ConversationSession | null>(null);
   const gamePlanFiredRef = useRef(false);
+  const lastAugmentResponseRef = useRef<CoachingResponse | null>(null);
 
   liveGameStateRef.current = liveGameState;
   if (liveGameState.activePlayer) {
@@ -156,9 +157,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     const activeInfo = lastState.players.find((p) => p.isActivePlayer);
     const eog = liveGameState.eogStats ?? lastState.eogStats;
 
-    // Extract last 3 voice coaching exchanges for the idle card
+    // Extract last 3 coaching exchanges for the idle card
     const voiceEntries = feed.filter(
-      (e): e is VoiceCoachingEntry => e.type === "voice-coaching"
+      (e): e is CoachingExchangeEntry => e.type === "coaching-exchange"
     );
     const recentExchanges = voiceEntries.slice(-3).map((e) => ({
       question: e.question,
@@ -280,14 +281,15 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         const gameTime = liveGameStateRef.current.gameTime;
         try {
           await submitGamePlanQuery(gameTime);
-          // Also push as a voice coaching entry for the feed narrative
+          // Also push as a coaching exchange for the feed narrative
           const plan = gamePlan$.getValue();
           if (plan) {
-            pushVoiceCoaching(
+            pushCoachingExchange(
               question,
               plan.summary,
               plan.buildPath.map((item) => ({
                 name: item,
+                fit: "strong" as const,
                 reasoning: "",
               })),
               gameTime,
@@ -372,14 +374,36 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
         sessionRef.current.addAssistantMessage(JSON.stringify(response));
 
+        // Pin fit ratings for augments that carried over from a reroll.
+        // An augment's fit is about the augment vs. the player's state, not
+        // vs. the other options — so if it was already rated, keep that rating.
+        let finalResponse = response;
+        if (isAugmentQuery && lastAugmentResponseRef.current) {
+          const prevByName = new Map(
+            lastAugmentResponseRef.current.recommendations.map((r) => [
+              r.name.toLowerCase(),
+              r,
+            ])
+          );
+          const merged = response.recommendations.map((rec) => {
+            const prior = prevByName.get(rec.name.toLowerCase());
+            return prior ?? rec;
+          });
+          finalResponse = { ...response, recommendations: merged };
+        }
+        if (isAugmentQuery) {
+          lastAugmentResponseRef.current = finalResponse;
+        }
+
         // Push to coaching feed (both reactive and augment queries)
         const gameTime = liveGameStateRef.current.gameTime;
         const feedSource = isAugmentQuery ? "augment" : "voice";
-        pushVoiceCoaching(
+        pushCoachingExchange(
           question,
-          response.answer,
-          response.recommendations.map((r) => ({
+          finalResponse.answer,
+          finalResponse.recommendations.map((r) => ({
             name: r.name,
+            fit: r.fit,
             reasoning: r.reasoning,
           })),
           gameTime,
@@ -389,7 +413,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         // Relay to overlay
         const sentAt = Date.now();
         const overlayPayload = {
-          ...response,
+          ...finalResponse,
           source,
           sentAt,
         };
@@ -450,15 +474,15 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
           // Push augment offer to feed with placeholder data
           const entry = pushAugmentOffer(
-            names.map((name, i) => ({
+            names.map((name) => ({
               name,
-              rank: i + 1,
+              fit: "situational" as const,
               reasoning: "",
             })),
             gameTime
           );
 
-          const question = `I'm being offered these augments: ${names.join(", ")}. Which should I pick and which should I re-roll?`;
+          const question = `I'm being offered these augments: ${names.join(", ")}. How well does each fit my current build?`;
           proactiveLog.info(
             `Auto-querying coaching for augment offer: ${names.join(", ")}`
           );
@@ -469,35 +493,34 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
           // Update the feed entry with coaching response rankings
           const feed = coachingFeed$.getValue();
-          // The last voice-coaching entry (if present) has the response
+          // The last coaching-exchange entry (if present) has the response
           const lastVoice = [...feed]
             .reverse()
-            .find((e) => e.type === "voice-coaching") as
-            | VoiceCoachingEntry
+            .find((e) => e.type === "coaching-exchange") as
+            | CoachingExchangeEntry
             | undefined;
           if (lastVoice) {
-            // Update the augment offer entry with LLM rankings
+            // Update the augment offer entry with LLM fit ratings
             const updated = feed.map((e) => {
               if (e.id !== entry.id || e.type !== "augment-offer") return e;
-              const rankedOptions = names.map((name) => {
+              const ratedOptions = names.map((name) => {
                 const rec = lastVoice.recommendations.find(
                   (r) => r.name.toLowerCase() === name.toLowerCase()
                 );
-                const rank = rec
-                  ? lastVoice.recommendations.indexOf(rec) + 1
-                  : names.indexOf(name) + 1;
                 return {
                   name,
-                  rank,
+                  fit: rec?.fit ?? ("situational" as const),
                   reasoning: rec?.reasoning ?? "",
                 };
               });
-              return { ...e, options: rankedOptions };
+              return { ...e, options: ratedOptions };
             });
             coachingFeed$.next(updated);
           }
         },
         onPicked: (name) => {
+          // Clear pinned ratings — next offer is a fresh selection round
+          lastAugmentResponseRef.current = null;
           if (chosenAugmentsRef.current.includes(name)) return;
           const next = [...chosenAugmentsRef.current, name];
           chosenAugmentsRef.current = next;

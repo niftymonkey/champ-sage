@@ -2,8 +2,9 @@ import type {
   AnyFeedEntry,
   GamePlanEntry,
   AugmentOfferEntry,
-  VoiceCoachingEntry,
+  CoachingExchangeEntry,
 } from "../../lib/reactive/coaching-feed-types";
+import type { FitRating } from "../../lib/ai/types";
 import { useCoachingContext } from "../../hooks/useCoachingContext";
 import { AugmentCard } from "../AugmentCard";
 import styles from "./CoachingCard.module.css";
@@ -18,8 +19,8 @@ export function CoachingCard({ entry }: CoachingCardProps) {
       return <GamePlanCard entry={entry} />;
     case "augment-offer":
       return <AugmentOfferCard entry={entry} />;
-    case "voice-coaching":
-      return <VoiceCoachingCard entry={entry} />;
+    case "coaching-exchange":
+      return <CoachingExchangeCard entry={entry} />;
   }
 }
 
@@ -58,12 +59,12 @@ function AugmentOfferCard({ entry }: { entry: AugmentOfferEntry }) {
             return (
               <div
                 key={opt.name}
-                className={`${styles.augmentOption} ${opt.rank === 1 ? styles.augmentPick : ""}`}
+                className={`${styles.augmentOption} ${opt.fit === "exceptional" || opt.fit === "strong" ? styles.augmentHighlight : ""}`}
               >
                 <span
-                  className={`${styles.augmentRankBadge} ${rankBadgeClass(opt.rank)}`}
+                  className={`${styles.augmentFitBadge} ${fitBadgeClass(opt.fit)}`}
                 >
-                  {opt.rank}
+                  {fitLabel(opt.fit)}
                 </span>
                 {augment ? (
                   <AugmentCard augment={augment} />
@@ -79,15 +80,15 @@ function AugmentOfferCard({ entry }: { entry: AugmentOfferEntry }) {
   );
 }
 
-/* ─── Voice Coaching Card ─── */
+/* ─── Coaching Exchange Card ─── */
 
-const SOURCE_LABELS: Record<VoiceCoachingEntry["source"], string> = {
+const SOURCE_LABELS: Record<CoachingExchangeEntry["source"], string> = {
   voice: "Voice query",
   augment: "Augment coaching",
   plan: "Game plan update",
 };
 
-function VoiceCoachingCard({ entry }: { entry: VoiceCoachingEntry }) {
+function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
   const label = SOURCE_LABELS[entry.source] ?? "Coaching";
   return (
     <div
@@ -103,10 +104,10 @@ function VoiceCoachingCard({ entry }: { entry: VoiceCoachingEntry }) {
         <div className={styles.answer}>{entry.answer}</div>
         {entry.recommendations.length > 0 && (
           <div className={styles.recommendations}>
-            {entry.recommendations.map((rec, i) => (
+            {entry.recommendations.map((rec) => (
               <div key={rec.name} className={styles.recItem}>
-                <span className={`${styles.recRank} ${rankClass(i + 1)}`}>
-                  {i + 1}
+                <span className={`${styles.recFit} ${fitTextClass(rec.fit)}`}>
+                  {fitLabel(rec.fit)}
                 </span>
                 <div>
                   <div className={styles.recName}>{rec.name}</div>
@@ -162,18 +163,37 @@ function BuildPath({ items }: { items: string[] }) {
   );
 }
 
-function rankClass(rank: number): string {
-  if (rank === 1) return styles.rank1;
-  if (rank === 2) return styles.rank2;
-  if (rank === 3) return styles.rank3;
-  return "";
+const FIT_BADGE_CLASSES: Record<FitRating, string> = {
+  exceptional: styles.badgeExceptional,
+  strong: styles.badgeStrong,
+  situational: styles.badgeSituational,
+  weak: styles.badgeWeak,
+};
+
+const FIT_TEXT_CLASSES: Record<FitRating, string> = {
+  exceptional: styles.fitExceptional,
+  strong: styles.fitStrong,
+  situational: styles.fitSituational,
+  weak: styles.fitWeak,
+};
+
+const FIT_LABELS: Record<FitRating, string> = {
+  exceptional: "Exceptional",
+  strong: "Strong",
+  situational: "Situational",
+  weak: "Weak",
+};
+
+function fitBadgeClass(fit: FitRating): string {
+  return FIT_BADGE_CLASSES[fit];
 }
 
-function rankBadgeClass(rank: number): string {
-  if (rank === 1) return styles.badgeRank1;
-  if (rank === 2) return styles.badgeRank2;
-  if (rank === 3) return styles.badgeRank3;
-  return "";
+function fitTextClass(fit: FitRating): string {
+  return FIT_TEXT_CLASSES[fit];
+}
+
+function fitLabel(fit: FitRating): string {
+  return FIT_LABELS[fit];
 }
 
 function formatGameTime(seconds: number): string {

@@ -17,16 +17,23 @@ export const coachingResponseSchema = jsonSchema<CoachingResponse>({
             type: "string",
             description: "Name of the recommended option (augment, item, etc.)",
           },
+          fit: {
+            type: "string",
+            enum: ["exceptional", "strong", "situational", "weak"],
+            description:
+              "Independent fit rating for this option against the current build and game state",
+          },
           reasoning: {
             type: "string",
-            description: "Why this option is recommended in this context",
+            description:
+              "What this option does and why it fits (or doesn't) the current state",
           },
         },
-        required: ["name", "reasoning"],
+        required: ["name", "fit", "reasoning"],
         additionalProperties: false,
       },
       description:
-        "Ranked recommendations if applicable (empty array if the question is not about choosing between options)",
+        "Recommendations with independent fit ratings (empty array if the question is not about choosing between options)",
     },
   },
   required: ["answer", "recommendations"],

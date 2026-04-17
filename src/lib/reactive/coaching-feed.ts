@@ -3,7 +3,7 @@
  * a game session and tracks the current game plan.
  *
  * - coachingFeed$: chronological list of feed entries (augment offers,
- *   voice coaching, game plan cards)
+ *   coaching exchanges, game plan cards)
  * - gamePlan$: the current game plan shown in the side panel
  * - lastGameSnapshot$: snapshot of the most recent completed game
  */
@@ -15,7 +15,7 @@ import type {
   LastGameSnapshot,
   GamePlanEntry,
   AugmentOfferEntry,
-  VoiceCoachingEntry,
+  CoachingExchangeEntry,
 } from "./coaching-feed-types";
 
 // ─── Streams ───
@@ -83,17 +83,17 @@ export function markAugmentPicked(entryId: string, picked: string): void {
   coachingFeed$.next(updated);
 }
 
-/** Push a voice coaching exchange to the feed */
-export function pushVoiceCoaching(
+/** Push a coaching exchange to the feed */
+export function pushCoachingExchange(
   question: string,
   answer: string,
-  recommendations: VoiceCoachingEntry["recommendations"],
+  recommendations: CoachingExchangeEntry["recommendations"],
   gameTime: number,
-  source: VoiceCoachingEntry["source"] = "voice"
-): VoiceCoachingEntry {
-  const entry: VoiceCoachingEntry = {
+  source: CoachingExchangeEntry["source"] = "voice"
+): CoachingExchangeEntry {
+  const entry: CoachingExchangeEntry = {
     id: nextFeedId(),
-    type: "voice-coaching",
+    type: "coaching-exchange",
     timestamp: gameTime,
     proactive: source !== "voice",
     source,

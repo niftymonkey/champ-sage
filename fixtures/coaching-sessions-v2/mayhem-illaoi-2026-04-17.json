@@ -1,0 +1,857 @@
+[
+  {
+    "label": "Illaoi @0:24: augment choice",
+    "index": 0,
+    "timestamp": "2026-04-17T02:15:00.000Z",
+    "model": "gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Illaoi",
+        "level": 3,
+        "currentGold": 1400,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 74,
+          "abilityPower": 0,
+          "armor": 39,
+          "magicResist": 34,
+          "maxHealth": 816,
+          "currentHealth": 816,
+          "moveSpeed": 340,
+          "attackSpeed": 0.625,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Illaoi",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [
+            {
+              "id": 220008,
+              "name": "Anvil Voucher"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ekko",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sivir",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Xayah",
+          "team": "CHAOS",
+          "level": 3,
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 24
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "query": {
+      "question": "I'm being offered these augments: Rabble Rousing, Keystone Conjurer, Holy Fire. How well does each fit my current build?",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Rabble Rousing",
+          "tier": "Gold",
+          "description": "After casting an ability, heal for 2% missing health per second for 4 seconds."
+        },
+        {
+          "name": "Keystone Conjurer",
+          "tier": "Gold",
+          "description": "Gain Arcane Comet or Summon Aery as a bonus keystone."
+        },
+        {
+          "name": "Holy Fire",
+          "tier": "Gold",
+          "description": "Gain a persistent aura that deals magic damage to nearby enemies and heals you for a portion of the damage dealt. Healing and shielding power increases the aura's damage and heal."
+        }
+      ]
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": ["Anvil Voucher"],
+      "gold": 1400,
+      "champion": "Illaoi",
+      "gameTime": "0:24"
+    }
+  },
+  {
+    "label": "Illaoi @1:30: augment choice",
+    "index": 1,
+    "timestamp": "2026-04-17T02:16:00.000Z",
+    "model": "gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Illaoi",
+        "level": 7,
+        "currentGold": 800,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 96,
+          "abilityPower": 0,
+          "armor": 52,
+          "magicResist": 62,
+          "maxHealth": 1340,
+          "currentHealth": 1120,
+          "moveSpeed": 355,
+          "attackSpeed": 0.644,
+          "abilityHaste": 0,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Illaoi",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 2,
+          "deaths": 1,
+          "assists": 3,
+          "items": [
+            {
+              "id": 3111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 3065,
+              "name": "Spirit Visage"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 1,
+          "deaths": 1,
+          "assists": 2,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 1,
+          "deaths": 2,
+          "assists": 4,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 7,
+          "kills": 3,
+          "deaths": 1,
+          "assists": 2,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 6,
+          "kills": 0,
+          "deaths": 1,
+          "assists": 5,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 2,
+          "deaths": 1,
+          "assists": 2,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ekko",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 1,
+          "deaths": 2,
+          "assists": 1,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sivir",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 1,
+          "deaths": 1,
+          "assists": 3,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "CHAOS",
+          "level": 6,
+          "kills": 0,
+          "deaths": 1,
+          "assists": 4,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Xayah",
+          "team": "CHAOS",
+          "level": 7,
+          "kills": 2,
+          "deaths": 1,
+          "assists": 1,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 90
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Celestial Body"],
+    "query": {
+      "question": "I'm being offered these augments: Critical Strike Shard, Magic Resist Shard, Attack Damage Shard. How well does each fit my current build?",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Critical Strike Shard",
+          "tier": "Silver",
+          "description": "Gain 15% critical strike chance."
+        },
+        {
+          "name": "Magic Resist Shard",
+          "tier": "Silver",
+          "description": "Gain 20 magic resistance."
+        },
+        {
+          "name": "Attack Damage Shard",
+          "tier": "Silver",
+          "description": "Gain 15 attack damage."
+        }
+      ]
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": ["Mercury's Treads", "Spirit Visage"],
+      "gold": 800,
+      "champion": "Illaoi",
+      "gameTime": "1:30"
+    }
+  },
+  {
+    "label": "Illaoi @5:00: augment choice",
+    "index": 2,
+    "timestamp": "2026-04-17T02:18:00.000Z",
+    "model": "gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Illaoi",
+        "level": 11,
+        "currentGold": 2200,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 118,
+          "abilityPower": 0,
+          "armor": 105,
+          "magicResist": 80,
+          "maxHealth": 2180,
+          "currentHealth": 1850,
+          "moveSpeed": 355,
+          "attackSpeed": 0.666,
+          "abilityHaste": 30,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Illaoi",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 8,
+          "items": [
+            {
+              "id": 3111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 3065,
+              "name": "Spirit Visage"
+            },
+            {
+              "id": 3075,
+              "name": "Thornmail"
+            },
+            {
+              "id": 3025,
+              "name": "Iceborn Gauntlet"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 5,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 10,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 7,
+          "deaths": 3,
+          "assists": 6,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 1,
+          "deaths": 3,
+          "assists": 12,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 5,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ekko",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 3,
+          "deaths": 4,
+          "assists": 4,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sivir",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 6,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 1,
+          "deaths": 3,
+          "assists": 9,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Xayah",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 4,
+          "deaths": 4,
+          "assists": 3,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 300
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": ["Celestial Body", "Magic Resist Shard"],
+    "query": {
+      "question": "I'm being offered these augments: Weighted Popoffs, Heavy Hitter, Dive Bomber. How well does each fit my current build?",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Weighted Popoffs",
+          "tier": "Silver",
+          "description": "Gain 5 ability haste. Whenever you deal damage with an ability, reduce your non-ultimate ability cooldowns by an additional 0.5 seconds."
+        },
+        {
+          "name": "Heavy Hitter",
+          "tier": "Silver",
+          "description": "Your abilities deal bonus physical damage equal to 2% of your maximum health."
+        },
+        {
+          "name": "Dive Bomber",
+          "tier": "Silver",
+          "description": "On death, deal magic damage equal to 50% of your maximum health to nearby enemies."
+        }
+      ]
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": [
+        "Mercury's Treads",
+        "Spirit Visage",
+        "Thornmail",
+        "Iceborn Gauntlet"
+      ],
+      "gold": 2200,
+      "champion": "Illaoi",
+      "gameTime": "5:00"
+    }
+  },
+  {
+    "label": "Illaoi @15:00: augment choice",
+    "index": 3,
+    "timestamp": "2026-04-17T02:25:00.000Z",
+    "model": "gpt-5.4-mini",
+    "category": "mayhem",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Illaoi",
+        "level": 15,
+        "currentGold": 3500,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 142,
+          "abilityPower": 0,
+          "armor": 112,
+          "magicResist": 82,
+          "maxHealth": 2860,
+          "currentHealth": 2400,
+          "moveSpeed": 355,
+          "attackSpeed": 0.688,
+          "abilityHaste": 35,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Illaoi",
+          "team": "ORDER",
+          "level": 15,
+          "kills": 8,
+          "deaths": 5,
+          "assists": 14,
+          "items": [
+            {
+              "id": 3111,
+              "name": "Mercury's Treads"
+            },
+            {
+              "id": 3065,
+              "name": "Spirit Visage"
+            },
+            {
+              "id": 3075,
+              "name": "Thornmail"
+            },
+            {
+              "id": 3025,
+              "name": "Iceborn Gauntlet"
+            },
+            {
+              "id": 3053,
+              "name": "Sterak's Gage"
+            }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 15,
+          "kills": 6,
+          "deaths": 5,
+          "assists": 8,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lux",
+          "team": "ORDER",
+          "level": 14,
+          "kills": 5,
+          "deaths": 6,
+          "assists": 15,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jinx",
+          "team": "ORDER",
+          "level": 15,
+          "kills": 12,
+          "deaths": 5,
+          "assists": 9,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 14,
+          "kills": 2,
+          "deaths": 5,
+          "assists": 18,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Syndra",
+          "team": "CHAOS",
+          "level": 15,
+          "kills": 8,
+          "deaths": 6,
+          "assists": 8,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ekko",
+          "team": "CHAOS",
+          "level": 14,
+          "kills": 5,
+          "deaths": 7,
+          "assists": 6,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Sivir",
+          "team": "CHAOS",
+          "level": 14,
+          "kills": 6,
+          "deaths": 5,
+          "assists": 8,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Janna",
+          "team": "CHAOS",
+          "level": 14,
+          "kills": 2,
+          "deaths": 5,
+          "assists": 14,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Xayah",
+          "team": "CHAOS",
+          "level": 15,
+          "kills": 7,
+          "deaths": 6,
+          "assists": 5,
+          "items": [],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 900
+    },
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [
+      "Celestial Body",
+      "Magic Resist Shard",
+      "Weighted Popoffs"
+    ],
+    "query": {
+      "question": "I'm being offered these augments: Spiritual Purification, Demon's Dance, Vampirism. How well does each fit my current build?",
+      "history": [],
+      "augmentOptions": [
+        {
+          "name": "Spiritual Purification",
+          "tier": "Gold",
+          "description": "On takedown, deal magic damage equal to 10% of nearby enemies' current health and slow them by 50% for 2 seconds."
+        },
+        {
+          "name": "Demon's Dance",
+          "tier": "Gold",
+          "description": "Gain the Flock and Grasp of the Undying Keystone Runes."
+        },
+        {
+          "name": "Vampirism",
+          "tier": "Gold",
+          "description": "Gain 15% omnivamp. Allies cannot heal you or grant you health regeneration."
+        }
+      ]
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": [
+        "Mercury's Treads",
+        "Spirit Visage",
+        "Thornmail",
+        "Iceborn Gauntlet",
+        "Sterak's Gage"
+      ],
+      "gold": 3500,
+      "champion": "Illaoi",
+      "gameTime": "15:00"
+    }
+  }
+]

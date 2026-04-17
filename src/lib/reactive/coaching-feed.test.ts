@@ -6,7 +6,7 @@ import {
   pushGamePlan,
   pushAugmentOffer,
   markAugmentPicked,
-  pushVoiceCoaching,
+  pushCoachingExchange,
   captureLastGameSnapshot,
   resetForNewGame,
   _resetFeedIdCounter,
@@ -25,13 +25,13 @@ describe("coachingFeed$", () => {
 
   it("accumulates entries in chronological order", () => {
     pushGamePlan("Plan A", ["Item1", "Item2"], 10);
-    pushVoiceCoaching("question?", "answer", [], 30);
-    pushAugmentOffer([{ name: "Aug1", rank: 1, reasoning: "good" }], 45);
+    pushCoachingExchange("question?", "answer", [], 30);
+    pushAugmentOffer([{ name: "Aug1", fit: "strong", reasoning: "good" }], 45);
 
     const feed = coachingFeed$.getValue();
     expect(feed).toHaveLength(3);
     expect(feed[0].type).toBe("game-plan");
-    expect(feed[1].type).toBe("voice-coaching");
+    expect(feed[1].type).toBe("coaching-exchange");
     expect(feed[2].type).toBe("augment-offer");
     expect(feed[0].timestamp).toBe(10);
     expect(feed[1].timestamp).toBe(30);
@@ -40,7 +40,7 @@ describe("coachingFeed$", () => {
 
   it("assigns unique IDs to each entry", () => {
     pushGamePlan("Plan", [], 0);
-    pushVoiceCoaching("q", "a", [], 10);
+    pushCoachingExchange("q", "a", [], 10);
     pushAugmentOffer([], 20);
 
     const ids = coachingFeed$.getValue().map((e) => e.id);
@@ -97,9 +97,13 @@ describe("pushAugmentOffer", () => {
   it("creates a proactive augment-offer entry", () => {
     const entry = pushAugmentOffer(
       [
-        { name: "Phenomenal Evil", rank: 1, reasoning: "Best scaling" },
-        { name: "Recursion", rank: 2, reasoning: "Decent" },
-        { name: "Firebrand", rank: 3, reasoning: "Redundant" },
+        {
+          name: "Phenomenal Evil",
+          fit: "exceptional",
+          reasoning: "Best scaling",
+        },
+        { name: "Recursion", fit: "strong", reasoning: "Decent" },
+        { name: "Firebrand", fit: "weak", reasoning: "Redundant" },
       ],
       180
     );
@@ -114,7 +118,7 @@ describe("pushAugmentOffer", () => {
 describe("markAugmentPicked", () => {
   it("sets picked on the matching augment offer", () => {
     const entry = pushAugmentOffer(
-      [{ name: "Phenomenal Evil", rank: 1, reasoning: "Best" }],
+      [{ name: "Phenomenal Evil", fit: "strong", reasoning: "Best" }],
       100
     );
 
@@ -127,32 +131,32 @@ describe("markAugmentPicked", () => {
   });
 
   it("does not affect other entries", () => {
-    pushVoiceCoaching("q", "a", [], 50);
+    pushCoachingExchange("q", "a", [], 50);
     const aug = pushAugmentOffer(
-      [{ name: "Aug1", rank: 1, reasoning: "good" }],
+      [{ name: "Aug1", fit: "strong", reasoning: "good" }],
       100
     );
-    pushVoiceCoaching("q2", "a2", [], 150);
+    pushCoachingExchange("q2", "a2", [], 150);
 
     markAugmentPicked(aug.id, "Aug1");
 
     const feed = coachingFeed$.getValue();
-    expect(feed[0].type).toBe("voice-coaching");
-    expect(feed[2].type).toBe("voice-coaching");
+    expect(feed[0].type).toBe("coaching-exchange");
+    expect(feed[2].type).toBe("coaching-exchange");
     expect((feed[1] as any).picked).toBe("Aug1");
   });
 });
 
-describe("pushVoiceCoaching", () => {
-  it("creates a reactive voice-coaching entry", () => {
-    const entry = pushVoiceCoaching(
+describe("pushCoachingExchange", () => {
+  it("creates a coaching exchange entry", () => {
+    const entry = pushCoachingExchange(
       "What should I build?",
       "Build Zhonya's",
-      [{ name: "Zhonya's Hourglass", reasoning: "Anti-burst" }],
+      [{ name: "Zhonya's Hourglass", fit: "strong", reasoning: "Anti-burst" }],
       200
     );
 
-    expect(entry.type).toBe("voice-coaching");
+    expect(entry.type).toBe("coaching-exchange");
     expect(entry.proactive).toBe(false);
     expect(entry.question).toBe("What should I build?");
     expect(entry.answer).toBe("Build Zhonya's");
@@ -196,7 +200,7 @@ describe("captureLastGameSnapshot", () => {
 describe("resetForNewGame", () => {
   it("clears the feed and plan but preserves last game snapshot", () => {
     pushGamePlan("Plan", ["A", "B", "C", "D", "E", "F"], 10);
-    pushVoiceCoaching("q", "a", [], 50);
+    pushCoachingExchange("q", "a", [], 50);
     captureLastGameSnapshot({
       championName: "Katarina",
       isWin: true,

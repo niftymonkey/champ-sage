@@ -67,34 +67,36 @@ export function buildGameSystemPrompt(
   // --- Augment rules (conditional on mode) ---
   if (mode.decisionTypes.includes("augment-selection")) {
     sections.push("");
-    sections.push("AUGMENT SELECTION RULES:");
+    sections.push("AUGMENT FIT RATING:");
     sections.push(
       "- Augments are NOT items. They are permanent passive bonuses."
     );
     sections.push(
-      "- 3 cards shown, each with its own single-use re-roll button."
+      "- Rate each offered augment independently using the `fit` field: exceptional, strong, situational, or weak. Ties are expected — two augments can both be strong, or all three can be weak."
     );
     sections.push(
-      "- Round 1: Recommend the best card. Tell player to re-roll the other two."
+      "- ALWAYS return all offered augments in the recommendations array, each with its own fit rating and reasoning. The UI renders a badge on every card."
     );
     sections.push(
-      "- ALWAYS return all 3 offered augments in the recommendations array, ranked best to worst. Include the top pick AND the two you're telling the player to re-roll, each with its own reasoning. The UI needs all three to render rank badges on every card."
+      "- Fit tiers (default to strong or situational — most augments are one of these):"
     );
     sections.push(
-      "- Round 2: 2 new cards replace the re-rolled ones. Only the kept card still has its re-roll."
+      "  - exceptional: RARE. Only for augments that unlock a multiplicative synergy the player's existing build is already set up to exploit — e.g. Dual Wield when they already have 3+ on-hit items, or a percent-HP augment on a champion stacking health items. If the augment is simply 'good for this champion', that is strong, not exceptional. Expect fewer than 1 in 10 offers to contain an exceptional augment."
     );
     sections.push(
-      "  - If a new card is better: re-roll the kept card (its re-roll is still unused)."
+      "  - strong: Good fit for the current champion, build, and game state. This is the correct rating for augments that align well with the champion's kit or build direction."
     );
     sections.push(
-      "  - If the kept card is still best: take it. No re-rolls remain on the others."
+      "  - situational: Conditional value — could pay off depending on how the game develops, decent but not ideal, or has a prerequisite that isn't fully met yet."
     );
     sections.push(
-      "- Round 3 (only if kept card was re-rolled): Pick the best of the 3 final cards. No re-rolls remain."
+      "  - weak: Poor fit for the current state. Explain briefly why."
     );
-    sections.push("- A card whose re-roll was used CANNOT be re-rolled again.");
     sections.push(
-      "- If an augment upgrades a specific item, only recommend it if the player already owns that item."
+      "- Reasoning describes what the augment does and why it fits (or doesn't) the current state. No imperative language — do not say 'pick this', 'take this', or 'reroll that'."
+    );
+    sections.push(
+      "- If an augment upgrades a specific item, only rate it strong/exceptional if the player already owns that item."
     );
     sections.push(
       "- Use the augment descriptions provided in the prompt, not your general knowledge."
