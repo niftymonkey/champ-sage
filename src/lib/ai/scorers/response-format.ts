@@ -18,24 +18,22 @@ export function scoreBrevity(response: string): number {
 }
 
 /**
- * Score response decisiveness. The response should give a clear recommendation,
- * not a menu of hedged options.
+ * Score response decisiveness. The response should give clear fit assessments,
+ * not deflect the decision entirely.
+ *
+ * Phrases like "both are viable" are legitimate when augments genuinely tie on
+ * fit rating. Only penalize true non-answers that avoid evaluating the options.
  *
  * Returns 1.0 for decisive responses, 0.0 for hedgy ones.
  */
 export function scoreDecisiveness(response: string): number {
   const lower = response.toLowerCase();
 
-  // Hedging patterns
   const hedges = [
     "it depends",
     "it's up to you",
     "you could go either way",
-    "both are viable",
-    "any of these would work",
-    "there's no wrong choice",
     "it really depends on",
-    "you can't go wrong with",
   ];
 
   const hedgeCount = hedges.filter((h) => lower.includes(h)).length;

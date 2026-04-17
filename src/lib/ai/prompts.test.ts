@@ -267,7 +267,7 @@ describe("buildGameSystemPrompt", () => {
     expect(prompt).toContain("PROACTIVE AWARENESS");
   });
 
-  it("includes augment rules when mode has augment-selection", () => {
+  it("includes augment fit-rating guidance when mode has augment-selection", () => {
     const mode = createStubMode({
       decisionTypes: [
         "augment-selection",
@@ -280,8 +280,10 @@ describe("buildGameSystemPrompt", () => {
       createStubGameData(),
       createGameState()
     );
-    expect(prompt).toContain("AUGMENT SELECTION RULES");
-    expect(prompt).toContain("re-roll");
+    expect(prompt).toContain("AUGMENT FIT RATING");
+    expect(prompt).toContain("exceptional");
+    expect(prompt).toContain("independent");
+    expect(prompt).not.toContain("re-roll");
   });
 
   it("includes synergy coaching instruction when mode has augment-selection", () => {
@@ -323,7 +325,7 @@ describe("buildGameSystemPrompt", () => {
       createStubGameData(),
       createGameState()
     );
-    expect(prompt).not.toContain("AUGMENT SELECTION RULES");
+    expect(prompt).not.toContain("AUGMENT FIT RATING");
   });
 
   it("includes game mode display name", () => {

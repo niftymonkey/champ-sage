@@ -52,7 +52,7 @@ describe("scoreDecisiveness", () => {
   it("scores 0 for multiple hedges", () => {
     expect(
       scoreDecisiveness(
-        "It depends on your playstyle. Both are viable options for Warwick here."
+        "It depends on your playstyle. It's up to you which direction to take here."
       )
     ).toBe(0);
   });

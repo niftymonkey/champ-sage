@@ -3,10 +3,12 @@
  * interactions displayed in the desktop window during gameplay.
  */
 
+import type { FitRating } from "../ai/types";
+
 /** Base fields shared by all feed entries */
 export interface FeedEntry {
   id: string;
-  type: "game-plan" | "augment-offer" | "voice-coaching";
+  type: "game-plan" | "augment-offer" | "coaching-exchange";
   /** Game time in seconds when the entry was created */
   timestamp: number;
   /** True = coach-initiated (gold border), false = player-initiated */
@@ -22,7 +24,7 @@ export interface GamePlanEntry extends FeedEntry {
   buildPath: string[];
 }
 
-/** GEP-triggered augment offer with ranked options */
+/** GEP-triggered augment offer with fit-rated options */
 export interface AugmentOfferEntry extends FeedEntry {
   type: "augment-offer";
   options: AugmentOption[];
@@ -32,22 +34,23 @@ export interface AugmentOfferEntry extends FeedEntry {
 
 export interface AugmentOption {
   name: string;
-  rank: number;
+  fit: FitRating;
   reasoning: string;
 }
 
-/** Voice query and coaching response */
-export interface VoiceCoachingEntry extends FeedEntry {
-  type: "voice-coaching";
+/** LLM coaching exchange — covers voice queries, augment evaluations, and plan updates */
+export interface CoachingExchangeEntry extends FeedEntry {
+  type: "coaching-exchange";
   /** Where this coaching request originated */
   source: "voice" | "augment" | "plan";
   question: string;
   answer: string;
-  recommendations: VoiceRecommendation[];
+  recommendations: CoachingRecommendation[];
 }
 
-export interface VoiceRecommendation {
+export interface CoachingRecommendation {
   name: string;
+  fit: FitRating;
   reasoning: string;
 }
 
@@ -55,7 +58,7 @@ export interface VoiceRecommendation {
 export type AnyFeedEntry =
   | GamePlanEntry
   | AugmentOfferEntry
-  | VoiceCoachingEntry;
+  | CoachingExchangeEntry;
 
 /** Current game plan — the living document shown in the side panel */
 export interface GamePlan {

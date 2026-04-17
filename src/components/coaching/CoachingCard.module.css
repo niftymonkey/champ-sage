@@ -67,7 +67,7 @@
   padding: 0.7rem;
 }
 
-/* ─── Voice coaching card ─── */
+/* ─── Coaching exchange card ─── */
 .question {
   color: #8890a4;
   font-size: 0.9rem;
@@ -104,22 +104,48 @@
   background: #181c26;
 }
 
-.recRank {
+.recFit {
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   min-width: 1rem;
   text-align: center;
+  text-transform: uppercase;
 }
 
-.rank1 {
+.fitExceptional {
+  background: linear-gradient(
+    135deg,
+    #ff80ab,
+    #82b1ff,
+    #b388ff,
+    #80cbc4,
+    #fff59d,
+    #ff80ab
+  );
+  background-size: 200% 100%;
+  animation: prismatic-text 3s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes prismatic-text {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+.fitStrong {
   color: #34d399;
 }
-.rank2 {
+.fitSituational {
   color: #fbbf24;
 }
-.rank3 {
-  color: #f87171;
+.fitWeak {
+  color: #6b7280;
 }
 
 .recName {
@@ -183,37 +209,52 @@
   border-color: #3d4560;
 }
 
-.augmentPick {
+.augmentHighlight {
   border-color: #34d399;
   background: rgba(52, 211, 153, 0.12);
 }
 
-.augmentPick:hover {
+.augmentHighlight:hover {
   background: rgba(52, 211, 153, 0.16);
 }
 
-.augmentRankBadge {
+.augmentFitBadge {
   position: absolute;
   top: -1px;
   right: -1px;
   font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
   padding: 0.08rem 0.3rem;
   border-radius: 0 0.2rem 0 0.2rem;
+  text-transform: uppercase;
 }
 
-.badgeRank1 {
+.badgeExceptional {
+  background: linear-gradient(
+    135deg,
+    #ff80ab,
+    #82b1ff,
+    #b388ff,
+    #80cbc4,
+    #fff59d,
+    #ff80ab
+  );
+  background-size: 200% 100%;
+  animation: prismatic-text 3s linear infinite;
+  color: #0a0c10;
+}
+.badgeStrong {
   background: #34d399;
   color: #0a0c10;
 }
-.badgeRank2 {
+.badgeSituational {
   background: #fbbf24;
   color: #0a0c10;
 }
-.badgeRank3 {
-  background: #f87171;
-  color: #0a0c10;
+.badgeWeak {
+  background: #6b7280;
+  color: #e5e7eb;
 }
 
 .augmentName {

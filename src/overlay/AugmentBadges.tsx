@@ -1,4 +1,4 @@
-import type { CoachingResponse } from "../lib/ai/types";
+import type { CoachingResponse, FitRating } from "../lib/ai/types";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 /** Strip markdown bold/italic markers from LLM output */
@@ -25,30 +25,31 @@ interface AugmentBadgesProps {
 }
 
 /**
- * Renders rank badges above each augment/stat anvil card during an offer.
+ * Renders fit-rating badges above each augment/stat anvil card during an offer.
  * Shows a "thinking" indicator while waiting for coaching response,
- * then shows ranked badges once the response arrives.
+ * then shows rated badges once the response arrives.
  */
 export function AugmentBadges({ offer, coaching }: AugmentBadgesProps) {
   if (!offer) return null;
 
   // Match coaching recommendations to offer positions by name. Slots whose
-  // augment name is in the coaching response get a ranked Badge; slots whose
+  // augment name is in the coaching response get a rated Badge; slots whose
   // name is absent (a rerolled-in card waiting for new coaching) get a
   // ThinkingIndicator. This lets kept cards stay on screen during a reroll
   // while only the changed slot briefly shows "analyzing." (#98)
-  const rankMap = new Map<string, { rank: number; reasoning: string }>();
-  coaching?.recommendations.forEach((rec, i) => {
-    rankMap.set(rec.name.toLowerCase(), {
-      rank: i + 1,
+  const fitMap = new Map<string, { fit: FitRating; reasoning: string }>();
+  coaching?.recommendations.forEach((rec) => {
+    fitMap.set(rec.name.toLowerCase(), {
+      fit: rec.fit,
       reasoning: rec.reasoning,
     });
   });
 
   return (
     <>
+      <style>{PRISMATIC_KEYFRAMES}</style>
       {offer.map((name, i) => {
-        const match = rankMap.get(name.toLowerCase());
+        const match = fitMap.get(name.toLowerCase());
 
         if (!match) {
           const cx = CARD_POSITIONS.cardCenters[i];
@@ -67,7 +68,7 @@ export function AugmentBadges({ offer, coaching }: AugmentBadgesProps) {
         return (
           <Badge
             key={`badge-${i}`}
-            rank={match.rank}
+            fit={match.fit}
             reason={stripMarkdown(match.reasoning)}
             slotIndex={i}
           />
@@ -78,20 +79,59 @@ export function AugmentBadges({ offer, coaching }: AugmentBadgesProps) {
 }
 
 interface BadgeProps {
-  rank: number;
+  fit: FitRating;
   reason: string;
   slotIndex: number;
 }
 
-const RANK_COLORS: Record<number, string> = {
-  1: "#22c55e", // green — best pick
-  2: "#eab308", // yellow — second
-  3: "#ef4444", // red — worst
+const FIT_COLORS: Record<FitRating, string> = {
+  exceptional: "#b388ff", // prismatic base (overridden by gradient)
+  strong: "#22c55e",
+  situational: "#eab308",
+  weak: "#6b7280",
 };
 
-function Badge({ rank, reason, slotIndex }: BadgeProps) {
+const FIT_LABELS: Record<FitRating, string> = {
+  exceptional: "Exceptional",
+  strong: "Strong",
+  situational: "Situational",
+  weak: "Weak",
+};
+
+const PRISMATIC_GRADIENT =
+  "linear-gradient(135deg, #ff80ab, #82b1ff, #b388ff, #80cbc4, #fff59d, #ff80ab)";
+
+const PRISMATIC_KEYFRAMES = `
+@keyframes prismatic-shift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+`;
+
+function Badge({ fit, reason, slotIndex }: BadgeProps) {
   const centerX = CARD_POSITIONS.cardCenters[slotIndex];
-  const bgColor = RANK_COLORS[rank] ?? "rgba(100, 100, 100, 0.8)";
+  const isPrismatic = fit === "exceptional";
+  const borderColor = FIT_COLORS[fit];
+
+  const borderStyle: React.CSSProperties = isPrismatic
+    ? {
+        borderImage: `${PRISMATIC_GRADIENT} 1`,
+        borderWidth: 2,
+        borderStyle: "solid",
+      }
+    : { border: `2px solid ${borderColor}` };
+
+  const labelStyle: React.CSSProperties = isPrismatic
+    ? {
+        background: PRISMATIC_GRADIENT,
+        backgroundSize: "200% 100%",
+        animation: "prismatic-shift 3s linear infinite",
+        color: "#0a0c10",
+      }
+    : {
+        backgroundColor: borderColor,
+        color: fit === "weak" ? "#e5e7eb" : "#fff",
+      };
 
   return (
     <div
@@ -106,42 +146,51 @@ function Badge({ rank, reason, slotIndex }: BadgeProps) {
         zIndex: 9000,
         backgroundColor: "rgba(0, 0, 0, 0.85)",
         borderRadius: 6,
-        padding: "4px 6px",
-        border: `2px solid ${bgColor}`,
-        overflow: "hidden",
+        padding: "16px 6px 4px",
+        ...borderStyle,
       }}
     >
+      {/* Fit label — centered at top, overlapping the border */}
       <span
         style={{
-          float: "left",
-          backgroundColor: bgColor,
-          color: "#fff",
+          position: "absolute",
+          top: -9,
+          left: "50%",
+          transform: "translateX(-50%)",
           borderRadius: 3,
-          padding: "1px 6px",
+          padding: "1px 8px",
           fontFamily: "monospace",
           fontWeight: "bold",
           fontSize: 13,
-          lineHeight: 1,
-          marginRight: 4,
-          marginTop: 1,
+          lineHeight: "16px",
+          whiteSpace: "nowrap",
+          zIndex: 1,
+          ...labelStyle,
         }}
       >
-        {rank}
+        {FIT_LABELS[fit]}
       </span>
-      <span
+      <div
         style={{
-          color: "#ddd",
-          fontSize: 17,
-          fontFamily: "monospace",
-          lineHeight: 1.3,
           overflow: "hidden",
-          display: "-webkit-box",
-          WebkitLineClamp: 4,
-          WebkitBoxOrient: "vertical",
+          height: "100%",
         }}
       >
-        {reason}
-      </span>
+        <span
+          style={{
+            color: "#ddd",
+            fontSize: 14,
+            fontFamily: "monospace",
+            lineHeight: 1.3,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 5,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          {reason}
+        </span>
+      </div>
     </div>
   );
 }

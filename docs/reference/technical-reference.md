@@ -567,7 +567,7 @@ The eval pipeline (`src/lib/ai/coaching.eval.ts`) supports both OpenAI direct an
 
 ### Eval scorer patterns
 
-- **Gate scorers** return 0 or 1 (pass/fail). Used for non-negotiable requirements (item awareness, structured output, augment re-roll mechanics, state awareness, gold-aware format).
+- **Gate scorers** return 0 or 1 (pass/fail). Used for non-negotiable requirements (item awareness, structured output, state awareness, gold-aware format). The augment re-roll accuracy gate scorer was removed when augment coaching switched from prescriptive ranking to independent fit ratings (#101).
 - **Ranking scorers** return 0-1 on a scale. Used for quality metrics (brevity, decisiveness, continuity, gold awareness, pivot explanation).
 - **`scorerHints`** — per-fixture metadata that tells scorers what to check. Added to `MultiTurnFixture` and `EvalInput`. Prevents false positives by only checking rules relevant to each fixture's scenario.
 - **State Awareness** scorer checks for keyword presence (GW items, MR items, enemy champion names, damage profile terms, owned items). All declared rules must pass for score=1.

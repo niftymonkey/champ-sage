@@ -257,7 +257,7 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
       augmentPicked$,
       {
         submitQuery: async (names, signal) => {
-          const question = `I'm being offered these augments: ${names.join(", ")}. Which should I pick and which should I re-roll?`;
+          const question = `I'm being offered these augments: ${names.join(", ")}. How well does each fit my current build?`;
           proactiveLog.info(
             `Auto-querying coaching for augment offer: ${names.join(", ")}`
           );
@@ -319,9 +319,13 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
           </p>
           {latestExchange.response.recommendations.length > 0 && (
             <div className="coaching-picks">
-              {latestExchange.response.recommendations.map((rec, i) => (
+              {latestExchange.response.recommendations.map((rec) => (
                 <div key={rec.name} className="coaching-pick">
-                  <span className="coaching-pick-rank">#{i + 1}</span>
+                  <span
+                    className={`coaching-pick-rank coaching-fit-${rec.fit}`}
+                  >
+                    {rec.fit}
+                  </span>
                   <div className="coaching-pick-content">
                     <span className="entity-name">{rec.name}</span>
                     <p className="entity-meta">{rec.reasoning}</p>

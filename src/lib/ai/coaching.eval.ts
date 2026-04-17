@@ -33,7 +33,6 @@ import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
 import type { LiveGameState } from "../reactive/types";
 import { scoreItemAwareness } from "./scorers/item-awareness";
-import { scoreAugmentRerollAccuracy } from "./scorers/augment-reroll-accuracy";
 import { scoreBrevity, scoreDecisiveness } from "./scorers/response-format";
 import { scoreConversationalContinuity } from "./scorers/conversational-continuity";
 import { scoreGoldAwareness } from "./scorers/gold-awareness";
@@ -49,6 +48,7 @@ interface EvalInput {
   category: string;
   question: string;
   champion: string;
+  level: number;
   gameTime: string;
   items: string[];
   gold: number;
@@ -71,7 +71,7 @@ interface ScorerHints {
 
 interface EvalOutput {
   answer: string;
-  recommendations: Array<{ name: string; reasoning: string }>;
+  recommendations: Array<{ name: string; fit: string; reasoning: string }>;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -129,19 +129,6 @@ const structuredOutput = createScorer<EvalInput, EvalOutput>({
     if (!output.answer) return 0;
     if (!Array.isArray(output.recommendations)) return 0;
     return 1;
-  },
-});
-
-const augmentRerollAccuracy = createScorer<EvalInput, EvalOutput>({
-  name: "Augment Re-Roll Accuracy",
-  description:
-    "Checks that the model follows actual re-roll mechanics when advising on augments",
-  scorer: ({ input, output }) => {
-    return scoreAugmentRerollAccuracy(
-      output.answer,
-      input.question,
-      input.history
-    );
   },
 });
 
@@ -236,7 +223,6 @@ const goldAwareRecommendations = createScorer<EvalInput, EvalOutput>({
 const GATE_SCORERS = [
   itemAwareness,
   structuredOutput,
-  augmentRerollAccuracy,
   stateAwareness,
   goldAwareRecommendations,
 ];
@@ -304,8 +290,13 @@ const fixturesDir = resolve("fixtures/coaching-sessions-v2");
 const { loadGameData } = await import("../data-ingest");
 const gameData = await loadGameData();
 
-const fixtureFiles = readdirSync(fixturesDir).filter((f) =>
-  f.endsWith(".json")
+// EVAL_FIXTURE_FILTER narrows which fixture files to load (substring match).
+// e.g. EVAL_FIXTURE_FILTER=illaoi npx evalite src/lib/ai/coaching.eval.ts
+const fixtureFilter = process.env.EVAL_FIXTURE_FILTER?.toLowerCase();
+const fixtureFiles = readdirSync(fixturesDir).filter(
+  (f) =>
+    f.endsWith(".json") &&
+    (!fixtureFilter || f.toLowerCase().includes(fixtureFilter))
 );
 const fixtures: MultiTurnFixture[] = fixtureFiles.flatMap((file) =>
   JSON.parse(readFileSync(resolve(fixturesDir, file), "utf-8"))
@@ -376,14 +367,22 @@ function buildEvalInput(
     }
   }
 
-  // Add current question
-  session.addUserMessage(stateText, f.query.question);
+  // Add current question, with augment descriptions if available
+  let questionText = f.query.question;
+  if (f.query.augmentOptions && f.query.augmentOptions.length > 0) {
+    const optionLines = f.query.augmentOptions.map(
+      (o) => `- ${o.name} (${o.tier}): ${o.description}`
+    );
+    questionText = `${f.query.question}\n\nAugment options:\n${optionLines.join("\n")}`;
+  }
+  session.addUserMessage(stateText, questionText);
 
   return {
     label: f.label,
     category: f.category,
     question: f.query.question,
     champion: f.scorerContext.champion,
+    level: f.gameState.activePlayer?.level ?? 1,
     gameTime: f.scorerContext.gameTime,
     items: f.scorerContext.items,
     gold: f.scorerContext.gold,
@@ -424,6 +423,13 @@ for (const model of models) {
           maxOutputTokens: 4096,
         });
 
+        // Log fit ratings for each recommendation
+        const recs = result.output.recommendations;
+        const fitSummary = recs.map((r) => `${r.name} [${r.fit}]`).join(", ");
+        console.log(
+          `\n  ${input.champion} lvl${input.level} @${input.gameTime}: ${fitSummary}`
+        );
+
         return result.output;
       },
 
@@ -433,11 +439,17 @@ for (const model of models) {
         { label: "Category", value: category },
         {
           label: "Champion",
-          value: `${result.input.champion} @${result.input.gameTime}`,
+          value: `${result.input.champion} lvl${result.input.level} @${result.input.gameTime}`,
         },
         {
           label: "Question",
           value: result.input.question.substring(0, 45),
+        },
+        {
+          label: "Fit Ratings",
+          value: result.output.recommendations
+            .map((r) => `${r.name} [${r.fit}]`)
+            .join(", "),
         },
         {
           label: "Context",
