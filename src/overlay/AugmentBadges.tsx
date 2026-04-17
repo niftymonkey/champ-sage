@@ -179,12 +179,12 @@ function Badge({ fit, reason, slotIndex }: BadgeProps) {
         <span
           style={{
             color: "#ddd",
-            fontSize: 17,
+            fontSize: 14,
             fontFamily: "monospace",
             lineHeight: 1.3,
             overflow: "hidden",
             display: "-webkit-box",
-            WebkitLineClamp: 4,
+            WebkitLineClamp: 5,
             WebkitBoxOrient: "vertical",
           }}
         >
