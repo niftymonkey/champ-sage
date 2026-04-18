@@ -110,9 +110,29 @@ export function OverlayApp() {
       // Discard responses that arrive after the player already picked.
       // The abort signal races with the response — if the pick cleared
       // the offer before this fires, applying it would show stale badges.
-      if (!offerNamesRef.current) {
+      const currentOfferNames = offerNamesRef.current;
+      if (!currentOfferNames) {
         overlayLog.info(
           "Discarding stale coaching response — offer already cleared by pick"
+        );
+        return;
+      }
+
+      // Also discard if the response was for a previous offer: fast pick →
+      // new offer arrives → stale response from the prior offer finally lands.
+      // offerNamesRef is now non-null but points to the new offer, so we need
+      // to check the response actually matches the current augment names.
+      const currentOfferNameSet = new Set(
+        currentOfferNames.map((n) => n.toLowerCase())
+      );
+      const matchesCurrentOffer =
+        response.recommendations?.length === currentOfferNames.length &&
+        response.recommendations.every((r) =>
+          currentOfferNameSet.has(r.name.toLowerCase())
+        );
+      if (!matchesCurrentOffer) {
+        overlayLog.info(
+          "Discarding stale coaching response — recommendations do not match current offer"
         );
         return;
       }
