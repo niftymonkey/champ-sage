@@ -107,6 +107,16 @@ export function OverlayApp() {
         `Augment coaching received (${delay}ms delay, recs: ${recNames?.join(", ")})`
       );
 
+      // Discard responses that arrive after the player already picked.
+      // The abort signal races with the response — if the pick cleared
+      // the offer before this fires, applying it would show stale badges.
+      if (!offerNamesRef.current) {
+        overlayLog.info(
+          "Discarding stale coaching response — offer already cleared by pick"
+        );
+        return;
+      }
+
       if (analyzingTimerRef.current) {
         clearTimeout(analyzingTimerRef.current);
         analyzingTimerRef.current = null;
