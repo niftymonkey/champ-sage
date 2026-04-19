@@ -5,6 +5,8 @@ export interface CoachingResponse {
   answer: string;
   /** Recommendations with independent fit ratings, if applicable (augments, items, etc.) */
   recommendations: Recommendation[];
+  /** True when this response came from a silent retry after a first-attempt failure (#102) */
+  retried?: boolean;
 }
 
 export interface Recommendation {

@@ -89,7 +89,8 @@ export function pushCoachingExchange(
   answer: string,
   recommendations: CoachingExchangeEntry["recommendations"],
   gameTime: number,
-  source: CoachingExchangeEntry["source"] = "voice"
+  source: CoachingExchangeEntry["source"] = "voice",
+  retried = false
 ): CoachingExchangeEntry {
   const entry: CoachingExchangeEntry = {
     id: nextFeedId(),
@@ -100,6 +101,7 @@ export function pushCoachingExchange(
     question,
     answer,
     recommendations,
+    ...(retried ? { retried: true } : {}),
   };
 
   coachingFeed$.next([...coachingFeed$.getValue(), entry]);

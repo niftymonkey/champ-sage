@@ -407,7 +407,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
             reasoning: r.reasoning,
           })),
           gameTime,
-          feedSource
+          feedSource,
+          finalResponse.retried ?? false
         );
 
         // Relay to overlay

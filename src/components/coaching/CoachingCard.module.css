@@ -83,6 +83,21 @@
   margin-bottom: 0.5rem;
 }
 
+.retriedBadge {
+  display: inline-block;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.2rem;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .recommendations {
   display: flex;
   flex-direction: column;
@@ -107,10 +122,17 @@
 .recFit {
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-weight: 700;
-  font-size: 0.7rem;
-  min-width: 1rem;
+  font-size: 0.6rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.2rem;
   text-align: center;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 0.1rem;
+  min-width: 5rem;
 }
 
 .fitExceptional {
@@ -124,13 +146,11 @@
     #ff80ab
   );
   background-size: 200% 100%;
-  animation: prismatic-text 3s linear infinite;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  animation: prismatic-shift 3s linear infinite;
+  color: #0a0c10;
 }
 
-@keyframes prismatic-text {
+@keyframes prismatic-shift {
   0% {
     background-position: 0% 50%;
   }
@@ -139,13 +159,16 @@
   }
 }
 .fitStrong {
-  color: #34d399;
+  background: #34d399;
+  color: #0a0c10;
 }
 .fitSituational {
-  color: #fbbf24;
+  background: #fbbf24;
+  color: #0a0c10;
 }
 .fitWeak {
-  color: #6b7280;
+  background: #6b7280;
+  color: #e5e7eb;
 }
 
 .recName {
