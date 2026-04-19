@@ -18,8 +18,10 @@ const DEBUG_OVERLAY = import.meta.env.VITE_DEBUG_OVERLAY === "1";
 /**
  * Safety timeout — if no coaching response arrives, stop showing "Analyzing".
  * Sized to cover one LLM call plus a silent retry on schema parse failure (#102).
+ * Worst case: attempt 1 fails late (~12s) and attempt 2 needs ~10-12s, so give
+ * 25s of headroom before the overlay gives up and clears the cards.
  */
-const ANALYZING_TIMEOUT_MS = 20_000;
+const ANALYZING_TIMEOUT_MS = 25_000;
 
 /**
  * Root component for the overlay window. Renders augment badges and

@@ -106,21 +106,19 @@ export function raceWithRetry<T>(
     let lastErr: unknown = null;
     let b: Attempt | null = null;
 
-    const finish = (
-      ok: boolean,
-      value?: T,
-      fromAttempt?: number,
-      err?: unknown,
-      loser?: Attempt | null
-    ) => {
+    // Split helpers so success/error is explicit — not encoded via "value is undefined".
+    // A generic T may legitimately resolve to undefined (e.g. Promise<void>).
+    const finishOk = (value: T, fromAttempt: number, loser: Attempt | null) => {
       if (done) return;
       done = true;
       if (loser) loser.controller.abort();
-      if (ok && value !== undefined && fromAttempt !== undefined) {
-        resolve({ value, winningAttempt: fromAttempt });
-      } else {
-        reject(err);
-      }
+      resolve({ value, winningAttempt: fromAttempt });
+    };
+
+    const finishErr = (err: unknown) => {
+      if (done) return;
+      done = true;
+      reject(err);
     };
 
     const startB = (reason: "timeout" | "attempt-1-failed", err?: unknown) => {
@@ -130,7 +128,7 @@ export function raceWithRetry<T>(
       b.promise.then(
         (value) => {
           if (!done) options?.onRetrySuccess?.();
-          finish(true, value, 2, undefined, a);
+          finishOk(value, 2, a);
         },
         (err2) => {
           bFailed = true;
@@ -138,7 +136,7 @@ export function raceWithRetry<T>(
           // If attempt 1 already failed too, we're done
           if (aFailed) {
             options?.onBothFailed?.(lastErr);
-            finish(false, undefined, undefined, err2, null);
+            finishErr(err2);
           }
           // else wait for A
         }
@@ -152,7 +150,7 @@ export function raceWithRetry<T>(
     a.promise.then(
       (value) => {
         clearTimeout(slowTimer);
-        finish(true, value, 1, undefined, b);
+        finishOk(value, 1, b);
       },
       (err) => {
         clearTimeout(slowTimer);
@@ -161,8 +159,8 @@ export function raceWithRetry<T>(
 
         if (isAbortError(err)) {
           // User aborted (or we lost the race and got aborted).
-          // Either way, stop. If B already won, finish is a no-op.
-          finish(false, undefined, undefined, err);
+          // Either way, stop. If B already won, finishErr is a no-op.
+          finishErr(err);
           return;
         }
 
@@ -171,7 +169,7 @@ export function raceWithRetry<T>(
           startB("attempt-1-failed", err);
         } else if (bFailed) {
           options?.onBothFailed?.(lastErr);
-          finish(false, undefined, undefined, lastErr ?? err);
+          finishErr(lastErr ?? err);
         }
         // else wait for B
       }

@@ -21,8 +21,10 @@ const FRESH_DURATION_MS = 8_000;
 /**
  * Safety timeout for thinking state — if no response arrives, stop showing "Analyzing".
  * Sized to cover one LLM call plus a silent retry on schema parse failure (#102).
+ * Kept ~2s above the badge overlay's ANALYZING_TIMEOUT_MS so the strip doesn't
+ * disappear before the badges do.
  */
-const THINKING_TIMEOUT_MS = 22_000;
+const THINKING_TIMEOUT_MS = 27_000;
 
 const MAX_FONT_SIZE = 16;
 const MIN_FONT_SIZE = 9;
