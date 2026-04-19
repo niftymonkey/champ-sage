@@ -46,6 +46,8 @@ export interface CoachingExchangeEntry extends FeedEntry {
   question: string;
   answer: string;
   recommendations: CoachingRecommendation[];
+  /** True when this response came from a silent retry after a first-attempt failure (#102) */
+  retried?: boolean;
 }
 
 export interface CoachingRecommendation {

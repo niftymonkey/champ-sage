@@ -101,6 +101,14 @@ function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
       />
       <div className={styles.body}>
         <div className={styles.question}>{entry.question}</div>
+        {entry.retried && (
+          <div
+            className={styles.retriedBadge}
+            title="LLM returned malformed output on first attempt; this response is from the automatic retry."
+          >
+            ↻ retried
+          </div>
+        )}
         <div className={styles.answer}>{entry.answer}</div>
         {entry.recommendations.length > 0 && (
           <div className={styles.recommendations}>
