@@ -9,4 +9,6 @@ export { MODEL_CONFIG, createCoachingModel } from "./model-config";
 export { coachingResponseSchema } from "./schemas";
 export { buildGameSystemPrompt } from "./prompts";
 export { assembleContext } from "./context-assembler";
-export { getMultiTurnCoachingResponse } from "./recommendation-engine";
+export type { CoachingFeature, MatchPhase, ExtractMeta } from "./feature";
+export { runFeatureCall } from "./recommendation-engine";
+export { coachingFeature } from "./features/coaching";

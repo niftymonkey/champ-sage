@@ -86,11 +86,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 // Evals always use OpenRouter via EVAL_OPENROUTER_API_KEY. This keeps eval
 // costs separate from the app's VITE_OPENAI_API_KEY.
 
-const openrouterKey = process.env.EVAL_OPENROUTER_API_KEY;
+const OPENROUTER_KEY = process.env.EVAL_OPENROUTER_API_KEY;
 
-if (!openrouterKey) {
+if (!OPENROUTER_KEY) {
   throw new Error("EVAL_OPENROUTER_API_KEY required in .env for evalite runs");
 }
+
+const openrouterKey: string = OPENROUTER_KEY;
 
 const openrouter = createOpenRouter({ apiKey: openrouterKey });
 
@@ -357,8 +359,11 @@ function buildEvalInput(
   );
   const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
 
-  // Build conversation session with history
-  const session = createConversationSession(systemPrompt);
+  // Build conversation session with history. apiKey is unused here (this
+  // harness calls generateText directly), but the session factory requires
+  // one for callers that go through session.ask(). Phase 8 retires this
+  // helper along with `createConversationSession` altogether.
+  const session = createConversationSession(systemPrompt, openrouterKey);
 
   if (f.query.history) {
     for (const exchange of f.query.history) {

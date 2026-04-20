@@ -3,28 +3,52 @@
  *
  * Each user message includes a full game state snapshot (not a diff),
  * re-anchoring the LLM to ground truth every turn. The system prompt is
- * set once at session creation and never changes.
+ * set once at session creation and composed per-call with the feature's
+ * task prompt.
  *
  * Usage:
- *   const session = createConversationSession(systemPrompt);
- *   session.addUserMessage(stateSnapshot, question);
- *   // ... call LLM with session.systemPrompt + session.messages ...
- *   session.addAssistantMessage(responseJson);
+ *   const session = createConversationSession(systemPrompt, apiKey);
+ *   const response = await session.ask(coachingFeature, { stateSnapshot, question });
  */
 
 import type { ModelMessage } from "ai";
+import type { CoachingFeature } from "./feature";
+import { runFeatureCall } from "./recommendation-engine";
 
 export interface ConversationSession {
   readonly systemPrompt: string;
   readonly messages: readonly ModelMessage[];
+
+  /**
+   * Feature-typed LLM call. Composes the system prompt (session base +
+   * feature task), appends the feature's user message to history, invokes
+   * the engine, appends the assistant turn, and returns the normalized
+   * result. On failure, rolls back the orphaned user turn so history stays
+   * clean and the same session is safe to reuse.
+   */
+  ask<TInput, TOutput>(
+    feature: CoachingFeature<TInput, TOutput>,
+    input: TInput,
+    options?: { signal?: AbortSignal }
+  ): Promise<TOutput>;
+
+  /**
+   * Lower-level history primitives. Used by tests and fixture-replay tooling
+   * to seed a session from prior-turn artifacts without mocking the engine.
+   */
   addUserMessage(stateSnapshot: string, question: string): void;
   addAssistantMessage(responseText: string): void;
   removeLastUserMessage(): void;
   reset(): void;
 }
 
+function formatUserContent(stateSnapshot: string, question: string): string {
+  return `[Game State]\n${stateSnapshot}\n\n[Question]\n${question}`;
+}
+
 export function createConversationSession(
-  systemPrompt: string
+  systemPrompt: string,
+  apiKey: string
 ): ConversationSession {
   const messages: ModelMessage[] = [];
 
@@ -37,10 +61,41 @@ export function createConversationSession(
       return messages;
     },
 
+    async ask(feature, input, options) {
+      const system = systemPrompt + feature.buildTaskPrompt(input);
+      const userContent = feature.buildUserMessage(input);
+
+      messages.push({ role: "user", content: userContent });
+
+      try {
+        const { value: raw, retried } = await runFeatureCall({
+          feature,
+          system,
+          messages,
+          apiKey,
+          signal: options?.signal,
+        });
+
+        const result = feature.extractResult(raw, { retried });
+
+        const historyContent =
+          feature.summarizeForHistory?.(result) ?? JSON.stringify(result);
+        messages.push({ role: "assistant", content: historyContent });
+
+        return result;
+      } catch (err) {
+        const last = messages[messages.length - 1];
+        if (last?.role === "user" && last.content === userContent) {
+          messages.pop();
+        }
+        throw err;
+      }
+    },
+
     addUserMessage(stateSnapshot: string, question: string): void {
       messages.push({
         role: "user",
-        content: `[Game State]\n${stateSnapshot}\n\n[Question]\n${question}`,
+        content: formatUserContent(stateSnapshot, question),
       });
     },
 

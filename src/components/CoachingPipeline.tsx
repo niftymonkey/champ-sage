@@ -20,8 +20,8 @@ import {
 } from "../lib/ai/game-plan-query";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
-import { getMultiTurnCoachingResponse } from "../lib/ai/recommendation-engine";
 import { createConversationSession } from "../lib/ai/conversation-session";
+import { coachingFeature } from "../lib/ai/features/coaching";
 import { buildGameSystemPrompt } from "../lib/ai/prompts";
 import {
   takeGameSnapshot,
@@ -108,7 +108,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
   // Create/reset conversation session when mode changes (new game detected)
   useEffect(() => {
-    if (!mode || !liveGameState.activePlayer) {
+    if (!mode || !liveGameState.activePlayer || !apiKey) {
       sessionRef.current = null;
       return;
     }
@@ -126,7 +126,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       gameDataRef.current,
       gameState
     );
-    sessionRef.current = createConversationSession(systemPrompt);
+    sessionRef.current = createConversationSession(systemPrompt, apiKey);
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
     resetForNewGame();
@@ -138,7 +138,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     // intentionally: background data refresh should NOT reset the mid-game
     // conversation session. gameDataRef.current provides the latest data
     // without triggering a session reset.
-  }, [mode, liveGameState.activePlayer?.championName]);
+  }, [apiKey, mode, liveGameState.activePlayer?.championName]);
 
   // Capture last game snapshot when transitioning out of a game
   useEffect(() => {
@@ -223,64 +223,49 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
       const planQuestion = buildGamePlanQuestion();
 
-      sessionRef.current.addUserMessage(stateText, planQuestion);
-
       proactiveLog.info(`Game plan query: "${planQuestion}"`);
 
-      try {
-        const response = await getMultiTurnCoachingResponse(
-          sessionRef.current,
-          apiKey
+      const response = await sessionRef.current.ask(coachingFeature, {
+        stateSnapshot: stateText,
+        question: planQuestion,
+      });
+
+      const buildPath = extractBuildPath(response);
+
+      // Smoke check: the prompt asks for 6 items. Anything else is a
+      // catastrophic prompt/schema failure worth surfacing loudly until
+      // proper eval coverage lands with the per-feature refactor (#108).
+      // A degraded plan (3-5 valid items) is still more useful to the
+      // player than an error, so don't abort — surface via warn log.
+      if (buildPath.length !== 6) {
+        proactiveLog.warn(
+          `Game plan build path has ${buildPath.length} items (expected 6)`
         );
-
-        const buildPath = extractBuildPath(response);
-
-        // Smoke check: the prompt asks for 6 items. Anything else is a
-        // catastrophic prompt/schema failure worth surfacing loudly until
-        // proper eval coverage lands with the per-feature refactor (#108).
-        // A degraded plan (3-5 valid items) is still more useful to the
-        // player than an error, so don't abort — surface via warn log.
-        if (buildPath.length !== 6) {
-          proactiveLog.warn(
-            `Game plan build path has ${buildPath.length} items (expected 6)`
-          );
-        }
-
-        // Normalize once: fold the (possibly synthesized) buildPath back
-        // into the response so the assistant history, side panel, and
-        // overlay all see the same data. Without this the overlay would
-        // receive `response.buildPath` (potentially `null` from fallback)
-        // while the side panel showed the extracted version.
-        const planResponse: CoachingResponse = { ...response, buildPath };
-
-        sessionRef.current.addAssistantMessage(JSON.stringify(planResponse));
-
-        proactiveLog.info(
-          `Game plan response: ${planResponse.answer.substring(0, 200)}...`
-        );
-        proactiveLog.info(
-          `Game plan build path: ${buildPath
-            .map((i) => `${i.name} [${i.category}]`)
-            .join(" → ")}`
-        );
-
-        pushGamePlan(planResponse.answer, buildPath, gameTime);
-
-        // Relay to overlay
-        proactiveLog.info("Sending game plan response to overlay");
-        window.electronAPI?.sendCoachingResponse({
-          ...planResponse,
-          source: "plan",
-          sentAt: Date.now(),
-        });
-      } catch (err) {
-        try {
-          sessionRef.current.removeLastUserMessage();
-        } catch {
-          // Session may have been reset
-        }
-        throw err;
       }
+
+      // Fold the (possibly synthesized) buildPath back into the response
+      // so the UI and overlay see a normalized version even when the LLM
+      // omitted buildPath and we promoted from recommendations.
+      const planResponse: CoachingResponse = { ...response, buildPath };
+
+      proactiveLog.info(
+        `Game plan response: ${planResponse.answer.substring(0, 200)}...`
+      );
+      proactiveLog.info(
+        `Game plan build path: ${buildPath
+          .map((i) => `${i.name} [${i.category}]`)
+          .join(" → ")}`
+      );
+
+      pushGamePlan(planResponse.answer, buildPath, gameTime);
+
+      // Relay to overlay
+      proactiveLog.info("Sending game plan response to overlay");
+      window.electronAPI?.sendCoachingResponse({
+        ...planResponse,
+        source: "plan",
+        sentAt: Date.now(),
+      });
     },
     [apiKey]
   );
@@ -381,8 +366,6 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         questionText = `${question}\n\nAugment options:\n${augmentLines.join("\n")}`;
       }
 
-      sessionRef.current.addUserMessage(stateText, questionText);
-
       const isAugmentQuery = question.startsWith(
         "I'm being offered these augments:"
       );
@@ -393,13 +376,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       }
 
       try {
-        const response = await getMultiTurnCoachingResponse(
-          sessionRef.current,
-          apiKey,
+        const response = await sessionRef.current.ask(
+          coachingFeature,
+          { stateSnapshot: stateText, question: questionText },
           { signal: options?.signal }
         );
-
-        sessionRef.current.addAssistantMessage(JSON.stringify(response));
 
         // Pin fit ratings for augments that carried over from a reroll.
         // An augment's fit is about the augment vs. the player's state, not
@@ -459,20 +440,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         window.electronAPI?.sendCoachingResponse(overlayPayload);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
-          reactiveLog.debug(
-            "Coaching request cancelled — removing orphaned message"
-          );
-          try {
-            sessionRef.current.removeLastUserMessage();
-          } catch {
-            // Session may have been reset
-          }
+          reactiveLog.debug("Coaching request cancelled");
         } else {
-          try {
-            sessionRef.current.removeLastUserMessage();
-          } catch {
-            // Ignore if session was reset
-          }
           const msg = err instanceof Error ? err.message : "Request failed";
           reactiveLog.error(`Coaching error: ${msg}`);
         }

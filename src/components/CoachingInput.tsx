@@ -5,8 +5,8 @@ import type { GameState } from "../lib/game-state/types";
 import type { ConversationSession } from "../lib/ai/conversation-session";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
-import { getMultiTurnCoachingResponse } from "../lib/ai/recommendation-engine";
 import { createConversationSession } from "../lib/ai/conversation-session";
+import { coachingFeature } from "../lib/ai/features/coaching";
 import { buildGameSystemPrompt } from "../lib/ai/prompts";
 import {
   takeGameSnapshot,
@@ -81,7 +81,7 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
 
   // Create/reset conversation session when mode changes (new game detected)
   useEffect(() => {
-    if (!mode || !liveGameState.activePlayer) {
+    if (!mode || !liveGameState.activePlayer || !apiKey) {
       sessionRef.current = null;
       return;
     }
@@ -96,7 +96,7 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
     };
 
     const systemPrompt = buildGameSystemPrompt(mode, gameData, gameState);
-    sessionRef.current = createConversationSession(systemPrompt);
+    sessionRef.current = createConversationSession(systemPrompt, apiKey);
     setChosenAugments([]);
     setLatestExchange(null);
     setError(null);
@@ -104,7 +104,7 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
     reactiveLog.info(
       `Conversation session created for ${mode.displayName} | ${liveGameState.activePlayer.championName}`
     );
-  }, [mode, gameData, liveGameState.activePlayer?.championName]);
+  }, [apiKey, mode, gameData, liveGameState.activePlayer?.championName]);
 
   const submitQuestion = useCallback(
     async (question: string, options?: { signal?: AbortSignal }) => {
@@ -172,9 +172,6 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
         questionText = `${question}\n\nAugment options:\n${augmentLines.join("\n")}`;
       }
 
-      // Add user message to conversation session
-      sessionRef.current.addUserMessage(stateText, questionText);
-
       reactiveLog.info(
         `Coaching query: "${question}" | ${sessionRef.current.messages.length} messages in thread`
       );
@@ -190,14 +187,11 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
       }
 
       try {
-        const response = await getMultiTurnCoachingResponse(
-          sessionRef.current,
-          apiKey,
+        const response = await sessionRef.current.ask(
+          coachingFeature,
+          { stateSnapshot: stateText, question: questionText },
           { signal: options?.signal }
         );
-
-        // Record assistant response in the session
-        sessionRef.current.addAssistantMessage(JSON.stringify(response));
 
         setLatestExchange({ question, response });
 
@@ -213,23 +207,8 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
         });
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
-          // Cancelled — remove the orphaned user message from the session
-          // The next turn's snapshot will reflect whatever choice was made
-          reactiveLog.debug(
-            "Coaching request cancelled — removing orphaned message"
-          );
-          try {
-            sessionRef.current.removeLastUserMessage();
-          } catch {
-            // Session may have been reset between cancel and this handler
-          }
+          reactiveLog.debug("Coaching request cancelled");
         } else {
-          // Remove the failed user message so the session stays clean
-          try {
-            sessionRef.current.removeLastUserMessage();
-          } catch {
-            // Ignore if session was reset
-          }
           const msg = err instanceof Error ? err.message : "Request failed";
           reactiveLog.error(`Coaching error: ${msg}`);
           setError(msg);
