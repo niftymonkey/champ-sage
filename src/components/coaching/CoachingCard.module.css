@@ -308,6 +308,24 @@
   margin-top: 0.4rem;
 }
 
+.buildItemWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: help;
+}
+
+/* Child text/SVG default to their own cursors and would override the
+   wrap's help cursor. Force inherit so the icon + chip hover as a unit. */
+.buildItemWrap * {
+  cursor: inherit;
+}
+
+.buildItemIcon {
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
 .buildItem {
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 0.75rem;
@@ -321,14 +339,37 @@
     color 0.15s;
 }
 
-.buildItem:hover {
+.buildItemWrap:hover .buildItem {
   background: #181c26;
   color: #e2e6ef;
+}
+
+.buildItemWrap:hover .buildItemIcon {
+  opacity: 0.85;
 }
 
 .buildArrow {
   color: #565e74;
   font-size: 0.7rem;
+}
+
+.cat_core {
+  color: #d7c997;
+}
+.cat_counter {
+  color: #e89898;
+}
+.cat_defensive {
+  color: #9cc9e8;
+}
+.cat_damage {
+  color: #e8a078;
+}
+.cat_utility {
+  color: #a8e0b8;
+}
+.cat_situational {
+  color: #8890a4;
 }
 
 /* ─── Responsive ─── */

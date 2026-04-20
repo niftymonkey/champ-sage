@@ -13,6 +13,11 @@ import type { CoachingQuery, CoachingResponse } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { ConversationSession } from "../lib/ai/conversation-session";
+import {
+  buildGamePlanQuestion,
+  extractBuildPath,
+  isUpdatePlanCommand,
+} from "../lib/ai/game-plan-query";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { getMultiTurnCoachingResponse } from "../lib/ai/recommendation-engine";
@@ -44,9 +49,6 @@ const proactiveLog = getLogger("coaching:proactive");
 interface CoachingPipelineProps {
   gameData: LoadedGameData;
 }
-
-/** Detect "update game plan" voice command (case-insensitive) */
-const UPDATE_PLAN_PATTERN = /^update\s+(?:game\s+)?plan$/i;
 
 function extractAugmentOptions(
   question: string,
@@ -219,8 +221,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       );
       const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
 
-      const planQuestion =
-        "This is the start of the game. Based on my champion, the enemy team comp, and the game mode, give me my game plan: what to watch out for, who to focus, and my recommended 6-item build path in order.";
+      const planQuestion = buildGamePlanQuestion();
 
       sessionRef.current.addUserMessage(stateText, planQuestion);
 
@@ -234,13 +235,25 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
         sessionRef.current.addAssistantMessage(JSON.stringify(response));
 
-        // Extract build path from recommendations or use item names
-        const buildPath = response.recommendations.map((r) => r.name);
+        const buildPath = extractBuildPath(response);
+
+        // Smoke check: the prompt asks for 6 items. Anything else is a
+        // catastrophic prompt/schema failure worth surfacing loudly until
+        // proper eval coverage lands with the per-feature refactor (#108).
+        if (buildPath.length !== 6) {
+          proactiveLog.warn(
+            `Game plan build path has ${buildPath.length} items (expected 6)`
+          );
+        }
 
         proactiveLog.info(
           `Game plan response: ${response.answer.substring(0, 200)}...`
         );
-        proactiveLog.info(`Game plan build path: ${buildPath.join(" → ")}`);
+        proactiveLog.info(
+          `Game plan build path: ${buildPath
+            .map((i) => `${i.name} [${i.category}]`)
+            .join(" → ")}`
+        );
 
         pushGamePlan(response.answer, buildPath, gameTime);
 
@@ -276,7 +289,12 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       }
 
       // Check for "update game plan" voice command
-      if (UPDATE_PLAN_PATTERN.test(question.trim())) {
+      const trimmedQuestion = question.trim();
+      const isUpdatePlan = isUpdatePlanCommand(trimmedQuestion);
+      proactiveLog.info(
+        `Voice intent match: "${trimmedQuestion}" → updatePlan=${isUpdatePlan}`
+      );
+      if (isUpdatePlan) {
         proactiveLog.info("Voice command: update game plan");
         const gameTime = liveGameStateRef.current.gameTime;
         try {
@@ -288,9 +306,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
               question,
               plan.summary,
               plan.buildPath.map((item) => ({
-                name: item,
+                name: item.name,
                 fit: "strong" as const,
-                reasoning: "",
+                reasoning: item.reason,
               })),
               gameTime,
               "plan"

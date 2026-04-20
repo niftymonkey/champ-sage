@@ -17,6 +17,11 @@ import {
   log,
   loadLogLevel,
 } from "./logger";
+import {
+  AugmentReplayFilter,
+  parseAugmentOfferNames,
+  parseAugmentPickedName,
+} from "./gep-replay-filter";
 
 const app = electronApp;
 
@@ -765,6 +770,13 @@ function registerOverlayHotkeys(overlayApi: any): void {
 
 // --- GEP (Game Events Provider) ---
 
+/**
+ * Tracks augments picked in the current game to suppress GEP's replay of
+ * stale offers when the app attaches to an already-running match. Cleared
+ * on game-exit so a subsequent game starts clean.
+ */
+const augmentReplayFilter = new AugmentReplayFilter();
+
 function initGep(): void {
   if (!owApp) return;
 
@@ -809,6 +821,22 @@ function initGep(): void {
     if (gameId !== LOL_GAME_ID) return;
     const update = args[0];
     if (!update) return;
+
+    const pickedName = parseAugmentPickedName(update);
+    if (pickedName) {
+      augmentReplayFilter.recordPick(pickedName);
+    }
+
+    const offerNames = parseAugmentOfferNames(update);
+    if (offerNames && augmentReplayFilter.isStaleOffer(offerNames)) {
+      gepLog.info(
+        `Stale augment offer suppressed (contains already-picked augment): ${offerNames.join(
+          ", "
+        )}`
+      );
+      return;
+    }
+
     sendToAllWindows("gep-info-update", update);
   });
 
@@ -821,6 +849,7 @@ function initGep(): void {
   gepApi.on("game-exit", (_e: any, gameId: number) => {
     if (gameId !== LOL_GAME_ID) return;
     gepLog.info("League exited");
+    augmentReplayFilter.reset();
   });
 
   gepApi.on("error", (_e: any, gameId: number, error: any) => {

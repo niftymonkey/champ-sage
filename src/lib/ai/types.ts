@@ -1,10 +1,44 @@
 export type FitRating = "exceptional" | "strong" | "situational" | "weak";
 
+/**
+ * Fixed set of visual categories the UI knows how to render for game-plan
+ * build-path items. Broad enough that the LLM's reasoning isn't artificially
+ * constrained; "situational" is the catch-all escape hatch.
+ */
+export type BuildPathCategory =
+  | "core"
+  | "counter"
+  | "defensive"
+  | "damage"
+  | "utility"
+  | "situational";
+
+export interface BuildPathItem {
+  /** Exact item name (must appear in the item catalog) */
+  name: string;
+  /** Visual category the UI renders with a distinct icon */
+  category: BuildPathCategory;
+  /**
+   * Enemy champion being countered — string when category is "counter",
+   * null otherwise. Nullable (not optional) because OpenAI strict-mode
+   * structured outputs require every property be present in every item.
+   */
+  targetEnemy: string | null;
+  /** Terse reason for this item — a few words max, grammar optional */
+  reason: string;
+}
+
 export interface CoachingResponse {
   /** Direct answer to the player's question */
   answer: string;
   /** Recommendations with independent fit ratings, if applicable (augments, items, etc.) */
   recommendations: Recommendation[];
+  /**
+   * Structured 6-item build path for game-plan queries. Null for every
+   * other query type. Nullable (not optional) because OpenAI strict-mode
+   * structured outputs require every declared property be present.
+   */
+  buildPath: BuildPathItem[] | null;
   /** True when this response came from a silent retry after a first-attempt failure (#102) */
   retried?: boolean;
 }

@@ -68,11 +68,23 @@
   border-radius: 0.2rem;
   font-size: 0.8rem;
   color: #8890a4;
+  cursor: help;
   transition: background 0.12s;
+}
+
+/* Child text/SVG default to their own cursors (I-beam, auto) and
+   override the row's help cursor. Force inherit so the whole row
+   consistently signals "hover for info". */
+.buildStep * {
+  cursor: inherit;
 }
 
 .buildStep:hover {
   background: #181c26;
+}
+
+.buildStep:hover .buildIcon {
+  opacity: 0.85;
 }
 
 .buildNum {
@@ -80,6 +92,47 @@
   font-size: 0.7rem;
   color: #565e74;
   min-width: 0.8rem;
+  flex-shrink: 0;
+}
+
+.buildIcon {
+  flex-shrink: 0;
+}
+
+.buildName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.counterTarget {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #e8a0a0;
+  flex-shrink: 0;
+}
+
+.cat_core {
+  color: #d7c997;
+}
+.cat_counter {
+  color: #e89898;
+}
+.cat_defensive {
+  color: #9cc9e8;
+}
+.cat_damage {
+  color: #e8a078;
+}
+.cat_utility {
+  color: #a8e0b8;
+}
+.cat_situational {
+  color: #8890a4;
 }
 
 .updated {
