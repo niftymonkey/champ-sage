@@ -9,6 +9,7 @@
  */
 
 import { BehaviorSubject } from "rxjs";
+import type { BuildPathItem } from "../ai/types";
 import type {
   AnyFeedEntry,
   GamePlan,
@@ -37,7 +38,7 @@ function nextFeedId(): string {
 /** Push a game plan entry to the feed and update the side panel */
 export function pushGamePlan(
   summary: string,
-  buildPath: string[],
+  buildPath: BuildPathItem[],
   gameTime: number
 ): GamePlanEntry {
   const entry: GamePlanEntry = {

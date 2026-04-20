@@ -4,9 +4,10 @@ import type {
   AugmentOfferEntry,
   CoachingExchangeEntry,
 } from "../../lib/reactive/coaching-feed-types";
-import type { FitRating } from "../../lib/ai/types";
+import type { BuildPathItem, FitRating } from "../../lib/ai/types";
 import { useCoachingContext } from "../../hooks/useCoachingContext";
 import { AugmentCard } from "../AugmentCard";
+import { BuildPathIcon, BUILD_PATH_CATEGORY_LABELS } from "./BuildPathIcon";
 import styles from "./CoachingCard.module.css";
 
 interface CoachingCardProps {
@@ -158,17 +159,34 @@ function CardHeader({ type, label, timestamp }: CardHeaderProps) {
   );
 }
 
-function BuildPath({ items }: { items: string[] }) {
+function BuildPath({ items }: { items: BuildPathItem[] }) {
   return (
     <div className={styles.buildPath}>
       {items.map((item, i) => (
-        <span key={`${item}-${i}`}>
+        <span
+          key={`${item.name}-${i}`}
+          className={styles.buildItemWrap}
+          title={formatBuildItemTooltip(item)}
+        >
           {i > 0 && <span className={styles.buildArrow}>→ </span>}
-          <span className={styles.buildItem}>{item}</span>
+          <BuildPathIcon
+            category={item.category}
+            className={`${styles.buildItemIcon} ${styles[`cat_${item.category}`] ?? ""}`}
+          />
+          <span className={styles.buildItem}>{item.name}</span>
         </span>
       ))}
     </div>
   );
+}
+
+function formatBuildItemTooltip(item: BuildPathItem): string {
+  const label = BUILD_PATH_CATEGORY_LABELS[item.category];
+  const header =
+    item.category === "counter" && item.targetEnemy
+      ? `${label} — ${item.targetEnemy}`
+      : label;
+  return item.reason ? `${header}: ${item.reason}` : header;
 }
 
 const FIT_BADGE_CLASSES: Record<FitRating, string> = {

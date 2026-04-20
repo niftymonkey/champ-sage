@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import type { BuildPathItem } from "../ai/types";
 import {
   coachingFeed$,
   gamePlan$,
@@ -12,6 +13,23 @@ import {
   _resetFeedIdCounter,
 } from "./coaching-feed";
 
+function buildItem(
+  name: string,
+  overrides: Partial<BuildPathItem> = {}
+): BuildPathItem {
+  return {
+    name,
+    category: "core",
+    targetEnemy: null,
+    reason: "",
+    ...overrides,
+  };
+}
+
+function sixCoreItems(names: string[]): BuildPathItem[] {
+  return names.map((n) => buildItem(n));
+}
+
 beforeEach(() => {
   resetForNewGame();
   _resetFeedIdCounter();
@@ -24,7 +42,7 @@ describe("coachingFeed$", () => {
   });
 
   it("accumulates entries in chronological order", () => {
-    pushGamePlan("Plan A", ["Item1", "Item2"], 10);
+    pushGamePlan("Plan A", sixCoreItems(["Item1", "Item2"]), 10);
     pushCoachingExchange("question?", "answer", [], 30);
     pushAugmentOffer([{ name: "Aug1", fit: "strong", reasoning: "good" }], 45);
 
@@ -53,12 +71,25 @@ describe("pushGamePlan", () => {
     const entry = pushGamePlan(
       "Heavy CC comp",
       [
-        "Rocketbelt",
-        "Merc Treads",
-        "Zhonya's",
-        "Banshee's",
-        "Rabadon's",
-        "Void Staff",
+        buildItem("Rocketbelt", {
+          category: "core",
+          reason: "mobility + burst",
+        }),
+        buildItem("Merc Treads", {
+          category: "defensive",
+          reason: "tenacity vs CC",
+        }),
+        buildItem("Zhonya's", {
+          category: "counter",
+          targetEnemy: "Zed",
+          reason: "stasis vs ult",
+        }),
+        buildItem("Banshee's", {
+          category: "defensive",
+          reason: "spell shield",
+        }),
+        buildItem("Rabadon's", { category: "damage", reason: "AP scaling" }),
+        buildItem("Void Staff", { category: "damage", reason: "MR pen" }),
       ],
       12
     );
@@ -67,22 +98,26 @@ describe("pushGamePlan", () => {
     expect(entry.proactive).toBe(true);
     expect(entry.summary).toBe("Heavy CC comp");
     expect(entry.buildPath).toHaveLength(6);
+    expect(entry.buildPath[2].category).toBe("counter");
+    expect(entry.buildPath[2].targetEnemy).toBe("Zed");
+    expect(entry.buildPath[2].reason).toBe("stasis vs ult");
     expect(entry.timestamp).toBe(12);
   });
 
   it("updates gamePlan$ with the current plan", () => {
-    pushGamePlan("Initial plan", ["A", "B", "C", "D", "E", "F"], 10);
+    const path = sixCoreItems(["A", "B", "C", "D", "E", "F"]);
+    pushGamePlan("Initial plan", path, 10);
 
     const plan = gamePlan$.getValue();
     expect(plan).not.toBeNull();
     expect(plan!.summary).toBe("Initial plan");
-    expect(plan!.buildPath).toEqual(["A", "B", "C", "D", "E", "F"]);
+    expect(plan!.buildPath).toEqual(path);
     expect(plan!.updatedAt).toBe(10);
   });
 
   it("replaces the previous plan when called again", () => {
-    pushGamePlan("Plan v1", ["A", "B", "C", "D", "E", "F"], 10);
-    pushGamePlan("Plan v2", ["X", "Y", "Z", "W", "V", "U"], 300);
+    pushGamePlan("Plan v1", sixCoreItems(["A", "B", "C", "D", "E", "F"]), 10);
+    pushGamePlan("Plan v2", sixCoreItems(["X", "Y", "Z", "W", "V", "U"]), 300);
 
     const plan = gamePlan$.getValue();
     expect(plan!.summary).toBe("Plan v2");
@@ -199,7 +234,7 @@ describe("captureLastGameSnapshot", () => {
 
 describe("resetForNewGame", () => {
   it("clears the feed and plan but preserves last game snapshot", () => {
-    pushGamePlan("Plan", ["A", "B", "C", "D", "E", "F"], 10);
+    pushGamePlan("Plan", sixCoreItems(["A", "B", "C", "D", "E", "F"]), 10);
     pushCoachingExchange("q", "a", [], 50);
     captureLastGameSnapshot({
       championName: "Katarina",

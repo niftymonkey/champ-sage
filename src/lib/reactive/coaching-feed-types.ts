@@ -3,7 +3,7 @@
  * interactions displayed in the desktop window during gameplay.
  */
 
-import type { FitRating } from "../ai/types";
+import type { BuildPathItem, FitRating } from "../ai/types";
 
 /** Base fields shared by all feed entries */
 export interface FeedEntry {
@@ -20,8 +20,8 @@ export interface GamePlanEntry extends FeedEntry {
   type: "game-plan";
   /** Coach's strategy reasoning text */
   summary: string;
-  /** Ordered item names (6 items) */
-  buildPath: string[];
+  /** Ordered 6-item build path with per-item category + reasoning */
+  buildPath: BuildPathItem[];
 }
 
 /** GEP-triggered augment offer with fit-rated options */
@@ -66,8 +66,8 @@ export type AnyFeedEntry =
 export interface GamePlan {
   /** Strategy reasoning text */
   summary: string;
-  /** 6 ordered item names */
-  buildPath: string[];
+  /** Ordered 6-item build path with per-item category + reasoning */
+  buildPath: BuildPathItem[];
   /** Game time of last update */
   updatedAt: number;
 }

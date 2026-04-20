@@ -576,3 +576,27 @@ The eval pipeline (`src/lib/ai/coaching.eval.ts`) supports both OpenAI direct an
 - **Item recommendation format** in system prompt is scoped to purchase responses: "When recommending an item purchase, always name the destination item AND a buildable component." Non-purchase responses (strategy, positioning, augments) should name items naturally without the format. This scoping prevents the model from forcing destination+component structure onto strategic advice.
 - **Augment data in state snapshots** — `PlayerSnapshot.augments` is an array of `{name, description, sets}`, not just names. `GameSnapshot.augmentSetProgress` shows active bonuses and next thresholds. Both are computed in `takeGameSnapshot()` from `LoadedGameData`. The `formatAugmentOfferLines()` helper (in `augment-offer-formatter.ts`) adds set bonus unlock previews when the model is choosing augments.
 - **SYNERGY COACHING** instruction in `buildGameSystemPrompt` (ARAM Mayhem only) tells the model to look for augment/set bonus/item/stat anvil synergies and recommend unconventional builds when synergies warrant it.
+
+### OpenAI structured outputs — strict-mode schema rules
+
+OpenAI's Responses API with structured outputs enforces rules beyond standard JSON Schema. These are silent until the API rejects the call at runtime, which can cascade: the coaching response schema is shared across every LLM call (augment coaching, voice, game plan), so one invalid property breaks all of them.
+
+- **Every declared property must appear in `required`** at every nesting level, including optional ones. There is no "optional-by-omission" as in draft-07 JSON Schema.
+- **Optional fields must be nullable.** Use `type: ["string", "null"]` (or `["array", "null"]`, etc.) and list the property in `required`. The model then returns `null` instead of omitting the field. **Example:** `CoachingResponse.buildPath[*].targetEnemy` is the counter-target enemy name for `counter` items and `null` for every other category — the field is always present on every build-path item. Any prompt wording that tells the model to "omit" such a field should instead tell it to "set to `null`"; the structured-output machinery will force the key to be present regardless, so "omit" instructions only confuse the model.
+- **`additionalProperties: false` is required** on every object node.
+- **Error signature:** `Invalid schema for response_format 'response': In context=(...), 'required' is required to be supplied and to be an array including every key in properties. Missing '<field>'.`
+- **Local guard:** `src/lib/ai/schemas.test.ts` walks the schema tree and asserts `required` completeness + `additionalProperties: false` at every level. Runs offline; catches violations before they hit the API.
+- **Consequence for TS types:** prefer `field: T | null` over `field?: T` when the field is part of an AI-SDK response schema, to keep the TS type honest about what the model returns.
+
+### Game plan prompt is state-agnostic
+
+`buildGamePlanQuestion()` in `src/lib/ai/game-plan-query.ts` is deliberately free of temporal anchors ("start of the game", "mid-game", etc.). The `[Game State]` block preceding every message carries all temporal context (current items, game time, enemy itemization, augments picked, KDA), so one prompt drives both the auto-fired opening plan and the mid-game "Update Game Plan" voice command. Adding phase-specific wording introduces contradictions when the state snapshot disagrees with the prompt (observed: "This is the start of the game" while state showed `t=18:42`, 4 items built — model hedged or re-reasoned from scratch).
+
+### GEP replays stale augment events at app launch
+
+When champ-sage attaches to an already-running League game, Overwolf's GEP replays the most recent augment pick and the offer that preceded it — in that order, ~50ms apart. Without filtering, this triggers auto-coaching and leaves the overlay's "Analyzing" badges stuck for up to the 25s timeout (and a follow-up LLM call that wastes tokens).
+
+- **Filter:** `electron/gep-replay-filter.ts` tracks names of augments picked in the current game and suppresses any subsequent offer containing an already-picked augment. Runs in the main process so both the main window and the overlay window (which listen to raw `gep-info-update` IPC independently) are protected from a single point.
+- **Reset:** `augmentReplayFilter.reset()` fires on GEP `game-exit` so the next match starts clean.
+- **Assumption:** in ARAM Mayhem / Arena, an augment cannot be picked twice, so current-offer vs. prior-pick overlap is always a replay. If a future mode permits re-picking, the filter needs a time-bounded variant.
+- **Overlay is a separate renderer:** the overlay window (`src/overlay/OverlayApp.tsx`) parses GEP info updates directly via `window.electronAPI.onGepInfoUpdate`, not through the main-window `augmentOffer$` Subject. Filtering has to live at the broadcast boundary in `electron/main.ts` to affect both windows.
