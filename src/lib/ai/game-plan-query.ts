@@ -22,7 +22,7 @@ export function buildGamePlanQuestion(): string {
     "Return the 6 items in the `buildPath` field of your response (not in `recommendations`). For each item:",
     "- name: exact item name from the Item Catalog.",
     "- category: one of core | counter | defensive | damage | utility | situational.",
-    "- targetEnemy: REQUIRED when category is `counter` — name the specific enemy champion this item addresses. Omit for every other category.",
+    "- targetEnemy: the enemy champion name being countered when category is `counter`; set to `null` for every other category (the field must always be present — the schema is nullable, not optional).",
     "- reason: a few words max. Sacrifice grammar for brevity. No full sentences.",
     "",
     "Category definitions:",
@@ -56,7 +56,7 @@ export function buildGamePlanQuestion(): string {
  * real-world phrasings to general coaching and leaving the side panel stale.
  */
 const UPDATE_PLAN_PATTERN =
-  /^(?:please\s+|hey\s+|ok\s+|okay\s+|coach\s+)?(update|refresh|rework|redo|replace|remake)\s+(?:the\s+|my\s+)?(?:game\s+)?plan\b/i;
+  /^(?:(?:please|hey|ok|okay|coach)\s+)*(update|refresh|rework|redo|replace|remake)\s+(?:the\s+|my\s+)?(?:game\s+)?plan\b/i;
 
 export function isUpdatePlanCommand(text: string): boolean {
   return UPDATE_PLAN_PATTERN.test(text.trim());

@@ -42,9 +42,13 @@ describe("buildGamePlanQuestion", () => {
     }
   });
 
-  it("requires targetEnemy only for counter category", () => {
-    expect(q).toMatch(/targetEnemy: REQUIRED when category is `counter`/);
-    expect(q).toMatch(/Omit for every other category/);
+  it("tells the model to set targetEnemy for counter, null otherwise", () => {
+    // The schema requires targetEnemy on every buildPath item (nullable, not
+    // optional) — the prompt must not instruct the model to omit it.
+    expect(q).toMatch(/targetEnemy:/);
+    expect(q).toMatch(/when category is `counter`/);
+    expect(q).toMatch(/set to `null` for every other category/);
+    expect(q).not.toMatch(/\bOmit\b/i);
   });
 
   it("asks for terse reason text (no full sentences)", () => {
@@ -70,6 +74,9 @@ describe("isUpdatePlanCommand", () => {
       "ok update the plan",
       "okay update my plan",
       "coach update my game plan",
+      "hey coach update my plan",
+      "please hey update the plan",
+      "ok coach please refresh the plan",
       "refresh plan",
       "refresh the plan",
       "refresh my game plan",

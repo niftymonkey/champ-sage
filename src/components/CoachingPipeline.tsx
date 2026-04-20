@@ -233,21 +233,30 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           apiKey
         );
 
-        sessionRef.current.addAssistantMessage(JSON.stringify(response));
-
         const buildPath = extractBuildPath(response);
 
         // Smoke check: the prompt asks for 6 items. Anything else is a
         // catastrophic prompt/schema failure worth surfacing loudly until
         // proper eval coverage lands with the per-feature refactor (#108).
+        // A degraded plan (3-5 valid items) is still more useful to the
+        // player than an error, so don't abort — surface via warn log.
         if (buildPath.length !== 6) {
           proactiveLog.warn(
             `Game plan build path has ${buildPath.length} items (expected 6)`
           );
         }
 
+        // Normalize once: fold the (possibly synthesized) buildPath back
+        // into the response so the assistant history, side panel, and
+        // overlay all see the same data. Without this the overlay would
+        // receive `response.buildPath` (potentially `null` from fallback)
+        // while the side panel showed the extracted version.
+        const planResponse: CoachingResponse = { ...response, buildPath };
+
+        sessionRef.current.addAssistantMessage(JSON.stringify(planResponse));
+
         proactiveLog.info(
-          `Game plan response: ${response.answer.substring(0, 200)}...`
+          `Game plan response: ${planResponse.answer.substring(0, 200)}...`
         );
         proactiveLog.info(
           `Game plan build path: ${buildPath
@@ -255,12 +264,12 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
             .join(" → ")}`
         );
 
-        pushGamePlan(response.answer, buildPath, gameTime);
+        pushGamePlan(planResponse.answer, buildPath, gameTime);
 
         // Relay to overlay
         proactiveLog.info("Sending game plan response to overlay");
         window.electronAPI?.sendCoachingResponse({
-          ...response,
+          ...planResponse,
           source: "plan",
           sentAt: Date.now(),
         });

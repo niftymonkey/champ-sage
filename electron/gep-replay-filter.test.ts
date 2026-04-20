@@ -64,13 +64,15 @@ describe("parseAugmentOfferNames", () => {
     ).toBeNull();
   });
 
-  it("drops empty/missing names silently", () => {
+  it("drops empty and missing names silently", () => {
     expect(
       parseAugmentOfferNames({
         feature: "augments",
         key: "me",
         value: JSON.stringify({
           augment_1: { name: "Only One" },
+          augment_2: { name: "" },
+          // augment_3 missing entirely
         }),
       })
     ).toEqual(["Only One"]);
