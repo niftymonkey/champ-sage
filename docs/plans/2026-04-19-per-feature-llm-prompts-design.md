@@ -28,6 +28,87 @@ Each LLM-driven feature owns:
 
 …while sharing a single `MatchSession` whose base context (champion, items, roster, mode rules, preferences, patch notes, past games) and accumulated conversation history are available to every feature.
 
+## Architecture at a glance
+
+### Anatomy of one LLM call (end-state)
+
+```
+┌───────────────────────────────────────────────────┐
+│  MatchSession (one per match, cumulative history) │
+│    baseContext : string                           │
+│    messages[]  : [user, assistant, user, ...]     │
+└─────────────────────┬─────────────────────────────┘
+                      │  session.ask(feature, input)
+                      ▼
+┌───────────────────────────────────────────────────┐
+│  CoachingFeature<TInput, TOutput>                 │
+│    buildTaskPrompt(input)  → string               │
+│    buildUserMessage(input) → string               │
+│    outputSchema                                   │
+│    extractResult(raw, meta) → TOutput             │
+└─────────────────────┬─────────────────────────────┘
+                      │  compose
+                      ▼
+┌───────────────────────────────────────────────────┐
+│  OpenAI call                                      │
+│    system   = baseContext + taskPrompt            │
+│    messages = [...prior turns, new user turn]     │
+│    schema   = feature.outputSchema                │
+└───────────────────────────────────────────────────┘
+```
+
+Key idea: the session owns **continuity** (base context + message history). The feature owns **what this particular call is about** (task prompt, user-message shape, output schema). Every call to `ask()` glues the two together and hands the combined thing to the LLM.
+
+### Current state (end of Phase 2)
+
+One shared "kitchen-sink" feature. Every call site passes the same feature and gets back the same `CoachingResponse` shape — only the input text differs.
+
+```
+game-plan auto-fire  ─┐
+voice Q&A             ├─▶ session.ask(coachingFeature, { stateSnapshot, question })
+augment offer        ─┘
+                              │
+                              ▼
+                 coachingFeature (kitchen-sink, one for all call types)
+                 ├─ buildTaskPrompt  = ALL remaining feature rules
+                 │                     (item-rec format, proactive, item pool,
+                 │                      augment fit, synergy coaching)
+                 ├─ buildUserMessage = [Game State] + [Question]
+                 └─ outputSchema     = coachingResponseSchema (shared shape)
+```
+
+### Target state (end of Phase 3)
+
+Four per-feature modules. The call site picks the right one; each feature carries only the rules and state it needs.
+
+```
+game-plan auto-fire  ─▶ session.ask(gamePlanFeature,    ...)
+augment offer        ─▶ session.ask(augmentFitFeature,  ...)
+voice "what buy"     ─▶ session.ask(itemRecFeature,     ...)
+voice other          ─▶ session.ask(voiceQueryFeature,  ...)
+
+  Each feature owns:
+    ├─ buildTaskPrompt    : only its own rules
+    ├─ buildUserMessage   : its own (feature-scoped) state snapshot  ← #109 defense
+    └─ outputSchema       : its own (Phase 4)
+```
+
+### Phase map — what each phase wires up
+
+```
+P0 ✓  rebase onto main (absorb #99 artifacts)
+P1 ✓  CoachingFeature contract + session.ask() plumbing (kitchen-sink feature)
+P2 ✓  split system prompt into baseContext + featureRules (kitchen-sink holds rules)
+P3    split kitchen-sink → 4 features; feature-scoped state snapshots (#109 defense)
+P4    per-feature schemas; enum-lock buildPath to item catalog (#109 guarantee);
+      retire CoachingResponse
+P5    store .answer prose in history (not full JSON)
+P6    personality-prefix infrastructure (no-op default, unblocks #24)
+P7    MatchSession phases: champ-select → in-game → post-game
+P8    migrate eval harness into per-feature dirs; land deferred #99 scorers
+P9    sweep + docs + PR
+```
+
 ## Design
 
 ### MatchSession: one session, three phases, cumulative history
