@@ -3,11 +3,13 @@ import type { CoachingResponse, CoachingQuery } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { ConversationSession } from "../lib/ai/conversation-session";
+import type { CoachingFeature } from "../lib/ai/feature";
+import type { CoachingFeatureInput } from "../lib/ai/features/coaching";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { createConversationSession } from "../lib/ai/conversation-session";
-import { coachingFeature } from "../lib/ai/features/coaching";
-import { buildGameSystemPrompt } from "../lib/ai/prompts";
+import { createCoachingFeature } from "../lib/ai/features/coaching";
+import { buildBaseContext } from "../lib/ai/base-context";
 import {
   takeGameSnapshot,
   formatStateSnapshot,
@@ -68,6 +70,10 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
   const enemyStatsRef = useRef(enemyStats);
   const chosenAugmentsRef = useRef(chosenAugments);
   const sessionRef = useRef<ConversationSession | null>(null);
+  const featureRef = useRef<CoachingFeature<
+    CoachingFeatureInput,
+    CoachingResponse
+  > | null>(null);
 
   liveGameStateRef.current = liveGameState;
   gameDataRef.current = gameData;
@@ -95,8 +101,9 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
       gameTime: liveGameState.gameTime,
     };
 
-    const systemPrompt = buildGameSystemPrompt(mode, gameData, gameState);
-    sessionRef.current = createConversationSession(systemPrompt, apiKey);
+    const baseContext = buildBaseContext({ mode, gameData, gameState });
+    sessionRef.current = createConversationSession(baseContext, apiKey);
+    featureRef.current = createCoachingFeature(mode);
     setChosenAugments([]);
     setLatestExchange(null);
     setError(null);
@@ -108,12 +115,19 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
 
   const submitQuestion = useCallback(
     async (question: string, options?: { signal?: AbortSignal }) => {
-      if (!sessionRef.current || !apiKey || !question.trim()) {
+      if (
+        !sessionRef.current ||
+        !featureRef.current ||
+        !apiKey ||
+        !question.trim()
+      ) {
         const reason = !sessionRef.current
           ? "no session"
-          : !apiKey
-            ? "no API key"
-            : "empty question";
+          : !featureRef.current
+            ? "no feature"
+            : !apiKey
+              ? "no API key"
+              : "empty question";
         reactiveLog.warn(`Coaching skipped: ${reason}`);
         return;
       }
@@ -188,7 +202,7 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
 
       try {
         const response = await sessionRef.current.ask(
-          coachingFeature,
+          featureRef.current,
           { stateSnapshot: stateText, question: questionText },
           { signal: options?.signal }
         );

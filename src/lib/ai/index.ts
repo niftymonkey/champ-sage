@@ -11,4 +11,6 @@ export { buildGameSystemPrompt } from "./prompts";
 export { assembleContext } from "./context-assembler";
 export type { CoachingFeature, MatchPhase, ExtractMeta } from "./feature";
 export { runFeatureCall } from "./recommendation-engine";
-export { coachingFeature } from "./features/coaching";
+export { createCoachingFeature } from "./features/coaching";
+export { buildBaseContext, type BaseContextInputs } from "./base-context";
+export { buildFeatureRules } from "./feature-rules";

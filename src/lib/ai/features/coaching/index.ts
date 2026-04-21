@@ -1,38 +1,47 @@
 import type { CoachingFeature } from "../../feature";
 import type { CoachingResponse } from "../../types";
+import type { GameMode } from "../../../mode/types";
 import { coachingResponseSchema } from "../../schemas";
+import { buildFeatureRules } from "../../feature-rules";
 
-/**
- * Input shape every current call site already constructs: a formatted state
- * snapshot plus the player's question (or an auto-generated question for
- * game-plan / augment-offer calls).
- */
 export interface CoachingFeatureInput {
   readonly stateSnapshot: string;
   readonly question: string;
 }
 
 /**
- * Unified coaching feature: every current call site (game-plan, augment
- * offer, voice Q&A, item rec) funnels through this one contract. The task
- * prompt is empty because the session's base context carries every rule;
- * `extractResult` splats `retried` onto the response body so consumers that
- * already read `response.retried` keep working.
+ * Unified coaching feature bound to the current game mode.
+ *
+ * Every current call site (game-plan, augment offer, voice Q&A, item rec)
+ * funnels through this one contract. The task prompt contributes the
+ * feature-rule block — item recommendation format, proactive awareness, and
+ * (when the mode supports it) augment fit rating and synergy coaching —
+ * appended after the session's base context. `extractResult` splats
+ * `retried` onto the response body so consumers that already read
+ * `response.retried` keep working.
+ *
+ * Binding to `mode` at construction keeps the session's base context and
+ * feature rules in sync for the lifetime of the match. A new mode means a
+ * new session and a new feature.
  */
-export const coachingFeature: CoachingFeature<
-  CoachingFeatureInput,
-  CoachingResponse
-> = {
-  id: "coaching",
-  supportedPhases: ["in-game"] as const,
+export function createCoachingFeature(
+  mode: GameMode
+): CoachingFeature<CoachingFeatureInput, CoachingResponse> {
+  const rules = buildFeatureRules(mode);
+  const taskPrompt = rules ? `\n\n${rules}` : "";
 
-  buildTaskPrompt: () => "",
+  return {
+    id: "coaching",
+    supportedPhases: ["in-game"] as const,
 
-  buildUserMessage: ({ stateSnapshot, question }) =>
-    `[Game State]\n${stateSnapshot}\n\n[Question]\n${question}`,
+    buildTaskPrompt: () => taskPrompt,
 
-  outputSchema: coachingResponseSchema,
+    buildUserMessage: ({ stateSnapshot, question }) =>
+      `[Game State]\n${stateSnapshot}\n\n[Question]\n${question}`,
 
-  extractResult: (raw, meta) =>
-    meta.retried ? { ...raw, retried: true } : raw,
-};
+    outputSchema: coachingResponseSchema,
+
+    extractResult: (raw, meta) =>
+      meta.retried ? { ...raw, retried: true } : raw,
+  };
+}

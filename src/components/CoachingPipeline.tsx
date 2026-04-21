@@ -13,6 +13,8 @@ import type { CoachingQuery, CoachingResponse } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { ConversationSession } from "../lib/ai/conversation-session";
+import type { CoachingFeature } from "../lib/ai/feature";
+import type { CoachingFeatureInput } from "../lib/ai/features/coaching";
 import {
   buildGamePlanQuestion,
   extractBuildPath,
@@ -21,8 +23,8 @@ import {
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { createConversationSession } from "../lib/ai/conversation-session";
-import { coachingFeature } from "../lib/ai/features/coaching";
-import { buildGameSystemPrompt } from "../lib/ai/prompts";
+import { createCoachingFeature } from "../lib/ai/features/coaching";
+import { buildBaseContext } from "../lib/ai/base-context";
 import {
   takeGameSnapshot,
   formatStateSnapshot,
@@ -90,6 +92,10 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const enemyStatsRef = useRef(enemyStats);
   const chosenAugmentsRef = useRef(chosenAugments);
   const sessionRef = useRef<ConversationSession | null>(null);
+  const featureRef = useRef<CoachingFeature<
+    CoachingFeatureInput,
+    CoachingResponse
+  > | null>(null);
   const gamePlanFiredRef = useRef(false);
   const lastAugmentResponseRef = useRef<CoachingResponse | null>(null);
 
@@ -121,12 +127,13 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       gameTime: liveGameState.gameTime,
     };
 
-    const systemPrompt = buildGameSystemPrompt(
+    const baseContext = buildBaseContext({
       mode,
-      gameDataRef.current,
-      gameState
-    );
-    sessionRef.current = createConversationSession(systemPrompt, apiKey);
+      gameData: gameDataRef.current,
+      gameState,
+    });
+    sessionRef.current = createConversationSession(baseContext, apiKey);
+    featureRef.current = createCoachingFeature(mode);
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
     resetForNewGame();
@@ -211,7 +218,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
   const submitGamePlanQuery = useCallback(
     async (gameTime: number) => {
-      if (!sessionRef.current || !apiKey) return;
+      if (!sessionRef.current || !featureRef.current || !apiKey) return;
 
       const snapshot = takeGameSnapshot(
         liveGameStateRef.current,
@@ -225,7 +232,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
       proactiveLog.info(`Game plan query: "${planQuestion}"`);
 
-      const response = await sessionRef.current.ask(coachingFeature, {
+      const response = await sessionRef.current.ask(featureRef.current, {
         stateSnapshot: stateText,
         question: planQuestion,
       });
@@ -272,12 +279,19 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
   const submitQuestion = useCallback(
     async (question: string, options?: { signal?: AbortSignal }) => {
-      if (!sessionRef.current || !apiKey || !question.trim()) {
+      if (
+        !sessionRef.current ||
+        !featureRef.current ||
+        !apiKey ||
+        !question.trim()
+      ) {
         const reason = !sessionRef.current
           ? "no session"
-          : !apiKey
-            ? "no API key"
-            : "empty question";
+          : !featureRef.current
+            ? "no feature"
+            : !apiKey
+              ? "no API key"
+              : "empty question";
         reactiveLog.warn(`Coaching skipped: ${reason}`);
         return;
       }
@@ -377,7 +391,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
       try {
         const response = await sessionRef.current.ask(
-          coachingFeature,
+          featureRef.current,
           { stateSnapshot: stateText, question: questionText },
           { signal: options?.signal }
         );
