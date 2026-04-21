@@ -20,6 +20,7 @@ export type LogModule =
   | "game-state"
   | "coaching:reactive"
   | "coaching:proactive"
+  | "coaching:session"
   | "gep"
   | "voice"
   | "data-ingest"

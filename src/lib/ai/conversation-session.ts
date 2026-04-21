@@ -14,6 +14,9 @@
 import type { ModelMessage } from "ai";
 import type { CoachingFeature } from "./feature";
 import { runFeatureCall } from "./recommendation-engine";
+import { getLogger } from "../logger";
+
+const sessionLog = getLogger("coaching:session");
 
 export interface ConversationSession {
   readonly systemPrompt: string;
@@ -52,6 +55,8 @@ export function createConversationSession(
 ): ConversationSession {
   const messages: ModelMessage[] = [];
 
+  sessionLog.info(`Session created. baseContext=${systemPrompt.length} chars`);
+
   return {
     get systemPrompt() {
       return systemPrompt;
@@ -62,8 +67,13 @@ export function createConversationSession(
     },
 
     async ask(feature, input, options) {
-      const system = systemPrompt + feature.buildTaskPrompt(input);
+      const taskPrompt = feature.buildTaskPrompt(input);
+      const system = systemPrompt + taskPrompt;
       const userContent = feature.buildUserMessage(input);
+
+      sessionLog.info(
+        `[${feature.id}] ask: base=${systemPrompt.length} task=${taskPrompt.length} total=${system.length} chars, history=${messages.length} msgs`
+      );
 
       messages.push({ role: "user", content: userContent });
 
