@@ -9,27 +9,22 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import type { CoachingQuery, CoachingResponse } from "../lib/ai/types";
+import type { CoachingResponse } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { ConversationSession } from "../lib/ai/conversation-session";
-import type { CoachingFeature } from "../lib/ai/feature";
-import type { CoachingFeatureInput } from "../lib/ai/features/coaching";
 import {
-  buildGamePlanQuestion,
   extractBuildPath,
+  gamePlanFeature,
   isUpdatePlanCommand,
-} from "../lib/ai/game-plan-query";
+} from "../lib/ai/features/game-plan";
+import { augmentFitFeature } from "../lib/ai/features/augment-fit";
+import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { createConversationSession } from "../lib/ai/conversation-session";
-import { createCoachingFeature } from "../lib/ai/features/coaching";
 import { buildBaseContext } from "../lib/ai/base-context";
-import {
-  takeGameSnapshot,
-  formatStateSnapshot,
-} from "../lib/ai/state-formatter";
-import { formatAugmentOfferLines } from "../lib/ai/augment-offer-formatter";
+import { takeGameSnapshot } from "../lib/ai/state-formatter";
 import { playerIntent$, manualInput$ } from "../lib/reactive";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
@@ -52,31 +47,6 @@ interface CoachingPipelineProps {
   gameData: LoadedGameData;
 }
 
-function extractAugmentOptions(
-  question: string,
-  gameData: LoadedGameData
-): CoachingQuery["augmentOptions"] {
-  const matches = gameData.dictionary.findInText(question);
-  const augmentMatches = matches.filter((m) => m.type === "augment");
-
-  if (augmentMatches.length === 0) return undefined;
-
-  const options: NonNullable<CoachingQuery["augmentOptions"]> = [];
-  for (const match of augmentMatches) {
-    const augment = gameData.augments.get(match.name.toLowerCase());
-    if (augment) {
-      options.push({
-        name: augment.name,
-        description: augment.description,
-        tier: augment.tier,
-        sets: augment.sets,
-      });
-    }
-  }
-
-  return options.length > 0 ? options : undefined;
-}
-
 export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const liveGameState = useLiveGameState();
   const { mode, enemyStats } = useCoachingContext();
@@ -92,10 +62,6 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const enemyStatsRef = useRef(enemyStats);
   const chosenAugmentsRef = useRef(chosenAugments);
   const sessionRef = useRef<ConversationSession | null>(null);
-  const featureRef = useRef<CoachingFeature<
-    CoachingFeatureInput,
-    CoachingResponse
-  > | null>(null);
   const gamePlanFiredRef = useRef(false);
   const lastAugmentResponseRef = useRef<CoachingResponse | null>(null);
 
@@ -133,7 +99,6 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       gameState,
     });
     sessionRef.current = createConversationSession(baseContext, apiKey);
-    featureRef.current = createCoachingFeature(mode);
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
     resetForNewGame();
@@ -218,7 +183,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
   const submitGamePlanQuery = useCallback(
     async (gameTime: number) => {
-      if (!sessionRef.current || !featureRef.current || !apiKey) return;
+      if (!sessionRef.current || !apiKey) return;
 
       const snapshot = takeGameSnapshot(
         liveGameStateRef.current,
@@ -226,15 +191,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         gameDataRef.current,
         chosenAugmentsRef.current
       );
-      const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
 
-      const planQuestion = buildGamePlanQuestion();
+      proactiveLog.info("Game plan query");
 
-      proactiveLog.info(`Game plan query: "${planQuestion}"`);
-
-      const response = await sessionRef.current.ask(featureRef.current, {
-        stateSnapshot: stateText,
-        question: planQuestion,
+      const response = await sessionRef.current.ask(gamePlanFeature, {
+        snapshot,
       });
 
       const buildPath = extractBuildPath(response);
@@ -277,21 +238,115 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     [apiKey]
   );
 
+  const submitAugmentQuery = useCallback(
+    async (
+      names: string[],
+      options?: { signal?: AbortSignal }
+    ): Promise<CoachingResponse | null> => {
+      if (!sessionRef.current || !apiKey) {
+        reactiveLog.warn(
+          `Augment query skipped: ${!sessionRef.current ? "no session" : "no API key"}`
+        );
+        return null;
+      }
+
+      const snapshot = takeGameSnapshot(
+        liveGameStateRef.current,
+        enemyStatsRef.current,
+        gameDataRef.current,
+        chosenAugmentsRef.current
+      );
+
+      proactiveLog.info(
+        `Auto-querying coaching for augment offer: ${names.join(", ")}`
+      );
+
+      try {
+        const response = await sessionRef.current.ask(
+          augmentFitFeature,
+          {
+            snapshot,
+            augmentNames: names,
+            chosenAugments: chosenAugmentsRef.current,
+            gameData: gameDataRef.current,
+          },
+          { signal: options?.signal }
+        );
+
+        // Pin fit ratings for augments that carried over from a reroll.
+        // An augment's fit is about the augment vs. the player's state, not
+        // vs. the other options — so if it was already rated, keep that rating.
+        let finalResponse = response;
+        if (lastAugmentResponseRef.current) {
+          const prevByName = new Map(
+            lastAugmentResponseRef.current.recommendations.map((r) => [
+              r.name.toLowerCase(),
+              r,
+            ])
+          );
+          const merged = response.recommendations.map((rec) => {
+            const prior = prevByName.get(rec.name.toLowerCase());
+            return prior ?? rec;
+          });
+          finalResponse = { ...response, recommendations: merged };
+        }
+        lastAugmentResponseRef.current = finalResponse;
+
+        const gameTime = liveGameStateRef.current.gameTime;
+        const question = `I'm being offered these augments: ${names.join(", ")}. How well does each fit my current build?`;
+        pushCoachingExchange(
+          question,
+          finalResponse.answer,
+          finalResponse.recommendations.map((r) => ({
+            name: r.name,
+            fit: r.fit,
+            reasoning: r.reasoning,
+          })),
+          gameTime,
+          "augment",
+          finalResponse.retried ?? false
+        );
+
+        const sentAt = Date.now();
+        const overlayPayload = {
+          ...finalResponse,
+          source: "augment" as const,
+          sentAt,
+        };
+        reactiveLog.info(
+          "Sending coaching response to overlay (source=augment)",
+          {
+            sentAt,
+            hasAnswer: !!overlayPayload.answer,
+            recNames: overlayPayload.recommendations?.map(
+              (r: { name: string }) => r.name
+            ),
+          }
+        );
+        window.electronAPI?.sendCoachingResponse(overlayPayload);
+
+        return finalResponse;
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          reactiveLog.debug("Augment request cancelled");
+        } else {
+          const msg = err instanceof Error ? err.message : "Request failed";
+          reactiveLog.error(`Augment coaching error: ${msg}`);
+        }
+        return null;
+      }
+    },
+    [apiKey]
+  );
+
   const submitQuestion = useCallback(
     async (question: string, options?: { signal?: AbortSignal }) => {
-      if (
-        !sessionRef.current ||
-        !featureRef.current ||
-        !apiKey ||
-        !question.trim()
-      ) {
+      if (!sessionRef.current || !apiKey || !question.trim()) {
         const reason = !sessionRef.current
           ? "no session"
-          : !featureRef.current
-            ? "no feature"
-            : !apiKey
-              ? "no API key"
-              : "empty question";
+          : !apiKey
+            ? "no API key"
+            : "empty question";
         reactiveLog.warn(`Coaching skipped: ${reason}`);
         return;
       }
@@ -357,95 +412,47 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         }
       }
 
-      // Build state snapshot
       const snapshot = takeGameSnapshot(
         liveGameStateRef.current,
         enemyStatsRef.current,
         gameDataRef.current,
         chosenAugmentsRef.current
       );
-      const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
 
-      const augmentOptions = extractAugmentOptions(
-        question,
-        gameDataRef.current
-      );
-      let questionText = question;
-      if (augmentOptions && augmentOptions.length > 0) {
-        const augmentLines = formatAugmentOfferLines(
-          augmentOptions,
-          chosenAugmentsRef.current,
-          gameDataRef.current
-        );
-        questionText = `${question}\n\nAugment options:\n${augmentLines.join("\n")}`;
-      }
-
-      const isAugmentQuery = question.startsWith(
-        "I'm being offered these augments:"
-      );
-      const source = isAugmentQuery ? "augment" : "reactive";
-
-      if (source === "reactive") {
-        window.electronAPI?.sendCoachingRequest();
-      }
+      window.electronAPI?.sendCoachingRequest();
 
       try {
         const response = await sessionRef.current.ask(
-          featureRef.current,
-          { stateSnapshot: stateText, question: questionText },
+          voiceQueryFeature,
+          { snapshot, question },
           { signal: options?.signal }
         );
 
-        // Pin fit ratings for augments that carried over from a reroll.
-        // An augment's fit is about the augment vs. the player's state, not
-        // vs. the other options — so if it was already rated, keep that rating.
-        let finalResponse = response;
-        if (isAugmentQuery && lastAugmentResponseRef.current) {
-          const prevByName = new Map(
-            lastAugmentResponseRef.current.recommendations.map((r) => [
-              r.name.toLowerCase(),
-              r,
-            ])
-          );
-          const merged = response.recommendations.map((rec) => {
-            const prior = prevByName.get(rec.name.toLowerCase());
-            return prior ?? rec;
-          });
-          finalResponse = { ...response, recommendations: merged };
-        }
-        if (isAugmentQuery) {
-          lastAugmentResponseRef.current = finalResponse;
-        }
-
-        // Push to coaching feed (both reactive and augment queries)
         const gameTime = liveGameStateRef.current.gameTime;
-        const feedSource = isAugmentQuery ? "augment" : "voice";
         pushCoachingExchange(
           question,
-          finalResponse.answer,
-          finalResponse.recommendations.map((r) => ({
+          response.answer,
+          response.recommendations.map((r) => ({
             name: r.name,
             fit: r.fit,
             reasoning: r.reasoning,
           })),
           gameTime,
-          feedSource,
-          finalResponse.retried ?? false
+          "voice",
+          response.retried ?? false
         );
 
-        // Relay to overlay
         const sentAt = Date.now();
         const overlayPayload = {
-          ...finalResponse,
-          source,
+          ...response,
+          source: "reactive" as const,
           sentAt,
         };
         reactiveLog.info(
-          `Sending coaching response to overlay (source=${source})`,
+          "Sending coaching response to overlay (source=reactive)",
           {
             sentAt,
             hasAnswer: !!overlayPayload.answer,
-            answerLength: overlayPayload.answer?.length ?? 0,
             recNames: overlayPayload.recommendations?.map(
               (r: { name: string }) => r.name
             ),
@@ -493,41 +500,26 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
             gameTime
           );
 
-          const question = `I'm being offered these augments: ${names.join(", ")}. How well does each fit my current build?`;
-          proactiveLog.info(
-            `Auto-querying coaching for augment offer: ${names.join(", ")}`
-          );
+          const response = await submitAugmentQuery([...names], { signal });
+          if (!response) return;
 
-          // submitQuestion handles the LLM call and overlay relay.
-          // We need to update the feed entry with real rankings after.
-          await submitQuestion(question, { signal });
-
-          // Update the feed entry with coaching response rankings
+          // Update the augment-offer feed entry with LLM fit ratings
           const feed = coachingFeed$.getValue();
-          // The last coaching-exchange entry (if present) has the response
-          const lastVoice = [...feed]
-            .reverse()
-            .find((e) => e.type === "coaching-exchange") as
-            | CoachingExchangeEntry
-            | undefined;
-          if (lastVoice) {
-            // Update the augment offer entry with LLM fit ratings
-            const updated = feed.map((e) => {
-              if (e.id !== entry.id || e.type !== "augment-offer") return e;
-              const ratedOptions = names.map((name) => {
-                const rec = lastVoice.recommendations.find(
-                  (r) => r.name.toLowerCase() === name.toLowerCase()
-                );
-                return {
-                  name,
-                  fit: rec?.fit ?? ("situational" as const),
-                  reasoning: rec?.reasoning ?? "",
-                };
-              });
-              return { ...e, options: ratedOptions };
+          const updated = feed.map((e) => {
+            if (e.id !== entry.id || e.type !== "augment-offer") return e;
+            const ratedOptions = names.map((name) => {
+              const rec = response.recommendations.find(
+                (r) => r.name.toLowerCase() === name.toLowerCase()
+              );
+              return {
+                name,
+                fit: rec?.fit ?? ("situational" as const),
+                reasoning: rec?.reasoning ?? "",
+              };
             });
-            coachingFeed$.next(updated);
-          }
+            return { ...e, options: ratedOptions };
+          });
+          coachingFeed$.next(updated);
         },
         onPicked: (name) => {
           // Clear pinned ratings — next offer is a fresh selection round
@@ -548,7 +540,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     );
 
     return () => ctrl.dispose();
-  }, [submitQuestion]);
+  }, [submitAugmentQuery]);
 
   useEffect(() => {
     if (!apiKey) {

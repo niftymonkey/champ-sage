@@ -3,8 +3,8 @@ import {
   buildGamePlanQuestion,
   extractBuildPath,
   isUpdatePlanCommand,
-} from "./game-plan-query";
-import type { CoachingResponse } from "./types";
+} from "./index";
+import type { CoachingResponse } from "../../types";
 
 describe("buildGamePlanQuestion", () => {
   const q = buildGamePlanQuestion();

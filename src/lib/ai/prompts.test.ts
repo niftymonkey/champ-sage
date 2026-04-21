@@ -301,7 +301,7 @@ describe("buildGameSystemPrompt", () => {
     );
     expect(prompt).toContain("SYNERGY COACHING");
     expect(prompt).toContain("set bonus");
-    expect(prompt).toContain("unconventional");
+    expect(prompt).toContain("creative synergies");
   });
 
   it("excludes synergy coaching when mode lacks augment-selection", () => {

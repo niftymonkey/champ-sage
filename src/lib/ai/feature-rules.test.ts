@@ -38,7 +38,8 @@ describe("buildFeatureRules", () => {
     expect(rules).toContain("AUGMENT FIT RATING");
     expect(rules).toContain("SYNERGY COACHING");
     expect(rules).toContain("exceptional");
-    expect(rules).toContain("unconventional");
+    expect(rules).toContain("set bonus");
+    expect(rules).toContain("creative synergies");
   });
 
   it("excludes augment blocks when the mode lacks augment-selection", () => {

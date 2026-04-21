@@ -1,19 +1,28 @@
-import type { BuildPathItem, CoachingResponse } from "./types";
+import type { CoachingFeature } from "../../feature";
+import type { BuildPathItem, CoachingResponse } from "../../types";
+import { coachingResponseSchema } from "../../schemas";
+import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
+import { GAME_PLAN_TASK_PROMPT } from "./prompt";
+
+export interface GamePlanInput {
+  readonly snapshot: GameSnapshot | null;
+}
 
 /**
  * The game-plan user message.
  *
- * State-agnostic by design: the same prompt serves the auto-fired opening plan
- * AND the mid-game "update plan" voice command. The [Game State] block that
- * precedes this message carries every temporal input the LLM needs (current
- * items, game time, enemy itemization, augments, KDA). If the LLM needs to
- * revise vs. draft from scratch, that conclusion is driven by what it sees in
- * the snapshot — not by a "this is the start of the game" / "this is mid-game"
- * anchor in the prompt.
+ * State-agnostic by design: the same prompt serves the auto-fired opening
+ * plan AND the mid-game "update plan" voice command. The [Game State] block
+ * that precedes this message carries every temporal input the LLM needs
+ * (current items, game time, enemy itemization, KDA). If the LLM needs to
+ * revise vs. draft from scratch, that conclusion is driven by what it sees
+ * in the snapshot — not by a "this is the start of the game" / "this is
+ * mid-game" anchor in the prompt.
  *
  * Instructs the LLM to return its 6-item build path in the structured
- * `buildPath` field with per-item category + reason (not in `recommendations`),
- * so the UI can render category icons and counter-target associations (#99).
+ * `buildPath` field with per-item category + reason (not in
+ * `recommendations`), so the UI can render category icons and
+ * counter-target associations (#99).
  */
 export function buildGamePlanQuestion(): string {
   return [
@@ -50,10 +59,6 @@ export function buildGamePlanQuestion(): string {
  *    dialogue to trigger on. "new" was considered and rejected: `"my new
  *    plan is to split push"` and `"that's a new plan"` are commentary, not
  *    commands.
- *
- * The strict `^update\s+(?:game\s+)?plan$` original (from #17) missed
- * trailing punctuation, articles, and leading filler — routing most
- * real-world phrasings to general coaching and leaving the side panel stale.
  */
 const UPDATE_PLAN_PATTERN =
   /^(?:(?:please|hey|ok|okay|coach)\s+)*(update|refresh|rework|redo|replace|remake)\s+(?:the\s+|my\s+)?(?:game\s+)?plan\b/i;
@@ -66,8 +71,8 @@ export function isUpdatePlanCommand(text: string): boolean {
  * Pull the structured build path out of a coaching response.
  *
  * Prefers the `buildPath` field. When absent (older prompt formats or a
- * malformed retry response), promotes each recommendation to a build-path item
- * so the UI still renders something usable instead of an empty panel.
+ * malformed retry response), promotes each recommendation to a build-path
+ * item so the UI still renders something usable instead of an empty panel.
  */
 export function extractBuildPath(response: CoachingResponse): BuildPathItem[] {
   if (response.buildPath && response.buildPath.length > 0) {
@@ -80,3 +85,23 @@ export function extractBuildPath(response: CoachingResponse): BuildPathItem[] {
     reason: r.reasoning,
   }));
 }
+
+export const gamePlanFeature: CoachingFeature<GamePlanInput, CoachingResponse> =
+  {
+    id: "game-plan",
+    supportedPhases: ["in-game"] as const,
+
+    buildTaskPrompt: () => `\n\n${GAME_PLAN_TASK_PROMPT}`,
+
+    buildUserMessage: ({ snapshot }) => {
+      const snapshotText = snapshot
+        ? formatStateSnapshot(snapshot, { omitAugments: true })
+        : "";
+      return `[Game State]\n${snapshotText}\n\n[Question]\n${buildGamePlanQuestion()}`;
+    },
+
+    outputSchema: coachingResponseSchema,
+
+    extractResult: (raw, meta) =>
+      meta.retried ? { ...raw, retried: true } : raw,
+  };
