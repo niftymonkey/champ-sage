@@ -1,18 +1,17 @@
 /**
- * Structured logger for the renderer process.
+ * Structured logger.
  *
- * Wraps electron-log's renderer module with type-enforced module scopes.
- * In Electron, logs are sent via IPC to the main process which writes
- * them to the NDJSON log file. In non-Electron contexts (tests),
- * the module mock or console fallback handles it.
+ * Picks the correct electron-log implementation based on the runtime:
+ * Electron's renderer process uses `electron-log/renderer` (IPC to main),
+ * everything else (Electron main, plain Node, vitest, evalite) uses
+ * `electron-log/node`. The `process.type` marker is the same signal
+ * electron-log itself uses internally to route between implementations.
  *
  * Usage:
  *   import { getLogger } from '../lib/logger';
  *   const log = getLogger('engine');
  *   log.info('LCU found', { port: 1234 });
  */
-
-import electronLog from "electron-log/renderer";
 
 export type LogModule =
   | "app"
@@ -38,6 +37,28 @@ export interface ScopedLogger {
   /** Lowest level — raw payloads, per-tick data */
   trace: (...args: unknown[]) => void;
 }
+
+type ElectronLogScope = {
+  error: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  info: (...args: unknown[]) => void;
+  debug: (...args: unknown[]) => void;
+  silly: (...args: unknown[]) => void;
+};
+
+type ElectronLog = {
+  scope: (name: string) => ElectronLogScope;
+};
+
+const processType =
+  typeof process === "object" && process !== null
+    ? (process as { type?: string }).type
+    : undefined;
+
+const electronLog: ElectronLog =
+  processType === "renderer"
+    ? ((await import("electron-log/renderer")).default as ElectronLog)
+    : ((await import("electron-log/node")).default as ElectronLog);
 
 const scopeCache = new Map<LogModule, ScopedLogger>();
 
