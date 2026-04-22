@@ -131,7 +131,7 @@ describe("parseAugmentPickedName", () => {
   });
 });
 
-describe("AugmentReplayFilter", () => {
+describe("AugmentReplayFilter — Rule 1 (augment lifetime set)", () => {
   let filter: AugmentReplayFilter;
 
   beforeEach(() => {
@@ -170,6 +170,11 @@ describe("AugmentReplayFilter", () => {
     expect(filter.isStaleOffer(["Celestial Body"])).toBe(true);
   });
 
+  it("strips HTML tags from names before matching", () => {
+    filter.recordPick("Celestial Body<br>");
+    expect(filter.isStaleOffer(["Celestial Body"])).toBe(true);
+  });
+
   it("reset() forgets previous picks so the next game starts clean", () => {
     filter.recordPick("Celestial Body");
     expect(filter.isStaleOffer(["Celestial Body"])).toBe(true);
@@ -177,20 +182,157 @@ describe("AugmentReplayFilter", () => {
     expect(filter.isStaleOffer(["Celestial Body"])).toBe(false);
   });
 
-  it("handles repeated picks without duplicating state", () => {
+  it("handles repeated picks without duplicating augment-set state", () => {
     filter.recordPick("Celestial Body");
     filter.recordPick("Celestial Body");
     expect(filter.size()).toBe(1);
   });
 
-  it("reproduces the launch-mid-game replay scenario", () => {
-    // Observed sequence: app attaches mid-game; GEP replays pick then offer.
-    filter.recordPick("Quest: Steel Your Heart");
-    const offerNames = [
-      "Magic Missile",
-      "Quest: Steel Your Heart",
-      "With Haste",
-    ];
+  it("suppresses an augment offer long after the pick (lifetime, not window)", () => {
+    let now = 10_000;
+    const fixed = new AugmentReplayFilter({ now: () => now });
+    fixed.recordPick("Phenomenal Evil");
+    // 5 minutes later a replay of the same offer still suppressed by Rule 1.
+    now += 5 * 60 * 1000;
+    expect(
+      fixed.isStaleOffer(["Magic Missile", "Phenomenal Evil", "With Haste"])
+    ).toBe(true);
+  });
+});
+
+describe("AugmentReplayFilter — Rule 2 (wall-clock replay window)", () => {
+  it("suppresses a shard offer that arrives within the replay window of a shard pick", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({
+      now: () => now,
+      replayWindowMs: 1000,
+    });
+    filter.recordPick("Attack Speed Shard");
+    now += 10; // GEP replays pick + offer ~milliseconds apart
+    expect(
+      filter.isStaleOffer(["Attack Speed Shard", "Health Shard", "Armor Shard"])
+    ).toBe(true);
+  });
+
+  it("does NOT suppress a shard offer that arrives after the replay window", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({
+      now: () => now,
+      replayWindowMs: 1000,
+    });
+    filter.recordPick("Attack Speed Shard");
+    now += 2000; // next shard round comes 2 seconds later — legitimate, not a replay
+    expect(
+      filter.isStaleOffer([
+        "Attack Speed Shard",
+        "Lethality Shard",
+        "Might Shard",
+      ])
+    ).toBe(false);
+  });
+
+  it("does NOT add shards to the lifetime augment set", () => {
+    const filter = new AugmentReplayFilter();
+    filter.recordPick("Attack Speed Shard");
+    expect(filter.size()).toBe(0);
+  });
+
+  it("still records every pick's timestamp, shards included", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({
+      now: () => now,
+      replayWindowMs: 1000,
+    });
+    // Pick a shard
+    filter.recordPick("Health Shard");
+    // Replayed offer arrives within window
+    now += 50;
+    expect(
+      filter.isStaleOffer(["Health Shard", "Armor Shard", "AD Shard"])
+    ).toBe(true);
+  });
+
+  it("window applies to augment replays too (belt-and-suspenders alongside Rule 1)", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({
+      now: () => now,
+      replayWindowMs: 1000,
+    });
+    filter.recordPick("Phenomenal Evil");
+    now += 50;
+    expect(
+      filter.isStaleOffer(["Magic Missile", "Phenomenal Evil", "With Haste"])
+    ).toBe(true);
+  });
+
+  it("reset() clears the last-pick timestamp alongside the augment set", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({
+      now: () => now,
+      replayWindowMs: 1000,
+    });
+    filter.recordPick("Health Shard");
+    filter.reset();
+    now += 50;
+    expect(
+      filter.isStaleOffer(["Health Shard", "Armor Shard", "AD Shard"])
+    ).toBe(false);
+  });
+});
+
+describe("AugmentReplayFilter — real-world replay scenarios", () => {
+  it("reproduces the mid-game app-relaunch shard replay", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({ now: () => now });
+    // App relaunches; GEP replays the most recent pick, then its offer, ms apart.
+    filter.recordPick("Attack Speed Shard");
+    now += 15;
+    const offerNames = ["Attack Speed Shard", "Health Shard", "Armor Shard"];
     expect(filter.isStaleOffer(offerNames)).toBe(true);
+  });
+
+  it("reproduces the launch-mid-game augment replay", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({ now: () => now });
+    filter.recordPick("Quest: Steel Your Heart");
+    now += 15;
+    expect(
+      filter.isStaleOffer([
+        "Magic Missile",
+        "Quest: Steel Your Heart",
+        "With Haste",
+      ])
+    ).toBe(true);
+  });
+
+  it("allows a legitimate later shard round that shares a name with an earlier pick", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({ now: () => now });
+    filter.recordPick("Unbreakable Shard");
+    // 2+ minutes pass, fresh round includes a shard name that was picked earlier.
+    now += 2 * 60 * 1000;
+    expect(
+      filter.isStaleOffer([
+        "Health Shard",
+        "Unbreakable Shard",
+        "Attack Damage Shard",
+      ])
+    ).toBe(false);
+  });
+
+  it("handles shard names with stray HTML tags ('Armor Penetration Shard<br>')", () => {
+    let now = 10_000;
+    const filter = new AugmentReplayFilter({ now: () => now });
+    filter.recordPick("Armor Penetration Shard<br>");
+    now += 50;
+    expect(
+      filter.isStaleOffer([
+        "Armor Penetration Shard",
+        "Tenacity Shard",
+        "Health and Size Shard",
+      ])
+    ).toBe(true);
+    // And doesn't end up in the lifetime augment set.
+    expect(filter.size()).toBe(0);
   });
 });
