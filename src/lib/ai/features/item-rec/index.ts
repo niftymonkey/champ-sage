@@ -24,4 +24,6 @@ export const itemRecFeature: CoachingFeature<ItemRecInput, ItemRecResult> = {
   outputSchema: itemRecSchema,
 
   extractResult: (raw) => raw,
+
+  summarizeForHistory: (result) => result.answer,
 };

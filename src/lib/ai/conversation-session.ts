@@ -89,9 +89,10 @@ export function createConversationSession(
 
         const result = feature.extractResult(raw);
 
-        const historyContent =
-          feature.summarizeForHistory?.(result) ?? JSON.stringify(result);
-        messages.push({ role: "assistant", content: historyContent });
+        messages.push({
+          role: "assistant",
+          content: feature.summarizeForHistory(result),
+        });
 
         return { value: result, retried };
       } catch (err) {

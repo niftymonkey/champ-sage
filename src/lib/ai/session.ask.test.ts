@@ -47,6 +47,7 @@ function createTestFeature(): CoachingFeature<TestInput, TestOutput> {
       `[Game State]\n${stateSnapshot}\n\n[Question]\n${question}`,
     outputSchema: testOutputSchema,
     extractResult: (raw) => raw,
+    summarizeForHistory: (result) => result.answer,
   };
 }
 
@@ -249,12 +250,12 @@ describe("session.ask", () => {
     expect(session.messages[3].role).toBe("assistant");
   });
 
-  it("stores the assistant turn as stringified result when no summarizeForHistory is provided", async () => {
+  it("stores the feature's summarizeForHistory output as the assistant turn", async () => {
     const session = createConversationSession("BASE", "test-key");
     const feature = createTestFeature();
 
     mockGenerateText.mockResolvedValueOnce({
-      output: { answer: "hello" },
+      output: { answer: "Buy Thornmail next." },
       usage: { inputTokens: 10, outputTokens: 5 },
     } as never);
 
@@ -262,7 +263,7 @@ describe("session.ask", () => {
 
     const assistantTurn = session.messages[1];
     expect(assistantTurn.role).toBe("assistant");
-    expect(assistantTurn.content).toBe('{"answer":"hello"}');
+    expect(assistantTurn.content).toBe("Buy Thornmail next.");
   });
 
   describe("racing timeout", () => {

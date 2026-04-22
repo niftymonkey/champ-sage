@@ -49,7 +49,9 @@ export interface CoachingFeature<TInput, TOutput> {
 
   /**
    * Prose assistant-turn summary the engine stores in conversation history.
-   * When omitted, the engine serializes the full result as JSON.
+   * Required so cumulative history stays homogeneous across heterogeneous
+   * per-feature output schemas — future turns reference prior assistant
+   * turns through this prose, not through structured fields.
    */
-  summarizeForHistory?(result: TOutput): string;
+  summarizeForHistory(result: TOutput): string;
 }

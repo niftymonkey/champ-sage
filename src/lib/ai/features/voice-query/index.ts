@@ -27,4 +27,6 @@ export const voiceQueryFeature: CoachingFeature<
   outputSchema: voiceQuerySchema,
 
   extractResult: (raw) => raw,
+
+  summarizeForHistory: (result) => result.answer,
 };
