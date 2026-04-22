@@ -3,14 +3,17 @@
  *
  * Subcommands:
  *   pnpm inspect-evals summary              # per-model averages with gate/ranking split
+ *   pnpm inspect-evals runs                 # list recent eval runs (id + timestamp)
+ *   pnpm inspect-evals diff --from A --to B # side-by-side score deltas between two runs
  *   pnpm inspect-evals results              # all results with scores
  *   pnpm inspect-evals failures             # only fixtures that failed a gate
  *   pnpm inspect-evals report               # generate markdown report to reports/
  *
  * Flags:
  *   --model "GPT 5.4 mini"    filter to one model
- *   --run latest               use only the most recent run
+ *   --run latest|<id>          scope to the latest run, or a specific run id
  *   --note "prompt v2"         add a note to the report header
+ *   --limit N                  cap the number of rows in `runs` (default 20)
  */
 
 import Database from "better-sqlite3";
@@ -57,7 +60,16 @@ const subcommand =
 const args = rawArgs.slice(subcommand === rawArgs[0] ? 1 : 0);
 
 const modelFilter = getArg("--model");
-const latestOnly = args.includes("--run") && getArg("--run") === "latest";
+const runArg = getArg("--run");
+const latestOnly = args.includes("--run") && runArg === "latest";
+const explicitRunId =
+  args.includes("--run") && runArg !== "latest" && runArg !== undefined
+    ? Number(runArg)
+    : null;
+if (explicitRunId !== null && !Number.isInteger(explicitRunId)) {
+  console.error(`--run must be 'latest' or an integer run id, got: ${runArg}`);
+  process.exit(1);
+}
 const reportNote = getArg("--note");
 
 function getArg(flag: string): string | undefined {
@@ -104,21 +116,39 @@ function getEvals(): Array<{
   eval_id: number;
   created_at: string;
 }> {
-  const latestRunFilter = latestOnly
-    ? "AND e.run_id = (SELECT id FROM runs ORDER BY id DESC LIMIT 1)"
-    : "";
+  // When `--run` scopes to a specific run, return exactly the suites that ran
+  // in that run — no max(created_at)-per-name filter, which would otherwise
+  // surface stale suite rows from other runs that share a name.
+  const params: Array<string | number> = [];
+  let runFilter: string;
+  if (explicitRunId !== null) {
+    runFilter = "WHERE e.run_id = ?";
+    params.push(explicitRunId);
+  } else if (latestOnly) {
+    runFilter =
+      "WHERE e.run_id = (SELECT id FROM runs ORDER BY id DESC LIMIT 1)";
+  } else {
+    // Default: collapse to one row per suite name (the most recent execution).
+    runFilter =
+      "WHERE e.created_at = (SELECT MAX(e2.created_at) FROM evals e2 WHERE e2.name = e.name)";
+  }
+
   const modelClause = modelFilter ? "AND e.name LIKE ?" : "";
+  if (modelFilter) params.push(`%${modelFilter}%`);
 
   const query = db.prepare(`
     SELECT e.name as eval_name, e.id as eval_id, e.created_at
     FROM evals e
-    WHERE e.created_at = (SELECT MAX(e2.created_at) FROM evals e2 WHERE e2.name = e.name)
-    ${latestRunFilter}
+    ${runFilter}
     ${modelClause}
     ORDER BY e.name
   `);
 
-  return modelFilter ? query.all(`%${modelFilter}%`) : query.all();
+  return query.all(...params) as Array<{
+    eval_name: string;
+    eval_id: number;
+    created_at: string;
+  }>;
 }
 
 function getScoresForEval(evalId: number): Map<string, number> {
@@ -570,33 +600,36 @@ function cmdReport() {
 // --- Subcommand: runs ---
 
 function cmdRuns() {
-  const limit = Number(getArg("--limit")) || 30;
+  const limit = Number(getArg("--limit")) || 20;
 
   const rows = db
     .prepare(
       `
     SELECT
-      e.id as eval_id,
-      e.name as suite,
-      e.created_at,
-      COUNT(DISTINCT r.id) as fixtures,
+      r.id as run_id,
+      r.runType as run_type,
+      r.created_at,
+      COUNT(DISTINCT e.id) as suites,
+      COUNT(DISTINCT res.id) as fixtures,
       ROUND(AVG(s.score) * 100, 1) as avg_score,
       SUM(CASE WHEN s.name IN (${GATE_SCORERS.map(() => "?").join(",")}) AND s.score < ${GATE_THRESHOLD} THEN 1 ELSE 0 END) as gate_failures
-    FROM evals e
-    JOIN results r ON r.eval_id = e.id
-    JOIN scores s ON s.result_id = r.id
-    GROUP BY e.id
-    ORDER BY e.created_at DESC
+    FROM runs r
+    LEFT JOIN evals e ON e.run_id = r.id
+    LEFT JOIN results res ON res.eval_id = e.id
+    LEFT JOIN scores s ON s.result_id = res.id
+    GROUP BY r.id
+    ORDER BY r.id DESC
     LIMIT ?
   `
     )
     .all(...GATE_SCORERS, limit) as Array<{
-    eval_id: number;
-    suite: string;
+    run_id: number;
+    run_type: string;
     created_at: string;
+    suites: number;
     fixtures: number;
-    avg_score: number;
-    gate_failures: number;
+    avg_score: number | null;
+    gate_failures: number | null;
   }>;
 
   if (rows.length === 0) {
@@ -604,22 +637,140 @@ function cmdRuns() {
     return;
   }
 
-  const suiteW = 28;
+  const idW = 6;
+  const timeW = 20;
+  const typeW = 8;
+  const suiteW = 7;
   const fixW = 9;
   const scoreW = 7;
   const gateW = 13;
 
-  console.log(`\n=== ALL RUNS (last ${limit}) ===\n`);
+  console.log(`\n=== RUNS (last ${limit}) ===\n`);
   console.log(
-    `${"Timestamp".padEnd(20)} ${"Suite".padEnd(suiteW)} ${"Fixtures".padStart(fixW)} ${"Score".padStart(scoreW)} ${"Gate Failures".padStart(gateW)}`
+    `${"Run".padStart(idW)}  ${"Timestamp".padEnd(timeW)} ${"Type".padEnd(typeW)} ${"Suites".padStart(suiteW)} ${"Fixtures".padStart(fixW)} ${"Score".padStart(scoreW)} ${"Gate Failures".padStart(gateW)}`
   );
-  console.log("-".repeat(20 + suiteW + fixW + scoreW + gateW + 4));
+  console.log(
+    "-".repeat(idW + timeW + typeW + suiteW + fixW + scoreW + gateW + 7)
+  );
 
   for (const r of rows) {
     const time = r.created_at.substring(0, 19);
-    const fails = r.gate_failures > 0 ? String(r.gate_failures) : "";
+    const score = r.avg_score === null ? "—" : `${r.avg_score}%`;
+    const fails =
+      r.gate_failures === null || r.gate_failures === 0
+        ? ""
+        : String(r.gate_failures);
     console.log(
-      `${time.padEnd(20)} ${r.suite.padEnd(suiteW)} ${String(r.fixtures).padStart(fixW)} ${(r.avg_score + "%").padStart(scoreW)} ${fails.padStart(gateW)}`
+      `${String(r.run_id).padStart(idW)}  ${time.padEnd(timeW)} ${r.run_type.padEnd(typeW)} ${String(r.suites).padStart(suiteW)} ${String(r.fixtures).padStart(fixW)} ${score.padStart(scoreW)} ${fails.padStart(gateW)}`
+    );
+  }
+  console.log();
+}
+
+// --- Subcommand: diff ---
+
+function cmdDiff() {
+  const fromRaw = getArg("--from");
+  const toRaw = getArg("--to");
+  if (!fromRaw || !toRaw) {
+    console.error("Usage: pnpm inspect-evals diff --from <runId> --to <runId>");
+    process.exit(1);
+  }
+  const fromId = Number(fromRaw);
+  const toId = Number(toRaw);
+  if (!Number.isInteger(fromId) || !Number.isInteger(toId)) {
+    console.error("--from and --to must be integer run ids");
+    process.exit(1);
+  }
+
+  const scoresByRun = (runId: number) => {
+    const rows = db
+      .prepare(
+        `
+      SELECT e.name as suite, s.name as scorer, ROUND(AVG(s.score), 4) as avg_score
+      FROM evals e
+      JOIN results r ON r.eval_id = e.id
+      JOIN scores s ON s.result_id = r.id
+      WHERE e.run_id = ?
+      GROUP BY e.name, s.name
+    `
+      )
+      .all(runId) as Array<{
+      suite: string;
+      scorer: string;
+      avg_score: number;
+    }>;
+    const map = new Map<string, number>();
+    for (const r of rows) map.set(`${r.suite}::${r.scorer}`, r.avg_score);
+    return map;
+  };
+
+  const fromScores = scoresByRun(fromId);
+  const toScores = scoresByRun(toId);
+
+  if (fromScores.size === 0 || toScores.size === 0) {
+    console.error(
+      `No scores found for run ${fromScores.size === 0 ? fromId : toId}`
+    );
+    process.exit(1);
+  }
+
+  // Union of all (suite, scorer) keys
+  const allKeys = new Set([...fromScores.keys(), ...toScores.keys()]);
+  type Row = {
+    suite: string;
+    scorer: string;
+    from: number | null;
+    to: number | null;
+    delta: number | null;
+  };
+  const rows: Row[] = [];
+  for (const key of allKeys) {
+    const [suite, scorer] = key.split("::");
+    const from = fromScores.get(key) ?? null;
+    const to = toScores.get(key) ?? null;
+    const delta = from !== null && to !== null ? to - from : null;
+    rows.push({ suite, scorer, from, to, delta });
+  }
+
+  rows.sort((a, b) => {
+    if (a.suite !== b.suite) return a.suite.localeCompare(b.suite);
+    return a.scorer.localeCompare(b.scorer);
+  });
+
+  const suiteW = Math.max(20, ...rows.map((r) => r.suite.length));
+  const scorerW = Math.max(28, ...rows.map((r) => r.scorer.length));
+  const colW = 8;
+
+  const fmtPct = (n: number | null) =>
+    (n === null ? "—" : pct(n)).padStart(colW);
+  const fmtDelta = (n: number | null) => {
+    if (n === null) return "—".padStart(colW);
+    const rounded = Math.round(n * 100);
+    if (rounded === 0) return "0".padStart(colW);
+    return `${rounded > 0 ? "+" : ""}${rounded}`.padStart(colW);
+  };
+
+  console.log(`\n=== DIFF: run ${fromId} → run ${toId} ===\n`);
+  console.log(
+    `${"Suite".padEnd(suiteW)}  ${"Scorer".padEnd(scorerW)}  ${"From".padStart(colW)} ${"To".padStart(colW)} ${"Δ".padStart(colW)}`
+  );
+  console.log("-".repeat(suiteW + scorerW + colW * 3 + 6));
+
+  let printedHeader = "";
+  for (const r of rows) {
+    const suiteLabel = r.suite === printedHeader ? "" : r.suite;
+    printedHeader = r.suite;
+    const marker =
+      r.delta === null
+        ? "?"
+        : Math.abs(r.delta) < 0.005
+          ? " "
+          : r.delta > 0
+            ? "▲"
+            : "▼";
+    console.log(
+      `${suiteLabel.padEnd(suiteW)}  ${r.scorer.padEnd(scorerW)}  ${fmtPct(r.from)} ${fmtPct(r.to)} ${fmtDelta(r.delta)} ${marker}`
     );
   }
   console.log();
@@ -634,6 +785,9 @@ switch (subcommand) {
   case "runs":
     cmdRuns();
     break;
+  case "diff":
+    cmdDiff();
+    break;
   case "results":
     cmdResults();
     break;
@@ -645,7 +799,7 @@ switch (subcommand) {
     break;
   default:
     console.error(`Unknown subcommand: ${subcommand}`);
-    console.error("Available: summary, runs, results, failures, report");
+    console.error("Available: summary, runs, diff, results, failures, report");
     process.exit(1);
 }
 
