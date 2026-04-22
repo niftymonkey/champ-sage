@@ -1,5 +1,5 @@
 import { generateText, Output } from "ai";
-import type { ModelMessage } from "ai";
+import type { LanguageModel, ModelMessage } from "ai";
 import type { CoachingFeature } from "./feature";
 import { createCoachingModel, MODEL_CONFIG } from "./model-config";
 import { raceWithRetry } from "./race-with-retry";
@@ -30,15 +30,28 @@ export async function runFeatureCall<TInput, TOutput>(params: {
   messages: readonly ModelMessage[];
   apiKey: string;
   signal?: AbortSignal;
+  /**
+   * Optional model override. When omitted, uses `createCoachingModel(apiKey)`
+   * — the production path. The eval harness injects an OpenRouter-backed
+   * model so multi-candidate evaluation reuses this exact code path.
+   */
+  model?: LanguageModel;
 }): Promise<FeatureCallResult<TOutput>> {
-  const { feature, system, messages, apiKey, signal } = params;
+  const {
+    feature,
+    system,
+    messages,
+    apiKey,
+    signal,
+    model: modelOverride,
+  } = params;
 
   coachingLog.info(
     `[${feature.id}] Request: ${messages.length} messages in thread`,
     { model: MODEL_CONFIG.id }
   );
 
-  const model = createCoachingModel(apiKey);
+  const model = modelOverride ?? createCoachingModel(apiKey);
 
   const { value, winningAttempt } = await raceWithRetry<TOutput>(
     async ({ attempt, signal: attemptSignal }) => {

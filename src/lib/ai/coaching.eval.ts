@@ -1,9 +1,13 @@
 /**
  * Coaching evaluation pipeline.
  *
- * Replays coaching sessions from multi-turn fixtures against model candidates
- * and scores the responses using the same buildGameSystemPrompt function
- * the app uses in production.
+ * Replays coaching sessions from multi-turn fixtures through the production
+ * code path. The harness builds a ConversationSession with an injected
+ * OpenRouter model, pre-loads history as prose, then invokes
+ * `session.ask(feature, input)` for the test turn. The model provider is
+ * the only eval-specific knob — everything else (base context, feature
+ * selection, per-feature schemas/prompts, history accumulation, retry
+ * behavior) reuses the same code the app runs in production.
  *
  * Usage:
  *   npx evalite src/lib/ai/coaching.eval.ts
@@ -17,21 +21,38 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, "../../../.env"), override: true });
 
-import { evalite } from "evalite";
-import { createScorer } from "evalite";
+import { evalite, createScorer } from "evalite";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateText, Output, type ModelMessage } from "ai";
+import type { LanguageModel } from "ai";
 import { readFileSync, readdirSync } from "fs";
-import { coachingResponseSchema } from "./schemas";
-import { buildGameSystemPrompt } from "./prompts";
-import { formatStateSnapshot, takeGameSnapshot } from "./state-formatter";
+import { buildBaseContext } from "./base-context";
+import {
+  formatStateSnapshot,
+  takeGameSnapshot,
+  type GameSnapshot,
+} from "./state-formatter";
 import { createConversationSession } from "./conversation-session";
 import { computeEnemyStats } from "./enemy-stats";
 import { aramMayhemMode, aramMode, classicMode } from "../mode";
 import type { GameMode } from "../mode/types";
 import type { GameState } from "../game-state/types";
-import type { LoadedGameData } from "../data-ingest";
 import type { LiveGameState } from "../reactive/types";
+import {
+  augmentFitFeature,
+  type AugmentFitInput,
+  type AugmentFitResult,
+} from "./features/augment-fit";
+import {
+  createGamePlanFeature,
+  isUpdatePlanCommand,
+  type GamePlanInput,
+  type GamePlanResult,
+} from "./features/game-plan";
+import {
+  voiceQueryFeature,
+  type VoiceQueryInput,
+  type VoiceQueryResult,
+} from "./features/voice-query";
 import { scoreItemAwareness } from "./scorers/item-awareness";
 import { scoreBrevity, scoreDecisiveness } from "./scorers/response-format";
 import { scoreConversationalContinuity } from "./scorers/conversational-continuity";
@@ -43,6 +64,15 @@ import { scoreGoldAwareRecommendations } from "./scorers/gold-aware-recommendati
 
 // --- Types ---
 
+interface ScorerHints {
+  stateAwareness?: Array<
+    "grievous-wounds" | "mr-needed" | "enemy-comp" | "existing-items"
+  >;
+  pivotExpected?: boolean;
+  priorRecommendation?: string;
+  goldAware?: boolean;
+}
+
 interface EvalInput {
   label: string;
   category: string;
@@ -52,21 +82,18 @@ interface EvalInput {
   gameTime: string;
   items: string[];
   gold: number;
-  systemPrompt: string;
-  userPrompt: string;
   history: Array<{ question: string; answer: string }>;
   expectedReferences?: string[];
   scorerHints?: ScorerHints;
   enemyChampions: string[];
-}
-
-interface ScorerHints {
-  stateAwareness?: Array<
-    "grievous-wounds" | "mr-needed" | "enemy-comp" | "existing-items"
-  >;
-  pivotExpected?: boolean;
-  priorRecommendation?: string;
-  goldAware?: boolean;
+  /**
+   * Runs the production code path against the chosen model. Each candidate
+   * model rebuilds a fresh session internally (the session is match-scoped,
+   * one provider per lifetime), pre-loads prose history, and dispatches to
+   * `session.ask(feature, input)`. Returns a scorer-friendly `EvalOutput`
+   * normalized from whichever feature handled the fixture.
+   */
+  runOnce: (model: LanguageModel) => Promise<EvalOutput>;
 }
 
 interface EvalOutput {
@@ -84,7 +111,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 // --- Model setup ---
 //
 // Evals always use OpenRouter via EVAL_OPENROUTER_API_KEY. This keeps eval
-// costs separate from the app's VITE_OPENAI_API_KEY.
+// costs separate from the app's VITE_OPENAI_API_KEY. OpenRouter is injected
+// into `createConversationSession` so the production call path (session.ask
+// → runFeatureCall → generateText) is reused verbatim.
 
 const OPENROUTER_KEY = process.env.EVAL_OPENROUTER_API_KEY;
 
@@ -108,10 +137,6 @@ const models: ModelCandidate[] = [
   // { name: "Gemini 2.5 Pro", id: "google/gemini-2.5-pro" },
   // { name: "Claude Sonnet 4.6", id: "anthropic/claude-sonnet-4.6" },
 ];
-
-function getModel(candidate: ModelCandidate) {
-  return openrouter.chat(candidate.id);
-}
 
 // --- Scorers ---
 
@@ -276,10 +301,6 @@ interface MultiTurnFixture {
   };
 }
 
-interface MultiTurnEvalInput extends EvalInput {
-  messages: ModelMessage[];
-}
-
 const MODE_MAP: Record<string, GameMode> = {
   "aram-mayhem": aramMayhemMode,
   aram: aramMode,
@@ -308,19 +329,12 @@ const validFixtures = fixtures.filter(
   (f) => f.error === null && f.query.question.length > 5
 );
 
-function buildEvalInput(
-  f: MultiTurnFixture,
-  gameData: LoadedGameData
-): MultiTurnEvalInput {
-  const mode = MODE_MAP[f.gameModeId];
-  if (!mode) {
-    throw new Error(`Unknown gameModeId: ${f.gameModeId}`);
-  }
-
-  // Build the system prompt using real function
-  const systemPrompt = buildGameSystemPrompt(mode, gameData, f.gameState);
-
-  // Compute enemy stats for each enemy player
+/** Build a GameSnapshot + LiveGameState + enemy champion list for a fixture. */
+function buildFixtureState(f: MultiTurnFixture): {
+  liveGameState: LiveGameState;
+  snapshot: GameSnapshot | null;
+  enemyChampions: string[];
+} {
   const activePlayerInfo = f.gameState.players.find((p) => p.isActivePlayer);
   const activeTeam = activePlayerInfo?.team ?? "ORDER";
   const enemyPlayers = f.gameState.players.filter((p) => p.team !== activeTeam);
@@ -328,18 +342,16 @@ function buildEvalInput(
   const enemyStats = new Map<string, ReturnType<typeof computeEnemyStats>>();
   for (const enemy of enemyPlayers) {
     const champData = gameData.champions.get(enemy.championName.toLowerCase());
-    if (champData) {
-      const enemyItems = enemy.items
-        .map((item) => gameData.items.get(item.id))
-        .filter((item): item is NonNullable<typeof item> => item != null);
-      enemyStats.set(
-        enemy.championName,
-        computeEnemyStats(champData.stats, enemy.level, enemyItems)
-      );
-    }
+    if (!champData) continue;
+    const enemyItems = enemy.items
+      .map((item) => gameData.items.get(item.id))
+      .filter((item): item is NonNullable<typeof item> => item != null);
+    enemyStats.set(
+      enemy.championName,
+      computeEnemyStats(champData.stats, enemy.level, enemyItems)
+    );
   }
 
-  // Build LiveGameState from GameState
   const liveGameState: LiveGameState = {
     activePlayer: f.gameState.activePlayer,
     players: f.gameState.players,
@@ -350,37 +362,137 @@ function buildEvalInput(
     eogStats: null,
   };
 
-  // Build snapshot and format it
   const snapshot = takeGameSnapshot(
     liveGameState,
     enemyStats,
     gameData,
     f.chosenAugments
   );
+
+  return {
+    liveGameState,
+    snapshot,
+    enemyChampions: enemyPlayers.map((p) => p.championName),
+  };
+}
+
+/**
+ * Pick the feature that owns this fixture and build its typed input.
+ *
+ * Today's fixtures cover augment-offer calls and open-ended voice queries.
+ * Game-plan and item-rec classifications are wired up but not exercised by
+ * the current fixture set — they're here so new fixtures pick up the right
+ * feature automatically.
+ */
+function classifyFixture(
+  f: MultiTurnFixture,
+  snapshot: GameSnapshot | null
+):
+  | { kind: "augment-fit"; input: AugmentFitInput }
+  | { kind: "game-plan"; input: GamePlanInput }
+  | { kind: "voice-query"; input: VoiceQueryInput } {
+  if (f.query.augmentOptions && f.query.augmentOptions.length >= 2) {
+    return {
+      kind: "augment-fit",
+      input: {
+        snapshot,
+        augmentNames: f.query.augmentOptions.map((o) => o.name),
+        chosenAugments: f.chosenAugments,
+        gameData,
+      },
+    };
+  }
+  if (isUpdatePlanCommand(f.query.question)) {
+    return {
+      kind: "game-plan",
+      input: { snapshot },
+    };
+  }
+  return {
+    kind: "voice-query",
+    input: { snapshot, question: f.query.question },
+  };
+}
+
+/** Boundary normalize per-feature results to the shared EvalOutput shape. */
+function normalize(
+  kind: "augment-fit" | "game-plan" | "voice-query",
+  result: AugmentFitResult | GamePlanResult | VoiceQueryResult
+): EvalOutput {
+  if (kind === "augment-fit") {
+    const r = result as AugmentFitResult;
+    const answer = augmentFitFeature.summarizeForHistory(r);
+    return {
+      answer,
+      recommendations: r.recommendations,
+    };
+  }
+  if (kind === "game-plan") {
+    const r = result as GamePlanResult;
+    return {
+      answer: r.answer,
+      recommendations: r.buildPath.map((item) => ({
+        name: item.name,
+        fit: "strong",
+        reasoning: item.reason,
+      })),
+    };
+  }
+  const r = result as VoiceQueryResult;
+  return {
+    answer: r.answer,
+    recommendations: r.recommendations,
+  };
+}
+
+function buildEvalInput(f: MultiTurnFixture): EvalInput {
+  const mode = MODE_MAP[f.gameModeId];
+  if (!mode) {
+    throw new Error(`Unknown gameModeId: ${f.gameModeId}`);
+  }
+
+  const { snapshot, enemyChampions } = buildFixtureState(f);
+  const baseContext = buildBaseContext({
+    mode,
+    gameData,
+    gameState: f.gameState,
+  });
+  const classification = classifyFixture(f, snapshot);
   const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
 
-  // Build conversation session with history. apiKey is unused here (this
-  // harness calls generateText directly), but the session factory requires
-  // one for callers that go through session.ask(). Phase 8 retires this
-  // helper along with `createConversationSession` altogether.
-  const session = createConversationSession(systemPrompt, openrouterKey);
+  const runOnce = async (model: LanguageModel): Promise<EvalOutput> => {
+    const session = createConversationSession(baseContext, openrouterKey, {
+      model,
+    });
 
-  if (f.query.history) {
-    for (const exchange of f.query.history) {
-      session.addUserMessage(stateText, exchange.question);
-      session.addAssistantMessage(exchange.answer);
+    if (f.query.history) {
+      for (const exchange of f.query.history) {
+        session.addUserMessage(stateText, exchange.question);
+        session.addAssistantMessage(exchange.answer);
+      }
     }
-  }
 
-  // Add current question, with augment descriptions if available
-  let questionText = f.query.question;
-  if (f.query.augmentOptions && f.query.augmentOptions.length > 0) {
-    const optionLines = f.query.augmentOptions.map(
-      (o) => `- ${o.name} (${o.tier}): ${o.description}`
+    if (classification.kind === "augment-fit") {
+      const { value } = await session.ask(
+        augmentFitFeature,
+        classification.input
+      );
+      return normalize("augment-fit", value);
+    }
+    if (classification.kind === "game-plan") {
+      const gamePlanFeature = createGamePlanFeature(gameData);
+      const { value } = await session.ask(
+        gamePlanFeature,
+        classification.input
+      );
+      return normalize("game-plan", value);
+    }
+    const { value } = await session.ask(
+      voiceQueryFeature,
+      classification.input
     );
-    questionText = `${f.query.question}\n\nAugment options:\n${optionLines.join("\n")}`;
-  }
-  session.addUserMessage(stateText, questionText);
+    return normalize("voice-query", value);
+  };
 
   return {
     label: f.label,
@@ -391,20 +503,18 @@ function buildEvalInput(
     gameTime: f.scorerContext.gameTime,
     items: f.scorerContext.items,
     gold: f.scorerContext.gold,
-    systemPrompt: session.systemPrompt,
-    userPrompt: "", // not used — messages carry the content
     history: f.query.history ?? [],
     expectedReferences: f.expectedReferences,
     scorerHints: f.scorerHints,
-    enemyChampions: enemyPlayers.map((p) => p.championName),
-    messages: [...session.messages],
+    enemyChampions,
+    runOnce,
   };
 }
 
 // Group inputs by category
-const inputsByCategory = new Map<string, MultiTurnEvalInput[]>();
+const inputsByCategory = new Map<string, EvalInput[]>();
 for (const f of validFixtures) {
-  const input = buildEvalInput(f, gameData);
+  const input = buildEvalInput(f);
   const categoryLabel = CATEGORY_LABELS[input.category] ?? input.category;
   const list = inputsByCategory.get(categoryLabel) ?? [];
   list.push(input);
@@ -412,30 +522,24 @@ for (const f of validFixtures) {
 }
 
 // Register evals
-for (const model of models) {
+for (const modelCandidate of models) {
   for (const [category, inputs] of inputsByCategory) {
     if (inputs.length === 0) continue;
 
-    evalite(`${model.name} / ${category}`, {
+    evalite(`${modelCandidate.name} / ${category}`, {
       data: () => inputs.map((input) => ({ input })),
 
-      task: async (input: MultiTurnEvalInput): Promise<EvalOutput> => {
-        const result = await generateText({
-          model: getModel(model),
-          system: input.systemPrompt,
-          messages: input.messages,
-          output: Output.object({ schema: coachingResponseSchema }),
-          maxOutputTokens: 4096,
-        });
+      task: async (input: EvalInput): Promise<EvalOutput> => {
+        const output = await input.runOnce(openrouter.chat(modelCandidate.id));
 
-        // Log fit ratings for each recommendation
-        const recs = result.output.recommendations;
-        const fitSummary = recs.map((r) => `${r.name} [${r.fit}]`).join(", ");
+        const fitSummary = output.recommendations
+          .map((r) => `${r.name} [${r.fit}]`)
+          .join(", ");
         console.log(
           `\n  ${input.champion} lvl${input.level} @${input.gameTime}: ${fitSummary}`
         );
 
-        return result.output;
+        return output;
       },
 
       scorers: ALL_SCORERS,

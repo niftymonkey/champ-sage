@@ -11,12 +11,22 @@
  *   const { value, retried } = await session.ask(someFeature, input);
  */
 
-import type { ModelMessage } from "ai";
+import type { LanguageModel, ModelMessage } from "ai";
 import type { AskResult, CoachingFeature } from "./feature";
 import { runFeatureCall } from "./recommendation-engine";
 import { getLogger } from "../logger";
 
 const sessionLog = getLogger("coaching:session");
+
+export interface CreateConversationSessionOptions {
+  /**
+   * Optional model override applied to every `session.ask()` call. When
+   * omitted, the engine resolves the production model via the apiKey.
+   * Match-scoped: one provider for the session's lifetime. The eval harness
+   * sets this to swap providers (OpenRouter) without forking call paths.
+   */
+  readonly model?: LanguageModel;
+}
 
 export interface ConversationSession {
   readonly systemPrompt: string;
@@ -52,9 +62,11 @@ function formatUserContent(stateSnapshot: string, question: string): string {
 
 export function createConversationSession(
   systemPrompt: string,
-  apiKey: string
+  apiKey: string,
+  options: CreateConversationSessionOptions = {}
 ): ConversationSession {
   const messages: ModelMessage[] = [];
+  const modelOverride = options.model;
 
   sessionLog.info(`Session created. baseContext=${systemPrompt.length} chars`);
 
@@ -85,6 +97,7 @@ export function createConversationSession(
           messages,
           apiKey,
           signal: options?.signal,
+          model: modelOverride,
         });
 
         const result = feature.extractResult(raw);
