@@ -7,11 +7,13 @@ import type { FlexibleSchema } from "ai";
 export type MatchPhase = "champ-select" | "in-game" | "post-game";
 
 /**
- * Engine metadata threaded to `extractResult` alongside the raw LLM output.
- * The `retried` flag reflects whether race-with-retry (#102) served the
- * response from attempt 2.
+ * Engine-level envelope returned by `session.ask()`. The `retried` flag
+ * reflects whether race-with-retry (#102) served the response from attempt
+ * 2; it lives here rather than on the feature result body so per-feature
+ * schemas don't need a `retried` slot.
  */
-export interface ExtractMeta {
+export interface AskResult<T> {
+  readonly value: T;
   readonly retried: boolean;
 }
 
@@ -37,7 +39,13 @@ export interface CoachingFeature<TInput, TOutput> {
 
   outputSchema: FlexibleSchema<TOutput>;
 
-  extractResult(raw: TOutput, meta: ExtractMeta): TOutput;
+  /**
+   * Normalize the raw LLM output into the feature's canonical result shape.
+   * Use this for post-processing like synthesizing fallback fields; the
+   * engine does not pass retry metadata here — that surfaces via the
+   * `AskResult` envelope returned by `session.ask()`.
+   */
+  extractResult(raw: TOutput): TOutput;
 
   /**
    * Prose assistant-turn summary the engine stores in conversation history.

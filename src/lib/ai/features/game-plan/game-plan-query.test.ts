@@ -24,9 +24,8 @@ describe("buildGamePlanQuestion", () => {
     expect(q).toMatch(/already built|current inventory/i);
   });
 
-  it("requires items in the `buildPath` field, not recommendations", () => {
+  it("requires items in the `buildPath` field", () => {
     expect(q).toMatch(/`buildPath` field/);
-    expect(q).toMatch(/not in `recommendations`/);
   });
 
   it("lists every supported category", () => {

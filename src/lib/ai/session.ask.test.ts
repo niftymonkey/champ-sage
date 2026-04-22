@@ -46,8 +46,7 @@ function createTestFeature(): CoachingFeature<TestInput, TestOutput> {
     buildUserMessage: ({ stateSnapshot, question }) =>
       `[Game State]\n${stateSnapshot}\n\n[Question]\n${question}`,
     outputSchema: testOutputSchema,
-    extractResult: (raw, meta) =>
-      meta.retried ? { ...raw, answer: `${raw.answer} (retried)` } : raw,
+    extractResult: (raw) => raw,
   };
 }
 
@@ -164,13 +163,14 @@ describe("session.ask", () => {
         usage: { inputTokens: 10, outputTokens: 5 },
       } as never);
 
-    const result = await session.ask(feature, {
+    const { value, retried } = await session.ask(feature, {
       stateSnapshot: "snap",
       question: "q",
     });
 
     expect(mockGenerateText).toHaveBeenCalledTimes(2);
-    expect(result.answer).toBe("retry-value (retried)");
+    expect(value.answer).toBe("retry-value");
+    expect(retried).toBe(true);
   });
 
   it("rolls back the orphaned user message when both attempts fail", async () => {
@@ -212,12 +212,13 @@ describe("session.ask", () => {
       usage: { inputTokens: 10, outputTokens: 5 },
     } as never);
 
-    const result = await session.ask(feature, {
+    const { value, retried } = await session.ask(feature, {
       stateSnapshot: "snap",
       question: "q",
     });
 
-    expect(result.answer).toBe("fast");
+    expect(value.answer).toBe("fast");
+    expect(retried).toBe(false);
   });
 
   it("carries conversation history across multiple ask() calls", async () => {
@@ -293,8 +294,9 @@ describe("session.ask", () => {
       await vi.advanceTimersByTimeAsync(10_001);
       expect(mockGenerateText).toHaveBeenCalledTimes(2);
 
-      const result = await resultPromise;
-      expect(result.answer).toBe("from-attempt-2 (retried)");
+      const { value, retried } = await resultPromise;
+      expect(value.answer).toBe("from-attempt-2");
+      expect(retried).toBe(true);
 
       deferredA.resolve({ output: { answer: "too-late" } });
     });
@@ -320,8 +322,9 @@ describe("session.ask", () => {
         usage: { inputTokens: 10, outputTokens: 5 },
       });
 
-      const result = await resultPromise;
-      expect(result.answer).toBe("from-attempt-1");
+      const { value, retried } = await resultPromise;
+      expect(value.answer).toBe("from-attempt-1");
+      expect(retried).toBe(false);
 
       deferredB.resolve({ output: { answer: "too-late" } });
     });

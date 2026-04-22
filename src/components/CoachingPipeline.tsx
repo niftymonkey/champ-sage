@@ -9,16 +9,21 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import type { CoachingResponse } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { ConversationSession } from "../lib/ai/conversation-session";
+import type { CoachingFeature } from "../lib/ai/feature";
 import {
+  createGamePlanFeature,
   extractBuildPath,
-  gamePlanFeature,
   isUpdatePlanCommand,
+  type GamePlanInput,
+  type GamePlanResult,
 } from "../lib/ai/features/game-plan";
-import { augmentFitFeature } from "../lib/ai/features/augment-fit";
+import {
+  augmentFitFeature,
+  type AugmentFitResult,
+} from "../lib/ai/features/augment-fit";
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
@@ -62,8 +67,12 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const enemyStatsRef = useRef(enemyStats);
   const chosenAugmentsRef = useRef(chosenAugments);
   const sessionRef = useRef<ConversationSession | null>(null);
+  const gamePlanFeatureRef = useRef<CoachingFeature<
+    GamePlanInput,
+    GamePlanResult
+  > | null>(null);
   const gamePlanFiredRef = useRef(false);
-  const lastAugmentResponseRef = useRef<CoachingResponse | null>(null);
+  const lastAugmentResponseRef = useRef<AugmentFitResult | null>(null);
 
   liveGameStateRef.current = liveGameState;
   if (liveGameState.activePlayer) {
@@ -99,6 +108,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       gameState,
     });
     sessionRef.current = createConversationSession(baseContext, apiKey);
+    gamePlanFeatureRef.current = createGamePlanFeature(gameDataRef.current);
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
     resetForNewGame();
@@ -183,7 +193,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
   const submitGamePlanQuery = useCallback(
     async (gameTime: number) => {
-      if (!sessionRef.current || !apiKey) return;
+      if (!sessionRef.current || !gamePlanFeatureRef.current || !apiKey) return;
 
       const snapshot = takeGameSnapshot(
         liveGameStateRef.current,
@@ -194,30 +204,25 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
       proactiveLog.info("Game plan query");
 
-      const response = await sessionRef.current.ask(gamePlanFeature, {
-        snapshot,
-      });
+      const { value: response } = await sessionRef.current.ask(
+        gamePlanFeatureRef.current,
+        { snapshot }
+      );
 
       const buildPath = extractBuildPath(response);
 
-      // Smoke check: the prompt asks for 6 items. Anything else is a
-      // catastrophic prompt/schema failure worth surfacing loudly until
-      // proper eval coverage lands with the per-feature refactor (#108).
-      // A degraded plan (3-5 valid items) is still more useful to the
-      // player than an error, so don't abort — surface via warn log.
+      // Smoke check: the schema requires 6 items. Fewer indicates a
+      // degraded-mode path (item-catalog exceeded the enum size limit and
+      // the schema fell back to free-string names) — still useful to the
+      // player but worth a warn log.
       if (buildPath.length !== 6) {
         proactiveLog.warn(
           `Game plan build path has ${buildPath.length} items (expected 6)`
         );
       }
 
-      // Fold the (possibly synthesized) buildPath back into the response
-      // so the UI and overlay see a normalized version even when the LLM
-      // omitted buildPath and we promoted from recommendations.
-      const planResponse: CoachingResponse = { ...response, buildPath };
-
       proactiveLog.info(
-        `Game plan response: ${planResponse.answer.substring(0, 200)}...`
+        `Game plan response: ${response.answer.substring(0, 200)}...`
       );
       proactiveLog.info(
         `Game plan build path: ${buildPath
@@ -225,12 +230,16 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           .join(" → ")}`
       );
 
-      pushGamePlan(planResponse.answer, buildPath, gameTime);
+      pushGamePlan(response.answer, buildPath, gameTime);
 
-      // Relay to overlay
+      // Relay to overlay. Overlay's CoachingResponse shape wants
+      // recommendations + buildPath even when the feature doesn't use
+      // recommendations (empty array here).
       proactiveLog.info("Sending game plan response to overlay");
       window.electronAPI?.sendCoachingResponse({
-        ...planResponse,
+        answer: response.answer,
+        recommendations: [],
+        buildPath,
         source: "plan",
         sentAt: Date.now(),
       });
@@ -242,7 +251,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     async (
       names: string[],
       options?: { signal?: AbortSignal }
-    ): Promise<CoachingResponse | null> => {
+    ): Promise<AugmentFitResult | null> => {
       if (!sessionRef.current || !apiKey) {
         reactiveLog.warn(
           `Augment query skipped: ${!sessionRef.current ? "no session" : "no API key"}`
@@ -262,7 +271,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       );
 
       try {
-        const response = await sessionRef.current.ask(
+        const { value: response, retried } = await sessionRef.current.ask(
           augmentFitFeature,
           {
             snapshot,
@@ -276,7 +285,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         // Pin fit ratings for augments that carried over from a reroll.
         // An augment's fit is about the augment vs. the player's state, not
         // vs. the other options — so if it was already rated, keep that rating.
-        let finalResponse = response;
+        let finalResult: AugmentFitResult = response;
         if (lastAugmentResponseRef.current) {
           const prevByName = new Map(
             lastAugmentResponseRef.current.recommendations.map((r) => [
@@ -288,28 +297,31 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
             const prior = prevByName.get(rec.name.toLowerCase());
             return prior ?? rec;
           });
-          finalResponse = { ...response, recommendations: merged };
+          finalResult = { recommendations: merged };
         }
-        lastAugmentResponseRef.current = finalResponse;
+        lastAugmentResponseRef.current = finalResult;
 
         const gameTime = liveGameStateRef.current.gameTime;
         const question = `I'm being offered these augments: ${names.join(", ")}. How well does each fit my current build?`;
         pushCoachingExchange(
           question,
-          finalResponse.answer,
-          finalResponse.recommendations.map((r) => ({
+          "", // augment-fit has no prose answer; UI renders badges only
+          finalResult.recommendations.map((r) => ({
             name: r.name,
             fit: r.fit,
             reasoning: r.reasoning,
           })),
           gameTime,
           "augment",
-          finalResponse.retried ?? false
+          retried
         );
 
         const sentAt = Date.now();
         const overlayPayload = {
-          ...finalResponse,
+          answer: "",
+          recommendations: finalResult.recommendations,
+          buildPath: null,
+          retried,
           source: "augment" as const,
           sentAt,
         };
@@ -317,15 +329,12 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           "Sending coaching response to overlay (source=augment)",
           {
             sentAt,
-            hasAnswer: !!overlayPayload.answer,
-            recNames: overlayPayload.recommendations?.map(
-              (r: { name: string }) => r.name
-            ),
+            recNames: overlayPayload.recommendations.map((r) => r.name),
           }
         );
         window.electronAPI?.sendCoachingResponse(overlayPayload);
 
-        return finalResponse;
+        return finalResult;
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
           reactiveLog.debug("Augment request cancelled");
@@ -422,7 +431,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       window.electronAPI?.sendCoachingRequest();
 
       try {
-        const response = await sessionRef.current.ask(
+        const { value: response, retried } = await sessionRef.current.ask(
           voiceQueryFeature,
           { snapshot, question },
           { signal: options?.signal }
@@ -439,12 +448,15 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           })),
           gameTime,
           "voice",
-          response.retried ?? false
+          retried
         );
 
         const sentAt = Date.now();
         const overlayPayload = {
-          ...response,
+          answer: response.answer,
+          recommendations: response.recommendations,
+          buildPath: null,
+          retried,
           source: "reactive" as const,
           sentAt,
         };
@@ -453,9 +465,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           {
             sentAt,
             hasAnswer: !!overlayPayload.answer,
-            recNames: overlayPayload.recommendations?.map(
-              (r: { name: string }) => r.name
-            ),
+            recNames: overlayPayload.recommendations.map((r) => r.name),
           }
         );
         window.electronAPI?.sendCoachingResponse(overlayPayload);

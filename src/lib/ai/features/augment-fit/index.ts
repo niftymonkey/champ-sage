@@ -1,10 +1,11 @@
 import type { CoachingFeature } from "../../feature";
-import type { CoachingResponse } from "../../types";
 import type { LoadedGameData } from "../../../data-ingest";
-import { coachingResponseSchema } from "../../schemas";
 import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
 import { formatAugmentOfferLines } from "../../augment-offer-formatter";
 import { AUGMENT_FIT_TASK_PROMPT } from "./prompt";
+import { augmentFitSchema, type AugmentFitResult } from "./schema";
+
+export type { AugmentFitResult } from "./schema";
 
 export interface AugmentFitInput {
   readonly snapshot: GameSnapshot | null;
@@ -15,7 +16,7 @@ export interface AugmentFitInput {
 
 export const augmentFitFeature: CoachingFeature<
   AugmentFitInput,
-  CoachingResponse
+  AugmentFitResult
 > = {
   id: "augment-fit",
   supportedPhases: ["in-game"] as const,
@@ -47,8 +48,14 @@ export const augmentFitFeature: CoachingFeature<
     return `[Game State]\n${snapshotText}\n\n[Question]\n${question}`;
   },
 
-  outputSchema: coachingResponseSchema,
+  outputSchema: augmentFitSchema,
 
-  extractResult: (raw, meta) =>
-    meta.retried ? { ...raw, retried: true } : raw,
+  extractResult: (raw) => raw,
+
+  summarizeForHistory: (result) => {
+    const picks = result.recommendations
+      .map((r) => `${r.name} [${r.fit}]`)
+      .join(", ");
+    return `Augment ratings: ${picks}`;
+  },
 };

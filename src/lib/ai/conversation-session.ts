@@ -8,11 +8,11 @@
  *
  * Usage:
  *   const session = createConversationSession(systemPrompt, apiKey);
- *   const response = await session.ask(coachingFeature, { stateSnapshot, question });
+ *   const { value, retried } = await session.ask(someFeature, input);
  */
 
 import type { ModelMessage } from "ai";
-import type { CoachingFeature } from "./feature";
+import type { AskResult, CoachingFeature } from "./feature";
 import { runFeatureCall } from "./recommendation-engine";
 import { getLogger } from "../logger";
 
@@ -25,15 +25,16 @@ export interface ConversationSession {
   /**
    * Feature-typed LLM call. Composes the system prompt (session base +
    * feature task), appends the feature's user message to history, invokes
-   * the engine, appends the assistant turn, and returns the normalized
-   * result. On failure, rolls back the orphaned user turn so history stays
-   * clean and the same session is safe to reuse.
+   * the engine, appends the assistant turn, and returns the result wrapped
+   * in an `AskResult` envelope (`{ value, retried }`). On failure, rolls
+   * back the orphaned user turn so history stays clean and the same
+   * session is safe to reuse.
    */
   ask<TInput, TOutput>(
     feature: CoachingFeature<TInput, TOutput>,
     input: TInput,
     options?: { signal?: AbortSignal }
-  ): Promise<TOutput>;
+  ): Promise<AskResult<TOutput>>;
 
   /**
    * Lower-level history primitives. Used by tests and fixture-replay tooling
@@ -86,13 +87,13 @@ export function createConversationSession(
           signal: options?.signal,
         });
 
-        const result = feature.extractResult(raw, { retried });
+        const result = feature.extractResult(raw);
 
         const historyContent =
           feature.summarizeForHistory?.(result) ?? JSON.stringify(result);
         messages.push({ role: "assistant", content: historyContent });
 
-        return result;
+        return { value: result, retried };
       } catch (err) {
         const last = messages[messages.length - 1];
         if (last?.role === "user" && last.content === userContent) {

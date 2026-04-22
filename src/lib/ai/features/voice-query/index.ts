@@ -1,8 +1,9 @@
 import type { CoachingFeature } from "../../feature";
-import type { CoachingResponse } from "../../types";
-import { coachingResponseSchema } from "../../schemas";
 import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
 import { VOICE_QUERY_TASK_PROMPT } from "./prompt";
+import { voiceQuerySchema, type VoiceQueryResult } from "./schema";
+
+export type { VoiceQueryResult } from "./schema";
 
 export interface VoiceQueryInput {
   readonly snapshot: GameSnapshot | null;
@@ -11,7 +12,7 @@ export interface VoiceQueryInput {
 
 export const voiceQueryFeature: CoachingFeature<
   VoiceQueryInput,
-  CoachingResponse
+  VoiceQueryResult
 > = {
   id: "voice-query",
   supportedPhases: ["in-game"] as const,
@@ -23,8 +24,7 @@ export const voiceQueryFeature: CoachingFeature<
     return `[Game State]\n${snapshotText}\n\n[Question]\n${question}`;
   },
 
-  outputSchema: coachingResponseSchema,
+  outputSchema: voiceQuerySchema,
 
-  extractResult: (raw, meta) =>
-    meta.retried ? { ...raw, retried: true } : raw,
+  extractResult: (raw) => raw,
 };

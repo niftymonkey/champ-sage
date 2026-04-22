@@ -95,7 +95,7 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
       setError(null);
 
       try {
-        const response = await sessionRef.current.ask(
+        const { value: response, retried } = await sessionRef.current.ask(
           augmentFitFeature,
           {
             snapshot,
@@ -107,14 +107,25 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
         );
 
         const question = `I'm being offered these augments: ${names.join(", ")}. How well does each fit my current build?`;
-        setLatestExchange({ question, response });
+        setLatestExchange({
+          question,
+          response: {
+            answer: "",
+            recommendations: response.recommendations,
+            buildPath: null,
+            retried,
+          },
+        });
 
         const sentAt = Date.now();
         reactiveLog.info(
           `Sending coaching response to overlay (source=augment, sentAt=${sentAt})`
         );
         window.electronAPI?.sendCoachingResponse({
-          ...response,
+          answer: "",
+          recommendations: response.recommendations,
+          buildPath: null,
+          retried,
           source: "augment",
           sentAt,
         });
@@ -189,20 +200,31 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
       window.electronAPI?.sendCoachingRequest();
 
       try {
-        const response = await sessionRef.current.ask(
+        const { value: response, retried } = await sessionRef.current.ask(
           voiceQueryFeature,
           { snapshot, question },
           { signal: options?.signal }
         );
 
-        setLatestExchange({ question, response });
+        setLatestExchange({
+          question,
+          response: {
+            answer: response.answer,
+            recommendations: response.recommendations,
+            buildPath: null,
+            retried,
+          },
+        });
 
         const sentAt = Date.now();
         reactiveLog.info(
           `Sending coaching response to overlay (source=reactive, sentAt=${sentAt})`
         );
         window.electronAPI?.sendCoachingResponse({
-          ...response,
+          answer: response.answer,
+          recommendations: response.recommendations,
+          buildPath: null,
+          retried,
           source: "reactive",
           sentAt,
         });

@@ -1,15 +1,16 @@
 import type { CoachingFeature } from "../../feature";
-import type { CoachingResponse } from "../../types";
-import { coachingResponseSchema } from "../../schemas";
 import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
 import { ITEM_REC_TASK_PROMPT } from "./prompt";
+import { itemRecSchema, type ItemRecResult } from "./schema";
+
+export type { ItemRecResult } from "./schema";
 
 export interface ItemRecInput {
   readonly snapshot: GameSnapshot | null;
   readonly question: string;
 }
 
-export const itemRecFeature: CoachingFeature<ItemRecInput, CoachingResponse> = {
+export const itemRecFeature: CoachingFeature<ItemRecInput, ItemRecResult> = {
   id: "item-rec",
   supportedPhases: ["in-game"] as const,
 
@@ -20,8 +21,7 @@ export const itemRecFeature: CoachingFeature<ItemRecInput, CoachingResponse> = {
     return `[Game State]\n${snapshotText}\n\n[Question]\n${question}`;
   },
 
-  outputSchema: coachingResponseSchema,
+  outputSchema: itemRecSchema,
 
-  extractResult: (raw, meta) =>
-    meta.retried ? { ...raw, retried: true } : raw,
+  extractResult: (raw) => raw,
 };
