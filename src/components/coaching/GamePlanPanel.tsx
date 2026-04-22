@@ -1,10 +1,13 @@
 import type { BuildPathItem } from "../../lib/ai/types";
 import { useGamePlan } from "../../hooks/useGamePlan";
+import { useLiveGameState } from "../../hooks/useLiveGameState";
 import { BuildPathIcon, BUILD_PATH_CATEGORY_LABELS } from "./BuildPathIcon";
 import styles from "./GamePlanPanel.module.css";
 
 export function GamePlanPanel() {
   const plan = useGamePlan();
+  const liveGameState = useLiveGameState();
+  const ownedNames = useOwnedItemNames(liveGameState);
 
   return (
     <div className={styles.panel}>
@@ -18,7 +21,12 @@ export function GamePlanPanel() {
           <div className={styles.buildTitle}>Build Path</div>
           <div className={styles.buildList}>
             {plan.buildPath.map((item, i) => (
-              <BuildStep key={`${item.name}-${i}`} index={i} item={item} />
+              <BuildStep
+                key={`${item.name}-${i}`}
+                index={i}
+                item={item}
+                owned={ownedNames.has(item.name.toLowerCase())}
+              />
             ))}
           </div>
           <div className={styles.updated}>
@@ -32,16 +40,38 @@ export function GamePlanPanel() {
   );
 }
 
-function BuildStep({ index, item }: { index: number; item: BuildPathItem }) {
-  const tooltip = formatTooltip(item);
+function useOwnedItemNames(
+  liveGameState: ReturnType<typeof useLiveGameState>
+): ReadonlySet<string> {
+  const active = liveGameState.players.find((p) => p.isActivePlayer);
+  return new Set((active?.items ?? []).map((i) => i.name.toLowerCase()));
+}
+
+function BuildStep({
+  index,
+  item,
+  owned,
+}: {
+  index: number;
+  item: BuildPathItem;
+  owned: boolean;
+}) {
+  const tooltip = formatTooltip(item, owned);
   return (
     <div
-      className={`${styles.buildStep} ${styles[`cat_${item.category}`] ?? ""}`}
+      className={[
+        styles.buildStep,
+        styles[`cat_${item.category}`] ?? "",
+        owned ? styles.owned : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       title={tooltip}
     >
       <span className={styles.buildNum}>{index + 1}</span>
       <BuildPathIcon category={item.category} className={styles.buildIcon} />
       <span className={styles.buildName}>{item.name}</span>
+      {owned ? <span className={styles.ownedBadge}>owned</span> : null}
       {item.category === "counter" && item.targetEnemy ? (
         <span className={styles.counterTarget}>vs {item.targetEnemy}</span>
       ) : null}
@@ -49,13 +79,14 @@ function BuildStep({ index, item }: { index: number; item: BuildPathItem }) {
   );
 }
 
-function formatTooltip(item: BuildPathItem): string {
+function formatTooltip(item: BuildPathItem, owned: boolean): string {
   const label = BUILD_PATH_CATEGORY_LABELS[item.category];
   const header =
     item.category === "counter" && item.targetEnemy
       ? `${label} — ${item.targetEnemy}`
       : label;
-  return item.reason ? `${header}: ${item.reason}` : header;
+  const body = item.reason ? `${header}: ${item.reason}` : header;
+  return owned ? `${body} (already owned)` : body;
 }
 
 function formatGameTime(seconds: number): string {

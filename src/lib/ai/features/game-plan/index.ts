@@ -26,7 +26,9 @@ export interface GamePlanInput {
  */
 export function buildGamePlanQuestion(): string {
   return [
-    "Based on the current game state — my champion, current inventory, the enemy team composition and their itemization, my chosen augments, and the game mode — give me my game plan: what to watch out for, who to focus, and my recommended 6-item build path in order. If the state shows items already built, factor them in and keep recommending from the remaining slots so the full 6-item path still reflects the end-state build.",
+    "Based on the current game state — my champion, current inventory, the enemy team composition and their itemization, my chosen augments, and the game mode — give me my game plan: what to watch out for, who to focus, and my recommended 6-item build path in order.",
+    "",
+    "The 6-item buildPath represents my END-STATE inventory. Items I already own MUST appear in the buildPath using their exact name from the Item Catalog, in the position they belong in the end-state build. Recommend new items only for the slots that aren't already filled by what I own. Never suggest a 7th item — the inventory cap is 6 total, including items I already have.",
     "",
     "Return the 6 items in the `buildPath` field of your response. For each item:",
     "- name: exact item name from the Item Catalog.",
