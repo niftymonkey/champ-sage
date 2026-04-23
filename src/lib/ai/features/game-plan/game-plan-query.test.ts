@@ -2,9 +2,12 @@ import { describe, it, expect } from "vitest";
 import {
   buildGamePlanQuestion,
   extractBuildPath,
+  findDuplicateBoots,
   isUpdatePlanCommand,
 } from "./index";
-import type { CoachingResponse } from "../../types";
+import { GAME_PLAN_TASK_PROMPT } from "./prompt";
+import type { BuildPathItem, CoachingResponse } from "../../types";
+import type { Item } from "../../../data-ingest/types";
 
 describe("buildGamePlanQuestion", () => {
   const q = buildGamePlanQuestion();
@@ -206,5 +209,94 @@ describe("extractBuildPath", () => {
     };
 
     expect(extractBuildPath(response)[0].targetEnemy).toBe("Yi");
+  });
+});
+
+describe("GAME_PLAN_TASK_PROMPT", () => {
+  it("forbids multiple Boots-tagged items in the build path", () => {
+    // #109 AC: build path never contains two pairs of boots. The schema enum
+    // can't express uniqueness, so the rule lives in the prompt and is
+    // double-checked post-hoc by findDuplicateBoots.
+    expect(GAME_PLAN_TASK_PROMPT).toMatch(/\bboots\b/i);
+    expect(GAME_PLAN_TASK_PROMPT).toMatch(/at most one/i);
+  });
+});
+
+describe("findDuplicateBoots", () => {
+  function makeItem(id: number, name: string, tags: string[]): Item {
+    return {
+      id,
+      name,
+      description: "",
+      plaintext: "",
+      gold: { base: 0, total: 0, sell: 0, purchasable: true },
+      tags,
+      stats: {},
+      image: `${id}.png`,
+      mode: "standard",
+    };
+  }
+
+  const items = new Map<number, Item>([
+    [1001, makeItem(1001, "Boots", ["Boots"])],
+    [3006, makeItem(3006, "Berserker's Greaves", ["Boots"])],
+    [3047, makeItem(3047, "Plated Steelcaps", ["Boots"])],
+    [6655, makeItem(6655, "Luden's Companion", ["SpellDamage"])],
+    [3157, makeItem(3157, "Zhonya's Hourglass", ["SpellDamage", "Armor"])],
+  ]);
+
+  function item(name: string): BuildPathItem {
+    return { name, category: "core", targetEnemy: null, reason: "" };
+  }
+
+  it("returns empty when the build path has no boots", () => {
+    const path = [item("Luden's Companion"), item("Zhonya's Hourglass")];
+    expect(findDuplicateBoots(path, items)).toEqual([]);
+  });
+
+  it("returns empty when the build path has exactly one boots item", () => {
+    const path = [item("Berserker's Greaves"), item("Luden's Companion")];
+    expect(findDuplicateBoots(path, items)).toEqual([]);
+  });
+
+  it("returns all boots items when the build path has two distinct pairs", () => {
+    const path = [
+      item("Luden's Companion"),
+      item("Berserker's Greaves"),
+      item("Plated Steelcaps"),
+      item("Zhonya's Hourglass"),
+    ];
+    const dupes = findDuplicateBoots(path, items);
+    expect(dupes.map((b) => b.name)).toEqual([
+      "Berserker's Greaves",
+      "Plated Steelcaps",
+    ]);
+  });
+
+  it("detects the exact playtest regression (Boots of Swiftness + Mercury's Treads)", () => {
+    const fullItems = new Map(items);
+    fullItems.set(3009, makeItem(3009, "Boots of Swiftness", ["Boots"]));
+    fullItems.set(3111, makeItem(3111, "Mercury's Treads", ["Boots"]));
+    const path = [
+      item("Liandry's Torment"),
+      item("Boots of Swiftness"),
+      item("Rylai's Crystal Scepter"),
+      item("Mercury's Treads"),
+      item("Force of Nature"),
+      item("Jak'Sho, The Protean"),
+    ];
+    const dupes = findDuplicateBoots(path, fullItems);
+    expect(dupes).toHaveLength(2);
+    expect(dupes.map((b) => b.name).sort()).toEqual([
+      "Boots of Swiftness",
+      "Mercury's Treads",
+    ]);
+  });
+
+  it("returns empty when an unknown item name appears in the build path", () => {
+    // Can't classify unknown names as boots; schema enum already rejects
+    // most leakage. Helper should not throw or false-positive.
+    const path = [item("Totally Made Up Item"), item("Luden's Companion")];
+    expect(findDuplicateBoots(path, items)).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
 import type { CoachingFeature } from "../../feature";
 import type { BuildPathItem } from "../../types";
 import type { LoadedGameData } from "../../../data-ingest";
+import type { Item } from "../../../data-ingest/types";
 import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
 import { GAME_PLAN_TASK_PROMPT } from "./prompt";
 import { createGamePlanSchema, type GamePlanResult } from "./schema";
@@ -136,4 +137,32 @@ export function extractBuildPath(result: GamePlanResultLike): BuildPathItem[] {
     targetEnemy: null,
     reason: r.reasoning,
   }));
+}
+
+/**
+ * Post-hoc validator for the boots-uniqueness rule (#109).
+ *
+ * Schema enums can't express "at most one Boots-tagged value" — the name
+ * enum permits each pair of boots individually, and uniqueness across
+ * elements isn't a constraint JSON Schema models. The prompt carries the
+ * primary rule; this helper is a belt-and-suspenders detector that lets the
+ * pipeline log a warning when the LLM slips up.
+ *
+ * Returns every build-path entry whose name matches a Boots-tagged item,
+ * but only when two or more are present. A single pair is the expected case
+ * and returns an empty array. Unknown names (not in the catalog) are
+ * ignored — the schema enum already rejects most off-catalog leakage.
+ */
+export function findDuplicateBoots(
+  buildPath: readonly BuildPathItem[],
+  items: ReadonlyMap<number, Item>
+): BuildPathItem[] {
+  const bootsNames = new Set<string>();
+  for (const item of items.values()) {
+    if (item.tags.includes("Boots")) {
+      bootsNames.add(item.name);
+    }
+  }
+  const boots = buildPath.filter((entry) => bootsNames.has(entry.name));
+  return boots.length > 1 ? boots : [];
 }

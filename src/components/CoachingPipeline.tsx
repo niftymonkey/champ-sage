@@ -16,6 +16,7 @@ import type { CoachingFeature } from "../lib/ai/feature";
 import {
   createGamePlanFeature,
   extractBuildPath,
+  findDuplicateBoots,
   isUpdatePlanCommand,
   type GamePlanInput,
   type GamePlanResult,
@@ -236,6 +237,21 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       if (buildPath.length !== 6) {
         proactiveLog.warn(
           `Game plan build path has ${buildPath.length} items (expected 6)`
+        );
+      }
+
+      // #109: the prompt forbids more than one Boots-tagged item, but the
+      // schema enum can't express uniqueness. Log when the LLM slips so
+      // regressions are visible in playtest logs.
+      const duplicateBoots = findDuplicateBoots(
+        buildPath,
+        gameDataRef.current.items
+      );
+      if (duplicateBoots.length > 0) {
+        proactiveLog.warn(
+          `Game plan build path contains ${duplicateBoots.length} boots items: ${duplicateBoots
+            .map((b) => b.name)
+            .join(", ")}`
         );
       }
 
