@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreItemAwareness } from "./item-awareness";
+import { scoreItemAwareness } from "./scorers";
 
 describe("scoreItemAwareness", () => {
   // --- Should score 1.0 (good responses) ---

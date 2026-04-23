@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreGoldAwareRecommendations } from "./gold-aware-recommendations";
+import { scoreGoldAwareRecommendations } from "./scorers";
 
 describe("scoreGoldAwareRecommendations", () => {
   // --- N/A cases ---

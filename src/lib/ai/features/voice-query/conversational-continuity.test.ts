@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreConversationalContinuity } from "./conversational-continuity";
+import { scoreConversationalContinuity } from "./scorers";
 
 describe("scoreConversationalContinuity", () => {
   it("scores 1 when no expected references (not a continuity test)", () => {

@@ -122,3 +122,187 @@ export function scoreReasonBrevity(buildPath: BuildPathItem[]): number {
   }
   return satisfied / buildPath.length;
 }
+
+// ---------------------------------------------------------------------------
+// Scorers shared with game-plan's prose `answer` (relocated from the flat
+// `src/lib/ai/scorers/` directory in #108 phase 8).
+// ---------------------------------------------------------------------------
+
+/**
+ * Score response brevity. Augment/item questions should be 1-2 sentences.
+ * Tactical questions can be up to 4 bullet points.
+ *
+ * Returns 1.0 for concise responses, degrades linearly for verbose ones.
+ */
+export function scoreBrevity(response: string): number {
+  const sentences = response.split(/[.!?]+/).filter((s) => s.trim().length > 5);
+  if (sentences.length <= 3) return 1;
+  if (sentences.length <= 5) return 0.5;
+  return 0;
+}
+
+export type StateAwarenessRule =
+  | "grievous-wounds"
+  | "mr-needed"
+  | "enemy-comp"
+  | "existing-items";
+
+const GRIEVOUS_WOUNDS_KEYWORDS = [
+  "grievous wounds",
+  "anti-heal",
+  "antiheal",
+  "morellonomicon",
+  "thornmail",
+  "oblivion orb",
+  "chempunk",
+  "chainsword",
+];
+
+const MR_KEYWORDS = [
+  "magic resist",
+  " mr ",
+  " mr.",
+  " mr,",
+  "spirit visage",
+  "force of nature",
+  "banshee's veil",
+  "banshee's",
+  "abyssal mask",
+  "wit's end",
+  "maw of malmortius",
+  "malmortius",
+  "hollow radiance",
+  "kaenic rookern",
+];
+
+const COMP_AWARENESS_KEYWORDS = [
+  " ap ",
+  " ad ",
+  "magic damage",
+  "physical damage",
+  "ap-heavy",
+  "ad-heavy",
+  "ap heavy",
+  "ad heavy",
+  "all ap",
+  "all ad",
+  "mostly ap",
+  "mostly ad",
+];
+
+function hasKeyword(lower: string, keywords: string[]): boolean {
+  return keywords.some((kw) => lower.includes(kw));
+}
+
+/**
+ * Check whether a coaching response demonstrates awareness of the game state.
+ *
+ * Each rule in `hints` maps to a set of keywords that should appear in the
+ * response. All rules must pass for a score of 1. Any failure yields 0.
+ *
+ * Returns 1.0 if no hints are provided (not a state-awareness fixture).
+ */
+export function scoreStateAwareness(
+  response: string,
+  hints: StateAwarenessRule[] | undefined,
+  items: string[],
+  enemyChampions?: string[]
+): number {
+  if (!hints || hints.length === 0) return 1;
+
+  const lower = response.toLowerCase();
+
+  for (const rule of hints) {
+    switch (rule) {
+      case "grievous-wounds":
+        if (!hasKeyword(lower, GRIEVOUS_WOUNDS_KEYWORDS)) return 0;
+        break;
+
+      case "mr-needed":
+        if (!hasKeyword(lower, MR_KEYWORDS)) return 0;
+        break;
+
+      case "enemy-comp": {
+        const mentionsEnemy = enemyChampions?.some((name) =>
+          lower.includes(name.toLowerCase())
+        );
+        const mentionsProfile = hasKeyword(lower, COMP_AWARENESS_KEYWORDS);
+        if (!mentionsEnemy && !mentionsProfile) return 0;
+        break;
+      }
+
+      case "existing-items": {
+        if (items.length === 0) break;
+        const mentionsItem = items.some(
+          (item) => item.length > 3 && lower.includes(item.toLowerCase())
+        );
+        if (!mentionsItem) return 0;
+        break;
+      }
+    }
+  }
+
+  return 1;
+}
+
+const PIVOT_EXPLANATION_PATTERNS = [
+  "because",
+  "since ",
+  "now that",
+  "changed",
+  "instead",
+  "switched",
+  "pivot",
+  "better option",
+  "no longer",
+  "doesn't make sense",
+  "less valuable",
+  "more valuable",
+  "synergizes",
+  "synergy",
+  "given that",
+  "due to",
+];
+
+const PIVOT_DISMISSAL_PATTERNS = [
+  "instead",
+  "switched",
+  "pivot",
+  "no longer",
+  "doesn't make sense",
+  "less valuable",
+  "rather than",
+];
+
+/**
+ * Score whether a recommendation change (pivot) is properly explained.
+ *
+ * - No pivot expected or detected → 1.0 (not applicable)
+ * - Pivot detected + explanation present → 1.0
+ * - Pivot detected + no explanation → 0.0
+ * - Pivot expected but not detected (still recommends same) → 0.5
+ */
+export function scorePivotExplanation(
+  response: string,
+  pivotExpected: boolean | undefined,
+  priorRecommendation: string | undefined,
+  _history: Array<{ question: string; answer: string }>
+): number {
+  if (pivotExpected === undefined) return 1;
+  if (!priorRecommendation) return 1;
+
+  const lower = response.toLowerCase();
+  const priorLower = priorRecommendation.toLowerCase();
+
+  const mentionsPrior = lower.includes(priorLower);
+  const dismissesIt = PIVOT_DISMISSAL_PATTERNS.some((p) => lower.includes(p));
+  const stillRecommendsSame = mentionsPrior && !dismissesIt;
+
+  if (pivotExpected && stillRecommendsSame) return 0.5;
+  if (!pivotExpected) return 1;
+
+  const hasExplanation = PIVOT_EXPLANATION_PATTERNS.some((p) =>
+    lower.includes(p)
+  );
+  return hasExplanation ? 1 : 0;
+}

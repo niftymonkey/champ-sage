@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreGoldAwareness } from "./gold-awareness";
+import { scoreGoldAwareness } from "./scorers";
 
 describe("scoreGoldAwareness", () => {
   it("scores 1 for non-item questions", () => {

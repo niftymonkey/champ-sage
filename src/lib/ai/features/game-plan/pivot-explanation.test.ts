@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scorePivotExplanation } from "./pivot-explanation";
+import { scorePivotExplanation } from "./scorers";
 
 describe("scorePivotExplanation", () => {
   const emptyHistory: Array<{ question: string; answer: string }> = [];

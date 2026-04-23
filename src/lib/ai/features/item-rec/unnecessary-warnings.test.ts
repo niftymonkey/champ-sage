@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreUnnecessaryWarnings } from "./unnecessary-warnings";
+import { scoreUnnecessaryWarnings } from "./scorers";
 
 describe("scoreUnnecessaryWarnings", () => {
   it("scores 1 for clean response without warnings", () => {

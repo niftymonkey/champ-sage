@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreStateAwareness } from "./state-awareness";
+import { scoreStateAwareness } from "./scorers";
 
 describe("scoreStateAwareness", () => {
   it("returns 1 when no hints provided (N/A fixture)", () => {
