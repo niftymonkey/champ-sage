@@ -28,6 +28,7 @@ const GATE_SCORERS = [
   "Augment Re-Roll Accuracy",
   "State Awareness",
   "Gold-Aware Recommendations",
+  "Build Path Structure",
 ];
 const RANKING_SCORERS = [
   "Brevity",
@@ -36,6 +37,9 @@ const RANKING_SCORERS = [
   "Gold Awareness",
   "Unnecessary Warnings",
   "Pivot Explanation",
+  "Counter Targeting",
+  "Category Diversity",
+  "Reason Brevity",
 ];
 const GATE_THRESHOLD = 0.8;
 
@@ -191,6 +195,10 @@ const SCORER_LABELS: Record<string, string> = {
   "State Awareness": "State",
   "Gold-Aware Recommendations": "GoldFmt",
   "Pivot Explanation": "Pivot",
+  "Build Path Structure": "BPStr",
+  "Counter Targeting": "CntrTgt",
+  "Category Diversity": "CatDiv",
+  "Reason Brevity": "RsnBrv",
 };
 
 function label(scorer: string): string {

@@ -37,6 +37,7 @@ import { aramMayhemMode, aramMode, classicMode } from "../mode";
 import type { GameMode } from "../mode/types";
 import type { GameState } from "../game-state/types";
 import type { LiveGameState } from "../reactive/types";
+import type { BuildPathItem } from "./types";
 import {
   augmentFitFeature,
   type AugmentFitInput,
@@ -53,14 +54,25 @@ import {
   type VoiceQueryInput,
   type VoiceQueryResult,
 } from "./features/voice-query";
-import { scoreItemAwareness } from "./scorers/item-awareness";
-import { scoreBrevity, scoreDecisiveness } from "./scorers/response-format";
-import { scoreConversationalContinuity } from "./scorers/conversational-continuity";
-import { scoreGoldAwareness } from "./scorers/gold-awareness";
-import { scoreUnnecessaryWarnings } from "./scorers/unnecessary-warnings";
-import { scoreStateAwareness } from "./scorers/state-awareness";
-import { scorePivotExplanation } from "./scorers/pivot-explanation";
-import { scoreGoldAwareRecommendations } from "./scorers/gold-aware-recommendations";
+import {
+  scoreBrevity,
+  scoreBuildPathStructure,
+  scoreCategoryDiversity,
+  scoreCounterTargeting,
+  scorePivotExplanation,
+  scoreReasonBrevity,
+  scoreStateAwareness,
+} from "./features/game-plan/scorers";
+import {
+  scoreConversationalContinuity,
+  scoreDecisiveness,
+  scoreGoldAwareness,
+} from "./features/voice-query/scorers";
+import {
+  scoreGoldAwareRecommendations,
+  scoreItemAwareness,
+  scoreUnnecessaryWarnings,
+} from "./features/item-rec/scorers";
 
 // --- Types ---
 
@@ -99,6 +111,15 @@ interface EvalInput {
 interface EvalOutput {
   answer: string;
   recommendations: Array<{ name: string; fit: string; reasoning: string }>;
+  /**
+   * Raw build path from the game-plan feature, when applicable. Populated
+   * only for game-plan results so the #99 follow-up scorers
+   * (`scoreBuildPathStructure`, `scoreCounterTargeting`,
+   * `scoreCategoryDiversity`, `scoreReasonBrevity`) can operate on the
+   * structured shape rather than the prose `answer`. Other features set
+   * this to an empty array; their scorers short-circuit appropriately.
+   */
+  buildPath: BuildPathItem[];
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -247,11 +268,57 @@ const goldAwareRecommendations = createScorer<EvalInput, EvalOutput>({
   },
 });
 
+// --- #99 follow-up scorers (game-plan only) ---
+//
+// Each operates on the structured `buildPath` field. Other features set
+// buildPath to an empty array; the scorer's empty-array baseline returns
+// 1.0 so non-game-plan suites aren't penalized.
+
+const buildPathStructure = createScorer<EvalInput, EvalOutput>({
+  name: "Build Path Structure",
+  description:
+    "Game-plan: build path has exactly 6 items with no duplicate names",
+  scorer: ({ output }) => {
+    if (output.buildPath.length === 0) return 1;
+    return scoreBuildPathStructure(output.buildPath);
+  },
+});
+
+const counterTargeting = createScorer<EvalInput, EvalOutput>({
+  name: "Counter Targeting",
+  description:
+    "Game-plan: counter items name a roster enemy; non-counter items leave targetEnemy null",
+  scorer: ({ input, output }) => {
+    if (output.buildPath.length === 0) return 1;
+    return scoreCounterTargeting(output.buildPath, input.enemyChampions);
+  },
+});
+
+const categoryDiversity = createScorer<EvalInput, EvalOutput>({
+  name: "Category Diversity",
+  description:
+    "Game-plan: penalize all-one-category builds and overuse of 'situational'",
+  scorer: ({ output }) => {
+    if (output.buildPath.length === 0) return 1;
+    return scoreCategoryDiversity(output.buildPath);
+  },
+});
+
+const reasonBrevity = createScorer<EvalInput, EvalOutput>({
+  name: "Reason Brevity",
+  description: "Game-plan: per-item reasons fit within an 8-word ceiling",
+  scorer: ({ output }) => {
+    if (output.buildPath.length === 0) return 1;
+    return scoreReasonBrevity(output.buildPath);
+  },
+});
+
 const GATE_SCORERS = [
   itemAwareness,
   structuredOutput,
   stateAwareness,
   goldAwareRecommendations,
+  buildPathStructure,
 ];
 const RANKING_SCORERS = [
   brevity,
@@ -260,6 +327,9 @@ const RANKING_SCORERS = [
   goldAwareness,
   unnecessaryWarnings,
   pivotExplanation,
+  counterTargeting,
+  categoryDiversity,
+  reasonBrevity,
 ];
 const ALL_SCORERS = [...GATE_SCORERS, ...RANKING_SCORERS];
 
@@ -425,6 +495,7 @@ function normalize(
     return {
       answer,
       recommendations: r.recommendations,
+      buildPath: [],
     };
   }
   if (kind === "game-plan") {
@@ -436,12 +507,14 @@ function normalize(
         fit: "strong",
         reasoning: item.reason,
       })),
+      buildPath: r.buildPath,
     };
   }
   const r = result as VoiceQueryResult;
   return {
     answer: r.answer,
     recommendations: r.recommendations,
+    buildPath: [],
   };
 }
 
