@@ -605,6 +605,14 @@ OpenAI's Responses API with structured outputs enforces rules beyond standard JS
 - **Local guard:** `src/lib/ai/schemas.test.ts` walks the schema tree and asserts `required` completeness + `additionalProperties: false` at every level. Runs offline; catches violations before they hit the API.
 - **Consequence for TS types:** prefer `field: T | null` over `field?: T` when the field is part of an AI-SDK response schema, to keep the TS type honest about what the model returns.
 
+### Cross-element array constraints belong in prompt + post-call validator
+
+OpenAI strict structured outputs disallow the JSON Schema keywords that would express uniqueness-by-predicate: `contains`, `maxContains`, `uniqueItems`, and the array-length keywords (`minItems`/`maxItems`) are all outside the strict-mode subset. Enums, `required`, and `additionalProperties` are in. Consequence: any rule of the form "at most N elements of the array satisfy predicate P" cannot be enforced structurally.
+
+- **Example (#109):** the game plan's 6-item `buildPath` must contain at most one Boots-tagged item. The `name` enum restricts each element to a valid catalog entry but allows multiple boots (each pair is individually valid). The rule lives in `GAME_PLAN_TASK_PROMPT` as a sentence and is double-checked after the call by `findDuplicateBoots` in `src/lib/ai/features/game-plan/index.ts`, which reads item tags from `gameData.items` and returns the offending entries when 2+ are present. The pipeline logs a warn; it does not rewrite. Two-pass "detect + log" is the observability baseline; remediation (retry, drop, replace) is a feature choice per rule.
+- **Eval coverage:** `Boots Uniqueness` gate scorer in `coaching.eval.ts` wraps `findDuplicateBoots` so model-comparison runs surface the violation rate alongside other hard-correctness gates.
+- **When to reach for this pattern:** any constraint that relates multiple elements of a structured-output array to each other or to external data (catalogs, the player's current inventory, roster membership, etc.). The schema's job ends at "each element is individually valid."
+
 ### Game plan prompt is state-agnostic
 
 `buildGamePlanQuestion()` in `src/lib/ai/game-plan-query.ts` is deliberately free of temporal anchors ("start of the game", "mid-game", etc.). The `[Game State]` block preceding every message carries all temporal context (current items, game time, enemy itemization, augments picked, KDA), so one prompt drives both the auto-fired opening plan and the mid-game "Update Game Plan" voice command. Adding phase-specific wording introduces contradictions when the state snapshot disagrees with the prompt (observed: "This is the start of the game" while state showed `t=18:42`, 4 items built — model hedged or re-reasoned from scratch).

@@ -15,6 +15,7 @@ export {
   createGamePlanFeature,
   buildGamePlanQuestion,
   extractBuildPath,
+  findDuplicateBoots,
   isUpdatePlanCommand,
   type GamePlanInput,
   type GamePlanResult,

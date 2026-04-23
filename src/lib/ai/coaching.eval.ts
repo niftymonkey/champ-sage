@@ -45,6 +45,7 @@ import {
 } from "./features/augment-fit";
 import {
   createGamePlanFeature,
+  findDuplicateBoots,
   isUpdatePlanCommand,
   type GamePlanInput,
   type GamePlanResult,
@@ -313,12 +314,30 @@ const reasonBrevity = createScorer<EvalInput, EvalOutput>({
   },
 });
 
+// Gate scorer for the boots-uniqueness rule (#109). Schema enums can't
+// express "at most one Boots-tagged item," so this scorer is how we track
+// the violation rate across models and prompt revisions. Binary: 1 if the
+// build path has ≤1 boots, 0 if it has 2+. gameData is loaded at module
+// top-level below; the scorer closure reads it at scoring time.
+const bootsUniqueness = createScorer<EvalInput, EvalOutput>({
+  name: "Boots Uniqueness",
+  description:
+    "Game-plan: build path contains at most one Boots-tagged item (#109)",
+  scorer: ({ output }) => {
+    if (output.buildPath.length === 0) return 1;
+    return findDuplicateBoots(output.buildPath, gameData.items).length === 0
+      ? 1
+      : 0;
+  },
+});
+
 const GATE_SCORERS = [
   itemAwareness,
   structuredOutput,
   stateAwareness,
   goldAwareRecommendations,
   buildPathStructure,
+  bootsUniqueness,
 ];
 const RANKING_SCORERS = [
   brevity,
