@@ -11,7 +11,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
-import type { ConversationSession } from "../lib/ai/conversation-session";
+import type { MatchSession } from "../lib/ai/match-session";
 import type { CoachingFeature } from "../lib/ai/feature";
 import {
   createGamePlanFeature,
@@ -27,7 +27,7 @@ import {
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
-import { createConversationSession } from "../lib/ai/conversation-session";
+import { createMatchSession } from "../lib/ai/match-session";
 import { getPersonality } from "../lib/ai/personality-store";
 import { buildBaseContext } from "../lib/ai/base-context";
 import { takeGameSnapshot } from "../lib/ai/state-formatter";
@@ -67,7 +67,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const modeRef = useRef(mode);
   const enemyStatsRef = useRef(enemyStats);
   const chosenAugmentsRef = useRef(chosenAugments);
-  const sessionRef = useRef<ConversationSession | null>(null);
+  const sessionRef = useRef<MatchSession | null>(null);
   const gamePlanFeatureRef = useRef<CoachingFeature<
     GamePlanInput,
     GamePlanResult
@@ -108,8 +108,23 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       gameData: gameDataRef.current,
       gameState,
     });
-    sessionRef.current = createConversationSession(baseContext, apiKey, {
+    // TODO(#108 phase 7): champ-select session creation + transitionTo wiring
+    // is intentionally deferred until #70 (champ-select coaching) and #84
+    // (post-game follow-up) land. Today no feature declares supportedPhases
+    // for "champ-select" or "post-game", so wiring those transitions here
+    // would just log no-op events. The infrastructure (phase getter,
+    // transitionTo, supportedPhases enforcement) is in place — when those
+    // tickets land, they should:
+    //   - Move session creation to first non-null `liveGameState.champSelect`
+    //     (phase: "champ-select")
+    //   - Call `session.transitionTo("in-game", buildBaseContext(...))` when
+    //     `activePlayer` first appears (replacing the current "create on
+    //     activePlayer" path)
+    //   - Call `session.transitionTo("post-game", ...)` in the
+    //     game-just-ended effect below, before the session is reset
+    sessionRef.current = createMatchSession(baseContext, apiKey, {
       personality: getPersonality,
+      phase: "in-game",
     });
     gamePlanFeatureRef.current = createGamePlanFeature(gameDataRef.current);
     setChosenAugments([]);

@@ -9,7 +9,7 @@
  * - `coachingResponseSchema` / `buildGameSystemPrompt` / `buildFeatureRules`
  *   → these are the pre-#108 monolithic seams. The eval must not bypass
  *   per-feature schemas/prompts by reaching for them.
- * - The eval must import `buildBaseContext` and `createConversationSession`
+ * - The eval must import `buildBaseContext` and `createMatchSession`
  *   so the system prompt and dispatch path stay aligned with production.
  */
 import { describe, expect, it } from "vitest";
@@ -73,9 +73,9 @@ describe("coaching.eval.ts anti-drift guards", () => {
           "the eval must build its system prompt via buildBaseContext so it stays byte-equal to what production uses",
       },
       {
-        token: "createConversationSession",
+        token: "createMatchSession",
         reason:
-          "the eval must dispatch through createConversationSession so model-injection + session.ask + history wiring all run",
+          "the eval must dispatch through createMatchSession so model-injection + session.ask + history wiring all run",
       },
       {
         token: "session.ask",

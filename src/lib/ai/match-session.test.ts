@@ -1,23 +1,23 @@
 import { describe, it, expect } from "vitest";
-import { createConversationSession } from "./conversation-session";
+import { createMatchSession } from "./match-session";
 
 const API_KEY = "test-api-key";
 
-describe("createConversationSession", () => {
+describe("createMatchSession", () => {
   const SYSTEM_PROMPT = "You are a coaching AI.";
 
   it("starts with empty messages", () => {
-    const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+    const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
     expect(session.messages).toEqual([]);
   });
 
   it("preserves the system prompt", () => {
-    const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+    const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
     expect(session.systemPrompt).toBe(SYSTEM_PROMPT);
   });
 
   it("adds a user message with state snapshot and question", () => {
-    const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+    const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
     session.addUserMessage("Level: 5\nGold: 1200", "What should I buy?");
 
     expect(session.messages).toHaveLength(1);
@@ -28,7 +28,7 @@ describe("createConversationSession", () => {
   });
 
   it("adds an assistant message", () => {
-    const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+    const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
     session.addUserMessage("Level: 5", "What should I buy?");
     session.addAssistantMessage('{"answer":"Buy Rabadon\'s."}');
 
@@ -38,7 +38,7 @@ describe("createConversationSession", () => {
   });
 
   it("grows the message array across multiple turns", () => {
-    const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+    const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
 
     session.addUserMessage("State 1", "Question 1");
     session.addAssistantMessage("Answer 1");
@@ -56,7 +56,7 @@ describe("createConversationSession", () => {
 
   describe("removeLastUserMessage", () => {
     it("removes the last message when it is a user message", () => {
-      const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+      const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
       session.addUserMessage("State", "Question");
       session.removeLastUserMessage();
 
@@ -64,7 +64,7 @@ describe("createConversationSession", () => {
     });
 
     it("removes only the last user message, preserving earlier messages", () => {
-      const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+      const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
       session.addUserMessage("State 1", "Q1");
       session.addAssistantMessage("A1");
       session.addUserMessage("State 2", "Q2");
@@ -77,7 +77,7 @@ describe("createConversationSession", () => {
     });
 
     it("throws if the last message is not a user message", () => {
-      const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+      const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
       session.addUserMessage("State", "Q");
       session.addAssistantMessage("A");
 
@@ -87,7 +87,7 @@ describe("createConversationSession", () => {
     });
 
     it("throws if messages array is empty", () => {
-      const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+      const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
 
       expect(() => session.removeLastUserMessage()).toThrow(
         "Cannot remove from empty message array"
@@ -97,7 +97,7 @@ describe("createConversationSession", () => {
 
   describe("reset", () => {
     it("clears all messages", () => {
-      const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+      const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
       session.addUserMessage("State", "Q");
       session.addAssistantMessage("A");
 
@@ -107,7 +107,7 @@ describe("createConversationSession", () => {
     });
 
     it("preserves the system prompt after reset", () => {
-      const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+      const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
       session.addUserMessage("State", "Q");
       session.reset();
 
@@ -115,7 +115,7 @@ describe("createConversationSession", () => {
     });
 
     it("allows new messages after reset", () => {
-      const session = createConversationSession(SYSTEM_PROMPT, API_KEY);
+      const session = createMatchSession(SYSTEM_PROMPT, API_KEY);
       session.addUserMessage("State 1", "Q1");
       session.reset();
       session.addUserMessage("State 2", "Q2");

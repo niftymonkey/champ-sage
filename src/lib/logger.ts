@@ -5,19 +5,23 @@
  * In Electron, logs are sent via IPC to the main process which writes
  * them to the NDJSON log file.
  *
- * electron-log is loaded lazily on the first log invocation — not at
- * module-top — so importers that never actually log (notably the evalite
- * harness, which transitively pulls in conversation-session.ts →
- * recommendation-engine.ts → logger.ts but never calls a logger method)
- * don't trigger electron-log's transport initialization. Top-level eager
- * loading caused evalite's test-discovery phase to hang on electron-log's
- * IPC-transport setup.
+ * Why static import (instead of dynamic-import lazy load):
+ *   - The earlier lazy form `import("electron-log/renderer")` hung
+ *     indefinitely in Vite 7's dev server — the dynamic import promise
+ *     never resolved, silently dropping every scoped renderer log.
+ *   - The original reason for going lazy was that evalite (Node) blew up
+ *     when statically importing `electron-log/renderer`. That's now
+ *     handled at the bundler layer: `vitest.config.ts` aliases
+ *     `electron-log/renderer` to a no-op stub for test + eval contexts.
+ *     Production renderer builds get the real module.
  *
  * Usage:
  *   import { getLogger } from '../lib/logger';
  *   const log = getLogger('engine');
  *   log.info('LCU found', { port: 1234 });
  */
+
+import electronLog from "electron-log/renderer";
 
 export type LogModule =
   | "app"
@@ -44,65 +48,20 @@ export interface ScopedLogger {
   trace: (...args: unknown[]) => void;
 }
 
-type LogLevel = "error" | "warn" | "info" | "debug" | "silly";
-
-type ElectronLogScope = {
-  error: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
-  info: (...args: unknown[]) => void;
-  debug: (...args: unknown[]) => void;
-  silly: (...args: unknown[]) => void;
-};
-
-type ElectronLog = {
-  scope: (name: string) => ElectronLogScope;
-};
-
-let cachedElectronLog: ElectronLog | null = null;
-let loadingPromise: Promise<ElectronLog> | null = null;
-
-function loadElectronLog(): Promise<ElectronLog> {
-  if (cachedElectronLog) return Promise.resolve(cachedElectronLog);
-  if (!loadingPromise) {
-    loadingPromise = import("electron-log/renderer").then((mod) => {
-      cachedElectronLog = mod.default as unknown as ElectronLog;
-      return cachedElectronLog;
-    });
-  }
-  return loadingPromise;
-}
-
 const scopeCache = new Map<LogModule, ScopedLogger>();
 
 export function getLogger(module: LogModule): ScopedLogger {
-  const cached = scopeCache.get(module);
-  if (cached) return cached;
+  let logger = scopeCache.get(module);
+  if (logger) return logger;
 
-  let scopeInstance: ElectronLogScope | null = null;
-
-  function invoke(level: LogLevel, args: unknown[]): void {
-    if (scopeInstance) {
-      scopeInstance[level](...args);
-      return;
-    }
-    if (cachedElectronLog) {
-      scopeInstance = cachedElectronLog.scope(module);
-      scopeInstance[level](...args);
-      return;
-    }
-    void loadElectronLog().then((log) => {
-      if (!scopeInstance) scopeInstance = log.scope(module);
-      scopeInstance[level](...args);
-    });
-  }
-
-  const logger: ScopedLogger = {
-    error: (...args) => invoke("error", args),
-    warn: (...args) => invoke("warn", args),
-    info: (...args) => invoke("info", args),
-    debug: (...args) => invoke("debug", args),
+  const scoped = electronLog.scope(module);
+  logger = {
+    error: (...args: unknown[]) => scoped.error(...args),
+    warn: (...args: unknown[]) => scoped.warn(...args),
+    info: (...args: unknown[]) => scoped.info(...args),
+    debug: (...args: unknown[]) => scoped.debug(...args),
     // electron-log calls this "silly" — we expose it as "trace"
-    trace: (...args) => invoke("silly", args),
+    trace: (...args: unknown[]) => scoped.silly(...args),
   };
 
   scopeCache.set(module, logger);

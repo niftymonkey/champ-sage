@@ -1,8 +1,8 @@
 /**
  * Runtime-swappable personality selection.
  *
- * The `ConversationSession` reads the current personality fresh on every
- * `ask()` call (via the function form of `createConversationSession`'s
+ * The `MatchSession` reads the current personality fresh on every
+ * `ask()` call (via the function form of `createMatchSession`'s
  * personality option). That means the player can flip personalities
  * mid-match and the very next coaching response uses the new voice —
  * useful for comparing how `briefPersonality` and `piratePersonality`

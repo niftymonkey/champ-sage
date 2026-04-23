@@ -2,7 +2,7 @@
  * Coaching evaluation pipeline.
  *
  * Replays coaching sessions from multi-turn fixtures through the production
- * code path. The harness builds a ConversationSession with an injected
+ * code path. The harness builds a MatchSession with an injected
  * OpenRouter model, pre-loads history as prose, then invokes
  * `session.ask(feature, input)` for the test turn. The model provider is
  * the only eval-specific knob — everything else (base context, feature
@@ -31,7 +31,7 @@ import {
   takeGameSnapshot,
   type GameSnapshot,
 } from "./state-formatter";
-import { createConversationSession } from "./conversation-session";
+import { createMatchSession } from "./match-session";
 import { computeEnemyStats } from "./enemy-stats";
 import { aramMayhemMode, aramMode, classicMode } from "../mode";
 import type { GameMode } from "../mode/types";
@@ -112,7 +112,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 //
 // Evals always use OpenRouter via EVAL_OPENROUTER_API_KEY. This keeps eval
 // costs separate from the app's VITE_OPENAI_API_KEY. OpenRouter is injected
-// into `createConversationSession` so the production call path (session.ask
+// into `createMatchSession` so the production call path (session.ask
 // → runFeatureCall → generateText) is reused verbatim.
 
 const OPENROUTER_KEY = process.env.EVAL_OPENROUTER_API_KEY;
@@ -461,7 +461,7 @@ function buildEvalInput(f: MultiTurnFixture): EvalInput {
   const stateText = snapshot ? formatStateSnapshot(snapshot) : "";
 
   const runOnce = async (model: LanguageModel): Promise<EvalOutput> => {
-    const session = createConversationSession(baseContext, openrouterKey, {
+    const session = createMatchSession(baseContext, openrouterKey, {
       model,
     });
 

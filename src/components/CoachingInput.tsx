@@ -2,10 +2,10 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import type { CoachingResponse } from "../lib/ai/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
-import type { ConversationSession } from "../lib/ai/conversation-session";
+import type { MatchSession } from "../lib/ai/match-session";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
-import { createConversationSession } from "../lib/ai/conversation-session";
+import { createMatchSession } from "../lib/ai/match-session";
 import { augmentFitFeature } from "../lib/ai/features/augment-fit";
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import { buildBaseContext } from "../lib/ai/base-context";
@@ -39,7 +39,7 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
   const modeRef = useRef(mode);
   const enemyStatsRef = useRef(enemyStats);
   const chosenAugmentsRef = useRef(chosenAugments);
-  const sessionRef = useRef<ConversationSession | null>(null);
+  const sessionRef = useRef<MatchSession | null>(null);
 
   liveGameStateRef.current = liveGameState;
   gameDataRef.current = gameData;
@@ -67,7 +67,7 @@ export function CoachingInput({ gameData }: CoachingInputProps) {
     };
 
     const baseContext = buildBaseContext({ mode, gameData, gameState });
-    sessionRef.current = createConversationSession(baseContext, apiKey);
+    sessionRef.current = createMatchSession(baseContext, apiKey);
     setChosenAugments([]);
     setLatestExchange(null);
     setError(null);

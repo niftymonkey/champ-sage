@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { jsonSchema } from "ai";
-import { createConversationSession } from "./conversation-session";
+import { createMatchSession } from "./match-session";
 import type { CoachingFeature } from "./feature";
 
 vi.mock("ai", async () => {
@@ -68,7 +68,7 @@ describe("session.ask", () => {
 
   it("sends the session base context as system when the feature task prompt is empty", async () => {
     const { noopPersonality } = await import("./personality");
-    const session = createConversationSession("BASE", "test-key", {
+    const session = createMatchSession("BASE", "test-key", {
       personality: noopPersonality,
     });
     const feature = createTestFeature();
@@ -89,7 +89,7 @@ describe("session.ask", () => {
 
   it("composes system = base context + feature task prompt", async () => {
     const { noopPersonality } = await import("./personality");
-    const session = createConversationSession("BASE", "test-key", {
+    const session = createMatchSession("BASE", "test-key", {
       personality: noopPersonality,
     });
     const feature = createTestFeature();
@@ -110,7 +110,7 @@ describe("session.ask", () => {
   });
 
   it("appends a custom personality suffix after the feature task prompt", async () => {
-    const session = createConversationSession("BASE", "test-key", {
+    const session = createMatchSession("BASE", "test-key", {
       personality: {
         id: "dramatic",
         suffix: () => "DRAMATIC VOICE",
@@ -135,7 +135,7 @@ describe("session.ask", () => {
 
   it("noop personality leaves the system prompt unchanged", async () => {
     const { noopPersonality } = await import("./personality");
-    const session = createConversationSession("BASE", "test-key", {
+    const session = createMatchSession("BASE", "test-key", {
       personality: noopPersonality,
     });
     const feature = createTestFeature();
@@ -155,7 +155,7 @@ describe("session.ask", () => {
     const { noopPersonality, piratePersonality } =
       await import("./personality");
     let current: typeof noopPersonality = noopPersonality;
-    const session = createConversationSession("BASE", "test-key", {
+    const session = createMatchSession("BASE", "test-key", {
       personality: () => current,
     });
     const feature = createTestFeature();
@@ -181,7 +181,7 @@ describe("session.ask", () => {
   });
 
   it("default personality (brief) appends voice rules after the task prompt", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
 
     mockGenerateText.mockResolvedValueOnce({
@@ -197,7 +197,7 @@ describe("session.ask", () => {
   });
 
   it("pushes the feature's user message to history and sends it to generateText", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
 
     mockGenerateText.mockResolvedValueOnce({
@@ -220,7 +220,7 @@ describe("session.ask", () => {
   });
 
   it("propagates the caller's abort signal to generateText", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
     const userController = new AbortController();
 
@@ -245,7 +245,7 @@ describe("session.ask", () => {
   });
 
   it("tags the result as retried via extractResult when attempt 2 wins", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
 
     mockGenerateText
@@ -268,7 +268,7 @@ describe("session.ask", () => {
   });
 
   it("rolls back the orphaned user message when both attempts fail", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
 
     mockGenerateText
@@ -283,7 +283,7 @@ describe("session.ask", () => {
   });
 
   it("does not retry on abort errors", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
 
     const abortErr = new Error("The operation was aborted.");
@@ -298,7 +298,7 @@ describe("session.ask", () => {
   });
 
   it("does not tag as retried when attempt 1 succeeds", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
 
     mockGenerateText.mockResolvedValueOnce({
@@ -316,7 +316,7 @@ describe("session.ask", () => {
   });
 
   it("carries conversation history across multiple ask() calls", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
 
     mockGenerateText
@@ -344,7 +344,7 @@ describe("session.ask", () => {
   });
 
   it("stores the feature's summarizeForHistory output as the assistant turn", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();
 
     mockGenerateText.mockResolvedValueOnce({
@@ -369,7 +369,7 @@ describe("session.ask", () => {
     });
 
     it("starts attempt 2 after 10s if attempt 1 still pending", async () => {
-      const session = createConversationSession("BASE", "test-key");
+      const session = createMatchSession("BASE", "test-key");
       const feature = createTestFeature();
 
       const deferredA = createDeferred();
@@ -396,7 +396,7 @@ describe("session.ask", () => {
     });
 
     it("returns attempt 1's result if it wins the race against attempt 2", async () => {
-      const session = createConversationSession("BASE", "test-key");
+      const session = createMatchSession("BASE", "test-key");
       const feature = createTestFeature();
 
       const deferredA = createDeferred();

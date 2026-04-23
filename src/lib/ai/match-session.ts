@@ -1,25 +1,32 @@
 /**
- * Manages the multi-turn conversation message array for a game session.
+ * Match-spanning conversation session.
+ *
+ * A `MatchSession` lives across the lifecycle of a single match —
+ * champ-select → in-game → post-game. The system prompt rebuilds when the
+ * phase changes (different base context per phase), but `messages[]` is
+ * cumulative: prior-phase asks remain in the LLM's context so a post-game
+ * follow-up can reference what was discussed during champ-select or
+ * in-game without restating it.
  *
  * Each user message includes a full game state snapshot (not a diff),
- * re-anchoring the LLM to ground truth every turn. The system prompt is
- * set once at session creation and composed per-call with the feature's
- * task prompt.
+ * re-anchoring the LLM to ground truth every turn. The session enforces
+ * `feature.supportedPhases` — calling `ask()` with a feature that doesn't
+ * support the current phase throws, catching wiring bugs early.
  *
  * Usage:
- *   const session = createConversationSession(systemPrompt, apiKey);
+ *   const session = createMatchSession(systemPrompt, apiKey);
  *   const { value, retried } = await session.ask(someFeature, input);
  */
 
 import type { LanguageModel, ModelMessage } from "ai";
-import type { AskResult, CoachingFeature } from "./feature";
+import type { AskResult, CoachingFeature, MatchPhase } from "./feature";
 import { runFeatureCall } from "./recommendation-engine";
 import { briefPersonality, type PersonalityLayer } from "./personality";
 import { getLogger } from "../logger";
 
 const sessionLog = getLogger("coaching:session");
 
-export interface CreateConversationSessionOptions {
+export interface CreateMatchSessionOptions {
   /**
    * Optional model override applied to every `session.ask()` call. When
    * omitted, the engine resolves the production model via the apiKey.
@@ -36,25 +43,44 @@ export interface CreateConversationSessionOptions {
    * historically lived inside `buildBaseContext`.
    */
   readonly personality?: PersonalityLayer | (() => PersonalityLayer);
+  /**
+   * Initial lifecycle phase. Defaults to `"in-game"` so callers that don't
+   * yet wire phase transitions retain pre-Phase 7 behavior.
+   */
+  readonly phase?: MatchPhase;
 }
 
-export interface ConversationSession {
+export interface MatchSession {
   readonly systemPrompt: string;
   readonly messages: readonly ModelMessage[];
+  readonly phase: MatchPhase;
 
   /**
    * Feature-typed LLM call. Composes the system prompt (session base +
-   * feature task), appends the feature's user message to history, invokes
-   * the engine, appends the assistant turn, and returns the result wrapped
-   * in an `AskResult` envelope (`{ value, retried }`). On failure, rolls
-   * back the orphaned user turn so history stays clean and the same
+   * feature task + personality suffix), appends the feature's user message
+   * to history, invokes the engine, appends the assistant turn, and
+   * returns the result wrapped in an `AskResult` envelope. On failure,
+   * rolls back the orphaned user turn so history stays clean and the same
    * session is safe to reuse.
+   *
+   * Throws if the feature doesn't list the session's current phase in
+   * `supportedPhases` — catches wiring bugs (e.g. a champ-select feature
+   * fired during in-game) at the engine boundary instead of producing a
+   * malformed prompt.
    */
   ask<TInput, TOutput>(
     feature: CoachingFeature<TInput, TOutput>,
     input: TInput,
     options?: { signal?: AbortSignal }
   ): Promise<AskResult<TOutput>>;
+
+  /**
+   * Move the session to a new lifecycle phase, swapping in a fresh base
+   * context (champ-select / in-game / post-game each have different
+   * relevant state). `messages[]` is preserved so the LLM still sees the
+   * accumulated conversation; only the system prompt changes.
+   */
+  transitionTo(phase: MatchPhase, systemPrompt: string): void;
 
   /**
    * Lower-level history primitives. Used by tests and fixture-replay tooling
@@ -70,11 +96,11 @@ function formatUserContent(stateSnapshot: string, question: string): string {
   return `[Game State]\n${stateSnapshot}\n\n[Question]\n${question}`;
 }
 
-export function createConversationSession(
-  systemPrompt: string,
+export function createMatchSession(
+  initialSystemPrompt: string,
   apiKey: string,
-  options: CreateConversationSessionOptions = {}
-): ConversationSession {
+  options: CreateMatchSessionOptions = {}
+): MatchSession {
   const messages: ModelMessage[] = [];
   const modelOverride = options.model;
   const personalityOption = options.personality;
@@ -83,8 +109,11 @@ export function createConversationSession(
       ? personalityOption
       : () => personalityOption ?? briefPersonality;
 
+  let systemPrompt = initialSystemPrompt;
+  let phase: MatchPhase = options.phase ?? "in-game";
+
   sessionLog.info(
-    `Session created. baseContext=${systemPrompt.length} chars, personality=${resolvePersonality().id}`
+    `Session created. phase=${phase} baseContext=${systemPrompt.length} chars, personality=${resolvePersonality().id}`
   );
 
   return {
@@ -96,7 +125,26 @@ export function createConversationSession(
       return messages;
     },
 
+    get phase() {
+      return phase;
+    },
+
+    transitionTo(nextPhase, nextSystemPrompt) {
+      const previousPhase = phase;
+      phase = nextPhase;
+      systemPrompt = nextSystemPrompt;
+      sessionLog.info(
+        `Session phase ${previousPhase} → ${nextPhase}. baseContext=${systemPrompt.length} chars, history preserved (${messages.length} msgs)`
+      );
+    },
+
     async ask(feature, input, options) {
+      if (!feature.supportedPhases.includes(phase)) {
+        throw new Error(
+          `Feature "${feature.id}" does not support phase "${phase}" (supports: ${feature.supportedPhases.join(", ")})`
+        );
+      }
+
       const personality = resolvePersonality();
       const taskPrompt = feature.buildTaskPrompt(input);
       const personalitySuffix = personality.suffix();
@@ -105,7 +153,7 @@ export function createConversationSession(
       const userContent = feature.buildUserMessage(input);
 
       sessionLog.info(
-        `[${feature.id}] ask: base=${systemPrompt.length} task=${taskPrompt.length} personality=${personality.id}(${personalitySuffix.length}) total=${system.length} chars, history=${messages.length} msgs`
+        `[${feature.id}] ask: phase=${phase} base=${systemPrompt.length} task=${taskPrompt.length} personality=${personality.id}(${personalitySuffix.length}) total=${system.length} chars, history=${messages.length} msgs`
       );
 
       messages.push({ role: "user", content: userContent });
