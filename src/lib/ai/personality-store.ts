@@ -45,10 +45,12 @@ export const personality$ = new BehaviorSubject<PersonalityLayer>(
   briefPersonality
 );
 
-// Async load on module init. Personality starts at brief, then promotes to
-// the persisted choice once the IPC round-trip completes. The `ask()` path
-// re-reads on every call, so the flip applies retroactively to any
-// in-flight session without manual reset.
+// Tracks whether the user has explicitly set a personality this session.
+// Hydrate runs async on module init; if the user toggles before the IPC
+// round-trip resolves, hydrate must NOT clobber that selection with the
+// stale persisted value.
+let userHasSet = false;
+
 void hydrate();
 
 async function hydrate(): Promise<void> {
@@ -56,9 +58,10 @@ async function hydrate(): Promise<void> {
   if (!bridge) return;
   try {
     const id = await bridge.invoke("settings:get", SETTINGS_KEY);
+    if (userHasSet) return;
     if (typeof id !== "string") return;
     const match = PERSONALITIES.find((p) => p.id === id);
-    if (match) personality$.next(match);
+    if (match && !userHasSet) personality$.next(match);
   } catch {
     // Bridge missing or IPC failed (test environment, broken main process)
     // — keep brief default. The next setPersonality call will retry.
@@ -70,8 +73,12 @@ export function getPersonality(): PersonalityLayer {
 }
 
 export function setPersonality(personality: PersonalityLayer): void {
+  userHasSet = true;
   personality$.next(personality);
   const bridge = getBridge();
   if (!bridge) return;
-  void bridge.invoke("settings:set", SETTINGS_KEY, personality.id);
+  bridge.invoke("settings:set", SETTINGS_KEY, personality.id).catch(() => {
+    // IPC write failed — in-memory state still reflects the user's choice;
+    // they'll just get the prior persisted value back on next launch.
+  });
 }

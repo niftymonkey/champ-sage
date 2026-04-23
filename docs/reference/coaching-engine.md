@@ -4,7 +4,7 @@ How the LLM-powered coaching pipeline builds prompts, dispatches calls, and accu
 
 ## The shape
 
-```
+```text
 MatchSession
   ├── baseContext (mode, champion, runes, item catalog, roster) ← buildBaseContext()
   ├── messages[] (cumulative across the match — prose-only history)
@@ -52,7 +52,7 @@ Today's features (`src/lib/ai/features/`):
 
 **The pain it caused:**
 
-- **Token waste.** Every voice question carried the augment fit-rating rules; every augment offer carried the full item catalog.
+- **Cross-feature rule pollution.** Every voice question carried the augment fit-rating rules; every augment offer carried the destination+component item-format rules. The base context (item catalog, roster, abilities) is unchanged — what got pruned is the per-feature _instructions_ leaking into other features' prompts.
 - **Schema fragility.** `CoachingResponse.buildPath: BuildPathItem[] | null` was populated only for game-plan, but every other call had to declare it. Adding a new field broke every call type.
 - **#109-class correctness bugs.** Augment names leaked into `buildPath` during active augment offers because game-plan saw augment-offer context in the shared snapshot. The shared schema couldn't enum-lock `name` per-feature.
 - **Untestable in isolation.** Changing voice-query behavior risked regressing augment-fit because they shared everything.

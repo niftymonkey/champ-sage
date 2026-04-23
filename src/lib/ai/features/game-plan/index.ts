@@ -61,9 +61,12 @@ export function buildGamePlanQuestion(): string {
  *    dialogue to trigger on. "new" was considered and rejected: `"my new
  *    plan is to split push"` and `"that's a new plan"` are commentary, not
  *    commands.
+ * 3. **Tolerates "gameplan" as one word.** Whisper transcription occasionally
+ *    collapses "game plan" into "gameplan"; `\s*` between "game" and "plan"
+ *    accepts both forms.
  */
 const UPDATE_PLAN_PATTERN =
-  /^(?:(?:please|hey|ok|okay|coach)\s+)*(update|refresh|rework|redo|replace|remake)\s+(?:the\s+|my\s+)?(?:game\s+)?plan\b/i;
+  /^(?:(?:please|hey|ok|okay|coach)\s+)*(update|refresh|rework|redo|replace|remake)\s+(?:the\s+|my\s+)?(?:game\s*)?plan\b/i;
 
 export function isUpdatePlanCommand(text: string): boolean {
   return UPDATE_PLAN_PATTERN.test(text.trim());
@@ -103,6 +106,19 @@ export function createGamePlanFeature(
 }
 
 /**
+ * Permissive shape for `extractBuildPath` callers.
+ *
+ * The current schema produces `GamePlanResult` directly, but this helper
+ * also accepts the legacy `CoachingResponse` shape where `buildPath` is
+ * nullable and the model occasionally placed items in `recommendations`
+ * instead. Both fields are optional so either source can satisfy it.
+ */
+export interface GamePlanResultLike {
+  buildPath?: BuildPathItem[] | null;
+  recommendations?: Array<{ name: string; reasoning: string }>;
+}
+
+/**
  * Normalize a game-plan result's build path. Today the schema requires
  * exactly 6 items and enum-locks names to the catalog; `extractBuildPath`
  * preserves the historical fallback of promoting recommendations when
@@ -110,11 +126,7 @@ export function createGamePlanFeature(
  * applied due to size, or legacy compatibility with the old shared-schema
  * response shape).
  */
-export function extractBuildPath(
-  result: { buildPath?: BuildPathItem[] | null } & {
-    recommendations?: Array<{ name: string; reasoning: string }>;
-  }
-): BuildPathItem[] {
+export function extractBuildPath(result: GamePlanResultLike): BuildPathItem[] {
   if (result.buildPath && result.buildPath.length > 0) {
     return result.buildPath;
   }

@@ -86,6 +86,13 @@ describe("isUpdatePlanCommand", () => {
       "replace the plan",
       "remake the game plan",
       "   update game plan   ",
+      // Whisper occasionally collapses "game plan" into one word; the hook
+      // should still fire instead of falling through to a coaching question.
+      "update gameplan",
+      "update the gameplan",
+      "update my gameplan",
+      "refresh gameplan",
+      "rework my gameplan",
     ];
     for (const phrase of hits) {
       it(`matches "${phrase}"`, () => {

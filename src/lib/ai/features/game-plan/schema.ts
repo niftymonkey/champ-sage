@@ -32,8 +32,11 @@ const MAX_ENUM_SIZE = 500;
  * decode time.
  *
  * When the item-name list exceeds the enum limit (unlikely but possible),
- * falls back to a plain string schema — `extractResult` is responsible for
- * filtering invalid names in that degraded mode.
+ * falls back to a plain string schema. In that degraded mode invalid names
+ * are NOT filtered (`extractResult` is a pass-through) — callers get
+ * whatever the model returned. Tracked alongside #89 (permissive scorer
+ * patterns); revisit if the catalog ever grows past the enum cap in
+ * practice.
  */
 export function createGamePlanSchema(itemNames: readonly string[]) {
   const canEnumerate =

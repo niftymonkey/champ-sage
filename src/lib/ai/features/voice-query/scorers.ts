@@ -43,14 +43,25 @@ export function scoreConversationalContinuity(
 export function scoreDecisiveness(response: string): number {
   const lower = response.toLowerCase();
 
+  // Order matters: longer/more-specific phrases are checked first and
+  // their match span is masked out so a contained shorter phrase (e.g.
+  // "it depends" inside "it really depends on") doesn't double-count.
   const hedges = [
-    "it depends",
-    "it's up to you",
-    "you could go either way",
     "it really depends on",
+    "you could go either way",
+    "it's up to you",
+    "it depends",
   ];
 
-  const hedgeCount = hedges.filter((h) => lower.includes(h)).length;
+  let scratch = lower;
+  let hedgeCount = 0;
+  for (const h of hedges) {
+    if (scratch.includes(h)) {
+      hedgeCount += 1;
+      scratch = scratch.split(h).join(" ".repeat(h.length));
+    }
+  }
+
   if (hedgeCount >= 2) return 0;
   if (hedgeCount === 1) return 0.5;
   return 1;

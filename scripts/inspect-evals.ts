@@ -65,6 +65,13 @@ const args = rawArgs.slice(subcommand === rawArgs[0] ? 1 : 0);
 
 const modelFilter = getArg("--model");
 const runArg = getArg("--run");
+if (
+  args.includes("--run") &&
+  (runArg === undefined || runArg.startsWith("-"))
+) {
+  console.error("--run requires a value: 'latest' or an integer run id");
+  process.exit(1);
+}
 const latestOnly = args.includes("--run") && runArg === "latest";
 const explicitRunId =
   args.includes("--run") && runArg !== "latest" && runArg !== undefined
@@ -608,7 +615,17 @@ function cmdReport() {
 // --- Subcommand: runs ---
 
 function cmdRuns() {
-  const limit = Number(getArg("--limit")) || 20;
+  const limitArg = getArg("--limit");
+  const parsedLimit = limitArg !== undefined ? Number(limitArg) : NaN;
+  if (
+    limitArg !== undefined &&
+    (!Number.isInteger(parsedLimit) || parsedLimit <= 0)
+  ) {
+    console.error(`--limit must be a positive integer, got: ${limitArg}`);
+    process.exit(1);
+  }
+  const limit =
+    Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : 20;
 
   const rows = db
     .prepare(
