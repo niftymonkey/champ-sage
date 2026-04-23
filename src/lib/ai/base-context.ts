@@ -36,15 +36,6 @@ export function buildBaseContext(inputs: BaseContextInputs): string {
   sections.push(
     "GOLD AWARENESS: The gold amount shown is the player's exact current gold. Use it to determine what they can afford. Do not hedge with 'if you can buy' when the gold amount is visible."
   );
-  sections.push("");
-  sections.push("RESPONSE RULES:");
-  sections.push(
-    "- Respond in 1-3 sentences maximum. Shorter is always better — the player is mid-game. Sacrifice grammar for brevity."
-  );
-  sections.push(
-    "- Lead with your top recommendation. Mention alternatives only when the situation genuinely supports different playstyles."
-  );
-  sections.push("- Never explain what the player already knows.");
 
   sections.push("");
   sections.push(

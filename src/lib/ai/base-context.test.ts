@@ -171,9 +171,12 @@ describe("buildBaseContext", () => {
     expect(context).toContain("expert League of Legends coaching AI");
     expect(context).toContain("ITEM AWARENESS");
     expect(context).toContain("GOLD AWARENESS");
-    expect(context).toContain("RESPONSE RULES");
-    expect(context).toContain("1-3 sentences");
     expect(context).toContain("[Game State]");
+    // Voice/tone rules moved to `briefPersonality` (Phase 6) so new
+    // personalities replace them cleanly instead of fighting embedded
+    // brevity instructions in the base context.
+    expect(context).not.toContain("RESPONSE RULES");
+    expect(context).not.toContain("1-3 sentences");
   });
 
   it("includes game mode display name, champion profile, runes, and roster", () => {

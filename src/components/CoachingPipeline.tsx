@@ -28,6 +28,7 @@ import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { createConversationSession } from "../lib/ai/conversation-session";
+import { getPersonality } from "../lib/ai/personality-store";
 import { buildBaseContext } from "../lib/ai/base-context";
 import { takeGameSnapshot } from "../lib/ai/state-formatter";
 import { playerIntent$, manualInput$ } from "../lib/reactive";
@@ -107,7 +108,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       gameData: gameDataRef.current,
       gameState,
     });
-    sessionRef.current = createConversationSession(baseContext, apiKey);
+    sessionRef.current = createConversationSession(baseContext, apiKey, {
+      personality: getPersonality,
+    });
     gamePlanFeatureRef.current = createGamePlanFeature(gameDataRef.current);
     setChosenAugments([]);
     gamePlanFiredRef.current = false;

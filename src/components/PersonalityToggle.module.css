@@ -1,0 +1,47 @@
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: #12151c;
+  border-bottom: 1px solid #2a2f3e;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.label {
+  color: #565e74;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.button {
+  background: transparent;
+  color: #8890a4;
+  border: 1px solid #2a2f3e;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.2rem;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.button:hover {
+  background: #181c26;
+  color: #b8a0e8;
+}
+
+.active {
+  background: #1a1e2a;
+  color: #b8a0e8;
+  border-color: #4a3f6e;
+}

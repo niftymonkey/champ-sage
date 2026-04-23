@@ -14,6 +14,7 @@
 import type { LanguageModel, ModelMessage } from "ai";
 import type { AskResult, CoachingFeature } from "./feature";
 import { runFeatureCall } from "./recommendation-engine";
+import { briefPersonality, type PersonalityLayer } from "./personality";
 import { getLogger } from "../logger";
 
 const sessionLog = getLogger("coaching:session");
@@ -26,6 +27,15 @@ export interface CreateConversationSessionOptions {
    * sets this to swap providers (OpenRouter) without forking call paths.
    */
   readonly model?: LanguageModel;
+  /**
+   * Personality layer (or getter) whose `suffix()` is appended to the
+   * system prompt after the feature task prompt on every `ask()`. Pass a
+   * function to pick up mid-session personality switches — the engine
+   * resolves fresh on every call. Defaults to `briefPersonality`, which
+   * carries the brevity / lead-with-recommendation voice rules that
+   * historically lived inside `buildBaseContext`.
+   */
+  readonly personality?: PersonalityLayer | (() => PersonalityLayer);
 }
 
 export interface ConversationSession {
@@ -67,8 +77,15 @@ export function createConversationSession(
 ): ConversationSession {
   const messages: ModelMessage[] = [];
   const modelOverride = options.model;
+  const personalityOption = options.personality;
+  const resolvePersonality: () => PersonalityLayer =
+    typeof personalityOption === "function"
+      ? personalityOption
+      : () => personalityOption ?? briefPersonality;
 
-  sessionLog.info(`Session created. baseContext=${systemPrompt.length} chars`);
+  sessionLog.info(
+    `Session created. baseContext=${systemPrompt.length} chars, personality=${resolvePersonality().id}`
+  );
 
   return {
     get systemPrompt() {
@@ -80,12 +97,15 @@ export function createConversationSession(
     },
 
     async ask(feature, input, options) {
+      const personality = resolvePersonality();
       const taskPrompt = feature.buildTaskPrompt(input);
-      const system = systemPrompt + taskPrompt;
+      const personalitySuffix = personality.suffix();
+      const suffixSection = personalitySuffix ? `\n\n${personalitySuffix}` : "";
+      const system = systemPrompt + taskPrompt + suffixSection;
       const userContent = feature.buildUserMessage(input);
 
       sessionLog.info(
-        `[${feature.id}] ask: base=${systemPrompt.length} task=${taskPrompt.length} total=${system.length} chars, history=${messages.length} msgs`
+        `[${feature.id}] ask: base=${systemPrompt.length} task=${taskPrompt.length} personality=${personality.id}(${personalitySuffix.length}) total=${system.length} chars, history=${messages.length} msgs`
       );
 
       messages.push({ role: "user", content: userContent });

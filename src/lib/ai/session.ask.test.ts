@@ -67,7 +67,10 @@ describe("session.ask", () => {
   });
 
   it("sends the session base context as system when the feature task prompt is empty", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const { noopPersonality } = await import("./personality");
+    const session = createConversationSession("BASE", "test-key", {
+      personality: noopPersonality,
+    });
     const feature = createTestFeature();
 
     mockGenerateText.mockResolvedValueOnce({
@@ -85,7 +88,10 @@ describe("session.ask", () => {
   });
 
   it("composes system = base context + feature task prompt", async () => {
-    const session = createConversationSession("BASE", "test-key");
+    const { noopPersonality } = await import("./personality");
+    const session = createConversationSession("BASE", "test-key", {
+      personality: noopPersonality,
+    });
     const feature = createTestFeature();
 
     mockGenerateText.mockResolvedValueOnce({
@@ -101,6 +107,93 @@ describe("session.ask", () => {
 
     const callArgs = mockGenerateText.mock.calls[0][0];
     expect(callArgs.system).toBe("BASE\n\nTASK");
+  });
+
+  it("appends a custom personality suffix after the feature task prompt", async () => {
+    const session = createConversationSession("BASE", "test-key", {
+      personality: {
+        id: "dramatic",
+        suffix: () => "DRAMATIC VOICE",
+      },
+    });
+    const feature = createTestFeature();
+
+    mockGenerateText.mockResolvedValueOnce({
+      output: { answer: "hello" },
+      usage: { inputTokens: 10, outputTokens: 5 },
+    } as never);
+
+    await session.ask(feature, {
+      stateSnapshot: "snap",
+      question: "q",
+      taskSuffix: "\n\nTASK",
+    });
+
+    const callArgs = mockGenerateText.mock.calls[0][0];
+    expect(callArgs.system).toBe("BASE\n\nTASK\n\nDRAMATIC VOICE");
+  });
+
+  it("noop personality leaves the system prompt unchanged", async () => {
+    const { noopPersonality } = await import("./personality");
+    const session = createConversationSession("BASE", "test-key", {
+      personality: noopPersonality,
+    });
+    const feature = createTestFeature();
+
+    mockGenerateText.mockResolvedValueOnce({
+      output: { answer: "hello" },
+      usage: { inputTokens: 10, outputTokens: 5 },
+    } as never);
+
+    await session.ask(feature, { stateSnapshot: "snap", question: "q" });
+
+    const callArgs = mockGenerateText.mock.calls[0][0];
+    expect(callArgs.system).toBe("BASE");
+  });
+
+  it("re-reads personality on every ask when given a function form (mid-session swap)", async () => {
+    const { noopPersonality, piratePersonality } =
+      await import("./personality");
+    let current: typeof noopPersonality = noopPersonality;
+    const session = createConversationSession("BASE", "test-key", {
+      personality: () => current,
+    });
+    const feature = createTestFeature();
+
+    mockGenerateText
+      .mockResolvedValueOnce({
+        output: { answer: "first" },
+        usage: { inputTokens: 10, outputTokens: 5 },
+      } as never)
+      .mockResolvedValueOnce({
+        output: { answer: "second" },
+        usage: { inputTokens: 10, outputTokens: 5 },
+      } as never);
+
+    await session.ask(feature, { stateSnapshot: "s1", question: "q1" });
+    expect(mockGenerateText.mock.calls[0][0].system).toBe("BASE");
+
+    // Flip personality between asks — next call must pick up the new value.
+    current = piratePersonality;
+
+    await session.ask(feature, { stateSnapshot: "s2", question: "q2" });
+    expect(mockGenerateText.mock.calls[1][0].system).toContain("pirate");
+  });
+
+  it("default personality (brief) appends voice rules after the task prompt", async () => {
+    const session = createConversationSession("BASE", "test-key");
+    const feature = createTestFeature();
+
+    mockGenerateText.mockResolvedValueOnce({
+      output: { answer: "hello" },
+      usage: { inputTokens: 10, outputTokens: 5 },
+    } as never);
+
+    await session.ask(feature, { stateSnapshot: "snap", question: "q" });
+
+    const callArgs = mockGenerateText.mock.calls[0][0];
+    expect(callArgs.system).toMatch(/^BASE\n\nRESPONSE RULES:/);
+    expect(callArgs.system).toContain("1-3 sentences maximum");
   });
 
   it("pushes the feature's user message to history and sends it to generateText", async () => {

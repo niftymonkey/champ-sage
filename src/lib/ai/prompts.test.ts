@@ -197,17 +197,19 @@ describe("buildGameSystemPrompt", () => {
     expect(prompt).toContain("expert League of Legends coaching AI");
     expect(prompt).toContain("ITEM AWARENESS");
     expect(prompt).toContain("GOLD AWARENESS");
-    expect(prompt).toContain("RESPONSE RULES");
   });
 
-  it("includes sentence limit in brevity instruction", () => {
+  it("no longer carries brevity rules (moved to briefPersonality in Phase 6)", () => {
     const prompt = buildGameSystemPrompt(
       createStubMode(),
       createStubGameData(),
       createGameState()
     );
-    expect(prompt).toContain("1-3 sentences");
-    expect(prompt).toContain("mid-game");
+    // RESPONSE RULES and the 1-3 sentences ceiling now live in
+    // `briefPersonality.suffix()` and are applied by session.ask at
+    // runtime, not by this compat shim.
+    expect(prompt).not.toContain("RESPONSE RULES");
+    expect(prompt).not.toContain("1-3 sentences");
   });
 
   it("includes directive state awareness instruction with specific champions", () => {

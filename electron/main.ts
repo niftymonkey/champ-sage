@@ -194,7 +194,70 @@ function forceCompositorFlush(
   }
 }
 
+/**
+ * Settings persistence — JSON file under app.getPath('userData').
+ *
+ * The renderer's localStorage didn't survive between launches in this
+ * Electron setup (writes succeed mid-session but the storage scope appears
+ * empty on restart, possibly due to dev-server origin/port shifts or the
+ * ow-electron renderer session lifecycle). A plain JSON file in the user
+ * data dir avoids that whole class of issue: synchronous fs writes flush
+ * to disk immediately and reads aren't tied to any browser-storage origin.
+ *
+ * Schema: a flat string-keyed map. Callers pick keys; the main process
+ * stays schema-agnostic so adding new settings doesn't require touching
+ * this file.
+ */
+function getSettingsPath(): string {
+  return join(app.getPath("userData"), "settings.json");
+}
+
+function readSettingsFile(): Record<string, unknown> {
+  try {
+    const raw = readFileSync(getSettingsPath(), "utf-8");
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    // Missing file or parse error → empty store; caller falls back to
+    // defaults. Log nothing — first-launch is the common case.
+    return {};
+  }
+}
+
+function writeSettingsFile(data: Record<string, unknown>): void {
+  writeFileSync(getSettingsPath(), JSON.stringify(data, null, 2), "utf-8");
+}
+
+function registerSettingsIpc(): void {
+  ipcMain.handle(
+    "settings:get",
+    quietHandler(async (_event: unknown, key: string): Promise<unknown> => {
+      const data = readSettingsFile();
+      return data[key] ?? null;
+    })
+  );
+
+  ipcMain.handle(
+    "settings:set",
+    quietHandler(
+      async (_event: unknown, key: string, value: unknown): Promise<void> => {
+        const data = readSettingsFile();
+        if (value === null || value === undefined) {
+          delete data[key];
+        } else {
+          data[key] = value;
+        }
+        writeSettingsFile(data);
+      }
+    )
+  );
+}
+
 function registerIpcHandlers(): void {
+  registerSettingsIpc();
+
   ipcMain.handle(
     "discover_lcu",
     quietHandler(async () => {
