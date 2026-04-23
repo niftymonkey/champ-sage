@@ -7,10 +7,22 @@
  * but the app used to treat it as a fresh choice, auto-firing augment
  * coaching and leaving badge overlays stuck "analyzing" for minutes.
  *
- * This filter tracks every augment picked since the filter was last reset
- * (game-exit) and suppresses any offer that contains a previously-picked
- * augment. In ARAM Mayhem / Arena an augment cannot be picked twice, so a
- * match between current offer and prior picks is always a replay.
+ * Stat shards (e.g., "Attack Damage Shard") complicate this: they CAN be
+ * offered and picked multiple times in a single match, so the simple
+ * "does this offer contain anything I've already picked?" check false-
+ * positives on legitimate repeat shard rounds. The filter therefore uses
+ * two rules:
+ *
+ *   1. Real augments go into a lifetime-tracked `augmentPicks` set. Any
+ *      match between an offer and this set is treated as a replay — real
+ *      augments cannot recur in one game.
+ *   2. Every pick (shard or augment) is recorded with a timestamp in
+ *      `lastPick`. An offer is suppressed only if the last pick happened
+ *      within `replayWindowMs` (default 1000ms) AND the offer contains
+ *      that pick's name. GEP's startup pick+offer replays fire within
+ *      milliseconds of each other; normal in-game rounds space the next
+ *      offer by seconds, so the window catches replays without false-
+ *      positiving legitimate repeat shard offers.
  */
 
 export interface GepUpdate {
@@ -18,6 +30,23 @@ export interface GepUpdate {
   category?: string;
   key?: string;
   value?: string | Record<string, unknown>;
+}
+
+/** HTML tags occasionally leak into augment name strings ("Armor Penetration Shard<br>"). */
+function normalizeName(raw: string): string {
+  return raw
+    .replace(/<[^>]*>/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * True for stat shard names like "Attack Damage Shard", "Health and Size
+ * Shard", "Armor Penetration Shard<br>". Shards have the word "Shard" as
+ * the last token (after any stray HTML tags); real augments don't.
+ */
+function isStatShard(raw: string): boolean {
+  return /\bshard\s*$/i.test(raw.replace(/<[^>]*>/g, "").trim());
 }
 
 /** Returns the 3 augment names, or null if this update is not an offer. */
@@ -56,24 +85,60 @@ export function parseAugmentPickedName(update: GepUpdate): string | null {
   return name.length > 0 ? name : null;
 }
 
+export interface AugmentReplayFilterOptions {
+  /** Defaults to `Date.now`. Tests inject a mock clock. */
+  now?: () => number;
+  /** Window after a pick during which a matching offer is treated as a replay. */
+  replayWindowMs?: number;
+}
+
 export class AugmentReplayFilter {
-  private picked = new Set<string>();
+  private augmentPicks = new Set<string>();
+  private lastPick: { normalized: string; ts: number } | null = null;
+  private readonly now: () => number;
+  private readonly replayWindowMs: number;
+
+  constructor(options: AugmentReplayFilterOptions = {}) {
+    this.now = options.now ?? (() => Date.now());
+    this.replayWindowMs = options.replayWindowMs ?? 1000;
+  }
 
   recordPick(name: string): void {
-    const normalized = name.trim().toLowerCase();
-    if (normalized) this.picked.add(normalized);
+    const normalized = normalizeName(name);
+    if (!normalized) return;
+    this.lastPick = { normalized, ts: this.now() };
+    // Only real augments (not shards) go into the lifetime set — shards can
+    // legitimately recur in later rounds.
+    if (!isStatShard(name)) {
+      this.augmentPicks.add(normalized);
+    }
   }
 
   isStaleOffer(names: string[]): boolean {
-    return names.some((n) => this.picked.has(n.trim().toLowerCase()));
+    const normalizedOffer = names.map(normalizeName);
+    // Rule 1: any previously-picked real augment in the offer means replay.
+    if (normalizedOffer.some((n) => this.augmentPicks.has(n))) {
+      return true;
+    }
+    // Rule 2: offer contains the last pick AND the pick happened inside the
+    // GEP replay window. This is the shard-safe check.
+    if (
+      this.lastPick &&
+      this.now() - this.lastPick.ts <= this.replayWindowMs &&
+      normalizedOffer.includes(this.lastPick.normalized)
+    ) {
+      return true;
+    }
+    return false;
   }
 
   reset(): void {
-    this.picked.clear();
+    this.augmentPicks.clear();
+    this.lastPick = null;
   }
 
   /** Test helper. */
   size(): number {
-    return this.picked.size;
+    return this.augmentPicks.size;
   }
 }

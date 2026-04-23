@@ -541,17 +541,34 @@ Many champions have `dmg_dealt: 1, dmg_taken: 1` (no actual change) — check fo
 
 ## AI Recommendation Engine
 
-### Architecture
+### Architecture (per-feature, post-#108)
 
-The AI module (`src/lib/ai/`) uses Vercel AI SDK v6 with OpenAI's GPT-5.4 Mini for augment recommendations. Pattern: `generateText` with `Output.object` for structured JSON output via `jsonSchema`.
+The AI module (`src/lib/ai/`) is organized into per-feature modules under `src/lib/ai/features/`:
+
+- `features/augment-fit/` — independent fit ratings for offered augments
+- `features/game-plan/` — 6-item build path with categories and reasons
+- `features/item-rec/` — item purchase recommendations with destination + component format
+- `features/voice-query/` — open-ended voice queries
+
+Each feature directory exports a `CoachingFeature<TInput, TOutput>` (interface in `feature.ts`) with its own task prompt, user-message builder, output schema (with field-level enums where structural correctness matters — see #109), result extractor, and prose history summarizer. Game-plan is a _factory_ (`createGamePlanFeature(gameData)`) because its schema enum-locks `buildPath[].name` to the player's actual item catalog.
+
+The `MatchSession` (`src/lib/ai/match-session.ts`) is the dispatch boundary. Production callers (`CoachingPipeline.tsx`) and the eval harness both go through `session.ask(feature, input)`. The session:
+
+- composes the system prompt as `buildBaseContext(...) + feature.buildTaskPrompt(input) + personality.suffix()`
+- pushes the feature's user message onto `messages[]` (cumulative across the match)
+- delegates LLM dispatch to `runFeatureCall` (race-with-retry, abort propagation, optional injected model for the eval harness)
+- appends the assistant turn as **prose** via `feature.summarizeForHistory(result)` (heterogeneous structured outputs collapse to homogeneous prose history)
+- enforces `feature.supportedPhases` — calling `ask()` with a feature that doesn't support the current phase throws
 
 ### Key design decisions
 
-- **Context assembly is a pure function** — `assembleContext()` transforms `LiveGameState` + `LoadedGameData` into a flat `CoachingContext` suitable for LLM consumption. No side effects, fully testable.
-- **Prompt construction is pure** — `buildGameSystemPrompt()` is deterministic given inputs. Tested via string containment assertions. Single-turn `buildSystemPrompt`/`buildUserPrompt` were removed — the app exclusively uses multi-turn sessions.
-- **The recommendation engine is NOT unit tested** — it calls a real LLM. Only the pure functions around it are tested.
+- **`buildBaseContext` is feature-agnostic** — coaching persona, item awareness rules, gold awareness, conversation format, mode, champion profile, item catalog, match roster. Anything that's per-feature (response style, augment-fit rules, item-rec format) lives in the feature's task prompt.
+- **Personality is a suffix layer** — `briefPersonality` (default) carries the brevity / lead-with-recommendation rules previously baked into `buildBaseContext`. `noopPersonality` exists as a structural fallback; future personalities (#24) replace `briefPersonality` cleanly.
+- **History stores prose summaries, not structured JSON** — `feature.summarizeForHistory(result)` returns the `.answer` string for most features, or a synthesized prose summary (e.g. `"Augment ratings: X [exceptional], Y [strong]"` for augment-fit). Keeps multi-turn history homogeneous regardless of which features fired earlier.
+- **Settings persistence via Electron IPC + JSON file** — renderer's `localStorage` didn't survive launches in the ow-electron setup. Settings (e.g. selected personality) round-trip through `settings:get` / `settings:set` IPC handlers that read/write `<userData>/settings.json`.
 - **Balance overrides are formatted as human-readable text** for the LLM (e.g., "Damage taken: -5%"), not raw multipliers (0.95).
-- **API key is via Vite env var** — `VITE_OPENAI_API_KEY` in `.env`, following the existing pattern for client-side env vars in Tauri apps.
+- **API key is via Vite env var** — `VITE_OPENAI_API_KEY` in `.env` for production, `EVAL_OPENROUTER_API_KEY` for eval (separate billing).
+- **`recommendation-engine.ts` accepts an injected `model`** — production uses `createCoachingModel(apiKey)`; the eval harness injects an OpenRouter-backed model. Same code path, different provider — the eval and the app exercise identical wiring.
 
 ### Model selection
 
@@ -573,9 +590,9 @@ The eval pipeline (`src/lib/ai/coaching.eval.ts`) supports both OpenAI direct an
 - **State Awareness** scorer checks for keyword presence (GW items, MR items, enemy champion names, damage profile terms, owned items). All declared rules must pass for score=1.
 - **Pivot Explanation** scorer uses a hybrid approach: rule-based pivot detection (does the response still mention the prior recommendation?) + pattern matching for causal language (because, since, now that, etc.). When the prior item is mentioned alongside causal language, it's treated as a dismissal rather than a recommendation.
 - **Gold-Aware Recommendations** scorer gates on response content (purchase verbs like "buy", "build toward", "rush", "get a"), not question text. If the response contains a purchase verb, it must follow the destination+component format. Augment confirmations ("I chose X") and augment offers ("X, Y, or Z") are excluded — the model may mention items incidentally in those contexts. This approach eliminates false positives from strategy questions that happen to contain words like "next" or "build".
-- **Item recommendation format** in system prompt is scoped to purchase responses: "When recommending an item purchase, always name the destination item AND a buildable component." Non-purchase responses (strategy, positioning, augments) should name items naturally without the format. This scoping prevents the model from forcing destination+component structure onto strategic advice.
+- **Item recommendation format** lives in `features/item-rec/prompt.ts`: "When recommending an item purchase, always name the destination item AND a buildable component." Non-purchase paths (`features/voice-query/prompt.ts`) explicitly tell the LLM NOT to force the format. This means voice-query item-purchase questions currently get casual recommendations that fail the `Gold-Aware Recommendations` scorer — see #113 for the routing fix and #115 for the scorer's variance characterization.
 - **Augment data in state snapshots** — `PlayerSnapshot.augments` is an array of `{name, description, sets}`, not just names. `GameSnapshot.augmentSetProgress` shows active bonuses and next thresholds. Both are computed in `takeGameSnapshot()` from `LoadedGameData`. The `formatAugmentOfferLines()` helper (in `augment-offer-formatter.ts`) adds set bonus unlock previews when the model is choosing augments.
-- **SYNERGY COACHING** instruction in `buildGameSystemPrompt` (ARAM Mayhem only) tells the model to look for augment/set bonus/item/stat anvil synergies and recommend unconventional builds when synergies warrant it.
+- **SYNERGY COACHING** instruction lives in `features/augment-fit/prompt.ts` (ARAM Mayhem only) and tells the model to look for augment/set bonus/item/stat anvil synergies and recommend unconventional builds when synergies warrant it.
 
 ### OpenAI structured outputs — strict-mode schema rules
 

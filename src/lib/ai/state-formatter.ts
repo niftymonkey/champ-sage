@@ -134,8 +134,20 @@ export function takeGameSnapshot(
   };
 }
 
+export interface FormatSnapshotOptions {
+  /**
+   * Omit chosen-augment and set-progress sections from the snapshot.
+   * Game-plan passes this to keep augment names out of its context so the
+   * LLM doesn't slot augment strings into `buildPath[].name` (#109).
+   */
+  readonly omitAugments?: boolean;
+}
+
 /** Format a full game state snapshot as text for the LLM. */
-export function formatStateSnapshot(snapshot: GameSnapshot): string {
+export function formatStateSnapshot(
+  snapshot: GameSnapshot,
+  options: FormatSnapshotOptions = {}
+): string {
   const sections: string[] = [];
 
   sections.push(
@@ -164,24 +176,26 @@ export function formatStateSnapshot(snapshot: GameSnapshot): string {
   // Player stats (exact from API)
   sections.push(formatPlayerStats(p.stats));
 
-  // Augments with descriptions
-  if (p.augments.length > 0) {
-    const augLines = p.augments.map((a) =>
-      a.description ? `- ${a.name}: ${a.description}` : `- ${a.name}`
-    );
-    sections.push(`Augments:\n${augLines.join("\n")}`);
-  }
+  if (!options.omitAugments) {
+    // Augments with descriptions
+    if (p.augments.length > 0) {
+      const augLines = p.augments.map((a) =>
+        a.description ? `- ${a.name}: ${a.description}` : `- ${a.name}`
+      );
+      sections.push(`Augments:\n${augLines.join("\n")}`);
+    }
 
-  // Augment set progress
-  if (snapshot.augmentSetProgress.length > 0) {
-    const setLines = snapshot.augmentSetProgress.map((s) => {
-      let line = `- ${s.name} (${s.count}/${s.nextThreshold ?? s.count})`;
-      if (s.activeBonus) line += ` — Active: ${s.activeBonus}`;
-      if (s.nextBonus && s.nextThreshold)
-        line += ` — Next at ${s.nextThreshold}: ${s.nextBonus}`;
-      return line;
-    });
-    sections.push(`Set Progress:\n${setLines.join("\n")}`);
+    // Augment set progress
+    if (snapshot.augmentSetProgress.length > 0) {
+      const setLines = snapshot.augmentSetProgress.map((s) => {
+        let line = `- ${s.name} (${s.count}/${s.nextThreshold ?? s.count})`;
+        if (s.activeBonus) line += ` — Active: ${s.activeBonus}`;
+        if (s.nextBonus && s.nextThreshold)
+          line += ` — Next at ${s.nextThreshold}: ${s.nextBonus}`;
+        return line;
+      });
+      sections.push(`Set Progress:\n${setLines.join("\n")}`);
+    }
   }
 
   // Ally team

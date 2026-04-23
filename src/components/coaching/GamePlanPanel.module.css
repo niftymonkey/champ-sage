@@ -116,6 +116,24 @@
   flex-shrink: 0;
 }
 
+.owned {
+  opacity: 0.45;
+}
+
+.owned .buildName {
+  text-decoration: line-through;
+  text-decoration-color: #565e74;
+}
+
+.ownedBadge {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #565e74;
+  flex-shrink: 0;
+}
+
 .cat_core {
   color: #d7c997;
 }

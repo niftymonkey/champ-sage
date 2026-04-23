@@ -1,8 +1,7 @@
 import { generateText, Output } from "ai";
-import type { CoachingResponse } from "./types";
-import type { ConversationSession } from "./conversation-session";
+import type { LanguageModel, ModelMessage } from "ai";
+import type { CoachingFeature } from "./feature";
 import { createCoachingModel, MODEL_CONFIG } from "./model-config";
-import { coachingResponseSchema } from "./schemas";
 import { raceWithRetry } from "./race-with-retry";
 import { getLogger } from "../logger";
 
@@ -14,55 +13,69 @@ const coachingLog = getLogger("coaching:reactive");
  */
 const SLOW_ATTEMPT_MS = 10_000;
 
+export interface FeatureCallResult<TOutput> {
+  readonly value: TOutput;
+  readonly retried: boolean;
+}
+
 /**
- * Multi-turn coaching response using a conversation session.
- *
- * Uses the session's system prompt and message array instead of
- * rebuilding context from scratch on each call.
- *
- * Failure handling (#102): delegates to `raceWithRetry` so the same racing
- * strategy is available to any other LLM call in the codebase.
+ * Feature-agnostic engine call. Wraps `generateText` in race-with-retry,
+ * threads an abort signal through, and returns the raw schema-typed output
+ * alongside the `retried` flag. The caller (session.ask) owns conversation
+ * history and feature-specific post-processing.
  */
-export async function getMultiTurnCoachingResponse(
-  session: ConversationSession,
-  apiKey: string,
-  options?: { signal?: AbortSignal }
-): Promise<CoachingResponse> {
+export async function runFeatureCall<TInput, TOutput>(params: {
+  feature: CoachingFeature<TInput, TOutput>;
+  system: string;
+  messages: readonly ModelMessage[];
+  apiKey: string;
+  signal?: AbortSignal;
+  /**
+   * Optional model override. When omitted, uses `createCoachingModel(apiKey)`
+   * — the production path. The eval harness injects an OpenRouter-backed
+   * model so multi-candidate evaluation reuses this exact code path.
+   */
+  model?: LanguageModel;
+}): Promise<FeatureCallResult<TOutput>> {
+  const {
+    feature,
+    system,
+    messages,
+    apiKey,
+    signal,
+    model: modelOverride,
+  } = params;
+
   coachingLog.info(
-    `Multi-turn request: ${session.messages.length} messages in thread`,
+    `[${feature.id}] Request: ${messages.length} messages in thread`,
     { model: MODEL_CONFIG.id }
   );
 
-  const model = createCoachingModel(apiKey);
+  const model = modelOverride ?? createCoachingModel(apiKey);
 
-  const { value, winningAttempt } = await raceWithRetry<CoachingResponse>(
-    async ({ attempt, signal }) => {
+  const { value, winningAttempt } = await raceWithRetry<TOutput>(
+    async ({ attempt, signal: attemptSignal }) => {
       const startMs = Date.now();
       const result = await generateText({
         model,
-        system: session.systemPrompt,
-        messages: [...session.messages],
-        output: Output.object({ schema: coachingResponseSchema }),
+        system,
+        messages: [...messages],
+        output: Output.object({ schema: feature.outputSchema }),
         maxOutputTokens: 1024,
-        abortSignal: signal,
+        abortSignal: attemptSignal,
       });
 
       const elapsedMs = Date.now() - startMs;
       const usage = result.usage;
-      const recs = result.output.recommendations;
 
       coachingLog.info(
-        `Response (${elapsedMs}ms${attempt > 1 ? `, attempt ${attempt}` : ""}): ${usage.inputTokens ?? "?"}in/${usage.outputTokens ?? "?"}out`,
-        {
-          answer: result.output.answer,
-          recommendations: recs.map((r) => `${r.name} [${r.fit}]`),
-        }
+        `[${feature.id}] Response (${elapsedMs}ms${attempt > 1 ? `, attempt ${attempt}` : ""}): ${usage.inputTokens ?? "?"}in/${usage.outputTokens ?? "?"}out`
       );
 
-      return result.output;
+      return result.output as TOutput;
     },
     {
-      signal: options?.signal,
+      signal,
       slowAfterMs: SLOW_ATTEMPT_MS,
       onRetryTrigger: (reason, err) => {
         const trigger =
@@ -70,14 +83,16 @@ export async function getMultiTurnCoachingResponse(
             ? `Attempt 1 exceeded ${SLOW_ATTEMPT_MS}ms`
             : `Attempt 1 failed: ${err instanceof Error ? err.message : String(err)}`;
         coachingLog.warn(
-          `[RETRY-TRIGGER] ${trigger} — racing a second attempt`
+          `[${feature.id}] [RETRY-TRIGGER] ${trigger} — racing a second attempt`
         );
       },
       onRetrySuccess: () => {
-        coachingLog.info("[RETRY-SUCCESS] Attempt 2 won the race");
+        coachingLog.info(
+          `[${feature.id}] [RETRY-SUCCESS] Attempt 2 won the race`
+        );
       },
       onBothFailed: (lastError) => {
-        coachingLog.error("Multi-turn request failed on both attempts", {
+        coachingLog.error(`[${feature.id}] Request failed on both attempts`, {
           error:
             lastError instanceof Error ? lastError.message : String(lastError),
         });
@@ -85,5 +100,5 @@ export async function getMultiTurnCoachingResponse(
     }
   );
 
-  return winningAttempt > 1 ? { ...value, retried: true } : value;
+  return { value, retried: winningAttempt > 1 };
 }
