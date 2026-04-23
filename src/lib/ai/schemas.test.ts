@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { coachingResponseSchema } from "./schemas";
 import { augmentFitSchema } from "./features/augment-fit/schema";
 import { itemRecSchema } from "./features/item-rec/schema";
 import { voiceQuerySchema } from "./features/voice-query/schema";
@@ -60,10 +59,6 @@ const perFeatureSchemas: Array<{
   {
     name: "createGamePlanSchema(…)",
     schema: createGamePlanSchema(["Example Item", "Another Item"]),
-  },
-  {
-    name: "coachingResponseSchema (legacy/eval)",
-    schema: coachingResponseSchema,
   },
 ];
 
