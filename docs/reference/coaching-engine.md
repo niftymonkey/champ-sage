@@ -70,6 +70,37 @@ Today's features (`src/lib/ai/features/`):
 - **New personality** — add to `src/lib/ai/personality.ts` and surface via `personality-store.ts` + `PersonalityToggle.tsx`. Tracked in #24.
 - **New phase wiring** (champ-select, post-game) — `MatchSession.transitionTo` is ready; per-phase features need `supportedPhases: ["champ-select"]` etc. Tracked in #70 (champ-select) and #84 (post-game follow-up).
 
+## Re-roll advisory logic (ARAM Mayhem)
+
+The augment-fit feature has to reason about a multi-round mechanic the model doesn't otherwise know about:
+
+- **Round 1**: player presents 3 augments. Pick the best, advise re-rolling the other two.
+- **Round 2**: player reports 2 new augments — but there are 3 cards in play (1 kept + 2 new). If a new one beats the kept one, advise spending the kept card's re-roll. Otherwise, take the kept one.
+- **Round 3** (optional): if the kept card was re-rolled, player reports 1 new augment. Pick the best of the 3 final cards. No re-rolls remain.
+
+The model only sees NEW cards each turn — it has to remember which card was kept from prior rounds via conversation history. This is encoded in the augment-fit task prompt; cumulative `messages[]` on `MatchSession` is what makes it work across rounds.
+
+## Data sources
+
+The LLM doesn't fetch anything itself — `MatchSession` is handed a pre-assembled snapshot. Where each piece comes from:
+
+| Data                                     | Source                                                                   | When fetched                               |
+| ---------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------ |
+| Champion names, levels, items, teams     | Riot Live Client Data API (port 2999, polled every 2s during InProgress) | Real-time during game                      |
+| Champion abilities (passive + QWER)      | DDragon per-champion endpoint                                            | Once per game start (10 parallel requests) |
+| Item descriptions and stats              | DDragon bulk items endpoint                                              | App launch (cached)                        |
+| Augment names, descriptions, tiers, sets | League Wiki Lua module (Mayhem + Arena)                                  | App launch (cached)                        |
+| Augment IDs and icons                    | Community Dragon                                                         | App launch (cached, merged with wiki data) |
+| ARAM balance overrides                   | League Wiki ChampionData Lua module                                      | App launch (cached)                        |
+| Game mode (KIWI/CLASSIC/CHERRY)          | LCU WebSocket session events                                             | Real-time via reactive engine              |
+
+## Known limitations
+
+- **Augment descriptions have residual markup artifacts** — 3 of 202 augments still have garbled text from wiki template edge cases. The model usually reads through them, but they show up verbatim if quoted.
+- **Model relies on training data for game knowledge** — augment synergies, meta builds, and matchup knowledge come from the model's training, not our data pipeline. Stale meta = stale advice.
+- **No augment set bonus tracking** — the model doesn't see set progress (e.g. "you have 2/3 Firecracker augments"). It can infer from the chosen list but isn't given a tally.
+- **No filtering on voice transcripts** — accidental hotkey presses produce empty/noise transcripts that still hit the LLM.
+
 ## Related references
 
 - `docs/reference/technical-reference.md` — implementation gotchas, OpenAI strict-mode rules, eval scorer patterns.
