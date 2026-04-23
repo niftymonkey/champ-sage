@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreBrevity, scoreDecisiveness } from "./response-format";
+import { scoreBrevity } from "./scorers";
 
 describe("scoreBrevity", () => {
   it("scores 1 for a 1-sentence response", () => {
@@ -29,30 +29,6 @@ describe("scoreBrevity", () => {
         "Buy Thornmail next. It gives armor. It has grievous wounds. " +
           "Viego heals a lot. Your team needs anti-heal. Caitlyn also has lifesteal. " +
           "This is the single best defensive option available."
-      )
-    ).toBe(0);
-  });
-});
-
-describe("scoreDecisiveness", () => {
-  it("scores 1 for a decisive response", () => {
-    expect(
-      scoreDecisiveness("Take **Outlaw's Grit**. Re-roll the other two.")
-    ).toBe(1);
-  });
-
-  it("scores 0.5 for a single hedge", () => {
-    expect(
-      scoreDecisiveness(
-        "It depends on your playstyle, but Outlaw's Grit is probably best."
-      )
-    ).toBe(0.5);
-  });
-
-  it("scores 0 for multiple hedges", () => {
-    expect(
-      scoreDecisiveness(
-        "It depends on your playstyle. It's up to you which direction to take here."
       )
     ).toBe(0);
   });
