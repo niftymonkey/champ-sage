@@ -35,12 +35,12 @@ import { buildBaseContext } from "../lib/ai/base-context";
 import { takeGameSnapshot } from "../lib/ai/state-formatter";
 import { playerIntent$, manualInput$ } from "../lib/reactive";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
-import { createAugmentCoachingController } from "../lib/ai/augment-coaching";
+import { ProactiveEngine } from "../lib/ai/proactive/engine";
+import { createAugmentOfferTrigger } from "../lib/ai/proactive/triggers/augment-offer";
 import {
   coachingFeed$,
   gamePlan$,
   pushGamePlan,
-  pushAugmentOffer,
   pushCoachingExchange,
   captureLastGameSnapshot,
   resetForNewGame,
@@ -336,21 +336,6 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         }
         lastAugmentResponseRef.current = finalResult;
 
-        const gameTime = liveGameStateRef.current.gameTime;
-        const question = `I'm being offered these augments: ${names.join(", ")}. How well does each fit my current build?`;
-        pushCoachingExchange(
-          question,
-          "", // augment-fit has no prose answer; UI renders badges only
-          finalResult.recommendations.map((r) => ({
-            name: r.name,
-            fit: r.fit,
-            reasoning: r.reasoning,
-          })),
-          gameTime,
-          "augment",
-          retried
-        );
-
         const sentAt = Date.now();
         const overlayPayload = {
           answer: "",
@@ -541,65 +526,41 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   }, [submitQuestion]);
 
   // GEP augment coaching controller — pushes offers into feed
+  // Proactive engine — routes decision-point triggers to feature calls.
+  // Today only the augment-offer trigger is registered; item-purchase and
+  // passive-observation triggers land in subsequent phases of #67.
   useEffect(() => {
-    const ctrl = createAugmentCoachingController(
+    if (!mode) return;
+    const trigger = createAugmentOfferTrigger({
       augmentOffer$,
       augmentPicked$,
-      {
-        submitQuery: async (names, signal) => {
-          const gameTime = liveGameStateRef.current.gameTime;
+      handle: async (names, signal) => {
+        await submitAugmentQuery([...names], { signal });
+      },
+    });
+    const engine = new ProactiveEngine(mode, [trigger]);
+    return () => engine.dispose();
+  }, [mode, submitAugmentQuery]);
 
-          // Push augment offer to feed with placeholder data
-          const entry = pushAugmentOffer(
-            names.map((name) => ({
-              name,
-              fit: "situational" as const,
-              reasoning: "",
-            })),
-            gameTime
-          );
-
-          const response = await submitAugmentQuery([...names], { signal });
-          if (!response) return;
-
-          // Update the augment-offer feed entry with LLM fit ratings
-          const feed = coachingFeed$.getValue();
-          const updated = feed.map((e) => {
-            if (e.id !== entry.id || e.type !== "augment-offer") return e;
-            const ratedOptions = names.map((name) => {
-              const rec = response.recommendations.find(
-                (r) => r.name.toLowerCase() === name.toLowerCase()
-              );
-              return {
-                name,
-                fit: rec?.fit ?? ("situational" as const),
-                reasoning: rec?.reasoning ?? "",
-              };
-            });
-            return { ...e, options: ratedOptions };
-          });
-          coachingFeed$.next(updated);
-        },
-        onPicked: (name) => {
-          // Clear pinned ratings — next offer is a fresh selection round
-          lastAugmentResponseRef.current = null;
-          if (chosenAugmentsRef.current.includes(name)) return;
-          const next = [...chosenAugmentsRef.current, name];
-          chosenAugmentsRef.current = next;
-          setChosenAugments(next);
-          const augmentData = gameDataRef.current.augments.get(
-            name.toLowerCase()
-          );
-          if (augmentData) {
-            manualInput$.next({ type: "augment", augment: augmentData });
-          }
-          proactiveLog.info(`Augment added to build: ${name}`);
-        },
+  // Player-side augment pick tracking — chosen augments + manual input feed.
+  // Separate from the trigger's cancel$ because these are app state updates,
+  // not cancellation semantics.
+  useEffect(() => {
+    const sub = augmentPicked$.subscribe((name) => {
+      // Clear pinned ratings — next offer is a fresh selection round
+      lastAugmentResponseRef.current = null;
+      if (chosenAugmentsRef.current.includes(name)) return;
+      const next = [...chosenAugmentsRef.current, name];
+      chosenAugmentsRef.current = next;
+      setChosenAugments(next);
+      const augmentData = gameDataRef.current.augments.get(name.toLowerCase());
+      if (augmentData) {
+        manualInput$.next({ type: "augment", augment: augmentData });
       }
-    );
-
-    return () => ctrl.dispose();
-  }, [submitAugmentQuery]);
+      proactiveLog.info(`Augment added to build: ${name}`);
+    });
+    return () => sub.unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!apiKey) {

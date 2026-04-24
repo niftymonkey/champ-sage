@@ -1,6 +1,10 @@
 /**
  * Types for the coaching feed — a chronological list of coaching
  * interactions displayed in the desktop window during gameplay.
+ *
+ * Augment offers are NOT in the feed. Augment fit ratings render in the
+ * in-game overlay (OverlayApp badges); duplicating them in the desktop feed
+ * was removed in #67 Phase 1 per the overlay-vs-UI split principle.
  */
 
 import type { BuildPathItem, FitRating } from "../ai/types";
@@ -8,7 +12,7 @@ import type { BuildPathItem, FitRating } from "../ai/types";
 /** Base fields shared by all feed entries */
 export interface FeedEntry {
   id: string;
-  type: "game-plan" | "augment-offer" | "coaching-exchange";
+  type: "game-plan" | "coaching-exchange";
   /** Game time in seconds when the entry was created */
   timestamp: number;
   /** True = coach-initiated (gold border), false = player-initiated */
@@ -24,25 +28,11 @@ export interface GamePlanEntry extends FeedEntry {
   buildPath: BuildPathItem[];
 }
 
-/** GEP-triggered augment offer with fit-rated options */
-export interface AugmentOfferEntry extends FeedEntry {
-  type: "augment-offer";
-  options: AugmentOption[];
-  /** Filled in when the player picks one */
-  picked?: string;
-}
-
-export interface AugmentOption {
-  name: string;
-  fit: FitRating;
-  reasoning: string;
-}
-
-/** LLM coaching exchange — covers voice queries, augment evaluations, and plan updates */
+/** LLM coaching exchange — covers voice queries and plan updates */
 export interface CoachingExchangeEntry extends FeedEntry {
   type: "coaching-exchange";
   /** Where this coaching request originated */
-  source: "voice" | "augment" | "plan";
+  source: "voice" | "plan";
   question: string;
   answer: string;
   recommendations: CoachingRecommendation[];
@@ -57,10 +47,7 @@ export interface CoachingRecommendation {
 }
 
 /** Union of all feed entry types */
-export type AnyFeedEntry =
-  | GamePlanEntry
-  | AugmentOfferEntry
-  | CoachingExchangeEntry;
+export type AnyFeedEntry = GamePlanEntry | CoachingExchangeEntry;
 
 /** Current game plan — the living document shown in the side panel */
 export interface GamePlan {

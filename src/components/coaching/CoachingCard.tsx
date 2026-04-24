@@ -1,12 +1,9 @@
 import type {
   AnyFeedEntry,
   GamePlanEntry,
-  AugmentOfferEntry,
   CoachingExchangeEntry,
 } from "../../lib/reactive/coaching-feed-types";
 import type { BuildPathItem, FitRating } from "../../lib/ai/types";
-import { useCoachingContext } from "../../hooks/useCoachingContext";
-import { AugmentCard } from "../AugmentCard";
 import { BuildPathIcon, BUILD_PATH_CATEGORY_LABELS } from "./BuildPathIcon";
 import styles from "./CoachingCard.module.css";
 
@@ -18,8 +15,6 @@ export function CoachingCard({ entry }: CoachingCardProps) {
   switch (entry.type) {
     case "game-plan":
       return <GamePlanCard entry={entry} />;
-    case "augment-offer":
-      return <AugmentOfferCard entry={entry} />;
     case "coaching-exchange":
       return <CoachingExchangeCard entry={entry} />;
   }
@@ -39,53 +34,10 @@ function GamePlanCard({ entry }: { entry: GamePlanEntry }) {
   );
 }
 
-/* ─── Augment Offer Card ─── */
-
-function AugmentOfferCard({ entry }: { entry: AugmentOfferEntry }) {
-  const { gameData } = useCoachingContext();
-
-  return (
-    <div
-      className={`${styles.card} ${styles.proactive} ${styles.augmentOfferCard}`}
-    >
-      <CardHeader
-        type="augment"
-        label="Augment offer"
-        timestamp={entry.timestamp}
-      />
-      <div className={styles.body}>
-        <div className={styles.augmentOffer}>
-          {entry.options.map((opt) => {
-            const augment = gameData?.augments.get(opt.name.toLowerCase());
-            return (
-              <div
-                key={opt.name}
-                className={`${styles.augmentOption} ${opt.fit === "exceptional" || opt.fit === "strong" ? styles.augmentHighlight : ""}`}
-              >
-                <span
-                  className={`${styles.augmentFitBadge} ${fitBadgeClass(opt.fit)}`}
-                >
-                  {fitLabel(opt.fit)}
-                </span>
-                {augment ? (
-                  <AugmentCard augment={augment} />
-                ) : (
-                  <div className={styles.augmentName}>{opt.name}</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Coaching Exchange Card ─── */
 
 const SOURCE_LABELS: Record<CoachingExchangeEntry["source"], string> = {
   voice: "Voice query",
-  augment: "Augment coaching",
   plan: "Game plan update",
 };
 
@@ -96,7 +48,7 @@ function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
       className={`${styles.card} ${entry.source !== "voice" ? styles.proactive : ""}`}
     >
       <CardHeader
-        type={entry.source === "voice" ? "voice" : "augment"}
+        type={entry.source === "voice" ? "voice" : "plan"}
         label={label}
         timestamp={entry.timestamp}
       />
@@ -189,13 +141,6 @@ function formatBuildItemTooltip(item: BuildPathItem): string {
   return item.reason ? `${header}: ${item.reason}` : header;
 }
 
-const FIT_BADGE_CLASSES: Record<FitRating, string> = {
-  exceptional: styles.badgeExceptional,
-  strong: styles.badgeStrong,
-  situational: styles.badgeSituational,
-  weak: styles.badgeWeak,
-};
-
 const FIT_TEXT_CLASSES: Record<FitRating, string> = {
   exceptional: styles.fitExceptional,
   strong: styles.fitStrong,
@@ -209,10 +154,6 @@ const FIT_LABELS: Record<FitRating, string> = {
   situational: "Situational",
   weak: "Weak",
 };
-
-function fitBadgeClass(fit: FitRating): string {
-  return FIT_BADGE_CLASSES[fit];
-}
 
 function fitTextClass(fit: FitRating): string {
   return FIT_TEXT_CLASSES[fit];

@@ -2,8 +2,8 @@
  * Coaching feed streams — accumulates coaching interactions during
  * a game session and tracks the current game plan.
  *
- * - coachingFeed$: chronological list of feed entries (augment offers,
- *   coaching exchanges, game plan cards)
+ * - coachingFeed$: chronological list of feed entries (game plan cards,
+ *   coaching exchanges). Augment offers render in the overlay, not here.
  * - gamePlan$: the current game plan shown in the side panel
  * - lastGameSnapshot$: snapshot of the most recent completed game
  */
@@ -15,7 +15,6 @@ import type {
   GamePlan,
   LastGameSnapshot,
   GamePlanEntry,
-  AugmentOfferEntry,
   CoachingExchangeEntry,
 } from "./coaching-feed-types";
 
@@ -54,34 +53,6 @@ export function pushGamePlan(
   gamePlan$.next({ summary, buildPath, updatedAt: gameTime });
 
   return entry;
-}
-
-/** Push an augment offer to the feed */
-export function pushAugmentOffer(
-  options: AugmentOfferEntry["options"],
-  gameTime: number
-): AugmentOfferEntry {
-  const entry: AugmentOfferEntry = {
-    id: nextFeedId(),
-    type: "augment-offer",
-    timestamp: gameTime,
-    proactive: true,
-    options,
-  };
-
-  coachingFeed$.next([...coachingFeed$.getValue(), entry]);
-  return entry;
-}
-
-/** Mark an augment offer as picked */
-export function markAugmentPicked(entryId: string, picked: string): void {
-  const feed = coachingFeed$.getValue();
-  const updated = feed.map((e) =>
-    e.id === entryId && e.type === "augment-offer"
-      ? ({ ...e, picked } as AugmentOfferEntry)
-      : e
-  );
-  coachingFeed$.next(updated);
 }
 
 /** Push a coaching exchange to the feed */
