@@ -21,7 +21,6 @@ import { InGameView } from "./components/InGameView";
 import { LastGameCard } from "./components/coaching";
 import { CoachingPipeline } from "./components/CoachingPipeline";
 import { ConnectionStatus } from "./components/ConnectionStatus";
-import { PersonalityToggle } from "./components/PersonalityToggle";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
 import {
   createModeRegistry,
@@ -198,8 +197,7 @@ function App() {
   if (loading && !data) {
     return (
       <main className="app-root">
-        <StatusBar isRecording={voice.isRecording} dataVersion="" />
-        <PersonalityToggle />
+        <StatusBar isRecording={voice.isRecording} />
         <div className="app-loading">Loading game data...</div>
       </main>
     );
@@ -208,8 +206,7 @@ function App() {
   if (error && !data) {
     return (
       <main className="app-root">
-        <StatusBar isRecording={voice.isRecording} dataVersion="" />
-        <PersonalityToggle />
+        <StatusBar isRecording={voice.isRecording} />
         <div className="app-error">Error: {error}</div>
       </main>
     );
@@ -219,8 +216,7 @@ function App() {
 
   return (
     <main className="app-root">
-      <StatusBar isRecording={voice.isRecording} dataVersion={data.version} />
-      <PersonalityToggle />
+      <StatusBar isRecording={voice.isRecording} />
       <CoachingProvider
         mode={detectedMode}
         liveGameState={liveGame}

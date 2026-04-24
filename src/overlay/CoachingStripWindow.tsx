@@ -135,6 +135,32 @@ export function CoachingStripWindow() {
     return () => unlisten();
   }, []);
 
+  // Manual clear from app window or hotkey (#111 safety valve). Resets
+  // every visible-state flag to its baseline so the strip hides; main
+  // process fires `forceCompositorFlush` on broadcast of this IPC.
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.onClearOverlays) return;
+
+    const unlisten = api.onClearOverlays(() => {
+      stripLog.info("Clear overlays — resetting strip state");
+      setText("");
+      setThinking(false);
+      setVisible(false);
+      setFresh(false);
+      if (freshTimerRef.current) {
+        clearTimeout(freshTimerRef.current);
+        freshTimerRef.current = null;
+      }
+      if (thinkingTimerRef.current) {
+        clearTimeout(thinkingTimerRef.current);
+        thinkingTimerRef.current = null;
+      }
+    });
+
+    return () => unlisten();
+  }, []);
+
   // Log significant state changes (thinking/visible transitions, not hover)
   useEffect(() => {
     stripLog.debug(

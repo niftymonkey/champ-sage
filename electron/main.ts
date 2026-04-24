@@ -707,6 +707,39 @@ function registerOverlayIpc(): void {
       // Ignore — window may not be ready
     }
   });
+
+  // Overlay compositor flush — renderer requests a forced repaint after a
+  // state-hidden transition (#111). React unmounting isn't enough for
+  // ow-electron's compositor; it retains the last painted frame until an
+  // external trigger forces a flush.
+  ipcMain.on("request-overlay-flush", (_e, label: unknown) => {
+    const target =
+      label === "badge"
+        ? badgeOverlay
+        : label === "strip"
+          ? stripOverlay
+          : null;
+    if (!target?.window) return;
+    forceCompositorFlush(
+      target.window,
+      typeof label === "string" ? label : "unknown"
+    );
+  });
+
+  // Clear overlays — user-triggered escape hatch (#111). Broadcasts to
+  // every renderer so overlay state machines reset to their initial state,
+  // then flushes the compositor on both overlay windows so the DOM
+  // unmounts paint through.
+  ipcMain.on("clear-overlays", () => {
+    overlayLog.info("Clear overlays requested — broadcasting reset");
+    sendToAllWindows("clear-overlays", {});
+    if (badgeOverlay?.window) {
+      forceCompositorFlush(badgeOverlay.window, "badge");
+    }
+    if (stripOverlay?.window) {
+      forceCompositorFlush(stripOverlay.window, "strip");
+    }
+  });
 }
 
 function initOverlay(): void {
@@ -826,8 +859,31 @@ function registerOverlayHotkeys(overlayApi: any): void {
     }
   );
 
+  // Ctrl+Shift+Space — escape hatch for stuck overlays (#111). Mirrors
+  // the "Clear overlays" button in the main app window. Same flow: reset
+  // every overlay's React state and force a main-process compositor flush.
+  overlayApi.hotkeys.register(
+    {
+      name: "clear-overlays",
+      keyCode: 32, // VK_SPACE
+      modifiers: { ctrl: true, shift: true },
+      passthrough: true,
+    },
+    (_hotkey: any, state: "pressed" | "released") => {
+      if (state !== "pressed") return;
+      overlayLog.info("Ctrl+Shift+Space pressed — clearing overlays");
+      sendToAllWindows("clear-overlays", {});
+      if (badgeOverlay?.window) {
+        forceCompositorFlush(badgeOverlay.window, "badge");
+      }
+      if (stripOverlay?.window) {
+        forceCompositorFlush(stripOverlay.window, "strip");
+      }
+    }
+  );
+
   voiceLog.info(
-    "Overlay hotkeys registered: NumpadSubtract (hold-to-talk), Shift+Tab (edit mode), F8 (calibration)"
+    "Overlay hotkeys registered: NumpadSubtract (hold-to-talk), Shift+Tab (edit mode), F8 (calibration), Ctrl+Shift+Space (clear overlays)"
   );
 }
 
