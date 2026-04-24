@@ -336,6 +336,21 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         }
         lastAugmentResponseRef.current = finalResult;
 
+        const gameTime = liveGameStateRef.current.gameTime;
+        const question = `I'm being offered these augments: ${names.join(", ")}. How well does each fit my current build?`;
+        pushCoachingExchange(
+          question,
+          "", // augment-fit has no prose answer; UI renders ratings only
+          finalResult.recommendations.map((r) => ({
+            name: r.name,
+            fit: r.fit,
+            reasoning: r.reasoning,
+          })),
+          gameTime,
+          "augment",
+          retried
+        );
+
         const sentAt = Date.now();
         const overlayPayload = {
           answer: "",

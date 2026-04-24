@@ -38,6 +38,7 @@ function GamePlanCard({ entry }: { entry: GamePlanEntry }) {
 
 const SOURCE_LABELS: Record<CoachingExchangeEntry["source"], string> = {
   voice: "Voice query",
+  augment: "Augment coaching",
   plan: "Game plan update",
 };
 
@@ -48,7 +49,13 @@ function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
       className={`${styles.card} ${entry.source !== "voice" ? styles.proactive : ""}`}
     >
       <CardHeader
-        type={entry.source === "voice" ? "voice" : "plan"}
+        type={
+          entry.source === "voice"
+            ? "voice"
+            : entry.source === "augment"
+              ? "augment"
+              : "plan"
+        }
         label={label}
         timestamp={entry.timestamp}
       />

@@ -28,11 +28,11 @@ export interface GamePlanEntry extends FeedEntry {
   buildPath: BuildPathItem[];
 }
 
-/** LLM coaching exchange — covers voice queries and plan updates */
+/** LLM coaching exchange — covers voice queries, augment evaluations, and plan updates */
 export interface CoachingExchangeEntry extends FeedEntry {
   type: "coaching-exchange";
   /** Where this coaching request originated */
-  source: "voice" | "plan";
+  source: "voice" | "augment" | "plan";
   question: string;
   answer: string;
   recommendations: CoachingRecommendation[];
