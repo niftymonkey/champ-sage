@@ -68,6 +68,7 @@ export function OverlayApp() {
           clearTimeout(analyzingTimerRef.current);
           analyzingTimerRef.current = null;
         }
+        window.electronAPI?.requestOverlayFlush("badge");
       }
     });
 
@@ -80,6 +81,13 @@ export function OverlayApp() {
   // a compositor layer routes through the same paint path as a real DOM
   // change. Call after any state transition that changes what should be
   // visible. (#98)
+  //
+  // Pairs with `requestOverlayFlush` for state-hidden transitions — the
+  // React-side nudge alone isn't enough to dislodge the last-painted
+  // frame from ow-electron's compositor; the main-process flush
+  // (`forceCompositorFlush` in electron/main.ts) is what actually
+  // guarantees the window repaints when offer/coaching go back to null
+  // (#111).
   const forcePaintNudge = useCallback(() => {
     requestAnimationFrame(() => {
       const root = document.getElementById("overlay-root");
@@ -90,6 +98,33 @@ export function OverlayApp() {
       });
     });
   }, []);
+
+  const requestMainFlush = useCallback(() => {
+    window.electronAPI?.requestOverlayFlush("badge");
+  }, []);
+
+  // Manual clear from app window or hotkey (#111 safety valve). Resets
+  // state to the hidden baseline and nudges the compositor. Main process
+  // already triggers `forceCompositorFlush` on broadcast of this IPC, so
+  // the renderer only needs the React-side state reset + paint nudge.
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.onClearOverlays) return;
+
+    const unlisten = api.onClearOverlays(() => {
+      overlayLog.info("Clear overlays — resetting badge state");
+      offerNamesRef.current = null;
+      setAugmentOffer(null);
+      setCoachingData(null);
+      if (analyzingTimerRef.current) {
+        clearTimeout(analyzingTimerRef.current);
+        analyzingTimerRef.current = null;
+      }
+      forcePaintNudge();
+    });
+
+    return () => unlisten();
+  }, [forcePaintNudge]);
 
   // Listen for coaching responses relayed from desktop window
   useEffect(() => {
@@ -189,9 +224,10 @@ export function OverlayApp() {
         setAugmentOffer(null);
         setCoachingData(null);
         forcePaintNudge();
+        requestMainFlush();
       }, ANALYZING_TIMEOUT_MS);
     },
-    [forcePaintNudge]
+    [forcePaintNudge, requestMainFlush]
   );
 
   const handleAugmentPicked = useCallback(() => {
@@ -204,7 +240,8 @@ export function OverlayApp() {
       analyzingTimerRef.current = null;
     }
     forcePaintNudge();
-  }, [forcePaintNudge]);
+    requestMainFlush();
+  }, [forcePaintNudge, requestMainFlush]);
 
   // Log state changes for debugging stale badge issues.
   // This is what determines whether "Analyzing" or actual badges render —

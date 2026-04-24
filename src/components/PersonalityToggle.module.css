@@ -1,13 +1,9 @@
 .toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.6rem;
-  background: #12151c;
-  border-bottom: 1px solid #2a2f3e;
+  gap: 0.35rem;
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 0.65rem;
-  flex-shrink: 0;
 }
 
 .label {
@@ -17,15 +13,15 @@
 }
 
 .buttons {
-  display: flex;
-  gap: 0.25rem;
+  display: inline-flex;
+  gap: 0.2rem;
 }
 
 .button {
   background: transparent;
   color: #8890a4;
   border: 1px solid #2a2f3e;
-  padding: 0.2rem 0.5rem;
+  padding: 0.15rem 0.45rem;
   border-radius: 0.2rem;
   cursor: pointer;
   font: inherit;

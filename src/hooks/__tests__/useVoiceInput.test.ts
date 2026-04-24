@@ -48,6 +48,9 @@ beforeEach(() => {
     onCoachingRequest: vi.fn(() => () => {}),
     sendCoachingResponse: vi.fn(),
     onCoachingResponse: vi.fn(() => () => {}),
+    requestOverlayFlush: vi.fn(),
+    clearOverlays: vi.fn(),
+    onClearOverlays: vi.fn(() => () => {}),
   };
 });
 
@@ -83,6 +86,9 @@ describe("useVoiceInput", () => {
       onCoachingRequest: vi.fn(() => () => {}),
       sendCoachingResponse: vi.fn(),
       onCoachingResponse: vi.fn(() => () => {}),
+      requestOverlayFlush: vi.fn(),
+      clearOverlays: vi.fn(),
+      onClearOverlays: vi.fn(() => () => {}),
     };
   });
 

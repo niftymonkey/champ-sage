@@ -23,6 +23,9 @@ interface ElectronAPI {
   onCoachingRequest(callback: () => void): () => void;
   sendCoachingResponse(data: unknown): void;
   onCoachingResponse(callback: (data: unknown) => void): () => void;
+  requestOverlayFlush(label: "badge" | "strip"): void;
+  clearOverlays(): void;
+  onClearOverlays(callback: () => void): () => void;
 }
 
 declare global {

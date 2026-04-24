@@ -1,13 +1,14 @@
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { useGameLifecycle } from "../hooks/useGameLifecycle";
+import { PersonalityToggle } from "./PersonalityToggle";
+import { ClearOverlaysButton } from "./ClearOverlaysButton";
 import styles from "./StatusBar.module.css";
 
 interface StatusBarProps {
   isRecording: boolean;
-  dataVersion: string;
 }
 
-export function StatusBar({ isRecording, dataVersion }: StatusBarProps) {
+export function StatusBar({ isRecording }: StatusBarProps) {
   const liveGame = useLiveGameState();
   const { event: lifecycle } = useGameLifecycle();
 
@@ -43,13 +44,9 @@ export function StatusBar({ isRecording, dataVersion }: StatusBarProps) {
         )}
       </div>
       <div className={styles.right}>
-        <span className={styles.muted}>
-          {isConnected ? "Connected" : "Disconnected"}
-        </span>
+        <PersonalityToggle />
         <span className={styles.sep}>|</span>
-        <span className={styles.muted} title="League of Legends patch version">
-          v{dataVersion}
-        </span>
+        <ClearOverlaysButton />
         <span className={styles.sep}>|</span>
         <VoiceIndicator isRecording={isRecording} />
       </div>

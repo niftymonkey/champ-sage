@@ -106,4 +106,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("coaching-response", handler);
     return () => ipcRenderer.removeListener("coaching-response", handler);
   },
+
+  // Overlay compositor flush — renderer asks main to force the overlay
+  // window to repaint after a state-hidden transition (#111). React
+  // unmounts the DOM fine, but ow-electron's compositor retains the
+  // last-painted frame without a main-process nudge.
+  requestOverlayFlush: (label: "badge" | "strip") => {
+    ipcRenderer.send("request-overlay-flush", label);
+  },
+
+  // Clear overlays — app window or hotkey asks main to reset overlay
+  // state machines and flush. Main broadcasts `clear-overlays` to every
+  // renderer.
+  clearOverlays: () => {
+    ipcRenderer.send("clear-overlays");
+  },
+
+  onClearOverlays: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on("clear-overlays", handler);
+    return () => ipcRenderer.removeListener("clear-overlays", handler);
+  },
 });

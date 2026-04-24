@@ -1,0 +1,28 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  color: #8890a4;
+  border: 1px solid #2a2f3e;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.2rem;
+  cursor: pointer;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.65rem;
+  transition:
+    background 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.button:hover {
+  background: #181c26;
+  color: #e8a0a0;
+  border-color: #6e3f3f;
+}
+
+.hint {
+  color: #4a5168;
+  font-size: 0.6rem;
+}
