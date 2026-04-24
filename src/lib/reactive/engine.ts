@@ -70,12 +70,17 @@ const NOISE_PREFIXES = [
 
 /** Parse raw EOG stats JSON from the LCU into our EogStats shape. */
 function parseEogStats(raw: Record<string, unknown>): EogStats {
-  const teams = raw.teams as Array<{ isWinningTeam: boolean }> | undefined;
+  const teams = raw.teams as
+    | Array<{ isWinningTeam: boolean; isPlayerTeam?: boolean }>
+    | undefined;
   const localPlayer = raw.localPlayer as
     | { championId: number; stats: Record<string, number> }
     | undefined;
 
-  const isWin = teams?.[0]?.isWinningTeam ?? false;
+  // Use `isPlayerTeam` to identify the player's team, not teams[0] — team
+  // ordering in the LCU payload does not match the player's team.
+  const playerTeam = teams?.find((t) => t.isPlayerTeam);
+  const isWin = playerTeam?.isWinningTeam ?? false;
 
   // Extract item IDs from stats (ITEM0..ITEM6), filtering out 0s
   const items: number[] = [];

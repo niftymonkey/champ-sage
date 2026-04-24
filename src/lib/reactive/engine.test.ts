@@ -819,7 +819,7 @@ describe("ReactiveEngine", () => {
         gameId: "12345",
         gameLength: 1800,
         gameMode: "CLASSIC",
-        teams: [{ isWinningTeam: true }],
+        teams: [{ isWinningTeam: true, isPlayerTeam: true }],
         localPlayer: { championId: 86, stats: { ITEM0: 1001, ITEM1: 3006 } },
       });
       engine.start();
@@ -854,7 +854,7 @@ describe("ReactiveEngine", () => {
         gameId: "67890",
         gameLength: 1800,
         gameMode: "CLASSIC",
-        teams: [{ isWinningTeam: true }],
+        teams: [{ isWinningTeam: true, isPlayerTeam: true }],
         localPlayer: {
           championId: 86,
           stats: { ITEM0: 1001, ITEM1: 3006, ITEM2: 0 },
@@ -884,6 +884,42 @@ describe("ReactiveEngine", () => {
       expect(state.eogStats?.gameId).toBe("67890");
       expect(state.eogStats?.isWin).toBe(true);
       expect(state.eogStats?.championId).toBe(86);
+    });
+
+    it("returns isWin based on the player's team, not teams[0]", async () => {
+      bridge.setLcuAvailable(12345, "secret");
+      bridge.setRiotApiResponse(createRiotApiResponse({ gameTime: 300 }));
+      bridge.setFetchLcuResponse({
+        gameId: "99999",
+        gameLength: 1800,
+        gameMode: "CLASSIC",
+        teams: [
+          { isWinningTeam: false, isPlayerTeam: false },
+          { isWinningTeam: true, isPlayerTeam: true },
+        ],
+        localPlayer: {
+          championId: 133,
+          stats: { ITEM0: 3085 },
+        },
+      });
+      engine.start();
+      await vi.advanceTimersByTimeAsync(0);
+
+      bridge.simulateLcuEvent({
+        uri: "/lol-gameflow/v1/gameflow-phase",
+        event_type: "Update",
+        data: "InProgress",
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      bridge.simulateLcuEvent({
+        uri: "/lol-gameflow/v1/gameflow-phase",
+        event_type: "Update",
+        data: "PreEndOfGame",
+      });
+      await vi.advanceTimersByTimeAsync(0);
+
+      const state = liveGameState$.getValue();
+      expect(state.eogStats?.isWin).toBe(true);
     });
 
     it("handles EOG fetch failure gracefully", async () => {
