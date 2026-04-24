@@ -26,6 +26,7 @@ export {
   type AugmentFitResult,
 } from "./features/augment-fit";
 export {
+  isItemRecQuestion,
   itemRecFeature,
   type ItemRecInput,
   type ItemRecResult,

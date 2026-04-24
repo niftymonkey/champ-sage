@@ -51,6 +51,12 @@ import {
   type GamePlanResult,
 } from "./features/game-plan";
 import {
+  isItemRecQuestion,
+  itemRecFeature,
+  type ItemRecInput,
+  type ItemRecResult,
+} from "./features/item-rec";
+import {
   voiceQueryFeature,
   type VoiceQueryInput,
   type VoiceQueryResult,
@@ -468,10 +474,16 @@ function buildFixtureState(f: MultiTurnFixture): {
 /**
  * Pick the feature that owns this fixture and build its typed input.
  *
- * Today's fixtures cover augment-offer calls and open-ended voice queries.
- * Game-plan and item-rec classifications are wired up but not exercised by
- * the current fixture set — they're here so new fixtures pick up the right
- * feature automatically.
+ * Classification order is load-bearing and must mirror production routing
+ * in `CoachingPipeline.tsx`:
+ *   1. `augment-fit` — augment offer context outranks anything else.
+ *   2. `game-plan` — the "update game plan" voice command.
+ *   3. `item-rec` — questions about buying/building items (#113).
+ *   4. `voice-query` — everything else: strategic, positional, mechanical.
+ *
+ * Today's fixtures cover augment-offer calls, item-rec questions, and
+ * open-ended voice queries. Game-plan is wired up but not exercised by the
+ * current fixture set.
  */
 function classifyFixture(
   f: MultiTurnFixture,
@@ -479,6 +491,7 @@ function classifyFixture(
 ):
   | { kind: "augment-fit"; input: AugmentFitInput }
   | { kind: "game-plan"; input: GamePlanInput }
+  | { kind: "item-rec"; input: ItemRecInput }
   | { kind: "voice-query"; input: VoiceQueryInput } {
   if (f.query.augmentOptions && f.query.augmentOptions.length >= 2) {
     return {
@@ -497,6 +510,12 @@ function classifyFixture(
       input: { snapshot },
     };
   }
+  if (isItemRecQuestion(f.query.question)) {
+    return {
+      kind: "item-rec",
+      input: { snapshot, question: f.query.question },
+    };
+  }
   return {
     kind: "voice-query",
     input: { snapshot, question: f.query.question },
@@ -505,8 +524,8 @@ function classifyFixture(
 
 /** Boundary normalize per-feature results to the shared EvalOutput shape. */
 function normalize(
-  kind: "augment-fit" | "game-plan" | "voice-query",
-  result: AugmentFitResult | GamePlanResult | VoiceQueryResult
+  kind: "augment-fit" | "game-plan" | "item-rec" | "voice-query",
+  result: AugmentFitResult | GamePlanResult | ItemRecResult | VoiceQueryResult
 ): EvalOutput {
   if (kind === "augment-fit") {
     const r = result as AugmentFitResult;
@@ -527,6 +546,14 @@ function normalize(
         reasoning: item.reason,
       })),
       buildPath: r.buildPath,
+    };
+  }
+  if (kind === "item-rec") {
+    const r = result as ItemRecResult;
+    return {
+      answer: r.answer,
+      recommendations: r.recommendations,
+      buildPath: [],
     };
   }
   const r = result as VoiceQueryResult;
@@ -578,6 +605,10 @@ function buildEvalInput(f: MultiTurnFixture): EvalInput {
         classification.input
       );
       return normalize("game-plan", value);
+    }
+    if (classification.kind === "item-rec") {
+      const { value } = await session.ask(itemRecFeature, classification.input);
+      return normalize("item-rec", value);
     }
     const { value } = await session.ask(
       voiceQueryFeature,

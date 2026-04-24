@@ -25,6 +25,7 @@ import {
   augmentFitFeature,
   type AugmentFitResult,
 } from "../lib/ai/features/augment-fit";
+import { isItemRecQuestion, itemRecFeature } from "../lib/ai/features/item-rec";
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
@@ -465,11 +466,25 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       window.electronAPI?.sendCoachingRequest();
 
       try {
-        const { value: response, retried } = await sessionRef.current.ask(
-          voiceQueryFeature,
-          { snapshot, question },
-          { signal: options?.signal }
+        // Route item-purchase questions to itemRecFeature so its prompt's
+        // destination+component format rule applies (#113). Strategic /
+        // positional / mechanical questions stay on voiceQueryFeature.
+        const useItemRec = isItemRecQuestion(trimmedQuestion);
+        proactiveLog.info(
+          `Voice question routing: "${trimmedQuestion}" → ${useItemRec ? "itemRec" : "voiceQuery"}`
         );
+        const askResult = useItemRec
+          ? await sessionRef.current.ask(
+              itemRecFeature,
+              { snapshot, question },
+              { signal: options?.signal }
+            )
+          : await sessionRef.current.ask(
+              voiceQueryFeature,
+              { snapshot, question },
+              { signal: options?.signal }
+            );
+        const { value: response, retried } = askResult;
 
         const gameTime = liveGameStateRef.current.gameTime;
         pushCoachingExchange(
