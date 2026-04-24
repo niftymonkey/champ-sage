@@ -372,12 +372,19 @@ interface MultiTurnFixture {
   query: {
     question: string;
     history?: Array<{ question: string; answer: string }>;
-    augmentOptions?: Array<{
-      name: string;
-      description: string;
-      tier: string;
-      sets?: string[];
-    }>;
+    // Accepts two shapes. Full objects carry metadata the augment-fit
+    // feature doesn't actually consume (the user message rehydrates from
+    // `gameData.augments.get(name)`), so lightweight string-form fixtures
+    // are valid for tests that only need names (e.g. re-roll tracking).
+    augmentOptions?: Array<
+      | string
+      | {
+          name: string;
+          description: string;
+          tier: string;
+          sets?: string[];
+        }
+    >;
   };
   response: {
     answer: string;
@@ -498,7 +505,9 @@ function classifyFixture(
       kind: "augment-fit",
       input: {
         snapshot,
-        augmentNames: f.query.augmentOptions.map((o) => o.name),
+        augmentNames: f.query.augmentOptions.map((o) =>
+          typeof o === "string" ? o : o.name
+        ),
         chosenAugments: f.chosenAugments,
         gameData,
       },
