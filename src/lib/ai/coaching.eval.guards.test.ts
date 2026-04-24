@@ -92,51 +92,15 @@ describe("coaching.eval.ts anti-drift guards", () => {
         ).toMatch(new RegExp(token.replace(".", "\\.")));
       });
     }
-  });
 
-  it("base context built for a fixture equals buildBaseContext output for the same inputs", async () => {
-    // Tautology guard: if the eval ever stops calling buildBaseContext and
-    // hand-rolls a system prompt, this comparison fails. Picks the first
-    // fixture from the synthetic-multiturn-scorers set as a stable sample.
-    const { buildBaseContext } = await import("./base-context");
-    const { aramMayhemMode, aramMode, classicMode } = await import("../mode");
-    const { loadGameData } = await import("../data-ingest");
-    const fixtures = JSON.parse(
-      readFileSync(
-        resolve(
-          __dirname,
-          "../../../fixtures/coaching-sessions-v2/synthetic-multiturn-scorers.json"
-        ),
-        "utf-8"
-      )
-    ) as Array<{
-      gameModeId: "aram-mayhem" | "aram" | "classic";
-      gameState: import("../game-state/types").GameState;
-    }>;
-    const f = fixtures[0];
-    const gameData = await loadGameData();
-    const modeMap = {
-      "aram-mayhem": aramMayhemMode,
-      aram: aramMode,
-      classic: classicMode,
-    };
-    const expected = buildBaseContext({
-      mode: modeMap[f.gameModeId],
-      gameData,
-      gameState: f.gameState,
+    // Call-shape guard: buildBaseContext must be called with the three
+    // production inputs (mode, gameData, gameState). If the eval ever wraps
+    // or narrows them, this regex fails. behavioral verification of
+    // buildBaseContext itself lives in base-context.test.ts — not here.
+    it("calls buildBaseContext with { mode, gameData, gameState }", () => {
+      expect(evalSource).toMatch(
+        /buildBaseContext\(\s*\{\s*[^}]*mode[^}]*gameData[^}]*gameState[^}]*\}\s*\)/
+      );
     });
-
-    // Source-level guard: confirm the eval calls buildBaseContext with the
-    // same shape we just used here. Combined with the eval's own import,
-    // any divergence (extra wrapping, prefix injection) shows up as a
-    // failing assertion the next time the eval is touched.
-    expect(evalSource).toMatch(
-      /buildBaseContext\(\s*\{\s*[^}]*mode[^}]*gameData[^}]*gameState[^}]*\}\s*\)/
-    );
-
-    // Sanity: the expected context is non-empty and has the persona block
-    // the eval relies on.
-    expect(expected.length).toBeGreaterThan(500);
-    expect(expected).toContain("League of Legends coaching AI");
   });
 });
