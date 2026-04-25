@@ -4,6 +4,8 @@ import type {
   CoachingExchangeEntry,
 } from "../../lib/reactive/coaching-feed-types";
 import type { BuildPathItem, FitRating } from "../../lib/ai/types";
+import type { LoadedGameData } from "../../lib/data-ingest";
+import { useCoachingContext } from "../../hooks/useCoachingContext";
 import { BuildPathIcon, BUILD_PATH_CATEGORY_LABELS } from "./BuildPathIcon";
 import styles from "./CoachingCard.module.css";
 
@@ -44,6 +46,7 @@ const SOURCE_LABELS: Record<CoachingExchangeEntry["source"], string> = {
 };
 
 function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
+  const { gameData } = useCoachingContext();
   const label = SOURCE_LABELS[entry.source] ?? "Coaching";
   return (
     <div
@@ -78,6 +81,7 @@ function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
                 <span className={`${styles.recFit} ${fitTextClass(rec.fit)}`}>
                   {fitLabel(rec.fit)}
                 </span>
+                <ItemIcon name={rec.name} gameData={gameData} />
                 <div>
                   <div className={styles.recName}>{rec.name}</div>
                   <div className={styles.recReason}>{rec.reasoning}</div>
@@ -88,6 +92,37 @@ function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
         )}
       </div>
     </div>
+  );
+}
+
+/* ─── Item icon — small DDragon thumbnail beside each recommendation row ─── */
+
+function ItemIcon({
+  name,
+  gameData,
+}: {
+  name: string;
+  gameData: LoadedGameData | null;
+}) {
+  if (!gameData) return null;
+  // Items map is keyed by ID; linear scan by name is fine — ~200 entries,
+  // 2-3 recs per render. Item.image is already a fully-resolved DDragon URL.
+  let url: string | null = null;
+  for (const item of gameData.items.values()) {
+    if (item.name === name) {
+      url = item.image;
+      break;
+    }
+  }
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      alt=""
+      aria-hidden="true"
+      className={styles.recItemIcon}
+      loading="lazy"
+    />
   );
 }
 
