@@ -40,6 +40,7 @@ const SOURCE_LABELS: Record<CoachingExchangeEntry["source"], string> = {
   voice: "Voice query",
   augment: "Augment coaching",
   plan: "Game plan update",
+  "item-rec": "Item recommendation",
 };
 
 function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {

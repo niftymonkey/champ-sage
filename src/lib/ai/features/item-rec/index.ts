@@ -5,10 +5,31 @@ import { itemRecSchema, type ItemRecResult } from "./schema";
 
 export type { ItemRecResult } from "./schema";
 
+/**
+ * What initiated this item-rec call. Used by buildUserMessage to add a
+ * framing line that helps the LLM tune urgency and forward-looking phrasing.
+ *
+ * - "voice": player asked via voice/text — reactive, conversational.
+ * - "shop-moment": proactive engine fired on death-with-gold — player is at
+ *   the shop right now; advice should be actionable in seconds.
+ * - "gold-available": proactive engine fired when gold reached the next
+ *   main item's threshold — forward-looking, "next time you shop..."
+ */
+export type ItemRecTrigger = "voice" | "shop-moment" | "gold-available";
+
 export interface ItemRecInput {
   readonly snapshot: GameSnapshot | null;
   readonly question: string;
+  /** Defaults to "voice" for backward compatibility with the existing reactive path. */
+  readonly trigger?: ItemRecTrigger;
 }
+
+const TRIGGER_FRAMING: Record<Exclude<ItemRecTrigger, "voice">, string> = {
+  "shop-moment":
+    "[Trigger: shop-moment] The player just died and is at the shop. Give them 2–3 strong purchase options they can act on in the next few seconds.",
+  "gold-available":
+    "[Trigger: gold-available] The player just reached enough gold to afford the next main item in their plan. Frame the response as forward-looking — what to prioritize on the next shop trip.",
+};
 
 export const itemRecFeature: CoachingFeature<ItemRecInput, ItemRecResult> = {
   id: "item-rec",
@@ -16,9 +37,14 @@ export const itemRecFeature: CoachingFeature<ItemRecInput, ItemRecResult> = {
 
   buildTaskPrompt: () => `\n\n${ITEM_REC_TASK_PROMPT}`,
 
-  buildUserMessage: ({ snapshot, question }) => {
+  buildUserMessage: ({ snapshot, question, trigger = "voice" }) => {
     const snapshotText = snapshot ? formatStateSnapshot(snapshot) : "";
-    return `[Game State]\n${snapshotText}\n\n[Question]\n${question}`;
+    const sections = [`[Game State]\n${snapshotText}`];
+    if (trigger !== "voice") {
+      sections.push(TRIGGER_FRAMING[trigger]);
+    }
+    sections.push(`[Question]\n${question}`);
+    return sections.join("\n\n");
   },
 
   outputSchema: itemRecSchema,

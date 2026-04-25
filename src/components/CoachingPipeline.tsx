@@ -25,7 +25,11 @@ import {
   augmentFitFeature,
   type AugmentFitResult,
 } from "../lib/ai/features/augment-fit";
-import { isItemRecQuestion, itemRecFeature } from "../lib/ai/features/item-rec";
+import {
+  isItemRecQuestion,
+  itemRecFeature,
+  type ItemRecTrigger,
+} from "../lib/ai/features/item-rec";
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
@@ -33,10 +37,15 @@ import { createMatchSession } from "../lib/ai/match-session";
 import { getPersonality } from "../lib/ai/personality-store";
 import { buildBaseContext } from "../lib/ai/base-context";
 import { takeGameSnapshot } from "../lib/ai/state-formatter";
-import { playerIntent$, manualInput$ } from "../lib/reactive";
+import { playerIntent$, manualInput$, liveGameState$ } from "../lib/reactive";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { ProactiveEngine } from "../lib/ai/proactive/engine";
 import { createAugmentOfferTrigger } from "../lib/ai/proactive/triggers/augment-offer";
+import {
+  createShopMomentTrigger,
+  createGoldAvailableTrigger,
+} from "../lib/ai/proactive/triggers/item-purchase";
+import type { LiveGameState } from "../lib/reactive/types";
 import {
   coachingFeed$,
   gamePlan$,
@@ -540,22 +549,108 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     return () => sub.unsubscribe();
   }, [submitQuestion]);
 
-  // GEP augment coaching controller — pushes offers into feed
   // Proactive engine — routes decision-point triggers to feature calls.
-  // Today only the augment-offer trigger is registered; item-purchase and
-  // passive-observation triggers land in subsequent phases of #67.
+  // Triggers: augment-offer (Phase 1), shop-moment + gold-available (Phase 2).
+  // Passive-observation triggers land in Phase 3.
+  //
+  // Global min-gap of 30s aggressively rate-limits cross-trigger LLM calls so
+  // proactive coaching never feels like a chat firehose. Augment-offer
+  // bypasses the gap (game-rate-limited; can't miss anvil moments). Item
+  // triggers respect it.
   useEffect(() => {
     if (!mode) return;
-    const trigger = createAugmentOfferTrigger({
+
+    const augmentTrigger = createAugmentOfferTrigger({
       augmentOffer$,
       augmentPicked$,
       handle: async (names, signal) => {
         await submitAugmentQuery([...names], { signal });
       },
     });
-    const engine = new ProactiveEngine(mode, [trigger]);
+
+    const itemRecHandle = async (
+      state: LiveGameState,
+      signal: AbortSignal,
+      trigger: ItemRecTrigger
+    ) => {
+      if (!sessionRef.current || !apiKey) return;
+      const question =
+        trigger === "shop-moment"
+          ? "I just died. What are my best 2-3 purchase options right now?"
+          : "I just reached enough gold for my next main item. What should I prioritize next time I shop?";
+      try {
+        const snapshot = takeGameSnapshot(
+          state,
+          enemyStatsRef.current,
+          gameDataRef.current,
+          chosenAugmentsRef.current
+        );
+        proactiveLog.info(`Item-rec ${trigger} fired`);
+        const { value: response, retried } = await sessionRef.current.ask(
+          itemRecFeature,
+          { snapshot, question, trigger },
+          { signal }
+        );
+        const gameTime = liveGameStateRef.current.gameTime;
+        pushCoachingExchange(
+          question,
+          response.answer,
+          response.recommendations.map((r) => ({
+            name: r.name,
+            fit: r.fit,
+            reasoning: r.reasoning,
+          })),
+          gameTime,
+          "item-rec",
+          retried
+        );
+        const sentAt = Date.now();
+        window.electronAPI?.sendCoachingResponse({
+          answer: response.answer,
+          recommendations: response.recommendations,
+          buildPath: null,
+          retried,
+          source: "reactive",
+          sentAt,
+        });
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          proactiveLog.debug(`Item-rec ${trigger} cancelled`);
+        } else {
+          const msg = err instanceof Error ? err.message : "Request failed";
+          proactiveLog.error(`Item-rec ${trigger} error: ${msg}`);
+        }
+      }
+    };
+
+    const shopMomentTrigger = createShopMomentTrigger(
+      { liveGameState$ },
+      (state, signal) => itemRecHandle(state, signal, "shop-moment")
+    );
+
+    const goldAvailableTrigger = createGoldAvailableTrigger(
+      {
+        liveGameState$,
+        gamePlan$,
+        // Item catalog is keyed by ID; iterate to find by name. Items are
+        // ~200 entries; linear scan is fine for the rare trigger fire path.
+        getItemCost: (name) => {
+          for (const item of gameDataRef.current.items.values()) {
+            if (item.name === name) return item.gold.total;
+          }
+          return null;
+        },
+      },
+      (state, signal) => itemRecHandle(state, signal, "gold-available")
+    );
+
+    const engine = new ProactiveEngine(
+      mode,
+      [augmentTrigger, shopMomentTrigger, goldAvailableTrigger],
+      { globalMinGapMs: 30_000 }
+    );
     return () => engine.dispose();
-  }, [mode, submitAugmentQuery]);
+  }, [mode, submitAugmentQuery, apiKey]);
 
   // Player-side augment pick tracking — chosen augments + manual input feed.
   // Separate from the trigger's cancel$ because these are app state updates,
