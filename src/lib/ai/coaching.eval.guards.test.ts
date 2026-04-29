@@ -97,9 +97,11 @@ describe("coaching.eval.ts anti-drift guards", () => {
     // production inputs (mode, gameData, gameState). If the eval ever wraps
     // or narrows them, this regex fails. behavioral verification of
     // buildBaseContext itself lives in base-context.test.ts — not here.
+    // Lookaheads make the assertion order-independent — the three keys can
+    // appear in any order inside the object literal without breaking CI.
     it("calls buildBaseContext with { mode, gameData, gameState }", () => {
       expect(evalSource).toMatch(
-        /buildBaseContext\(\s*\{\s*[^}]*mode[^}]*gameData[^}]*gameState[^}]*\}\s*\)/
+        /buildBaseContext\(\s*\{(?=[^}]*\bmode\b)(?=[^}]*\bgameData\b)(?=[^}]*\bgameState\b)[^}]*\}\s*\)/
       );
     });
   });

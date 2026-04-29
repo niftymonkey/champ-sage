@@ -61,11 +61,15 @@ export function createShopMomentTrigger(
     signal
   ) => {
     const snapshot = activePlayerItems(state);
-    lastFiredItems = snapshot;
     log.info(
       `[shop-moment] Items at fire: [${[...snapshot].join(", ") || "(empty)"}]`
     );
+    // Only advance the suppression snapshot AFTER a successful handle call.
+    // If handle rejects (LLM error) or is aborted (supersede / cancel$), the
+    // player did not actually receive advice — leaving lastFiredItems at its
+    // prior value lets the next death retry instead of being suppressed.
     await handle(state, signal);
+    lastFiredItems = snapshot;
   };
 
   return {

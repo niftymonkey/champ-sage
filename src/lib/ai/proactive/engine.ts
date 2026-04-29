@@ -1,5 +1,5 @@
 import { NEVER, Subscription, timer } from "rxjs";
-import { switchMap, takeUntil } from "rxjs/operators";
+import { map, switchMap, takeUntil } from "rxjs/operators";
 import type { GameMode } from "../../mode/types";
 import { getLogger } from "../../logger";
 import type { DecisionPointTrigger } from "./types";
@@ -69,7 +69,10 @@ export class ProactiveEngine {
         timer(trigger.debounceMs).pipe(
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           takeUntil(cancelOrNever),
-          switchMap(() => Promise.resolve(ctx))
+          // map (synchronous) instead of switchMap(() => Promise.resolve(ctx))
+          // — Promise resolution introduces a microtask gap during which a
+          // cancellation on cancelOrNever could race past the emission.
+          map(() => ctx)
         )
       )
     );

@@ -106,7 +106,7 @@ Benefits:
 
 ## 6. Architecture
 
-```
+```text
 ┌────────────────────────────────────────────────────┐
 │ ProactiveEngine                                    │
 │   triggers: DecisionPointTrigger[]                 │
@@ -143,7 +143,7 @@ Engine responsibilities:
 
 1. Filter to triggers matching `mode.decisionTypes` (plus always-on passive).
 2. Debounce each `source$`.
-3. Enforce per-trigger cooldown + global min-gap (default 15s) between any two fires.
+3. Enforce per-trigger cooldown + global min-gap (default 30s) between any two fires.
 4. Hold an `AbortController` per trigger; abort on supersede or game end.
 5. Call `trigger.handle(ctx, signal)` — handlers invoke `session.ask(feature, input, { signal })` and push to the feed.
 
@@ -224,7 +224,7 @@ Per-trigger cooldowns:
 - item-completed: no cooldown (each unique item is a distinct event)
 - level-up: no cooldown (each level is distinct)
 
-Global min-gap on the engine (default 15s) handles cross-trigger spam.
+Global min-gap on the engine (default 30s) handles cross-trigger spam.
 
 ---
 
@@ -232,7 +232,7 @@ Global min-gap on the engine (default 15s) handles cross-trigger spam.
 
 1. **Per-trigger debounce** — merges state-change bursts (e.g. RxJS `debounceTime`).
 2. **Per-trigger cooldown** — minimum gap between fires of the same trigger.
-3. **Global min-gap** — default 15s between any two proactive fires. Prevents two triggers colliding after one state change.
+3. **Global min-gap** — default 30s between any two proactive fires. Prevents two triggers colliding after one state change.
 
 Plus **abort-on-supersede**: newer trigger of same type cancels in-flight LLM call (reuses the pattern from `createAugmentCoachingController`).
 
@@ -331,7 +331,7 @@ Each phase is independently shippable and reviewable.
   1. Augment offer during Mayhem → fit ratings (parity with pre-migration)
   2. ARAM death → respawn → item-purchase options card appears within ~5s
   3. Play through several deaths/items/levels → observations surface; most are useful, some are `null` (LLM restraint)
-  4. Spam state changes → confirm no two proactive cards fire within 15s global min-gap
+  4. Spam state changes → confirm no two proactive cards fire within 30s global min-gap
 - `pnpm eval` — existing scorers still pass; new proactive-observation fixtures score as expected
 - Compliance audit: re-read CLAUDE.md compliance section against every new task prompt; confirm no trigger path can produce tactical-map advice
 

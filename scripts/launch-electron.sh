@@ -28,7 +28,12 @@ UTF8='[Console]::OutputEncoding = [System.Text.Encoding]::UTF8'
 # Access is denied" repeatedly. Filtering on command-line containing the
 # repo's Windows path means unrelated ow-electron apps are not touched.
 sweep_orphans() {
-  powershell.exe -NoProfile -Command "\$path = '${PROJECT_WIN}'; \$pattern = '*' + \$path + '*'; Get-CimInstance Win32_Process -Filter \"Name = 'ow-electron.exe' OR Name = 'electron.exe'\" | Where-Object { \$_.CommandLine -like \$pattern } | ForEach-Object { Write-Host \"[launch-electron] killed orphan PID \$(\$_.ProcessId) (\$(\$_.Name))\"; Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }" 2>/dev/null
+  # Pass PROJECT_WIN via env var (not single-quoted interpolation) and use
+  # [WildcardPattern]::Escape() to neutralize apostrophes and wildcard
+  # metacharacters (* ? [ ]) before building the -like pattern, so paths
+  # like "C:\Users\O'Neil\repo[dev]" don't break parsing or accidentally
+  # match unrelated processes.
+  REPO_WIN_PATH="${PROJECT_WIN}" powershell.exe -NoProfile -Command "\$path = \$env:REPO_WIN_PATH; \$pattern = '*' + [System.Management.Automation.WildcardPattern]::Escape(\$path) + '*'; Get-CimInstance Win32_Process -Filter \"Name = 'ow-electron.exe' OR Name = 'electron.exe'\" | Where-Object { \$_.CommandLine -and \$_.CommandLine -like \$pattern } | ForEach-Object { Write-Host \"[launch-electron] killed orphan PID \$(\$_.ProcessId) (\$(\$_.Name))\"; Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }" 2>/dev/null
 }
 
 sweep_orphans

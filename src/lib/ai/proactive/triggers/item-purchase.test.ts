@@ -347,9 +347,6 @@ describe("createGoldAvailableTrigger", () => {
   });
 
   it("declares the expected trigger metadata", () => {
-    const { liveGameState$, gamePlan$, seen: _seen } = setup();
-    void liveGameState$;
-    void gamePlan$;
     const trigger = createGoldAvailableTrigger(
       {
         liveGameState$: new Subject(),
