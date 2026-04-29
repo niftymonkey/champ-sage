@@ -13,8 +13,6 @@ export type {
 export type {
   FeedEntry,
   GamePlanEntry,
-  AugmentOfferEntry,
-  AugmentOption,
   CoachingExchangeEntry,
   CoachingRecommendation,
   AnyFeedEntry,
@@ -27,8 +25,6 @@ export {
   gamePlan$,
   lastGameSnapshot$,
   pushGamePlan,
-  pushAugmentOffer,
-  markAugmentPicked,
   pushCoachingExchange,
   captureLastGameSnapshot,
   resetForNewGame,

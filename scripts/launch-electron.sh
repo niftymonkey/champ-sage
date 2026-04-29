@@ -20,6 +20,24 @@ cd /mnt/c || { echo "[launch-electron] Error: Cannot change to /mnt/c"; exit 1; 
 
 UTF8='[Console]::OutputEncoding = [System.Text.Encoding]::UTF8'
 
+# Best-effort: kill orphan ow-electron / electron processes from prior dev
+# runs against THIS repo. concurrently sometimes can't reap ow-electron
+# cleanly on Ctrl-C (GEP / overlay packages keep it alive), and a leftover
+# instance holds exclusive locks on Chromium's Cache / Code Cache / GPUCache
+# under userData — the next launch then prints "Unable to move the cache:
+# Access is denied" repeatedly. Filtering on command-line containing the
+# repo's Windows path means unrelated ow-electron apps are not touched.
+sweep_orphans() {
+  # Pass PROJECT_WIN via env var (not single-quoted interpolation) and use
+  # [WildcardPattern]::Escape() to neutralize apostrophes and wildcard
+  # metacharacters (* ? [ ]) before building the -like pattern, so paths
+  # like "C:\Users\O'Neil\repo[dev]" don't break parsing or accidentally
+  # match unrelated processes.
+  REPO_WIN_PATH="${PROJECT_WIN}" powershell.exe -NoProfile -Command "\$path = \$env:REPO_WIN_PATH; \$pattern = '*' + [System.Management.Automation.WildcardPattern]::Escape(\$path) + '*'; Get-CimInstance Win32_Process -Filter \"Name = 'ow-electron.exe' OR Name = 'electron.exe'\" | Where-Object { \$_.CommandLine -and \$_.CommandLine -like \$pattern } | ForEach-Object { Write-Host \"[launch-electron] killed orphan PID \$(\$_.ProcessId) (\$(\$_.Name))\"; Stop-Process -Id \$_.ProcessId -Force -ErrorAction SilentlyContinue }" 2>/dev/null
+}
+
+sweep_orphans
+
 if [ "$1" = "--prod" ]; then
   echo "[launch-electron] Production mode — loading bundled HTML from dist/"
   powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ow-electron \"${PROJECT_WIN}\""

@@ -5,8 +5,6 @@ import {
   gamePlan$,
   lastGameSnapshot$,
   pushGamePlan,
-  pushAugmentOffer,
-  markAugmentPicked,
   pushCoachingExchange,
   captureLastGameSnapshot,
   resetForNewGame,
@@ -44,13 +42,13 @@ describe("coachingFeed$", () => {
   it("accumulates entries in chronological order", () => {
     pushGamePlan("Plan A", sixCoreItems(["Item1", "Item2"]), 10);
     pushCoachingExchange("question?", "answer", [], 30);
-    pushAugmentOffer([{ name: "Aug1", fit: "strong", reasoning: "good" }], 45);
+    pushCoachingExchange("another?", "reply", [], 45, "plan");
 
     const feed = coachingFeed$.getValue();
     expect(feed).toHaveLength(3);
     expect(feed[0].type).toBe("game-plan");
     expect(feed[1].type).toBe("coaching-exchange");
-    expect(feed[2].type).toBe("augment-offer");
+    expect(feed[2].type).toBe("coaching-exchange");
     expect(feed[0].timestamp).toBe(10);
     expect(feed[1].timestamp).toBe(30);
     expect(feed[2].timestamp).toBe(45);
@@ -59,7 +57,7 @@ describe("coachingFeed$", () => {
   it("assigns unique IDs to each entry", () => {
     pushGamePlan("Plan", [], 0);
     pushCoachingExchange("q", "a", [], 10);
-    pushAugmentOffer([], 20);
+    pushCoachingExchange("q2", "a2", [], 20);
 
     const ids = coachingFeed$.getValue().map((e) => e.id);
     expect(new Set(ids).size).toBe(3);
@@ -125,60 +123,6 @@ describe("pushGamePlan", () => {
 
     // Both entries should be in the feed
     expect(coachingFeed$.getValue()).toHaveLength(2);
-  });
-});
-
-describe("pushAugmentOffer", () => {
-  it("creates a proactive augment-offer entry", () => {
-    const entry = pushAugmentOffer(
-      [
-        {
-          name: "Phenomenal Evil",
-          fit: "exceptional",
-          reasoning: "Best scaling",
-        },
-        { name: "Recursion", fit: "strong", reasoning: "Decent" },
-        { name: "Firebrand", fit: "weak", reasoning: "Redundant" },
-      ],
-      180
-    );
-
-    expect(entry.type).toBe("augment-offer");
-    expect(entry.proactive).toBe(true);
-    expect(entry.options).toHaveLength(3);
-    expect(entry.picked).toBeUndefined();
-  });
-});
-
-describe("markAugmentPicked", () => {
-  it("sets picked on the matching augment offer", () => {
-    const entry = pushAugmentOffer(
-      [{ name: "Phenomenal Evil", fit: "strong", reasoning: "Best" }],
-      100
-    );
-
-    markAugmentPicked(entry.id, "Phenomenal Evil");
-
-    const feed = coachingFeed$.getValue();
-    const updated = feed.find((e) => e.id === entry.id);
-    expect(updated).toBeDefined();
-    expect((updated as any).picked).toBe("Phenomenal Evil");
-  });
-
-  it("does not affect other entries", () => {
-    pushCoachingExchange("q", "a", [], 50);
-    const aug = pushAugmentOffer(
-      [{ name: "Aug1", fit: "strong", reasoning: "good" }],
-      100
-    );
-    pushCoachingExchange("q2", "a2", [], 150);
-
-    markAugmentPicked(aug.id, "Aug1");
-
-    const feed = coachingFeed$.getValue();
-    expect(feed[0].type).toBe("coaching-exchange");
-    expect(feed[2].type).toBe("coaching-exchange");
-    expect((feed[1] as any).picked).toBe("Aug1");
   });
 });
 
