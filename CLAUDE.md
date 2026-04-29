@@ -1,5 +1,10 @@
 # Champ Sage — Project Instructions
 
+## Commits
+
+- Never run `git commit` unless I have explicitly authorized this specific change in this session. Tests passing, typecheck clean, and "the work is done" are prerequisites — not authorization. Wait for "commit it" / "ship it" / equivalent before staging or committing.
+- "Looks good" on a plan authorizes the work, not the commit. "Ship" or "go" at the start of a phase authorizes implementation, not the commit at the end. Surface the finished change for review and wait for explicit go-ahead.
+
 ## Before Committing
 
 Before creating a commit, review `docs/reference/technical-reference.md` and update it with any new discoveries from this session: new API behaviors, data source quirks, parsing gotchas, or architectural insights that took effort to learn and would be painful to rediscover.
