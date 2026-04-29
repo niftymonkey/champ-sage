@@ -26,9 +26,9 @@ export interface ItemRecInput {
 
 const TRIGGER_FRAMING: Record<Exclude<ItemRecTrigger, "voice">, string> = {
   "shop-moment":
-    "[Trigger: shop-moment] The player just died and is at the shop. Give them 2–3 strong purchase options they can act on in the next few seconds.",
+    "[Trigger: shop-moment] The player just died and is at the shop. Give 2–3 strong purchase options for fast decisions — keep using the destination + component format from the rules above for each option.",
   "gold-available":
-    "[Trigger: gold-available] The player just reached enough gold to afford the next main item in their plan. Frame the response as forward-looking — what to prioritize on the next shop trip.",
+    "[Trigger: gold-available] The player just reached enough gold to afford the next main item in their plan. Frame the response as forward-looking ('next time you shop, consider…') with 2–3 options, each in the destination + component format.",
 };
 
 export const itemRecFeature: CoachingFeature<ItemRecInput, ItemRecResult> = {
