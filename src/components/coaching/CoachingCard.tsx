@@ -64,7 +64,13 @@ function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
         timestamp={entry.timestamp}
       />
       <div className={styles.body}>
-        <div className={styles.question}>{entry.question}</div>
+        {/* Only show the question text for player-initiated voice queries.
+            Proactive sources (augment, plan, item-rec) synthesize a question
+            string for the LLM internally; rendering it here would imply the
+            player said it. */}
+        {entry.source === "voice" && (
+          <div className={styles.question}>{entry.question}</div>
+        )}
         {entry.retried && (
           <div
             className={styles.retriedBadge}
