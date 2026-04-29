@@ -321,4 +321,59 @@ describe("ProactiveEngine", () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(handle).toHaveBeenCalledOnce(); // no new fire after dispose
   });
+
+  it("clears the in-flight entry when handle resolves cleanly", async () => {
+    const source$ = new Subject<string>();
+    let resolveHandle: () => void = () => {};
+    const handle = vi.fn<HandleFn<string>>().mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveHandle = resolve;
+        })
+    );
+    const trigger = makeTrigger({ source$, debounceMs: 0, handle });
+
+    const engine = new ProactiveEngine(makeMode(["augment-selection"]), [
+      trigger,
+    ]);
+
+    source$.next("a");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(engine.inFlightSize).toBe(1);
+
+    resolveHandle();
+    // Flush the .catch().finally() chain that runs cleanup
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(engine.inFlightSize).toBe(0);
+
+    engine.dispose();
+  });
+
+  it("clears the in-flight entry when handle rejects", async () => {
+    const source$ = new Subject<string>();
+    let rejectHandle: (e: Error) => void = () => {};
+    const handle = vi.fn<HandleFn<string>>().mockImplementation(
+      () =>
+        new Promise<void>((_, reject) => {
+          rejectHandle = reject;
+        })
+    );
+    const trigger = makeTrigger({ source$, debounceMs: 0, handle });
+
+    const engine = new ProactiveEngine(makeMode(["augment-selection"]), [
+      trigger,
+    ]);
+
+    source$.next("a");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(engine.inFlightSize).toBe(1);
+
+    rejectHandle(new Error("simulated handler failure"));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(engine.inFlightSize).toBe(0);
+
+    engine.dispose();
+  });
 });
