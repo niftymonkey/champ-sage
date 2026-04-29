@@ -1,0 +1,507 @@
+[
+  {
+    "label": "PROACTIVE shop-moment — mid-game death, AP-heavy enemy comp",
+    "index": 0,
+    "timestamp": "2026-04-28T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Kayle",
+        "level": 13,
+        "currentGold": 1850,
+        "runes": {
+          "keystone": "Lethal Tempo",
+          "primaryTree": "Precision",
+          "secondaryTree": "Sorcery"
+        },
+        "stats": {
+          "attackDamage": 95,
+          "abilityPower": 30,
+          "armor": 70,
+          "magicResist": 38,
+          "maxHealth": 1750,
+          "currentHealth": 1750,
+          "moveSpeed": 335,
+          "attackSpeed": 1.4,
+          "abilityHaste": 10,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Kayle",
+          "team": "ORDER",
+          "level": 13,
+          "kills": 5,
+          "deaths": 4,
+          "assists": 8,
+          "items": [
+            { "id": 3006, "name": "Berserker's Greaves" },
+            { "id": 3115, "name": "Nashor's Tooth" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Lux",
+          "team": "CHAOS",
+          "level": 13,
+          "kills": 7,
+          "deaths": 3,
+          "assists": 9,
+          "items": [
+            { "id": 6655, "name": "Luden's Companion" },
+            { "id": 3020, "name": "Sorcerer's Shoes" },
+            { "id": 4645, "name": "Shadowflame" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Ahri",
+          "team": "CHAOS",
+          "level": 13,
+          "kills": 8,
+          "deaths": 2,
+          "assists": 11,
+          "items": [
+            { "id": 3152, "name": "Hextech Rocketbelt" },
+            { "id": 3020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Veigar",
+          "team": "CHAOS",
+          "level": 13,
+          "kills": 4,
+          "deaths": 5,
+          "assists": 7,
+          "items": [
+            { "id": 3001, "name": "Abyssal Mask" },
+            { "id": 3020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 13,
+          "kills": 9,
+          "deaths": 4,
+          "assists": 6,
+          "items": [
+            { "id": 6701, "name": "Opportunity" },
+            { "id": 3158, "name": "Ionian Boots of Lucidity" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 1100
+    },
+    "query": {
+      "question": "I just died. What are my best 2-3 purchase options right now?",
+      "trigger": "shop-moment"
+    },
+    "response": null,
+    "error": null,
+    "scorerHints": {
+      "stateAwareness": ["mr-needed", "enemy-comp"]
+    },
+    "scorerContext": {
+      "items": ["Berserker's Greaves", "Nashor's Tooth"],
+      "gold": 1850,
+      "champion": "Kayle",
+      "gameTime": "18:20"
+    }
+  },
+  {
+    "label": "PROACTIVE shop-moment — late-game death, last-slot decision vs tank comp",
+    "index": 1,
+    "timestamp": "2026-04-28T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Caitlyn",
+        "level": 16,
+        "currentGold": 2500,
+        "runes": {
+          "keystone": "Fleet Footwork",
+          "primaryTree": "Precision",
+          "secondaryTree": "Domination"
+        },
+        "stats": {
+          "attackDamage": 145,
+          "abilityPower": 0,
+          "armor": 80,
+          "magicResist": 42,
+          "maxHealth": 2050,
+          "currentHealth": 2050,
+          "moveSpeed": 335,
+          "attackSpeed": 1.7,
+          "abilityHaste": 0,
+          "critChance": 60
+        }
+      },
+      "players": [
+        {
+          "championName": "Caitlyn",
+          "team": "ORDER",
+          "level": 16,
+          "kills": 11,
+          "deaths": 6,
+          "assists": 9,
+          "items": [
+            { "id": 3006, "name": "Berserker's Greaves" },
+            { "id": 3031, "name": "Infinity Edge" },
+            { "id": 6675, "name": "Navori Flickerblade" },
+            { "id": 6676, "name": "The Collector" },
+            { "id": 6672, "name": "Kraken Slayer" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Sett",
+          "team": "CHAOS",
+          "level": 16,
+          "kills": 8,
+          "deaths": 7,
+          "assists": 12,
+          "items": [
+            { "id": 3068, "name": "Sunfire Aegis" },
+            { "id": 3193, "name": "Gargoyle Stoneplate" },
+            { "id": 3047, "name": "Plated Steelcaps" },
+            { "id": 3110, "name": "Frozen Heart" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Dr. Mundo",
+          "team": "CHAOS",
+          "level": 16,
+          "kills": 7,
+          "deaths": 8,
+          "assists": 6,
+          "items": [
+            { "id": 3084, "name": "Heartsteel" },
+            { "id": 3065, "name": "Spirit Visage" },
+            { "id": 3075, "name": "Thornmail" },
+            { "id": 3047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "CHAOS",
+          "level": 16,
+          "kills": 9,
+          "deaths": 6,
+          "assists": 8,
+          "items": [
+            { "id": 6664, "name": "Hollow Radiance" },
+            { "id": 3742, "name": "Dead Man's Plate" },
+            { "id": 3047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 1620
+    },
+    "query": {
+      "question": "I just died. Last item slot, what's the best buy right now?",
+      "trigger": "shop-moment"
+    },
+    "response": null,
+    "error": null,
+    "scorerHints": {
+      "stateAwareness": ["enemy-comp", "existing-items"]
+    },
+    "scorerContext": {
+      "items": [
+        "Berserker's Greaves",
+        "Infinity Edge",
+        "Navori Flickerblade",
+        "The Collector",
+        "Kraken Slayer"
+      ],
+      "gold": 2500,
+      "champion": "Caitlyn",
+      "gameTime": "27:00"
+    }
+  },
+  {
+    "label": "PROACTIVE gold-available — crossed threshold for next main item, mid-game",
+    "index": 2,
+    "timestamp": "2026-04-28T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Sett",
+        "level": 11,
+        "currentGold": 3050,
+        "runes": {
+          "keystone": "Grasp of the Undying",
+          "primaryTree": "Resolve",
+          "secondaryTree": "Precision"
+        },
+        "stats": {
+          "attackDamage": 88,
+          "abilityPower": 0,
+          "armor": 75,
+          "magicResist": 50,
+          "maxHealth": 2200,
+          "currentHealth": 1850,
+          "moveSpeed": 335,
+          "attackSpeed": 0.85,
+          "abilityHaste": 5,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Sett",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 4,
+          "deaths": 2,
+          "assists": 6,
+          "items": [{ "id": 3111, "name": "Mercury's Treads" }],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Lux",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 7,
+          "items": [
+            { "id": 6655, "name": "Luden's Companion" },
+            { "id": 3020, "name": "Sorcerer's Shoes" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Caitlyn",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 6,
+          "deaths": 4,
+          "assists": 5,
+          "items": [
+            { "id": 3031, "name": "Infinity Edge" },
+            { "id": 3006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Yasuo",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 4,
+          "deaths": 5,
+          "assists": 4,
+          "items": [
+            { "id": 6673, "name": "Immortal Shieldbow" },
+            { "id": 3006, "name": "Berserker's Greaves" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 900
+    },
+    "query": {
+      "question": "I just reached enough gold for my next main item. What should I prioritize next time I shop?",
+      "trigger": "gold-available"
+    },
+    "response": null,
+    "error": null,
+    "scorerHints": {
+      "stateAwareness": ["enemy-comp"]
+    },
+    "scorerContext": {
+      "items": ["Mercury's Treads"],
+      "gold": 3050,
+      "champion": "Sett",
+      "gameTime": "15:00"
+    }
+  },
+  {
+    "label": "PROACTIVE gold-available — late-game cross, multi-item slot remaining",
+    "index": 3,
+    "timestamp": "2026-04-28T00:00:00Z",
+    "model": "synthetic",
+    "category": "mayhem",
+    "gameModeId": "aram-mayhem",
+    "chosenAugments": [],
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Vi",
+        "level": 15,
+        "currentGold": 2950,
+        "runes": {
+          "keystone": "Conqueror",
+          "primaryTree": "Precision",
+          "secondaryTree": "Resolve"
+        },
+        "stats": {
+          "attackDamage": 115,
+          "abilityPower": 0,
+          "armor": 95,
+          "magicResist": 55,
+          "maxHealth": 2400,
+          "currentHealth": 2200,
+          "moveSpeed": 340,
+          "attackSpeed": 1.0,
+          "abilityHaste": 25,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Vi",
+          "team": "ORDER",
+          "level": 15,
+          "kills": 9,
+          "deaths": 5,
+          "assists": 11,
+          "items": [
+            { "id": 3047, "name": "Plated Steelcaps" },
+            { "id": 3084, "name": "Heartsteel" },
+            { "id": 3161, "name": "Spear of Shojin" },
+            { "id": 3115, "name": "Sundered Sky" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Soraka",
+          "team": "CHAOS",
+          "level": 15,
+          "kills": 1,
+          "deaths": 6,
+          "assists": 17,
+          "items": [
+            { "id": 3504, "name": "Ardent Censer" },
+            { "id": 3158, "name": "Ionian Boots of Lucidity" },
+            { "id": 3107, "name": "Redemption" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Aatrox",
+          "team": "CHAOS",
+          "level": 15,
+          "kills": 11,
+          "deaths": 4,
+          "assists": 8,
+          "items": [
+            { "id": 6673, "name": "Immortal Shieldbow" },
+            { "id": 3006, "name": "Berserker's Greaves" },
+            { "id": 6630, "name": "Goredrinker" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Warwick",
+          "team": "CHAOS",
+          "level": 15,
+          "kills": 8,
+          "deaths": 5,
+          "assists": 9,
+          "items": [
+            { "id": 3074, "name": "Ravenous Hydra" },
+            { "id": 3047, "name": "Plated Steelcaps" }
+          ],
+          "summonerSpells": ["Flash", "Mark"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "KIWI",
+      "gameTime": 1500
+    },
+    "query": {
+      "question": "I just reached enough gold for my next main item. What should I prioritize?",
+      "trigger": "gold-available"
+    },
+    "response": null,
+    "error": null,
+    "scorerHints": {
+      "stateAwareness": ["grievous-wounds", "enemy-comp"]
+    },
+    "scorerContext": {
+      "items": [
+        "Plated Steelcaps",
+        "Heartsteel",
+        "Spear of Shojin",
+        "Sundered Sky"
+      ],
+      "gold": 2950,
+      "champion": "Vi",
+      "gameTime": "25:00"
+    }
+  }
+]

@@ -55,6 +55,7 @@ import {
   itemRecFeature,
   type ItemRecInput,
   type ItemRecResult,
+  type ItemRecTrigger,
 } from "./features/item-rec";
 import {
   voiceQueryFeature,
@@ -385,6 +386,14 @@ interface MultiTurnFixture {
           sets?: string[];
         }
     >;
+    /**
+     * Proactive trigger context for synthetic item-rec fixtures. When set,
+     * the fixture is routed to the item-rec feature with this trigger value
+     * threaded into ItemRecInput so the LLM receives the trigger-specific
+     * framing block (shop-moment urgency vs gold-available forward-looking).
+     * Omitting it preserves the existing voice-style routing.
+     */
+    trigger?: ItemRecTrigger;
   };
   response: {
     answer: string;
@@ -519,10 +528,17 @@ function classifyFixture(
       input: { snapshot },
     };
   }
-  if (isItemRecQuestion(f.query.question)) {
+  // Proactive triggers ALWAYS route to item-rec — the question is synthesized
+  // by the engine handler (not player-typed), so isItemRecQuestion may not
+  // match. The trigger field's presence is the routing signal.
+  if (f.query.trigger || isItemRecQuestion(f.query.question)) {
     return {
       kind: "item-rec",
-      input: { snapshot, question: f.query.question },
+      input: {
+        snapshot,
+        question: f.query.question,
+        ...(f.query.trigger ? { trigger: f.query.trigger } : {}),
+      },
     };
   }
   return {
