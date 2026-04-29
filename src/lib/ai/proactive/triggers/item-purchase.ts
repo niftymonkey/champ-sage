@@ -1,8 +1,11 @@
 import { combineLatest, type Observable } from "rxjs";
-import { filter, map, pairwise } from "rxjs/operators";
+import { filter, map, pairwise, tap } from "rxjs/operators";
 import type { LiveGameState } from "../../../reactive/types";
 import type { GamePlan } from "../../../reactive/coaching-feed-types";
+import { getLogger } from "../../../logger";
 import type { DecisionPointTrigger } from "../types";
+
+const log = getLogger("coaching:proactive");
 
 // ─── shop-moment trigger ───
 
@@ -29,16 +32,67 @@ function activePlayerDeaths(state: LiveGameState): number | null {
   return me?.deaths ?? null;
 }
 
+function activePlayerItems(state: LiveGameState): Set<string> {
+  const me = state.players.find((p) => p.isActivePlayer);
+  return new Set(me?.items.map((i) => i.name) ?? []);
+}
+
+function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const x of a) if (!b.has(x)) return false;
+  return true;
+}
+
 export function createShopMomentTrigger(
   deps: ShopMomentTriggerDeps,
   handle: DecisionPointTrigger<LiveGameState>["handle"]
 ): DecisionPointTrigger<LiveGameState> {
   const minGold = deps.minGold ?? SHOP_MOMENT_DEFAULT_MIN_GOLD;
+  // Track items at the most recent successful fire. Suppress subsequent fires
+  // until inventory actually changes — prevents the LLM from being asked the
+  // same question again across consecutive deaths when the player hasn't been
+  // able to act on prior advice (e.g. couldn't afford the suggested item yet).
+  // Closure resets when the trigger is recreated (per-game lifecycle in
+  // CoachingPipeline's session-init effect).
+  let lastFiredItems: ReadonlySet<string> | null = null;
+
+  const wrappedHandle: DecisionPointTrigger<LiveGameState>["handle"] = async (
+    state,
+    signal
+  ) => {
+    const snapshot = activePlayerItems(state);
+    lastFiredItems = snapshot;
+    log.info(
+      `[shop-moment] Items at fire: [${[...snapshot].join(", ") || "(empty)"}]`
+    );
+    await handle(state, signal);
+  };
+
   return {
     id: "item-purchase-shop-moment",
     decisionType: "item-purchase",
     source$: deps.liveGameState$.pipe(
       pairwise(),
+      tap(([prev, curr]) => {
+        const prevDeaths = activePlayerDeaths(prev);
+        const currDeaths = activePlayerDeaths(curr);
+        if (
+          prevDeaths !== null &&
+          currDeaths !== null &&
+          currDeaths > prevDeaths
+        ) {
+          const gold = curr.activePlayer?.currentGold ?? 0;
+          if (gold < minGold) {
+            log.info(
+              `[shop-moment] Death detected but gold below threshold: gold=${gold} < minGold=${minGold} (deaths ${prevDeaths}→${currDeaths})`
+            );
+          } else {
+            log.info(
+              `[shop-moment] Detection: death + gold-gate cleared (gold=${gold}, deaths ${prevDeaths}→${currDeaths})`
+            );
+          }
+        }
+      }),
       filter(([prev, curr]) => {
         const prevDeaths = activePlayerDeaths(prev);
         const currDeaths = activePlayerDeaths(curr);
@@ -47,12 +101,24 @@ export function createShopMomentTrigger(
         const gold = curr.activePlayer?.currentGold ?? 0;
         return gold >= minGold;
       }),
+      filter(([, curr]) => {
+        // Inventory-change gate: skip if items haven't changed since last fire.
+        if (lastFiredItems === null) return true;
+        const currItems = activePlayerItems(curr);
+        if (setsEqual(currItems, lastFiredItems)) {
+          log.info(
+            `[shop-moment] SUPPRESSED — no inventory change since last fire (items=[${[...currItems].join(", ") || "(empty)"}])`
+          );
+          return false;
+        }
+        return true;
+      }),
       map(([, curr]) => curr)
     ),
     debounceMs: 0,
     cooldownMs: SHOP_MOMENT_COOLDOWN_MS,
     respectGlobalGap: true,
-    handle,
+    handle: wrappedHandle,
   };
 }
 
@@ -115,17 +181,43 @@ export function createGoldAvailableTrigger(
   deps: GoldAvailableTriggerDeps,
   handle: DecisionPointTrigger<LiveGameState>["handle"]
 ): DecisionPointTrigger<LiveGameState> {
+  // Track threshold changes so we log the initial value plus each transition
+  // (player completes a planned item → cheapest-unowned recomputes). Without
+  // these logs the "no fire this game" case is opaque — we can't tell whether
+  // the context was being built, what threshold was computed, or whether gold
+  // was already above on first observation (in which case no upward cross
+  // ever fires from that vantage point).
+  let lastLoggedThreshold: number | null = null;
+
   return {
     id: "item-purchase-gold-available",
     decisionType: "item-purchase",
     source$: combineLatest([deps.liveGameState$, deps.gamePlan$]).pipe(
       map(([state, plan]) => buildContext(state, plan, deps.getItemCost)),
       filter((ctx): ctx is GoldAvailableContext => ctx !== null),
+      tap((ctx) => {
+        if (lastLoggedThreshold !== ctx.threshold) {
+          const label = lastLoggedThreshold === null ? "initial" : "changed";
+          const position =
+            ctx.gold >= ctx.threshold ? "ALREADY above" : "below";
+          log.info(
+            `[gold-available] Threshold ${label}: ${ctx.threshold} (current gold=${ctx.gold}, ${position} threshold)`
+          );
+          lastLoggedThreshold = ctx.threshold;
+        }
+      }),
       pairwise(),
       // Upward cross: prev was below the CURRENT threshold, curr is at or above.
       // Using curr.threshold for both sides means a threshold change (player
       // bought a planned item) doesn't retroactively trigger — the new
       // threshold is only crossed when gold actually rises past it.
+      tap(([prev, curr]) => {
+        if (prev.gold < curr.threshold && curr.gold >= curr.threshold) {
+          log.info(
+            `[gold-available] Detection: upward cross (gold ${prev.gold}→${curr.gold} crossed threshold=${curr.threshold})`
+          );
+        }
+      }),
       filter(([prev, curr]) => {
         return prev.gold < curr.threshold && curr.gold >= curr.threshold;
       }),

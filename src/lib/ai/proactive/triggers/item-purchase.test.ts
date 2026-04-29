@@ -8,6 +8,7 @@ import type {
 import type { LiveGameState } from "../../../reactive/types";
 import type { GamePlan } from "../../../reactive/coaching-feed-types";
 import type { BuildPathItem } from "../../types";
+import type { DecisionPointTrigger } from "../types";
 import {
   createShopMomentTrigger,
   createGoldAvailableTrigger,
@@ -178,7 +179,56 @@ describe("createShopMomentTrigger", () => {
     expect(trigger.cooldownMs).toBeGreaterThanOrEqual(30_000);
     expect(trigger.respectGlobalGap).toBe(true);
   });
+
+  it("suppresses subsequent deaths when inventory hasn't changed since last fire", async () => {
+    const liveGameState$ = new Subject<LiveGameState>();
+    const handle = vi.fn<HandleFnLgs>().mockResolvedValue(undefined);
+    const trigger = createShopMomentTrigger({ liveGameState$ }, handle);
+    const seen: LiveGameState[] = [];
+    trigger.source$.subscribe((s) => seen.push(s));
+
+    // First death — fires, snapshot of inventory captured by wrapped handle.
+    const items = [{ id: 3057, name: "Sheen" }];
+    liveGameState$.next(makeState({ gold: 1000, deaths: 1, items }));
+    liveGameState$.next(makeState({ gold: 1000, deaths: 2, items }));
+    expect(seen).toHaveLength(1);
+    await trigger.handle(seen[0], new AbortController().signal);
+
+    // Second death — same items list, should be suppressed.
+    liveGameState$.next(makeState({ gold: 1500, deaths: 3, items }));
+    expect(seen).toHaveLength(1);
+
+    // Third death — still same items, still suppressed even though gold changed.
+    liveGameState$.next(makeState({ gold: 2200, deaths: 4, items }));
+    expect(seen).toHaveLength(1);
+  });
+
+  it("fires again after the player completes a new item", async () => {
+    const liveGameState$ = new Subject<LiveGameState>();
+    const handle = vi.fn<HandleFnLgs>().mockResolvedValue(undefined);
+    const trigger = createShopMomentTrigger({ liveGameState$ }, handle);
+    const seen: LiveGameState[] = [];
+    trigger.source$.subscribe((s) => seen.push(s));
+
+    // First death with Sheen — fires.
+    const before = [{ id: 3057, name: "Sheen" }];
+    liveGameState$.next(makeState({ gold: 1000, deaths: 1, items: before }));
+    liveGameState$.next(makeState({ gold: 1000, deaths: 2, items: before }));
+    expect(seen).toHaveLength(1);
+    await trigger.handle(seen[0], new AbortController().signal);
+
+    // Player buys Trinity Force, then dies — items changed, fires again.
+    const after = [
+      { id: 3057, name: "Sheen" },
+      { id: 3078, name: "Trinity Force" },
+    ];
+    liveGameState$.next(makeState({ gold: 200, deaths: 2, items: after }));
+    liveGameState$.next(makeState({ gold: 1500, deaths: 3, items: after }));
+    expect(seen).toHaveLength(2);
+  });
 });
+
+type HandleFnLgs = DecisionPointTrigger<LiveGameState>["handle"];
 
 // ─── Tests: gold-available trigger ───
 
