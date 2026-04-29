@@ -105,34 +105,55 @@
 }
 
 .recItem {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.4rem 0.5rem;
+  /* Vertical-center so when the row grows to 3 lines, the icon and text
+     column both sit centered relative to the row instead of top-anchored.
+     At 1- and 2-line default, the row matches the icon height, so centering
+     has no visual effect — equal-padding around the icon still holds. */
+  align-items: center;
+  gap: 0.75rem;
+  /* Left padding doubled (1rem) so the fit-tab overlap reads cleanly.
+     Top/bottom kept tight (0.5rem) — DDragon icons have transparent
+     internal padding, so smaller CSS padding still reads as visually
+     close to the left margin around the icon's actual art. */
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  /* min-height enforces the 2-line default. Calc:
+     icon (3.55rem) + 0.5rem padding-top + 0.5rem padding-bottom = 4.55rem. */
+  min-height: 4.55rem;
   border-radius: 0.2rem;
   border: 1px solid #2a2f3e;
   background: #12151c;
   transition: background 0.15s;
 }
 
+/* Text column — let it shrink properly under flex when reason is long. */
+.recItem > div:last-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .recItem:hover {
   background: #181c26;
 }
 
+/* Tab-style fit indicator — sits at top-left, overlapping the row border.
+   Mirrors the overlay augment-badge pill treatment but corner-anchored
+   instead of centered. */
 .recFit {
+  position: absolute;
+  top: -9px;
+  left: -8px;
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-weight: 700;
-  font-size: 0.6rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.2rem;
-  text-align: center;
+  font-size: 0.7rem;
+  padding: 1px 8px;
+  border-radius: 3px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  line-height: 1.2;
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 0.1rem;
-  min-width: 5rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  z-index: 1;
 }
 
 .fitExceptional {
@@ -171,15 +192,17 @@
   color: #e5e7eb;
 }
 
+/* Fixed square sized to the 2-line default's content area
+   (min-height 4.55rem − 2 × 0.5rem padding = 3.55rem). When the row grows
+   to 3 lines, the icon stays this size and centers vertically with the text
+   column via the parent's align-items: center. */
 .recItemIcon {
-  width: 36px;
-  height: 36px;
   flex-shrink: 0;
+  width: 3.55rem;
+  height: 3.55rem;
   border-radius: 4px;
   border: 1px solid #2a2f3e;
   background: #0a0c10;
-  align-self: flex-start;
-  margin-top: 0.05rem;
   object-fit: cover;
   display: block;
 }
@@ -194,6 +217,11 @@
   font-size: 0.8rem;
   color: #8890a4;
   line-height: 1.5;
+  /* Cap reason at 3 lines — typical case is 2, can grow one more if needed. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ─── Augment offer card ─── */
