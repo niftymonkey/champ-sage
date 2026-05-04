@@ -21,6 +21,7 @@ function defaultState(overrides: Partial<LiveGameState> = {}): LiveGameState {
     players: [],
     gameMode: "",
     lcuGameMode: "",
+    mapNumber: 0,
     gameTime: 0,
     champSelect: null,
     eogStats: null,

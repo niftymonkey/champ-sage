@@ -166,6 +166,7 @@ export function createMockGameState(
     players,
     gameMode: options.gameMode,
     lcuGameMode: options.gameMode,
+    mapNumber: 0,
     gameTime,
     champSelect: null,
     eogStats: null,

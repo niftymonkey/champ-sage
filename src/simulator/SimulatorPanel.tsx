@@ -112,6 +112,7 @@ export function SimulatorPanel({ gameData }: SimulatorPanelProps) {
         players: currentStateRef.current?.players ?? [],
         gameMode: "",
         lcuGameMode: "",
+        mapNumber: 0,
         gameTime: 0,
         champSelect: null,
         eogStats: eog,

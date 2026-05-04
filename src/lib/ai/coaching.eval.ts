@@ -99,6 +99,7 @@ interface EvalInput {
   question: string;
   champion: string;
   level: number;
+  mapNumber: 0;
   gameTime: string;
   items: string[];
   gold: number;
@@ -408,6 +409,7 @@ interface MultiTurnFixture {
     items: string[];
     gold: number;
     champion: string;
+    mapNumber: 0;
     gameTime: string;
   };
 }
@@ -468,6 +470,7 @@ function buildFixtureState(f: MultiTurnFixture): {
     players: f.gameState.players,
     gameMode: f.gameState.gameMode,
     lcuGameMode: f.gameModeId === "aram-mayhem" ? "KIWI" : f.gameState.gameMode,
+    mapNumber: 0,
     gameTime: f.gameState.gameTime,
     champSelect: null,
     eogStats: null,
@@ -648,6 +651,7 @@ function buildEvalInput(f: MultiTurnFixture): EvalInput {
     question: f.query.question,
     champion: f.scorerContext.champion,
     level: f.gameState.activePlayer?.level ?? 1,
+    mapNumber: 0,
     gameTime: f.scorerContext.gameTime,
     items: f.scorerContext.items,
     gold: f.scorerContext.gold,

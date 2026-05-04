@@ -174,14 +174,15 @@ Available at the `PreEndOfGame` phase transition (immediately when the nexus die
 
 ### Game mode internal names
 
-| Display name    | Live Client Data API `gameMode` | LCU `gameMode` | Constant           |
-| --------------- | ------------------------------- | -------------- | ------------------ |
-| ARAM Mayhem     | `KIWI`                          | `KIWI`         | `GAME_MODE_MAYHEM` |
-| Regular ARAM    | `ARAM` (assumed, untested)      | `ARAM`         | `GAME_MODE_ARAM`   |
-| Summoner's Rift | `CLASSIC`                       | `CLASSIC`      | —                  |
-| Arena           | `CHERRY`                        | `CHERRY`       | `GAME_MODE_ARENA`  |
+| Display name    | Live Client Data API `gameMode` | LCU `gameMode` | Live Client `mapNumber` | Constant           |
+| --------------- | ------------------------------- | -------------- | ----------------------- | ------------------ |
+| ARAM Mayhem     | `KIWI`                          | `KIWI`         | 12                      | `GAME_MODE_MAYHEM` |
+| Regular ARAM    | `ARAM` (assumed, untested)      | `ARAM`         | 12                      | `GAME_MODE_ARAM`   |
+| Summoner's Rift | `CLASSIC`                       | `CLASSIC`      | 11                      | -                  |
+| Arena           | `CHERRY`                        | `CHERRY`       | 30                      | `GAME_MODE_ARENA`  |
+| Practice Tool   | `PRACTICETOOL`                  | `PRACTICETOOL` | underlying map id       | n/a                |
 
-Both sources return the same mode string for all tested modes. Regular ARAM has not been tested in-game yet — the `GAME_MODE_ARAM` ("ARAM") value is assumed from documentation and used as a fallback in mode detection. ARAM Mayhem consistently returns "KIWI" (tested patch 15.6). Constants are defined in `src/lib/mode/types.ts`.
+For all queued modes, `gameMode` and the LCU `gameMode` agree. Practice Tool is the exception: BOTH sources echo `PRACTICETOOL` (verified empirically with the LCU `/lol-gameflow/v1/session` queue block) regardless of which map the player picked, so the only way to recover the underlying mode for a Practice Tool session is the Live Client `gameData.mapNumber` field. Mode detection uses `detectMode(registry, liveGameMode, lcuGameMode, mapNumber)` in `src/lib/mode/detect.ts`. The function tries `liveGameMode` first, falls back to `lcuGameMode`, and finally translates `mapNumber` through a `MAP_TO_MODE` table (11 -> CLASSIC, 12 -> ARAM, 30 -> CHERRY). Without these fallbacks Practice Tool silently disables the coaching pipeline because no registered mode matches `PRACTICETOOL`. Note: Mayhem (KIWI) shares map 12 with regular ARAM but is queue-only and cannot be opened in Practice Tool, so map 12 in Practice Tool resolves to ARAM. Regular ARAM has not been tested in-game yet - the `GAME_MODE_ARAM` ("ARAM") value is assumed from documentation. ARAM Mayhem consistently returns "KIWI" (tested patch 15.6). Constants are defined in `src/lib/mode/types.ts`.
 
 ### WebSocket (real-time events)
 

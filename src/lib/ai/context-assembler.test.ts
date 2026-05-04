@@ -73,6 +73,7 @@ function createLiveGameState(
     ],
     gameMode: "ARAM",
     lcuGameMode: "KIWI",
+    mapNumber: 0,
     gameTime: 600,
     champSelect: null,
     eogStats: null,

@@ -24,7 +24,7 @@ import {
   manualInput$,
   playerIntent$,
 } from "./streams";
-import { normalizeGameState } from "../game-state/normalize";
+import { normalizeGameState, extractMapNumber } from "../game-state/normalize";
 import type { PlatformBridge, LcuEventPayload } from "./platform-bridge";
 import type { GameflowPhase, LiveGameState, EogStats } from "./types";
 import { formatGameTime } from "../format";
@@ -524,12 +524,17 @@ export class ReactiveEngine {
             (json) => {
               const raw: unknown = JSON.parse(json);
               const normalized = normalizeGameState(raw);
+              const mapNumber = extractMapNumber(raw);
               const status = `OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`;
               if (shouldLogPollStatus("OK", this.lastPollStatus)) {
                 engineLog.debug(`Poll ${status}`);
               }
               this.lastPollStatus = "OK";
-              return { success: true as const, data: normalized };
+              return {
+                success: true as const,
+                data: normalized,
+                mapNumber,
+              };
             },
             (err) => {
               const errMsg = err instanceof Error ? err.message : String(err);
@@ -566,6 +571,7 @@ export class ReactiveEngine {
                 players: result.data.players,
                 gameMode: result.data.gameMode,
                 lcuGameMode: this.lcuGameMode,
+                mapNumber: result.mapNumber,
                 gameTime: result.data.gameTime,
               };
               subscriber.next(gameState);

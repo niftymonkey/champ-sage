@@ -28,6 +28,7 @@ import {
   aramMode,
   classicMode,
   buildEffectiveGameState,
+  detectMode,
 } from "./lib/mode";
 import { addSelectedAugment } from "./lib/mode/augment-selection";
 import { ensureAbilities } from "./lib/data-ingest/ensure-abilities";
@@ -116,9 +117,14 @@ function App() {
     const championNames = liveGame.players.map((p) => p.championName);
     ensureAbilities(data, championNames, data.version).catch(() => {});
 
-    const detectedMode = registry.detect(liveGame.gameMode);
+    const detectedMode = detectMode(
+      registry,
+      liveGame.gameMode,
+      liveGame.lcuGameMode,
+      liveGame.mapNumber
+    );
     appLog.info(
-      `Game detected: ${liveGame.gameMode} | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.length} | augments in data: ${data.augments.size}`
+      `Game detected: ${liveGame.gameMode} (lcu: ${liveGame.lcuGameMode || "n/a"}, map: ${liveGame.mapNumber || "n/a"}) | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.length} | augments in data: ${data.augments.size}`
     );
   }, [data, liveGame.players]);
 
@@ -165,8 +171,19 @@ function App() {
 
   const detectedMode = useMemo(() => {
     if (!data || gameState.status !== "connected") return null;
-    return registry.detect(gameState.gameMode);
-  }, [data, gameState.status, gameState.gameMode]);
+    return detectMode(
+      registry,
+      gameState.gameMode,
+      liveGame.lcuGameMode,
+      liveGame.mapNumber
+    );
+  }, [
+    data,
+    gameState.status,
+    gameState.gameMode,
+    liveGame.lcuGameMode,
+    liveGame.mapNumber,
+  ]);
 
   const effectiveState = useMemo(() => {
     if (!data || gameState.status !== "connected") {

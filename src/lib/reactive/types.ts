@@ -39,8 +39,14 @@ export interface LiveGameState {
   activePlayer: ActivePlayer | null;
   players: PlayerInfo[];
   gameMode: string;
-  /** LCU game mode (KIWI for Mayhem, CLASSIC for SR, CHERRY for Arena) — more specific than gameMode */
+  /** LCU game mode (KIWI for Mayhem, CLASSIC for SR, CHERRY for Arena) - more specific than gameMode */
   lcuGameMode: string;
+  /**
+   * Riot map id from the Live Client `gameData.mapNumber` block.
+   * 11 = Summoner's Rift, 12 = Howling Abyss (ARAM), 30 = Arena, 0 if unknown.
+   * Last-resort signal when both gameMode and lcuGameMode report PRACTICETOOL.
+   */
+  mapNumber: number;
   gameTime: number;
   champSelect: unknown | null;
   eogStats: EogStats | null;
