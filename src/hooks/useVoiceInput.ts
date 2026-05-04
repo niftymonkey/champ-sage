@@ -33,7 +33,36 @@ const voiceLog = getLogger("voice");
  * In ow-electron Phase 2, this will move to overlay.hotkeys which works
  * during gameplay. For now, the main process handles it.
  */
-const PUSH_TO_TALK_HOTKEY = "NumpadSubtract";
+export const PUSH_TO_TALK_HOTKEY = "NumpadSubtract";
+
+/**
+ * Render a Chromium / Electron accelerator string as something a player can
+ * actually read in the UI. "NumpadSubtract" -> "Num -", "Alt+Space" -> "Alt
+ * + Space", etc. Falls back to the raw string for combos we have not styled.
+ */
+export function formatHotkeyLabel(accelerator: string): string {
+  return accelerator
+    .split("+")
+    .map((part) => {
+      switch (part) {
+        case "NumpadSubtract":
+          return "Num -";
+        case "NumpadAdd":
+          return "Num +";
+        case "NumpadMultiply":
+          return "Num *";
+        case "NumpadDivide":
+          return "Num /";
+        case "Space":
+          return "Space";
+        case "Tab":
+          return "Tab";
+        default:
+          return part;
+      }
+    })
+    .join(" + ");
+}
 
 export interface VoiceInputState {
   isRecording: boolean;
@@ -135,6 +164,14 @@ export function useVoiceInput(
   }, []);
 
   const startRecording = useCallback(async () => {
+    // Voice queries are gated to live games. The post-game "rejoin a finished
+    // session and ask follow-up questions" feature does not exist yet, so
+    // outside an active game the push-to-talk gesture is a no-op: do not
+    // capture audio, do not toggle recording state, do not log a session.
+    if (liveGameState$.getValue().activePlayer === null) {
+      return;
+    }
+
     try {
       // Force-reset if a previous cycle left state stuck (e.g., focus loss
       // caused a "Released" event to be missed, or an error mid-transcription)
@@ -143,7 +180,7 @@ export function useVoiceInput(
         try {
           await stopAudioCapture();
         } catch {
-          // Ignore — just cleaning up stale state
+          // Ignore - just cleaning up stale state
         }
       }
 

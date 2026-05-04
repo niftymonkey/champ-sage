@@ -16,12 +16,16 @@ import {
   WhisperProvider,
   LocalWhisperProvider,
 } from "./lib/voice/stt-provider";
-import { StatusBar } from "./components/StatusBar";
 import { InGameView } from "./components/InGameView";
-import { LastGameCard } from "./components/coaching";
 import { CoachingPipeline } from "./components/CoachingPipeline";
-import { ConnectionStatus } from "./components/ConnectionStatus";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
+import { WindowChrome } from "./surfaces/WindowChrome";
+import { ChromeStatus } from "./surfaces/ChromeStatus";
+import { IdleSurface } from "./surfaces/IdleSurface";
+import { ChampSelectSurface } from "./surfaces/ChampSelectSurface";
+import { PostGameSurface } from "./surfaces/PostGameSurface";
+import { SettingsSurface } from "./surfaces/SettingsSurface";
+import { useSurfaceState } from "./surfaces/useSurfaceState";
 import {
   createModeRegistry,
   aramMayhemMode,
@@ -209,12 +213,21 @@ function App() {
     return buildEffectiveGameState(gameState, modeContext);
   }, [gameState, data, selectedAugments, detectedMode]);
 
-  const inGame = liveGame.activePlayer !== null;
+  const { surface, navigate } = useSurfaceState();
 
   if (loading && !data) {
     return (
       <main className="app-root">
-        <StatusBar isRecording={voice.isRecording} />
+        <WindowChrome
+          surface={surface}
+          onNavigate={navigate}
+          statusContent={
+            <ChromeStatus
+              isRecording={voice.isRecording}
+              voiceAvailable={whisperProvider !== null}
+            />
+          }
+        />
         <div className="app-loading">Loading game data...</div>
       </main>
     );
@@ -223,7 +236,16 @@ function App() {
   if (error && !data) {
     return (
       <main className="app-root">
-        <StatusBar isRecording={voice.isRecording} />
+        <WindowChrome
+          surface={surface}
+          onNavigate={navigate}
+          statusContent={
+            <ChromeStatus
+              isRecording={voice.isRecording}
+              voiceAvailable={whisperProvider !== null}
+            />
+          }
+        />
         <div className="app-error">Error: {error}</div>
       </main>
     );
@@ -233,30 +255,38 @@ function App() {
 
   return (
     <main className="app-root">
-      <StatusBar isRecording={voice.isRecording} />
       <CoachingProvider
         mode={detectedMode}
         liveGameState={liveGame}
         gameData={data}
       >
         <CoachingPipeline gameData={data} />
+        <WindowChrome
+          surface={surface}
+          onNavigate={navigate}
+          statusContent={
+            <ChromeStatus
+              isRecording={voice.isRecording}
+              voiceAvailable={whisperProvider !== null}
+            />
+          }
+        />
         <div className="app-body">
-          {inGame ? (
+          {surface === "in-game" ? (
             <InGameView state={effectiveState} gameData={data} />
+          ) : surface === "champ-select" ? (
+            <ChampSelectSurface />
+          ) : surface === "post-game" ? (
+            <PostGameSurface />
+          ) : surface === "settings" ? (
+            <SettingsSurface />
           ) : (
-            <div className="app-idle">
-              <ConnectionStatus
-                lifecycle={lifecycle}
-                lastPhase={lastPhase}
-                championName={championName}
-              />
-              <LastGameCard
-                dataVersion={data.version}
-                championCount={data.champions.size}
-                itemCount={data.items.size}
-                augmentCount={data.augments.size}
-              />
-            </div>
+            <IdleSurface
+              data={data}
+              lifecycle={lifecycle}
+              lastPhase={lastPhase}
+              championName={championName}
+            />
           )}
           {devMode && <SimulatorPanel gameData={data} />}
         </div>

@@ -1,8 +1,43 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useVoiceInput } from "../useVoiceInput";
 import type { SttProvider, SttResult } from "../../lib/voice/stt-provider";
-import { playerIntent$ } from "../../lib/reactive";
+import {
+  playerIntent$,
+  liveGameState$,
+  createDefaultLiveGameState,
+} from "../../lib/reactive";
+import type { ActivePlayer } from "../../lib/game-state/types";
+
+const FAKE_ACTIVE_PLAYER: ActivePlayer = {
+  championName: "Aatrox",
+  level: 1,
+  currentGold: 500,
+  runes: { keystone: "", primaryTree: "", secondaryTree: "" },
+  stats: {
+    abilityPower: 0,
+    armor: 0,
+    attackDamage: 0,
+    attackSpeed: 0,
+    abilityHaste: 0,
+    critChance: 0,
+    magicResist: 0,
+    moveSpeed: 0,
+    maxHealth: 0,
+    currentHealth: 0,
+  },
+};
+
+function setLiveGameInProgress(): void {
+  liveGameState$.next({
+    ...createDefaultLiveGameState(),
+    activePlayer: FAKE_ACTIVE_PLAYER,
+  });
+}
+
+function setLiveGameIdle(): void {
+  liveGameState$.next(createDefaultLiveGameState());
+}
 
 // Mock the logger — vi.hoisted runs before vi.mock hoisting
 const mockVoiceLog = vi.hoisted(() => ({
@@ -67,9 +102,17 @@ function createMockProvider(
 const fakeWavBytes = new Array(32000).fill(0); // ~1 second at 16kHz 16-bit mono
 
 describe("useVoiceInput", () => {
+  afterEach(() => {
+    setLiveGameIdle();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(mockStopRecording).mockResolvedValue(fakeWavBytes);
+    // Voice queries are gated to live games. Default the test environment to
+    // an in-progress game so the existing recording-flow tests continue to
+    // exercise the recorder; the gate itself has its own dedicated tests.
+    setLiveGameInProgress();
     // Re-assign after clearAllMocks
     window.electronAPI = {
       invoke: vi.fn(),
@@ -255,5 +298,38 @@ describe("useVoiceInput", () => {
     });
 
     expect(result.current.error).toBe("No STT provider configured");
+  });
+
+  describe("in-game gate", () => {
+    it("does not start recording when no game is in progress", async () => {
+      // Voice queries are gated to live games today. Holding the push-to-talk
+      // key on the home screen must be a no-op: no audio capture, no state
+      // toggle, no log entry suggesting a session started.
+      setLiveGameIdle();
+
+      const { result } = renderHook(() => useVoiceInput(createMockProvider()));
+
+      await act(async () => {
+        await result.current.startRecording();
+      });
+
+      expect(result.current.isRecording).toBe(false);
+      expect(mockStartRecording).not.toHaveBeenCalled();
+    });
+
+    it("starts recording when an active player is present", async () => {
+      // Sanity: with a live player on the state stream the gate opens and
+      // recording behaves normally.
+      setLiveGameInProgress();
+
+      const { result } = renderHook(() => useVoiceInput(createMockProvider()));
+
+      await act(async () => {
+        await result.current.startRecording();
+      });
+
+      expect(result.current.isRecording).toBe(true);
+      expect(mockStartRecording).toHaveBeenCalled();
+    });
   });
 });
