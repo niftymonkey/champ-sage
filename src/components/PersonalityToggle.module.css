@@ -2,14 +2,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.65rem;
 }
 
 .label {
-  color: #565e74;
+  color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--type-meta-tracking);
 }
 
 .buttons {
@@ -19,25 +19,25 @@
 
 .button {
   background: transparent;
-  color: #8890a4;
-  border: 1px solid #2a2f3e;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
   padding: 0.15rem 0.45rem;
-  border-radius: 0.2rem;
+  border-radius: var(--radius-card);
   cursor: pointer;
   font: inherit;
   transition:
-    background 0.12s,
-    color 0.12s,
-    border-color 0.12s;
+    background var(--motion-color),
+    color var(--motion-color),
+    border-color var(--motion-color);
 }
 
 .button:hover {
-  background: #181c26;
-  color: #b8a0e8;
+  background: var(--bg-2);
+  color: var(--accent-2);
 }
 
 .active {
-  background: #1a1e2a;
-  color: #b8a0e8;
-  border-color: #4a3f6e;
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  border-color: var(--accent-border);
 }

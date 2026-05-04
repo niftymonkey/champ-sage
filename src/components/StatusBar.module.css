@@ -4,10 +4,10 @@
   justify-content: space-between;
   padding: 0 1rem;
   height: 2.4rem;
-  background: #12151c;
-  border-bottom: 1px solid #2a2f3e;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
   flex-shrink: 0;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   letter-spacing: 0.02em;
 }
@@ -30,51 +30,53 @@
 }
 
 .dotConnected {
-  background: #34d399;
-  box-shadow: 0 0 8px #34d399;
+  background: var(--fit-strong);
+  box-shadow: 0 0 8px rgba(138, 163, 124, 0.55);
 }
 
 .dotDisconnected {
-  background: #565e74;
+  background: var(--ink-3);
   box-shadow: none;
 }
 
 /* App name shown in idle state */
 .appName {
-  color: #8890a4;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--ink-2);
 }
 
 /* Game mode badge */
 .mode {
-  background: rgba(96, 165, 250, 0.1);
-  color: #60a5fa;
+  background: var(--accent-soft);
+  color: var(--accent-2);
   padding: 0.1rem 0.5rem;
-  border-radius: 3px;
+  border-radius: var(--radius-chip);
   font-weight: 500;
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--type-meta-tracking);
 }
 
 .gameTime {
-  color: #8890a4;
+  color: var(--ink-2);
 }
 
 .text {
-  color: #8890a4;
+  color: var(--ink-2);
 }
 
 .muted {
-  color: #565e74;
+  color: var(--ink-3);
   cursor: help;
 }
 
 .sep {
-  color: #565e74;
+  color: var(--ink-3);
 }
 
 .gold {
-  color: #fbbf24;
+  color: var(--threat-md);
   cursor: help;
 }
 
@@ -86,19 +88,19 @@
 }
 
 .kdaKills {
-  color: #4ade80;
+  color: var(--fit-strong);
 }
 
 .kdaDeaths {
-  color: #f87171;
+  color: var(--threat-hi);
 }
 
 .kdaAssists {
-  color: #8890a4;
+  color: var(--ink-2);
 }
 
 .kdaSep {
-  color: #565e74;
+  color: var(--ink-3);
   padding: 0 0.15rem;
   font-size: 0.65rem;
   vertical-align: middle;
@@ -109,26 +111,26 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  color: #565e74;
+  color: var(--ink-3);
   cursor: help;
 }
 
 .voiceRecording {
-  color: #f87171;
+  color: var(--accent-2);
 }
 
 .voiceRing {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  border: 1.5px solid #565e74;
+  border: 1.5px solid var(--ink-3);
   display: inline-block;
   vertical-align: middle;
   transition: all 0.2s;
 }
 
 .voiceRingRecording {
-  border-color: #f87171;
-  background: #f87171;
-  box-shadow: 0 0 6px rgba(248, 113, 113, 0.5);
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(176, 74, 78, 0.55);
 }

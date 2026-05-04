@@ -1,23 +1,23 @@
 /* ─── Base card ─── */
 .card {
-  background: #181c26;
-  border: 1px solid #2a2f3e;
-  border-radius: 0.3rem;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  transition: border-color 0.15s;
+  transition: border-color var(--motion-color);
   flex-shrink: 0;
 }
 
 .card:hover {
-  border-color: #3d4560;
+  border-color: var(--line-2);
 }
 
 .proactive {
-  border-color: rgba(212, 168, 67, 0.5);
+  border-color: var(--accent-border);
 }
 
 .proactive:hover {
-  border-color: #d4a843;
+  border-color: var(--accent);
 }
 
 /* ─── Card header ─── */
@@ -26,17 +26,17 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.7rem;
-  border-bottom: 1px solid #2a2f3e;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: #565e74;
+  color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--type-meta-tracking);
 }
 
 .proactive .header {
-  border-bottom-color: rgba(212, 168, 67, 0.5);
-  background: rgba(212, 168, 67, 0.06);
+  border-bottom-color: var(--accent-border);
+  background: var(--accent-soft);
 }
 
 .cardType {
@@ -52,15 +52,15 @@
 }
 
 .dotAugment {
-  background: #fbbf24;
+  background: var(--threat-md);
 }
 
 .dotVoice {
-  background: #60a5fa;
+  background: var(--secondary-2);
 }
 
 .dotPlan {
-  background: #34d399;
+  background: var(--fit-strong);
 }
 
 .body {
@@ -69,15 +69,20 @@
 
 /* ─── Coaching exchange card ─── */
 .question {
-  color: #8890a4;
+  color: var(--quote);
+  font-family: var(--font-display);
+  font-style: italic;
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
   padding-left: 0.6rem;
-  border-left: 2px solid #3d4560;
+  border-left: 2px solid var(--quote);
   line-height: 1.5;
 }
 
 .answer {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--coach);
   font-size: 0.95rem;
   line-height: 1.6;
   margin-bottom: 0.5rem;
@@ -85,14 +90,14 @@
 
 .retriedBadge {
   display: inline-block;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.65rem;
-  font-weight: 600;
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  font-weight: 500;
+  color: var(--threat-md);
+  background: rgba(212, 160, 80, 0.12);
+  border: 1px solid rgba(212, 160, 80, 0.35);
   padding: 0.1rem 0.4rem;
-  border-radius: 0.2rem;
+  border-radius: var(--radius-chip);
   margin-bottom: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -110,42 +115,42 @@
   /* Vertical-center so when the row grows to 3 lines, the icon and text
      column both sit centered relative to the row instead of top-anchored.
      At 1- and 2-line default, the row matches the icon height, so centering
-     has no visual effect — equal-padding around the icon still holds. */
+     has no visual effect - equal-padding around the icon still holds. */
   align-items: center;
   gap: 0.75rem;
   /* Left padding doubled (1rem) so the fit-tab overlap reads cleanly.
-     Top/bottom kept tight (0.5rem) — DDragon icons have transparent
+     Top/bottom kept tight (0.5rem) - DDragon icons have transparent
      internal padding, so smaller CSS padding still reads as visually
      close to the left margin around the icon's actual art. */
   padding: 0.5rem 0.5rem 0.5rem 1rem;
   /* min-height enforces the 2-line default. Calc:
      icon (3.55rem) + 0.5rem padding-top + 0.5rem padding-bottom = 4.55rem. */
   min-height: 4.55rem;
-  border-radius: 0.2rem;
-  border: 1px solid #2a2f3e;
-  background: #12151c;
-  transition: background 0.15s;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  transition: background var(--motion-color);
 }
 
-/* Text column — let it shrink properly under flex when reason is long. */
+/* Text column - let it shrink properly under flex when reason is long. */
 .recItem > div:last-child {
   min-width: 0;
   flex: 1 1 auto;
 }
 
 .recItem:hover {
-  background: #181c26;
+  background: var(--bg-2);
 }
 
-/* Tab-style fit indicator — sits at top-left, overlapping the row border.
+/* Tab-style fit indicator - sits at top-left, overlapping the row border.
    Mirrors the overlay augment-badge pill treatment but corner-anchored
    instead of centered. */
 .recFit {
   position: absolute;
   top: -9px;
   left: -8px;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: 500;
   font-size: 0.7rem;
   padding: 1px 8px;
   border-radius: 3px;
@@ -168,7 +173,7 @@
   );
   background-size: 200% 100%;
   animation: prismatic-shift 3s linear infinite;
-  color: #0a0c10;
+  color: var(--bg);
 }
 
 @keyframes prismatic-shift {
@@ -180,16 +185,16 @@
   }
 }
 .fitStrong {
-  background: #34d399;
-  color: #0a0c10;
+  background: var(--fit-strong);
+  color: var(--bg);
 }
 .fitSituational {
-  background: #fbbf24;
-  color: #0a0c10;
+  background: var(--fit-excellent);
+  color: var(--bg);
 }
 .fitWeak {
-  background: #6b7280;
-  color: #e5e7eb;
+  background: var(--ink-3);
+  color: var(--ink);
 }
 
 /* Fixed square sized to the 2-line default's content area
@@ -201,23 +206,24 @@
   width: 3.55rem;
   height: 3.55rem;
   border-radius: 4px;
-  border: 1px solid #2a2f3e;
-  background: #0a0c10;
+  border: 1px solid var(--line);
+  background: var(--bg);
   object-fit: cover;
   display: block;
 }
 
 .recName {
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 500;
   font-size: 0.85rem;
   margin-bottom: 0.1rem;
 }
 
 .recReason {
   font-size: 0.8rem;
-  color: #8890a4;
+  color: var(--ink-2);
   line-height: 1.5;
-  /* Cap reason at 3 lines — typical case is 2, can grow one more if needed. */
+  /* Cap reason at 3 lines - typical case is 2, can grow one more if needed. */
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -237,7 +243,7 @@
   padding: 0 0.5rem;
 }
 
-/* Scale down augment cards inside feed — keep 2:3 ratio but smaller */
+/* Scale down augment cards inside feed - keep 2:3 ratio but smaller */
 .augmentOption :global(.augment-card) {
   padding: 0.3rem 0.3rem;
   font-size: 0.75rem;
@@ -259,38 +265,38 @@
 .augmentOption {
   flex: 0 1 270px;
   padding: 0;
-  border-radius: 0.25rem;
-  border: 1px solid #2a2f3e;
-  background: #12151c;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line);
+  background: var(--bg);
   position: relative;
   transition:
-    background 0.15s,
-    border-color 0.15s;
+    background var(--motion-color),
+    border-color var(--motion-color);
 }
 
 .augmentOption:hover {
-  background: #181c26;
-  border-color: #3d4560;
+  background: var(--bg-2);
+  border-color: var(--line-2);
 }
 
 .augmentHighlight {
-  border-color: #34d399;
-  background: rgba(52, 211, 153, 0.12);
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .augmentHighlight:hover {
-  background: rgba(52, 211, 153, 0.16);
+  background: rgba(176, 74, 78, 0.18);
 }
 
 .augmentFitBadge {
   position: absolute;
   top: -1px;
   right: -1px;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.08rem 0.3rem;
-  border-radius: 0 0.2rem 0 0.2rem;
+  border-radius: 0 var(--radius-card) 0 var(--radius-card);
   text-transform: uppercase;
 }
 
@@ -306,23 +312,24 @@
   );
   background-size: 200% 100%;
   animation: prismatic-text 3s linear infinite;
-  color: #0a0c10;
+  color: var(--bg);
 }
 .badgeStrong {
-  background: #34d399;
-  color: #0a0c10;
+  background: var(--fit-strong);
+  color: var(--bg);
 }
 .badgeSituational {
-  background: #fbbf24;
-  color: #0a0c10;
+  background: var(--fit-excellent);
+  color: var(--bg);
 }
 .badgeWeak {
-  background: #6b7280;
-  color: #e5e7eb;
+  background: var(--ink-3);
+  color: var(--ink);
 }
 
 .augmentName {
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 500;
   font-size: 0.85rem;
   margin-bottom: 0.2rem;
   padding-right: 1rem;
@@ -330,12 +337,15 @@
 
 .augmentReason {
   font-size: 0.8rem;
-  color: #8890a4;
+  color: var(--ink-2);
   line-height: 1.5;
 }
 
 /* ─── Game plan card ─── */
 .planSummary {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--coach);
   font-size: 0.95rem;
   line-height: 1.6;
   margin-bottom: 0.4rem;
@@ -364,25 +374,25 @@
 
 .buildItemIcon {
   flex-shrink: 0;
-  transition: opacity 0.15s;
+  transition: opacity var(--motion-color);
 }
 
 .buildItem {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
-  background: #12151c;
-  border: 1px solid #2a2f3e;
-  color: #8890a4;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
   transition:
-    background 0.15s,
-    color 0.15s;
+    background var(--motion-color),
+    color var(--motion-color);
 }
 
 .buildItemWrap:hover .buildItem {
-  background: #181c26;
-  color: #e2e6ef;
+  background: var(--bg-2);
+  color: var(--ink);
 }
 
 .buildItemWrap:hover .buildItemIcon {
@@ -390,27 +400,27 @@
 }
 
 .buildArrow {
-  color: #565e74;
+  color: var(--ink-3);
   font-size: 0.7rem;
 }
 
 .cat_core {
-  color: #d7c997;
+  color: var(--threat-md);
 }
 .cat_counter {
-  color: #e89898;
+  color: var(--accent-2);
 }
 .cat_defensive {
-  color: #9cc9e8;
+  color: var(--secondary-2);
 }
 .cat_damage {
-  color: #e8a078;
+  color: var(--tag-ad);
 }
 .cat_utility {
-  color: #a8e0b8;
+  color: var(--fit-strong);
 }
 .cat_situational {
-  color: #8890a4;
+  color: var(--ink-2);
 }
 
 /* ─── Responsive ─── */

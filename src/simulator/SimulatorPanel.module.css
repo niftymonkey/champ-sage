@@ -1,10 +1,10 @@
 .panel {
-  background: #1a1a2e;
-  border-left: 1px solid #333;
+  background: var(--bg-2);
+  border-left: 1px solid var(--line);
   padding: 12px;
   overflow-y: auto;
   font-size: 13px;
-  color: #ccc;
+  color: var(--ink-2);
   width: 320px;
   flex-shrink: 0;
 }
@@ -14,12 +14,13 @@
 }
 
 .sectionTitle {
+  font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
+  letter-spacing: var(--type-meta-tracking);
+  color: var(--ink-3);
   margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .row {
@@ -30,49 +31,63 @@
 }
 
 .btn {
-  background: #2d2d4a;
-  border: 1px solid #444;
-  color: #ccc;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
   cursor: pointer;
+  font-family: var(--font-ui);
   font-size: 12px;
   white-space: nowrap;
+  transition:
+    background var(--motion-color),
+    border-color var(--motion-color);
 }
 
 .btn:hover {
-  background: #3d3d5a;
-  border-color: #666;
+  background: var(--bg-2);
+  border-color: var(--ink-3);
 }
 
 .btnPrimary {
   composes: btn;
-  background: #1a5c3a;
-  border-color: #2a7c4a;
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-2);
 }
 
 .btnPrimary:hover {
-  background: #2a7c4a;
+  background: rgba(176, 74, 78, 0.22);
+  border-color: var(--accent);
 }
 
 .btnDanger {
   composes: btn;
-  background: #5c1a1a;
-  border-color: #7c2a2a;
+  background: rgba(193, 72, 72, 0.12);
+  border-color: rgba(193, 72, 72, 0.4);
+  color: var(--threat-hi);
 }
 
 .btnDanger:hover {
-  background: #7c2a2a;
+  background: rgba(193, 72, 72, 0.2);
+  border-color: var(--threat-hi);
 }
 
 .input {
-  background: #222;
-  border: 1px solid #444;
-  color: #ccc;
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  color: var(--ink);
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-card);
+  font-family: var(--font-ui);
   font-size: 12px;
   width: 100%;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .select {
@@ -86,8 +101,9 @@
 }
 
 .label {
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: #999;
+  color: var(--ink-3);
   min-width: 50px;
 }
 
@@ -104,13 +120,14 @@
 }
 
 .status {
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: #666;
+  color: var(--ink-3);
   margin-top: 4px;
 }
 
 .statusActive {
-  color: #22c55e;
+  color: var(--fit-strong);
 }
 
 .augmentRow {

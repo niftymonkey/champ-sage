@@ -18,7 +18,7 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 1px solid rgba(200, 155, 60, 0.2);
+  border: 1px solid rgba(176, 74, 78, 0.2);
   animation: spin-slow 20s linear infinite;
 }
 
@@ -27,14 +27,14 @@
   position: absolute;
   inset: -1px;
   border-radius: 50%;
-  border: 1px dashed rgba(200, 155, 60, 0.15);
+  border: 1px dashed rgba(176, 74, 78, 0.15);
 }
 
 .innerRing {
   position: absolute;
   inset: 0.75rem;
   border-radius: 50%;
-  border: 1px solid rgba(200, 155, 60, 0.12);
+  border: 1px solid rgba(176, 74, 78, 0.12);
   animation: spin-reverse 14s linear infinite;
 }
 
@@ -43,7 +43,7 @@
   position: absolute;
   inset: 0.4rem;
   border-radius: 50%;
-  border: 1px solid rgba(200, 155, 60, 0.08);
+  border: 1px solid rgba(176, 74, 78, 0.08);
 }
 
 .gem {
@@ -53,11 +53,11 @@
   width: 1.4rem;
   height: 1.4rem;
   transform: translate(-50%, -50%) rotate(45deg);
-  border: 2px solid rgba(200, 155, 60, 0.6);
+  border: 2px solid rgba(176, 74, 78, 0.6);
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(200, 155, 60, 0.2),
-    rgba(10, 12, 16, 0.8)
+    rgba(176, 74, 78, 0.2),
+    rgba(17, 19, 21, 0.8)
   );
 }
 
@@ -66,11 +66,7 @@
   position: absolute;
   inset: -1rem;
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(200, 155, 60, 0.15),
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgba(176, 74, 78, 0.15), transparent 70%);
   transform: rotate(-45deg);
 }
 
@@ -78,7 +74,7 @@
   position: absolute;
   width: 3px;
   height: 3px;
-  background: rgba(200, 155, 60, 0.5);
+  background: rgba(176, 74, 78, 0.5);
   border-radius: 50%;
 }
 
@@ -106,7 +102,7 @@
 /* --- Text --- */
 
 .label {
-  font-family: "Marcellus", Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.6rem;
   font-weight: 400;
   letter-spacing: 0.1em;
@@ -115,247 +111,239 @@
 }
 
 .detail {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
-  color: #6b7280;
+  color: var(--ink-3);
   text-align: center;
   letter-spacing: 0.03em;
 }
 
 /* ================================================================
-   STATE: Waiting — slate blue-gray
+   STATE: Waiting - slate (ink-3 family)
    ================================================================ */
 
 .waiting.runeCircle .outerRing {
-  border-color: rgba(120, 140, 170, 0.2);
+  border-color: rgba(108, 113, 122, 0.2);
   animation-duration: 24s;
 }
 .waiting.runeCircle .outerRing::before {
-  border-color: rgba(120, 140, 170, 0.12);
+  border-color: rgba(108, 113, 122, 0.12);
 }
 .waiting.runeCircle .innerRing {
-  border-color: rgba(120, 140, 170, 0.12);
+  border-color: rgba(108, 113, 122, 0.12);
 }
 .waiting.runeCircle .innerRing::before {
-  border-color: rgba(120, 140, 170, 0.06);
+  border-color: rgba(108, 113, 122, 0.06);
 }
 .waiting.runeCircle .gem {
-  border-color: rgba(120, 140, 170, 0.4);
+  border-color: rgba(108, 113, 122, 0.4);
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(120, 140, 170, 0.15),
-    rgba(10, 12, 16, 0.8)
+    rgba(108, 113, 122, 0.15),
+    rgba(17, 19, 21, 0.8)
   );
   animation: gem-pulse-waiting 3s ease-in-out infinite;
 }
 .waiting.runeCircle .gem::after {
   background: radial-gradient(
     circle,
-    rgba(120, 140, 170, 0.1),
+    rgba(108, 113, 122, 0.1),
     transparent 70%
   );
 }
 .waiting.runeCircle .cardinal {
-  background: rgba(120, 140, 170, 0.3);
+  background: rgba(108, 113, 122, 0.3);
 }
 .waiting.label {
-  color: #8896aa;
+  color: var(--ink-2);
 }
 
 /* ================================================================
-   STATE: Connected — soft purple
+   STATE: Connected - oxblood
    ================================================================ */
 
 .connected.runeCircle .outerRing {
-  border-color: rgba(160, 120, 200, 0.25);
+  border-color: rgba(176, 74, 78, 0.25);
 }
 .connected.runeCircle .outerRing::before {
-  border-color: rgba(160, 120, 200, 0.15);
+  border-color: rgba(176, 74, 78, 0.15);
 }
 .connected.runeCircle .innerRing {
-  border-color: rgba(160, 120, 200, 0.15);
+  border-color: rgba(176, 74, 78, 0.15);
 }
 .connected.runeCircle .innerRing::before {
-  border-color: rgba(160, 120, 200, 0.08);
+  border-color: rgba(176, 74, 78, 0.08);
 }
 .connected.runeCircle .gem {
-  border-color: rgba(160, 120, 200, 0.6);
+  border-color: rgba(176, 74, 78, 0.6);
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(160, 120, 200, 0.25),
-    rgba(10, 12, 16, 0.8)
+    rgba(176, 74, 78, 0.25),
+    rgba(17, 19, 21, 0.8)
   );
 }
 .connected.runeCircle .gem::after {
-  background: radial-gradient(
-    circle,
-    rgba(160, 120, 200, 0.15),
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgba(176, 74, 78, 0.15), transparent 70%);
 }
 .connected.runeCircle .cardinal {
-  background: rgba(160, 120, 200, 0.5);
+  background: rgba(176, 74, 78, 0.5);
 }
 .connected.label {
-  color: #b898d8;
+  color: var(--accent-2);
 }
 
 /* ================================================================
-   STATE: Lobby — cool blue
+   STATE: Lobby - teal (secondary)
    ================================================================ */
 
 .lobby.runeCircle .outerRing {
-  border-color: rgba(100, 160, 220, 0.25);
+  border-color: rgba(93, 138, 142, 0.25);
 }
 .lobby.runeCircle .outerRing::before {
-  border-color: rgba(100, 160, 220, 0.15);
+  border-color: rgba(93, 138, 142, 0.15);
 }
 .lobby.runeCircle .innerRing {
-  border-color: rgba(100, 160, 220, 0.15);
+  border-color: rgba(93, 138, 142, 0.15);
 }
 .lobby.runeCircle .innerRing::before {
-  border-color: rgba(100, 160, 220, 0.08);
+  border-color: rgba(93, 138, 142, 0.08);
 }
 .lobby.runeCircle .gem {
-  border-color: rgba(100, 160, 220, 0.6);
+  border-color: rgba(93, 138, 142, 0.6);
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(100, 160, 220, 0.2),
-    rgba(10, 12, 16, 0.8)
+    rgba(93, 138, 142, 0.2),
+    rgba(17, 19, 21, 0.8)
   );
 }
 .lobby.runeCircle .gem::after {
   background: radial-gradient(
     circle,
-    rgba(100, 160, 220, 0.12),
+    rgba(93, 138, 142, 0.12),
     transparent 70%
   );
 }
 .lobby.runeCircle .cardinal {
-  background: rgba(100, 160, 220, 0.5);
+  background: rgba(93, 138, 142, 0.5);
 }
 .lobby.label {
-  color: #7ab4e0;
+  color: var(--secondary-2);
 }
 
 /* ================================================================
-   STATE: Active (matchmaking, champ select, loading) — green
+   STATE: Active (matchmaking, champ select, loading) - fit-strong
    ================================================================ */
 
 .active.runeCircle .outerRing {
-  border-color: rgba(74, 222, 128, 0.25);
+  border-color: rgba(138, 163, 124, 0.25);
   animation-duration: 12s;
 }
 .active.runeCircle .outerRing::before {
-  border-color: rgba(74, 222, 128, 0.15);
+  border-color: rgba(138, 163, 124, 0.15);
 }
 .active.runeCircle .innerRing {
-  border-color: rgba(74, 222, 128, 0.15);
+  border-color: rgba(138, 163, 124, 0.15);
   animation-duration: 8s;
 }
 .active.runeCircle .innerRing::before {
-  border-color: rgba(74, 222, 128, 0.08);
+  border-color: rgba(138, 163, 124, 0.08);
 }
 .active.runeCircle .gem {
-  border-color: rgba(74, 222, 128, 0.7);
+  border-color: rgba(138, 163, 124, 0.7);
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(74, 222, 128, 0.25),
-    rgba(10, 12, 16, 0.8)
+    rgba(138, 163, 124, 0.25),
+    rgba(17, 19, 21, 0.8)
   );
   animation: gem-pulse-active 2s ease-in-out infinite;
 }
 .active.runeCircle .gem::after {
   background: radial-gradient(
     circle,
-    rgba(74, 222, 128, 0.15),
+    rgba(138, 163, 124, 0.15),
     transparent 70%
   );
 }
 .active.runeCircle .cardinal {
-  background: rgba(74, 222, 128, 0.5);
+  background: rgba(138, 163, 124, 0.5);
 }
 .active.label {
-  color: #6ee7a0;
+  color: var(--fit-strong);
 }
 
 /* ================================================================
-   STATE: Post-game — same slate blue-gray as waiting
+   STATE: Post-game - slate (matches waiting)
    ================================================================ */
 
 .postgame.runeCircle .outerRing {
-  border-color: rgba(120, 140, 170, 0.2);
+  border-color: rgba(108, 113, 122, 0.2);
   animation-duration: 30s;
 }
 .postgame.runeCircle .outerRing::before {
-  border-color: rgba(120, 140, 170, 0.12);
+  border-color: rgba(108, 113, 122, 0.12);
 }
 .postgame.runeCircle .innerRing {
-  border-color: rgba(120, 140, 170, 0.12);
+  border-color: rgba(108, 113, 122, 0.12);
 }
 .postgame.runeCircle .innerRing::before {
-  border-color: rgba(120, 140, 170, 0.06);
+  border-color: rgba(108, 113, 122, 0.06);
 }
 .postgame.runeCircle .gem {
-  border-color: rgba(120, 140, 170, 0.4);
+  border-color: rgba(108, 113, 122, 0.4);
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(120, 140, 170, 0.15),
-    rgba(10, 12, 16, 0.8)
+    rgba(108, 113, 122, 0.15),
+    rgba(17, 19, 21, 0.8)
   );
 }
 .postgame.runeCircle .gem::after {
   background: radial-gradient(
     circle,
-    rgba(120, 140, 170, 0.1),
+    rgba(108, 113, 122, 0.1),
     transparent 70%
   );
 }
 .postgame.runeCircle .cardinal {
-  background: rgba(120, 140, 170, 0.3);
+  background: rgba(108, 113, 122, 0.3);
 }
 .postgame.label {
-  color: #8896aa;
+  color: var(--ink-2);
 }
 
 /* ================================================================
-   STATE: Error — red
+   STATE: Error - threat-hi
    ================================================================ */
 
 .error.runeCircle .outerRing {
-  border-color: rgba(248, 113, 113, 0.3);
+  border-color: rgba(193, 72, 72, 0.3);
   animation: none;
 }
 .error.runeCircle .outerRing::before {
-  border-color: rgba(248, 113, 113, 0.18);
+  border-color: rgba(193, 72, 72, 0.18);
 }
 .error.runeCircle .innerRing {
-  border-color: rgba(248, 113, 113, 0.15);
+  border-color: rgba(193, 72, 72, 0.15);
   animation: none;
 }
 .error.runeCircle .innerRing::before {
-  border-color: rgba(248, 113, 113, 0.08);
+  border-color: rgba(193, 72, 72, 0.08);
 }
 .error.runeCircle .gem {
-  border-color: rgba(248, 113, 113, 0.6);
+  border-color: rgba(193, 72, 72, 0.6);
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(248, 113, 113, 0.2),
-    rgba(10, 12, 16, 0.8)
+    rgba(193, 72, 72, 0.2),
+    rgba(17, 19, 21, 0.8)
   );
 }
 .error.runeCircle .gem::after {
-  background: radial-gradient(
-    circle,
-    rgba(248, 113, 113, 0.12),
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgba(193, 72, 72, 0.12), transparent 70%);
 }
 .error.runeCircle .cardinal {
-  background: rgba(248, 113, 113, 0.5);
+  background: rgba(193, 72, 72, 0.5);
 }
 .error.label {
-  color: #f87171;
+  color: var(--threat-hi);
 }
 
 /* --- Keyframes --- */
@@ -382,13 +370,13 @@
   0%,
   100% {
     box-shadow:
-      0 0 6px rgba(120, 140, 170, 0.1),
-      0 0 20px rgba(120, 140, 170, 0.04);
+      0 0 6px rgba(108, 113, 122, 0.1),
+      0 0 20px rgba(108, 113, 122, 0.04);
   }
   50% {
     box-shadow:
-      0 0 10px rgba(120, 140, 170, 0.25),
-      0 0 30px rgba(120, 140, 170, 0.08);
+      0 0 10px rgba(108, 113, 122, 0.25),
+      0 0 30px rgba(108, 113, 122, 0.08);
   }
 }
 
@@ -396,12 +384,12 @@
   0%,
   100% {
     box-shadow:
-      0 0 8px rgba(74, 222, 128, 0.15),
-      0 0 24px rgba(74, 222, 128, 0.05);
+      0 0 8px rgba(138, 163, 124, 0.15),
+      0 0 24px rgba(138, 163, 124, 0.05);
   }
   50% {
     box-shadow:
-      0 0 14px rgba(74, 222, 128, 0.4),
-      0 0 40px rgba(74, 222, 128, 0.12);
+      0 0 14px rgba(138, 163, 124, 0.4),
+      0 0 40px rgba(138, 163, 124, 0.12);
   }
 }
