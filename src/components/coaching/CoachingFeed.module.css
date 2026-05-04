@@ -1,28 +1,72 @@
 .feed {
   flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.7rem;
   min-width: 0;
+  min-height: 0;
 }
 
-.feed > * {
-  width: 90%;
-  max-width: 1100px;
+.heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-3);
+  flex-shrink: 0;
 }
 
-.feed::-webkit-scrollbar {
+.headingTitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--ink);
+  margin: 0;
+}
+
+.headingMeta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Scrolling region. Conversation is pinned to the bottom: new entries push
+   older ones up. "Older" is conveyed by the 60% opacity rule below, not by
+   a static fade on the top edge - that read as if the topmost visible
+   message was being clipped even when nothing had scrolled past. */
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-6) var(--space-5);
+  min-height: 0;
+}
+
+.scroll::-webkit-scrollbar {
   width: 4px;
 }
-.feed::-webkit-scrollbar-track {
+
+.scroll::-webkit-scrollbar-track {
   background: transparent;
 }
-.feed::-webkit-scrollbar-thumb {
+
+.scroll::-webkit-scrollbar-thumb {
   background: var(--line);
   border-radius: 2px;
+}
+
+/* Age-based opacity: every card except the most recent fades to 60%. The
+   transition is gentle so a new entry pushes the previous card down without
+   a flicker. */
+.scroll > *:not(:last-child) {
+  opacity: 0.6;
+  transition: opacity var(--motion-color);
+}
+
+.scroll > *:last-child {
+  opacity: 1;
 }
 
 .placeholder {
@@ -32,7 +76,11 @@
   justify-content: center;
   flex: 1;
   color: var(--ink-3);
-  font-size: 0.9rem;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.95rem;
   gap: 0.4rem;
   opacity: 0.6;
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
 }

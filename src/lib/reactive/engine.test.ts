@@ -616,6 +616,42 @@ describe("ReactiveEngine", () => {
 
       teardown();
     });
+
+    it("clears the coaching feed and game plan when ChampSelect begins", async () => {
+      // Seed the streams with prior-game content, then simulate the LCU
+      // entering ChampSelect. The engine should drain both streams so a
+      // freshly-routed in-game surface never displays stale state from the
+      // previous game.
+      const { coachingFeed$, gamePlan$ } = await import("./coaching-feed");
+      coachingFeed$.next([
+        {
+          id: "stale-1",
+          type: "game-plan",
+          timestamp: 0,
+          proactive: true,
+          summary: "old game plan",
+          buildPath: [],
+        },
+      ]);
+      gamePlan$.next({
+        summary: "old game plan",
+        buildPath: [],
+        updatedAt: 0,
+      });
+
+      bridge.setLcuAvailable(12345, "secret");
+      engine.start();
+      await vi.advanceTimersByTimeAsync(0);
+
+      bridge.simulateLcuEvent({
+        uri: "/lol-gameflow/v1/gameflow-phase",
+        event_type: "Update",
+        data: "ChampSelect",
+      });
+
+      expect(coachingFeed$.getValue()).toEqual([]);
+      expect(gamePlan$.getValue()).toBeNull();
+    });
   });
 
   // =========================================================================

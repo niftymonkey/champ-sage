@@ -27,7 +27,7 @@ export function CoachingCard({ entry }: CoachingCardProps) {
 function GamePlanCard({ entry }: { entry: GamePlanEntry }) {
   return (
     <div className={`${styles.card} ${styles.proactive}`}>
-      <CardHeader type="plan" label="Game plan" timestamp={entry.timestamp} />
+      <CardHeader subtype="game plan" timestamp={entry.timestamp} />
       <div className={styles.body}>
         <div className={styles.planSummary}>{entry.summary}</div>
         <BuildPath items={entry.buildPath} />
@@ -38,36 +38,35 @@ function GamePlanCard({ entry }: { entry: GamePlanEntry }) {
 
 /* ─── Coaching Exchange Card ─── */
 
-const SOURCE_LABELS: Record<CoachingExchangeEntry["source"], string> = {
-  voice: "Voice query",
-  augment: "Augment coaching",
-  plan: "Game plan update",
-  "item-rec": "Item recommendation",
+/**
+ * Sub-type strings follow the v16 spec's vocabulary: every card reads as
+ * "coach · {sub-type}" so the player knows whether the turn was theirs or
+ * proactive. "answering you · via voice" mirrors the empty/prompt overlay's
+ * Hold-to-ask language. Proactive sources collapse to "on observation" - the
+ * coach noticed something and chose to speak.
+ */
+const SOURCE_SUBTYPES: Record<CoachingExchangeEntry["source"], string> = {
+  voice: "answering you · via voice",
+  augment: "on observation",
+  plan: "on observation",
+  "item-rec": "on observation",
 };
 
 function CoachingExchangeCard({ entry }: { entry: CoachingExchangeEntry }) {
   const { gameData } = useCoachingContext();
-  const label = SOURCE_LABELS[entry.source] ?? "Coaching";
+  const subtype = SOURCE_SUBTYPES[entry.source] ?? "on observation";
   return (
     <div
       className={`${styles.card} ${entry.source !== "voice" ? styles.proactive : ""}`}
     >
-      <CardHeader
-        type={
-          entry.source === "voice"
-            ? "voice"
-            : entry.source === "augment"
-              ? "augment"
-              : "plan"
-        }
-        label={label}
-        timestamp={entry.timestamp}
-      />
+      <CardHeader subtype={subtype} timestamp={entry.timestamp} />
       <div className={styles.body}>
-        {/* Only show the question text for player-initiated voice queries.
-            Proactive sources (augment, plan, item-rec) synthesize a question
-            string for the LLM internally; rendering it here would imply the
-            player said it. */}
+        {/* Voice exchanges read as a single turn: the player's question is
+            rendered above the coach's answer in italic Fraunces teal, the
+            coach's answer in italic Fraunces warm-bone. Proactive sources
+            (augment / plan / item-rec) synthesize a question string for the
+            LLM internally - we don't surface it because the player did not
+            actually say it. */}
         {entry.source === "voice" && (
           <div className={styles.question}>{entry.question}</div>
         )}
@@ -134,28 +133,21 @@ function ItemIcon({
 
 /* ─── Shared subcomponents ─── */
 
-type CardType = "plan" | "augment" | "voice";
-
 interface CardHeaderProps {
-  type: CardType;
-  label: string;
+  /** Subtype string after the leading "coach" keyword, e.g. "answering you · via voice". */
+  subtype: string;
   timestamp: number;
 }
 
-function CardHeader({ type, label, timestamp }: CardHeaderProps) {
-  const dotClass = {
-    plan: styles.dotPlan,
-    augment: styles.dotAugment,
-    voice: styles.dotVoice,
-  }[type];
-
+function CardHeader({ subtype, timestamp }: CardHeaderProps) {
   return (
     <div className={styles.header}>
       <span className={styles.cardType}>
-        <span className={`${styles.typeDot} ${dotClass}`} />
-        {label}
+        <span className={styles.cardTypeKeyword}>coach</span>
+        <span className={styles.cardTypeSep}>·</span>
+        <span>{subtype}</span>
       </span>
-      <span>{formatGameTime(timestamp)}</span>
+      <span className={styles.timestamp}>{formatGameTime(timestamp)}</span>
     </div>
   );
 }

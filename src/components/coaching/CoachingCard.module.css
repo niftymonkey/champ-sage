@@ -23,44 +23,39 @@
 /* ─── Card header ─── */
 .header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   padding: 0.4rem 0.7rem;
   border-bottom: 1px solid var(--line);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--ink-3);
-  text-transform: uppercase;
   letter-spacing: var(--type-meta-tracking);
 }
 
 .proactive .header {
   border-bottom-color: var(--accent-border);
-  background: var(--accent-soft);
 }
 
 .cardType {
-  display: flex;
-  align-items: center;
+  display: inline-flex;
+  align-items: baseline;
   gap: 0.3rem;
+  text-transform: lowercase;
 }
 
-.typeDot {
-  width: 0.28rem;
-  height: 0.28rem;
-  border-radius: 50%;
+.cardTypeKeyword {
+  color: var(--accent);
+  font-weight: 500;
+  text-transform: lowercase;
 }
 
-.dotAugment {
-  background: var(--threat-md);
+.cardTypeSep {
+  color: var(--ink-4);
 }
 
-.dotVoice {
-  background: var(--secondary-2);
-}
-
-.dotPlan {
-  background: var(--fit-strong);
+.timestamp {
+  color: var(--ink-3);
 }
 
 .body {

@@ -25,6 +25,7 @@ import {
   playerIntent$,
 } from "./streams";
 import { normalizeGameState, extractMapNumber } from "../game-state/normalize";
+import { resetForNewGame } from "./coaching-feed";
 import type { PlatformBridge, LcuEventPayload } from "./platform-bridge";
 import type { GameflowPhase, LiveGameState, EogStats } from "./types";
 import { formatGameTime } from "../format";
@@ -279,6 +280,23 @@ export class ReactiveEngine {
       })
     );
 
+    // Clear the prior game's coaching feed + plan the moment a new game
+    // begins. ChampSelect is the unambiguous "new game starting" signal -
+    // both queued play and Practice Tool reach it before any in-game state
+    // is produced - so resetting here guarantees the user does not flash
+    // stale feed/plan content when routing back to the in-game surface.
+    // The CoachingPipeline's session-creation effect calls the same reset
+    // once polling produces a new active player; that path remains as a
+    // safety net for app launches mid-game where ChampSelect was missed.
+    this.subscription.add(
+      gameflowPhase$
+        .pipe(filter((phase) => phase === "ChampSelect"))
+        .subscribe(() => {
+          engineLog.info("New ChampSelect detected - clearing coaching feed");
+          resetForNewGame();
+        })
+    );
+
     // Log honor and pre-end-of-game events to understand post-game transitions
     this.subscription.add(
       wsFiltered$
@@ -339,7 +357,12 @@ export class ReactiveEngine {
         )
         .subscribe((data) => {
           gameLifecycle$.next({ type: "session", data });
-          // Extract LCU game mode from session (e.g., KIWI for Mayhem)
+          // Extract LCU game mode from session (e.g., KIWI for Mayhem) and
+          // mirror it onto liveGameState. The instance field captures it for
+          // the polling path; renderers (resolveSurface, ChromeStatus, etc.)
+          // need it on the observable too, otherwise they read an empty
+          // string for the entire pre-game flow because polling is gated to
+          // the InProgress phase.
           const session = data as Record<string, unknown> | null;
           const gameData = session?.gameData as
             | Record<string, unknown>
@@ -348,6 +371,10 @@ export class ReactiveEngine {
           const lcuMode = queue?.gameMode as string | undefined;
           if (lcuMode) {
             this.lcuGameMode = lcuMode;
+            const current = liveGameState$.getValue();
+            if (current.lcuGameMode !== lcuMode) {
+              liveGameState$.next({ ...current, lcuGameMode: lcuMode });
+            }
           }
         })
     );

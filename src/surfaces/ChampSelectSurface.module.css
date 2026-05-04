@@ -1,0 +1,224 @@
+.surface {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-10);
+  overflow-y: auto;
+  align-items: center;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  align-self: flex-start;
+  width: 100%;
+  max-width: 64rem;
+}
+
+/* ─── Team strip ─── */
+
+.strip {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-6);
+  align-items: start;
+  width: 100%;
+  max-width: 64rem;
+}
+
+.team {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.teamRight {
+  direction: rtl;
+}
+
+.teamRight > * {
+  direction: ltr;
+}
+
+.divider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  padding-top: 0.5rem;
+}
+
+.dividerLine {
+  width: 1px;
+  flex: 1;
+  background: var(--line);
+}
+
+.dividerLabel {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ─── Slot ─── */
+
+.slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1.25rem 0.4rem 0.5rem;
+  border-radius: var(--radius-card);
+  min-width: 0;
+}
+
+/* Local player slot: oxblood "You" eyebrow above the portrait, oxblood ring
+   around the portrait, and a soft tinted background. The original 2px
+   left-border read like a divider against the next slot, so this version
+   uses the redesign's primary "this is yours" signaling instead - same
+   vocabulary the player-voice quote uses. */
+.slotMine {
+  background: var(--accent-soft);
+}
+
+.slotMineEyebrow {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.portrait {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-card);
+  object-fit: cover;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+
+.slotMine .portrait {
+  border: 2px solid var(--accent);
+}
+
+.portraitEmpty {
+  background: var(--bg-2);
+  border: 1px dashed var(--line-2);
+}
+
+.slotMine .portraitEmpty {
+  border: 2px dashed var(--accent);
+}
+
+.name {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--ink);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.namePending {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.classTag {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+}
+
+.tagAd {
+  color: var(--tag-ad);
+}
+.tagAp {
+  color: var(--tag-ap);
+}
+.tagTank {
+  color: var(--tag-tank);
+}
+.tagSupp {
+  color: var(--tag-supp);
+}
+.tagTrue {
+  color: var(--tag-true);
+}
+.tagUnknown {
+  color: var(--ink-3);
+}
+
+/* ─── Matchup read ─── */
+
+.read {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 48rem;
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-6);
+}
+
+.readHeading {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.375rem;
+  color: var(--ink);
+  margin: 0;
+}
+
+.readBody {
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+/* ─── Empty state ─── */
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.emptyHeadline {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.75rem;
+  color: var(--ink);
+  margin: 0;
+}
+
+.emptySubhead {
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  margin: 0;
+  max-width: 28rem;
+}

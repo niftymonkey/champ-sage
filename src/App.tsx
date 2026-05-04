@@ -275,7 +275,7 @@ function App() {
           {surface === "in-game" ? (
             <InGameView state={effectiveState} gameData={data} />
           ) : surface === "champ-select" ? (
-            <ChampSelectSurface />
+            <ChampSelectSurface data={data} />
           ) : surface === "post-game" ? (
             <PostGameSurface />
           ) : surface === "settings" ? (
