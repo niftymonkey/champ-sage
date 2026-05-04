@@ -497,8 +497,9 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 
 - Use `luaparse` (not regex). Augment descriptions contain `}}` from wiki templates that break regex-based entry matching.
 - The raw Lua has a `-- <pre>` wrapper that must be stripped before parsing.
-- `ChampionData` contains unicode right quotes (U+2019) and em dashes that luaparse chokes on — replace with ASCII equivalents before parsing.
+- `ChampionData`, `MayhemAugmentData`, and `ArenaAugmentData` all contain unicode characters luaparse rejects in `x-user-defined` mode (U+2018/U+2019 curly singles, U+201C/U+201D curly doubles, U+2013 en dash, U+2014 em dash). The wiki adds and removes these without warning. `sanitizeForLuaParse` in `src/lib/data-ingest/parsers/lua-parser.ts` is the single normalization point; every wiki Lua source must run input through it before calling `luaparse.parse`. Curly doubles are mapped to `\"` (escaped) since they almost always appear inside double-quoted Lua string literals; mapping to a bare `"` would terminate the literal mid-content.
 - Wiki markup in descriptions uses `{{as|...}}`, `{{tip|key|display}}`, `{{pp|...}}`, `[[[File:...]]`, `'''bold'''`, `''italic''`. All stripped during ingest.
+- `loadGameData` falls back to the last cached payload when any ingest source throws (network failure, wiki parse break, schema drift). The error is logged via the `data-ingest` logger but the app stays usable on stale data. Only when there is no cache to fall back to does the error propagate. Forced refreshes via the exported `fetchAndCache` deliberately do NOT have this fallback - if a user explicitly asks for a refresh and it fails, they should be told.
 
 ### Community Dragon (augment IDs/icons)
 

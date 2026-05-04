@@ -6,13 +6,34 @@ import * as luaparse from "luaparse";
  * regex, which is necessary because wiki augment descriptions contain
  * double curly braces `}}` that break naive pattern matching.
  */
+/**
+ * luaparse runs in encodingMode "x-user-defined" and throws on code points
+ * outside that subset (e.g. "code unit U+2013 is not allowed in the current
+ * encoding mode"). The wiki sporadically emits curly quotes and en/em dashes
+ * inside augment descriptions, so every caller of parseLuaTable must run
+ * input through this sanitizer first or a single wiki text edit can crash
+ * data ingest. Centralized here so any new caller inherits the protection.
+ *
+ * Curly double quotes are mapped to the escaped sequence `\"` (not bare `"`)
+ * because they almost always appear inside double-quoted Lua string literals
+ * in the wiki modules; rewriting to a bare `"` would terminate the literal
+ * mid-content. extractValue strips the `\` when reading the parsed string.
+ */
+export function sanitizeForLuaParse(lua: string): string {
+  return lua
+    .replace(/[‘’‚]/g, "'")
+    .replace(/[“”„]/g, '\\"')
+    .replace(/[–—]/g, "-");
+}
+
 export function parseLuaTable(
   lua: string
 ): Record<string, Record<string, string | number>> {
-  // Strip HTML comment wrapper that the wiki sometimes adds
-  const cleaned = lua
-    .replace(/^--\s*<pre>\s*\n?/, "")
-    .replace(/\n?--\s*<\/pre>\s*$/, "");
+  // Strip HTML comment wrapper that the wiki sometimes adds, then normalize
+  // unicode characters luaparse cannot handle in x-user-defined mode.
+  const cleaned = sanitizeForLuaParse(
+    lua.replace(/^--\s*<pre>\s*\n?/, "").replace(/\n?--\s*<\/pre>\s*$/, "")
+  );
 
   const ast = luaparse.parse(cleaned, { encodingMode: "x-user-defined" });
   const result: Record<string, Record<string, string | number>> = {};

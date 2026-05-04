@@ -288,6 +288,42 @@ describe("loadCachedGameData", () => {
   });
 });
 
+describe("loadGameData ingest-failure fallback", () => {
+  it("returns the last cached payload when an ingest source throws", async () => {
+    // Wiki-side breakage (e.g. a new unicode char that crashes the Lua parser)
+    // must not blank the app. If a prior fetch succeeded and is still cached,
+    // loadGameData has to surface that data instead of propagating the error.
+    vi.mocked(wikiAugments.fetchWikiAugments).mockRejectedValue(
+      new SyntaxError("[1198:426] code unit U+2013 is not allowed")
+    );
+    vi.mocked(cache.readCache).mockResolvedValue({
+      version: "15.6.1",
+      champions: { aatrox: createMockChampions().get("aatrox") },
+      items: { "1001": mockItems.get(1001) },
+      runes: mockRunes,
+      augments: { typhoon: mockMayhemAugments.get("typhoon") },
+      augmentSets: [],
+      lastRefreshedAt: 1000,
+    });
+
+    const data = await loadGameData();
+
+    expect(data.version).toBe("15.6.1");
+    expect(data.champions.size).toBe(1);
+  });
+
+  it("propagates the ingest error when no cached payload exists", async () => {
+    vi.mocked(wikiAugments.fetchWikiAugments).mockRejectedValue(
+      new SyntaxError("[1198:426] code unit U+2013 is not allowed")
+    );
+    vi.mocked(cache.readCache).mockResolvedValue(null);
+
+    await expect(loadGameData()).rejects.toThrow(
+      /code unit U\+2013 is not allowed/
+    );
+  });
+});
+
 describe("checkForNewVersion", () => {
   it("returns false when versions match", async () => {
     vi.mocked(dataDragon.fetchLatestVersion).mockResolvedValue("15.6.1");

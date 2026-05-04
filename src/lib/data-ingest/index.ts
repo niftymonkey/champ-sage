@@ -23,6 +23,9 @@ import { enrichQuestAugments } from "./sources/quest-augment-rewards";
 import { readCache, writeCache, mapToObject, objectToMap } from "./cache";
 import { buildEntityDictionary } from "./entity-dictionary";
 import { loadMetaBuilds, type MetaBuildIndex } from "./meta-builds";
+import { getLogger } from "../logger";
+
+const log = getLogger("data-ingest");
 
 const CACHE_KEY = "game-data";
 
@@ -71,7 +74,7 @@ export async function checkForNewVersion(
 export async function loadGameData(): Promise<LoadedGameData> {
   // Skip cache in dev mode so hot reload always shows fresh data
   if (import.meta.env.DEV) {
-    return fetchAndCache();
+    return fetchAndCacheWithFallback();
   }
 
   const cached = await readCache<CachedGameData>(CACHE_KEY);
@@ -81,7 +84,37 @@ export async function loadGameData(): Promise<LoadedGameData> {
     return data;
   }
 
-  return fetchAndCache();
+  return fetchAndCacheWithFallback();
+}
+
+/**
+ * Run a fresh ingest, falling back to the last cached payload if any source
+ * fails (network outage, wiki text change that crashes the Lua parser, etc).
+ * The app stays usable on stale data instead of dying on a third-party hiccup;
+ * the underlying error is logged so the failure is still visible to devs.
+ *
+ * If no cache exists, the original error propagates - there is nothing to
+ * fall back to and the caller deserves to know ingest failed.
+ */
+async function fetchAndCacheWithFallback(): Promise<LoadedGameData> {
+  try {
+    return await fetchAndCache();
+  } catch (err) {
+    const cached = await readCache<CachedGameData>(CACHE_KEY);
+    if (!cached) {
+      log.error(
+        "Data ingest failed and no cached payload is available",
+        err as Error
+      );
+      throw err;
+    }
+    log.warn(
+      `Data ingest failed (${(err as Error).message}); serving cached payload from ${new Date(cached.lastRefreshedAt).toISOString()}`
+    );
+    const data = fromCached(cached);
+    data.metaBuilds = await loadMetaBuilds();
+    return data;
+  }
 }
 
 export async function fetchAndCache(): Promise<LoadedGameData> {
