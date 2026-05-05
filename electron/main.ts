@@ -508,6 +508,14 @@ const overlayLog = log.scope("overlay");
 let badgeOverlay: any = null;
 let stripOverlay: any = null;
 
+/**
+ * Once the user has explicitly sized the strip via the corner grip in
+ * edit mode, we stop content-driven auto-resize and respect their size.
+ * Reset to false when Clear Overlays fires (the user-facing escape hatch)
+ * and via the planned Settings "reset overlay size" affordance.
+ */
+let stripUserSized = false;
+
 function loadOverlayContent(
   win: BrowserWindow,
   page: "overlay" | "overlay-strip"
@@ -585,15 +593,31 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
     overlayLog.error("Failed to create badge overlay:", err);
   }
 
-  // Coaching strip — small window, interactive (noPassThrough), draggable
+  // Coaching strip — small window, interactive (noPassThrough), draggable.
+  //
+  // Sized to host the v16 glass cards (max-width 380px) plus a little room
+  // for shadow/glow, scaled with screen resolution. Anchored bottom-right
+  // in the dead space between the item bar and the minimap, per the v16
+  // spec for the notification slot. Player can shift+tab to enter edit
+  // mode and drag from there; the [strip-bounds] log captures the new
+  // bounds as resolution-relative fractions to settle on better defaults.
   try {
-    const stripWidth = Math.round(width * 0.5);
-    const stripHeight = 60;
-    const stripX = Math.round((width - stripWidth) / 2);
-    const stripY = Math.round(height * 0.05);
+    const clamp = (v: number, lo: number, hi: number): number =>
+      Math.max(lo, Math.min(hi, v));
+    const stripWidth = clamp(Math.round(width * 0.22), 420, 600);
+    const stripHeight = clamp(Math.round(height * 0.2), 200, 320);
+    // Right edge offset: leave room for the minimap (~18% of width).
+    // Bottom offset: leave room for the item bar (~16% of height).
+    const stripX = width - stripWidth - Math.round(width * 0.18);
+    const stripY = height - stripHeight - Math.round(height * 0.16);
 
     stripOverlay = await overlayApi.createWindow({
-      name: "champ-sage-strip",
+      // Bumped from "champ-sage-strip" to "champ-sage-strip-v2" once the
+      // v16 redesign moved the slot to the bottom-right notification dead
+      // space. Overwolf keys persisted window position by name; renaming
+      // orphans any prior drag state so the new defaults take effect.
+      // Future drags persist under the new name normally.
+      name: "champ-sage-strip-v2",
       width: stripWidth,
       height: stripHeight,
       x: stripX,
@@ -631,6 +655,33 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
     overlayLog.info(
       `Coaching strip overlay created (${stripWidth}x${stripHeight} at ${stripX},${stripY})`
     );
+
+    // Diagnostic: log every move/resize so the user can settle the strip
+    // where they want and capture the values to bake in as the resolution-
+    // aware defaults. Logs both absolute pixels and screen-relative
+    // fractions so the same placement reproduces at any resolution.
+    const logStripBounds = (verb: "moved" | "resized"): void => {
+      try {
+        const win = stripOverlay?.window;
+        if (!win) return;
+        const b = win.getBounds();
+        const fx = (b.x / width).toFixed(4);
+        const fy = (b.y / height).toFixed(4);
+        const fw = (b.width / width).toFixed(4);
+        const fh = (b.height / height).toFixed(4);
+        overlayLog.info(
+          `[strip-bounds] ${verb} | abs=(${b.x},${b.y}) ${b.width}x${b.height} | screen=${width}x${height} | rel=(${fx},${fy}) ${fw}x${fh}`
+        );
+      } catch (err) {
+        overlayLog.warn("[strip-bounds] failed to read bounds", err);
+      }
+    };
+    stripOverlay.window.on("moved", () => logStripBounds("moved"));
+    stripOverlay.window.on("resized", () => logStripBounds("resized"));
+    // Some Electron builds only fire the in-progress events; subscribe to
+    // both for safety. The listeners coalesce in the log via verb only.
+    stripOverlay.window.on("move", () => logStripBounds("moved"));
+    stripOverlay.window.on("resize", () => logStripBounds("resized"));
   } catch (err) {
     overlayLog.error("Failed to create coaching strip overlay:", err);
   }
@@ -708,6 +759,78 @@ function registerOverlayIpc(): void {
     }
   });
 
+  // Coaching strip auto-resize. The strip is a frameless transparent
+  // window so OS resize handles do not exist; the renderer measures the
+  // active card and tells main exactly how tall the window should be.
+  //
+  // Top-anchored: x and y are preserved exactly; only height changes.
+  // Whatever position the user dragged the strip to is where the TOP of
+  // the strip stays. Cards grow downward when content gets taller.
+  //
+  // Suppressed entirely once the user has manually sized the strip via
+  // the edit-mode corner grip. The user's size wins until they reset.
+  ipcMain.on("resize-strip-to-content", (_e, raw: unknown) => {
+    if (!stripOverlay?.window) return;
+    if (stripUserSized) return;
+    const requested = typeof raw === "number" ? Math.round(raw) : NaN;
+    if (!Number.isFinite(requested) || requested <= 0) return;
+    try {
+      const b = stripOverlay.window.getBounds();
+      // Clamp so we do not collapse to a sliver or sprawl across the
+      // screen if the content reports something silly.
+      const clamped = Math.max(80, Math.min(640, requested));
+      if (clamped === b.height) return;
+      stripOverlay.window.setBounds({
+        x: b.x,
+        y: b.y,
+        width: b.width,
+        height: clamped,
+      });
+    } catch (err) {
+      overlayLog.warn("resize-strip-to-content failed", err);
+    }
+  });
+
+  // Coaching strip manual resize. The user dragged the corner grip in
+  // edit mode; the renderer reports the absolute target dimensions. We
+  // apply them and latch stripUserSized so future auto-fit suggestions
+  // are ignored.
+  ipcMain.on("set-strip-size", (_e, raw: unknown) => {
+    if (!stripOverlay?.window) return;
+    const payload = raw as { width?: unknown; height?: unknown };
+    const w =
+      typeof payload?.width === "number" ? Math.round(payload.width) : NaN;
+    const h =
+      typeof payload?.height === "number" ? Math.round(payload.height) : NaN;
+    if (!Number.isFinite(w) || !Number.isFinite(h)) return;
+    if (w <= 0 || h <= 0) return;
+    try {
+      const b = stripOverlay.window.getBounds();
+      const clampedW = Math.max(200, Math.min(1200, w));
+      const clampedH = Math.max(80, Math.min(900, h));
+      stripOverlay.window.setBounds({
+        x: b.x,
+        y: b.y,
+        width: clampedW,
+        height: clampedH,
+      });
+      stripUserSized = true;
+      overlayLog.info(
+        `[strip-bounds] user-sized | abs=(${b.x},${b.y}) ${clampedW}x${clampedH} (auto-fit suppressed)`
+      );
+    } catch (err) {
+      overlayLog.warn("set-strip-size failed", err);
+    }
+  });
+
+  // Coaching strip auto-fit reset. Re-enables content-driven sizing. The
+  // next resize-strip-to-content will apply.
+  ipcMain.on("reset-strip-size", () => {
+    if (!stripUserSized) return;
+    stripUserSized = false;
+    overlayLog.info("Strip size lock reset - auto-fit re-enabled");
+  });
+
   // Overlay compositor flush — renderer requests a forced repaint after a
   // state-hidden transition (#111). React unmounting isn't enough for
   // ow-electron's compositor; it retains the last painted frame until an
@@ -738,6 +861,12 @@ function registerOverlayIpc(): void {
     }
     if (stripOverlay?.window) {
       forceCompositorFlush(stripOverlay.window, "strip");
+    }
+    // Clear Overlays is the user's escape hatch; release the manual size
+    // lock so auto-fit takes back over on the next coaching response.
+    if (stripUserSized) {
+      stripUserSized = false;
+      overlayLog.info("Strip size lock released by Clear Overlays");
     }
   });
 }
@@ -816,7 +945,13 @@ function registerOverlayHotkeys(overlayApi: any): void {
     }
   );
 
-  // Shift+Tab to enable coaching strip dragging
+  // Shift+Tab toggles coaching strip edit mode. Press to enter edit mode
+  // (window becomes mouse-interactive, drag handle visible); press again
+  // to leave it. The previous hold-to-edit behavior was inconsistent
+  // because Shift+Tab is also a Riot client hotkey - releasing was
+  // sometimes consumed by the game and the strip would silently stay in
+  // a half-edit state.
+  let stripEditing = false;
   overlayApi.hotkeys.register(
     {
       name: "overlay-edit-mode",
@@ -825,12 +960,13 @@ function registerOverlayHotkeys(overlayApi: any): void {
       passthrough: true,
     },
     (_hotkey: any, state: "pressed" | "released") => {
-      const editing = state === "pressed";
-      sendToAllWindows("overlay-edit-mode", { editing });
+      if (state !== "pressed") return;
+      stripEditing = !stripEditing;
+      sendToAllWindows("overlay-edit-mode", { editing: stripEditing });
 
       if (stripOverlay) {
         try {
-          if (editing) {
+          if (stripEditing) {
             stripOverlay.window.setIgnoreMouseEvents(false);
           } else {
             stripOverlay.window.setIgnoreMouseEvents(true, { forward: true });
@@ -840,7 +976,9 @@ function registerOverlayHotkeys(overlayApi: any): void {
         }
       }
 
-      overlayLog.info(`Overlay edit mode: ${editing ? "ON" : "OFF"}`);
+      overlayLog.info(
+        `Overlay edit mode: ${stripEditing ? "ON" : "OFF"} (toggle)`
+      );
     }
   );
 

@@ -1,5 +1,6 @@
 import { PersonalityToggle } from "../components/PersonalityToggle";
 import { ClearOverlaysButton } from "../components/ClearOverlaysButton";
+import { ResetStripSizeButton } from "../components/ResetStripSizeButton";
 import styles from "./SettingsSurface.module.css";
 
 /**
@@ -45,6 +46,17 @@ export function SettingsSurface() {
             </p>
           </div>
           <ClearOverlaysButton />
+        </div>
+        <div className={styles.row}>
+          <div className={styles.rowText}>
+            <span className={styles.rowLabel}>Coach strip size</span>
+            <p className={styles.rowDescription}>
+              The strip auto-fits its content by default. After dragging the
+              corner grip in edit mode it locks to that size; this restores
+              auto-fit.
+            </p>
+          </div>
+          <ResetStripSizeButton />
         </div>
       </section>
     </div>

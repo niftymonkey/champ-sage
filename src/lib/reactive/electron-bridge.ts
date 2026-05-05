@@ -19,6 +19,9 @@ interface ElectronAPI {
   onCalibrationCapture(callback: () => void): () => void;
   onOverlayEditMode(callback: (data: { editing: boolean }) => void): () => void;
   startStripDrag(): void;
+  resizeStripToContent(contentHeight: number): void;
+  setStripSize(width: number, height: number): void;
+  resetStripSize(): void;
   sendCoachingRequest(): void;
   onCoachingRequest(callback: () => void): () => void;
   sendCoachingResponse(data: unknown): void;

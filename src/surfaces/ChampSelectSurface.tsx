@@ -143,15 +143,14 @@ function Slot({ slot }: { slot: SlotData }) {
 }
 
 /**
- * Pick the most useful single tag for the chrome's class label. DDragon
- * returns multi-tag arrays (e.g. ["Fighter","Tank"]); the redesign asks for
- * one badge per slot so we collapse via this priority list.
+ * Pick the single class tag for the slot label. DDragon returns multi-tag
+ * arrays ordered primary-first (Malphite is ["Tank","Mage"], Lux is
+ * ["Mage","Support"]) and the redesign asks for one badge per slot, so we
+ * trust Riot's ordering. An earlier priority-list approach overrode that
+ * ordering and labeled tank/mage hybrids like Malphite as "AP", which
+ * misrepresented the player's typical build intent.
  */
 function primaryTag(tags: string[]): string | null {
-  const order = ["Marksman", "Mage", "Tank", "Support", "Assassin", "Fighter"];
-  for (const candidate of order) {
-    if (tags.includes(candidate)) return tagToLabel(candidate);
-  }
   return tags[0] ? tagToLabel(tags[0]) : null;
 }
 

@@ -52,7 +52,10 @@
   --tag-true: #e8eaee;
 
   /* ─── Augment-fit ladder ─── */
-  --fit-strong: #8aa37c;
+  /* fit-strong was #8aa37c (sage) but read as gray on the augment badge
+     and on KDA kills counters. Bumped saturation so "strong" is
+     unambiguously a green positive indicator while still feeling v16. */
+  --fit-strong: #6db05c;
   --fit-excellent: #d4a050;
   --fit-ok: #a3a8b0;
 

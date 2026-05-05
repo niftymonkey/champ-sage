@@ -86,6 +86,9 @@ beforeEach(() => {
     requestOverlayFlush: vi.fn(),
     clearOverlays: vi.fn(),
     onClearOverlays: vi.fn(() => () => {}),
+    resizeStripToContent: vi.fn(),
+    setStripSize: vi.fn(),
+    resetStripSize: vi.fn(),
   };
 });
 
@@ -132,6 +135,9 @@ describe("useVoiceInput", () => {
       requestOverlayFlush: vi.fn(),
       clearOverlays: vi.fn(),
       onClearOverlays: vi.fn(() => () => {}),
+      resizeStripToContent: vi.fn(),
+      setStripSize: vi.fn(),
+      resetStripSize: vi.fn(),
     };
   });
 

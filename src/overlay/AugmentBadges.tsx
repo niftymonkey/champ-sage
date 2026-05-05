@@ -84,11 +84,14 @@ interface BadgeProps {
   slotIndex: number;
 }
 
+// v16 fit ladder. Exceptional stays prismatic (the gradient is the
+// celebration). The other tiers map to the redesign's --fit-* tokens so the
+// badge palette agrees with the chrome and the in-game card recommendations.
 const FIT_COLORS: Record<FitRating, string> = {
   exceptional: "#b388ff", // prismatic base (overridden by gradient)
-  strong: "#22c55e",
-  situational: "#eab308",
-  weak: "#6b7280",
+  strong: "#6db05c", // --fit-strong (clear green)
+  situational: "#d4a050", // --fit-excellent (gold)
+  weak: "#a3a8b0", // --fit-ok (light gray)
 };
 
 const FIT_LABELS: Record<FitRating, string> = {
@@ -121,6 +124,9 @@ function Badge({ fit, reason, slotIndex }: BadgeProps) {
       }
     : { border: `2px solid ${borderColor}` };
 
+  // The strong / situational / weak label backgrounds are now muted v16
+  // tokens (sage / gold / light gray) - dark text reads cleanly on all
+  // three. Exceptional stays prismatic with dark text.
   const labelStyle: React.CSSProperties = isPrismatic
     ? {
         background: PRISMATIC_GRADIENT,
@@ -130,7 +136,7 @@ function Badge({ fit, reason, slotIndex }: BadgeProps) {
       }
     : {
         backgroundColor: borderColor,
-        color: fit === "weak" ? "#e5e7eb" : "#fff",
+        color: "#111315",
       };
 
   return (
@@ -144,9 +150,15 @@ function Badge({ fit, reason, slotIndex }: BadgeProps) {
         height: 100,
         pointerEvents: "none",
         zIndex: 9000,
-        backgroundColor: "rgba(0, 0, 0, 0.85)",
+        // v16 glass recipe - same surface as every other overlay card so
+        // the badge stops reading as a different visual system.
+        background: "var(--glass-bg, rgba(17, 19, 21, 0.82))",
+        backdropFilter: "var(--glass-blur, blur(14px))",
+        WebkitBackdropFilter: "var(--glass-blur, blur(14px))",
         borderRadius: 6,
         padding: "16px 6px 4px",
+        boxShadow:
+          "0 8px 28px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.04) inset",
         ...borderStyle,
       }}
     >
@@ -159,9 +171,11 @@ function Badge({ fit, reason, slotIndex }: BadgeProps) {
           transform: "translateX(-50%)",
           borderRadius: 3,
           padding: "1px 8px",
-          fontFamily: "monospace",
-          fontWeight: "bold",
-          fontSize: 13,
+          fontFamily: "var(--font-mono, monospace)",
+          fontWeight: 500,
+          fontSize: 11,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
           lineHeight: "16px",
           whiteSpace: "nowrap",
           zIndex: 1,
@@ -178,10 +192,11 @@ function Badge({ fit, reason, slotIndex }: BadgeProps) {
       >
         <span
           style={{
-            color: "#ddd",
+            color: "var(--coach, #f0eef0)",
             fontSize: 14,
-            fontFamily: "monospace",
-            lineHeight: 1.3,
+            fontFamily: "var(--font-display, Fraunces, Georgia, serif)",
+            fontStyle: "italic",
+            lineHeight: 1.4,
             overflow: "hidden",
             display: "-webkit-box",
             WebkitLineClamp: 5,

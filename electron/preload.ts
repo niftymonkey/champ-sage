@@ -85,6 +85,29 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.send("start-strip-drag");
   },
 
+  // Coaching strip auto-resize: the strip is a frameless transparent
+  // window with no OS-level resize handles. The renderer measures the
+  // active card's content height after every state change and asks main
+  // to fit the window to it. Width is fixed; height grows/shrinks.
+  resizeStripToContent: (contentHeight: number) => {
+    ipcRenderer.send("resize-strip-to-content", contentHeight);
+  },
+
+  // Coaching strip manual resize: when the user drags the corner grip in
+  // edit mode, the renderer fires this with the desired absolute width and
+  // height. Main applies it via setBounds AND latches a "user has set the
+  // size" flag so subsequent auto-fit requests are ignored.
+  setStripSize: (width: number, height: number) => {
+    ipcRenderer.send("set-strip-size", { width, height });
+  },
+
+  // Coaching strip auto-fit reset: re-enables content-driven sizing after
+  // the user has manually sized the strip. Used by the Clear Overlays
+  // escape hatch; future affordance could surface this in Settings.
+  resetStripSize: () => {
+    ipcRenderer.send("reset-strip-size");
+  },
+
   // Coaching request/response relay (desktop window → main → overlay)
   sendCoachingRequest: () => {
     ipcRenderer.send("coaching-request");
