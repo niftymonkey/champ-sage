@@ -84,6 +84,10 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     GamePlanResult
   > | null>(null);
   const gamePlanFiredRef = useRef(false);
+  // Per-game plan revision counter. Increments each time a plan is sent to
+  // the overlay so the slot's plan-revision card chip can show "plan rev N".
+  // Reset to 0 alongside resetForNewGame() in the session-create effect.
+  const gamePlanRevRef = useRef(0);
   const lastAugmentResponseRef = useRef<AugmentFitResult | null>(null);
 
   liveGameStateRef.current = liveGameState;
@@ -140,6 +144,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     gamePlanFeatureRef.current = createGamePlanFeature(gameDataRef.current);
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
+    gamePlanRevRef.current = 0;
     resetForNewGame();
 
     reactiveLog.info(
@@ -279,12 +284,15 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       // Relay to overlay. Overlay's CoachingResponse shape wants
       // recommendations + buildPath even when the feature doesn't use
       // recommendations (empty array here).
-      proactiveLog.info("Sending game plan response to overlay");
+      gamePlanRevRef.current += 1;
+      const rev = gamePlanRevRef.current;
+      proactiveLog.info(`Sending game plan response to overlay (rev=${rev})`);
       window.electronAPI?.sendCoachingResponse({
         answer: response.answer,
         recommendations: [],
         buildPath,
         source: "plan",
+        rev,
         sentAt: Date.now(),
       });
     },
@@ -367,6 +375,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           buildPath: null,
           retried,
           source: "augment" as const,
+          question,
           sentAt,
         };
         reactiveLog.info(
@@ -516,6 +525,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           buildPath: null,
           retried,
           source: "reactive" as const,
+          question,
           sentAt,
         };
         reactiveLog.info(
@@ -611,6 +621,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           buildPath: null,
           retried,
           source: "reactive",
+          question,
           sentAt,
         });
       } catch (err) {

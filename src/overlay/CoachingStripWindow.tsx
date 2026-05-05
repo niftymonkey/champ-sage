@@ -130,8 +130,8 @@ export function CoachingStripWindow() {
       if (response.source === "plan") {
         inputs.planRevision$.next({
           summary: cleaned,
-          // The current IPC payload does not include the rev counter;
-          // default to 1 until the main process plumbs it through.
+          // Defaults to 1 if the desktop sender did not include rev (older
+          // payloads or non-plan paths that misroute here).
           rev: response.rev ?? 1,
           timestamp,
         });
@@ -141,8 +141,6 @@ export function CoachingStripWindow() {
       // Voice + item-rec + unknown all read as a coach voice answer in the
       // slot. Item-rec is proactive but uses the same body shape today.
       inputs.voiceAnswer$.next({
-        // Question text isn't on the response payload yet - cards render
-        // the answer alone when question is empty.
         question: response.question ?? "",
         answer: cleaned,
         timestamp,
