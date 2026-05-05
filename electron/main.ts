@@ -22,6 +22,7 @@ import {
   parseAugmentOfferNames,
   parseAugmentPickedName,
 } from "./gep-replay-filter";
+import { createStripResizeLock } from "./strip-resize-lock";
 
 const app = electronApp;
 
@@ -512,9 +513,14 @@ let stripOverlay: any = null;
  * Once the user has explicitly sized the strip via the corner grip in
  * edit mode, we stop content-driven auto-resize and respect their size.
  * Reset to false when Clear Overlays fires (the user-facing escape hatch)
- * and via the planned Settings "reset overlay size" affordance.
+ * and via the Settings "reset overlay size" affordance. Persisted to the
+ * shared settings JSON so a restart keeps auto-fit suppressed against the
+ * size Overwolf already remembers for the named strip window.
  */
-let stripUserSized = false;
+const stripResizeLock = createStripResizeLock({
+  read: readSettingsFile,
+  write: writeSettingsFile,
+});
 
 function loadOverlayContent(
   win: BrowserWindow,
@@ -771,7 +777,7 @@ function registerOverlayIpc(): void {
   // the edit-mode corner grip. The user's size wins until they reset.
   ipcMain.on("resize-strip-to-content", (_e, raw: unknown) => {
     if (!stripOverlay?.window) return;
-    if (stripUserSized) return;
+    if (stripResizeLock.get()) return;
     const requested = typeof raw === "number" ? Math.round(raw) : NaN;
     if (!Number.isFinite(requested) || requested <= 0) return;
     try {
@@ -793,8 +799,9 @@ function registerOverlayIpc(): void {
 
   // Coaching strip manual resize. The user dragged the corner grip in
   // edit mode; the renderer reports the absolute target dimensions. We
-  // apply them and latch stripUserSized so future auto-fit suggestions
-  // are ignored.
+  // apply them and latch the resize lock so future auto-fit suggestions
+  // are ignored. The lock persists to settings JSON so a restart keeps
+  // honoring the user's size against the bounds Overwolf already saved.
   ipcMain.on("set-strip-size", (_e, raw: unknown) => {
     if (!stripOverlay?.window) return;
     const payload = raw as { width?: unknown; height?: unknown };
@@ -814,9 +821,9 @@ function registerOverlayIpc(): void {
         width: clampedW,
         height: clampedH,
       });
-      stripUserSized = true;
+      stripResizeLock.set(true);
       overlayLog.info(
-        `[strip-bounds] user-sized | abs=(${b.x},${b.y}) ${clampedW}x${clampedH} (auto-fit suppressed)`
+        `[strip-bounds] user-sized | abs=(${b.x},${b.y}) ${clampedW}x${clampedH} (auto-fit suppressed, persisted)`
       );
     } catch (err) {
       overlayLog.warn("set-strip-size failed", err);
@@ -826,8 +833,8 @@ function registerOverlayIpc(): void {
   // Coaching strip auto-fit reset. Re-enables content-driven sizing. The
   // next resize-strip-to-content will apply.
   ipcMain.on("reset-strip-size", () => {
-    if (!stripUserSized) return;
-    stripUserSized = false;
+    if (!stripResizeLock.get()) return;
+    stripResizeLock.set(false);
     overlayLog.info("Strip size lock reset - auto-fit re-enabled");
   });
 
@@ -864,8 +871,8 @@ function registerOverlayIpc(): void {
     }
     // Clear Overlays is the user's escape hatch; release the manual size
     // lock so auto-fit takes back over on the next coaching response.
-    if (stripUserSized) {
-      stripUserSized = false;
+    if (stripResizeLock.get()) {
+      stripResizeLock.set(false);
       overlayLog.info("Strip size lock released by Clear Overlays");
     }
   });
