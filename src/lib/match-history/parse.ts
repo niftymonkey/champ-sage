@@ -92,13 +92,19 @@ export function lcuMatchToSummary(
  * Map LCU's gameMode string + queueId to the coarse modes the rest of
  * the renderer talks in. Falls back to "OTHER" rather than throwing so
  * one weird match doesn't break the history list.
+ *
+ * Mayhem in particular reports `gameMode: "KIWI"` from the LCU rather
+ * than ARAM — see `src/lib/mode/types.ts` for the GAME_MODE_MAYHEM
+ * constant. Without this branch, every Mayhem match in the history
+ * list would render as "OTHER".
  */
 function normalizeGameMode(
   raw: string | undefined,
   queueId: number
-): "ARAM" | "CLASSIC" | "CHERRY" | "PRACTICETOOL" | "OTHER" {
+): "ARAM" | "MAYHEM" | "CLASSIC" | "CHERRY" | "PRACTICETOOL" | "OTHER" {
   const upper = raw?.toUpperCase() ?? "";
   if (upper === "ARAM") return "ARAM";
+  if (upper === "KIWI") return "MAYHEM";
   if (upper === "CLASSIC") return "CLASSIC";
   if (upper === "CHERRY") return "CHERRY";
   if (upper === "PRACTICETOOL") return "PRACTICETOOL";

@@ -93,6 +93,11 @@ describe("lcuMatchToSummary", () => {
     ).toBe("CHERRY");
   });
 
+  it("maps LCU KIWI gameMode to MAYHEM", () => {
+    const m = lcuMatchToSummary({ ...fullPayload, gameMode: "KIWI" }, resolver);
+    expect(m?.gameMode).toBe("MAYHEM");
+  });
+
   it("normalizes unrecognized modes to OTHER", () => {
     const m = lcuMatchToSummary(
       { ...fullPayload, gameMode: "URF", queueId: 76 },
