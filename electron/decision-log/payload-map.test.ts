@@ -141,6 +141,47 @@ describe("coachingPayloadToDecisionInput", () => {
     expect(result?.retried).toBe(false);
   });
 
+  it("maps source=takeaway with narrative and game stats", () => {
+    const result = coachingPayloadToDecisionInput({
+      ...baseGameFields,
+      source: "takeaway",
+      answer: "",
+      narrative: "The plan held up early.",
+      champion: "Lux",
+      isWin: true,
+      duration: 1634,
+      kills: 12,
+      deaths: 4,
+      assists: 18,
+      finalGold: 14820,
+      finalItems: ["Luden's Tempest"],
+      recommendedBuild: ["Luden's Tempest", "Rabadon's"],
+      matchedItemCount: 1,
+    });
+    expect(result?.source).toBe("takeaway");
+    if (result?.source !== "takeaway") throw new Error();
+    expect(result.narrative).toBe("The plan held up early.");
+    expect(result.champion).toBe("Lux");
+    expect(result.isWin).toBe(true);
+    expect(result.kills).toBe(12);
+    expect(result.matchedItemCount).toBe(1);
+  });
+
+  it("takeaway defaults numeric fields to safe values when missing", () => {
+    const result = coachingPayloadToDecisionInput({
+      ...baseGameFields,
+      source: "takeaway",
+      answer: "",
+    });
+    if (result?.source !== "takeaway") throw new Error();
+    expect(result.kills).toBe(0);
+    expect(result.deaths).toBe(0);
+    expect(result.assists).toBe(0);
+    expect(result.finalGold).toBeNull();
+    expect(result.finalItems).toEqual([]);
+    expect(result.matchedItemCount).toBe(0);
+  });
+
   it("returns null for unknown source values", () => {
     const result = coachingPayloadToDecisionInput({
       ...baseGameFields,

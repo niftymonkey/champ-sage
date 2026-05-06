@@ -14,7 +14,7 @@ import type {
  * counts as a voice exchange (the player triggered it).
  */
 export interface CoachingResponsePayload {
-  source: "plan" | "augment" | "reactive" | "item-rec";
+  source: "plan" | "augment" | "reactive" | "item-rec" | "takeaway";
   answer: string;
   gameId?: string;
   gameMode?: string;
@@ -33,6 +33,18 @@ export interface CoachingResponsePayload {
   rev?: number;
   retried?: boolean;
   sentAt?: number;
+  // Takeaway-only fields (source: "takeaway")
+  narrative?: string;
+  champion?: string;
+  isWin?: boolean;
+  duration?: number;
+  kills?: number;
+  deaths?: number;
+  assists?: number;
+  finalGold?: number | null;
+  finalItems?: string[];
+  recommendedBuild?: string[];
+  matchedItemCount?: number;
 }
 
 const KNOWN_MODES: DecisionGameMode[] = [
@@ -120,6 +132,27 @@ export function coachingPayloadToDecisionInput(
         answer: payload.answer ?? "",
       };
     }
+
+    case "takeaway":
+      return {
+        ...envelope,
+        source: "takeaway",
+        narrative: payload.narrative ?? "",
+        champion: payload.champion ?? "",
+        isWin: payload.isWin === true,
+        duration: typeof payload.duration === "number" ? payload.duration : 0,
+        kills: typeof payload.kills === "number" ? payload.kills : 0,
+        deaths: typeof payload.deaths === "number" ? payload.deaths : 0,
+        assists: typeof payload.assists === "number" ? payload.assists : 0,
+        finalGold:
+          typeof payload.finalGold === "number" ? payload.finalGold : null,
+        finalItems: payload.finalItems ?? [],
+        recommendedBuild: payload.recommendedBuild ?? [],
+        matchedItemCount:
+          typeof payload.matchedItemCount === "number"
+            ? payload.matchedItemCount
+            : 0,
+      };
 
     default:
       return null;

@@ -4,6 +4,7 @@ import type {
   AugmentDecision,
   ItemRecDecision,
   PlanDecision,
+  TakeawayDecision,
   ThreatSpikeDecision,
   VoiceDecision,
 } from "./types";
@@ -75,6 +76,27 @@ function threat(
     source: "threat-spike",
     threat: "Veigar ult",
     reason: "stay outside cage range",
+    ...overrides,
+  };
+}
+
+function takeaway(overrides: Partial<TakeawayDecision> = {}): TakeawayDecision {
+  return {
+    ...baseEnvelope,
+    id: "tk1",
+    sentAt: 9_999,
+    source: "takeaway",
+    narrative: "The plan held up early.",
+    champion: "Lux",
+    isWin: true,
+    duration: 1634,
+    kills: 12,
+    deaths: 4,
+    assists: 18,
+    finalGold: 14820,
+    finalItems: ["Luden's Tempest", "Sorcerer's Shoes"],
+    recommendedBuild: ["Luden's Tempest", "Sorcerer's Shoes", "Rabadon's"],
+    matchedItemCount: 2,
     ...overrides,
   };
 }
@@ -155,11 +177,34 @@ describe("summarizeGame", () => {
   });
 
   it("buckets every source variant into the right kind list", () => {
-    const s = summarizeGame([voice(), plan(), augment(), itemRec(), threat()]);
+    const s = summarizeGame([
+      voice(),
+      plan(),
+      augment(),
+      itemRec(),
+      threat(),
+      takeaway(),
+    ]);
     expect(s.byKind.voice).toHaveLength(1);
     expect(s.byKind.plan).toHaveLength(1);
     expect(s.byKind.augment).toHaveLength(1);
     expect(s.byKind.itemRec).toHaveLength(1);
     expect(s.byKind.threatSpike).toHaveLength(1);
+    expect(s.byKind.takeaway).toHaveLength(1);
+  });
+
+  it("exposes the latest takeaway record on the summary", () => {
+    const s = summarizeGame([
+      takeaway({ id: "tk1", sentAt: 5_000, narrative: "first" }),
+      takeaway({ id: "tk2", sentAt: 9_000, narrative: "later" }),
+      voice(),
+    ]);
+    expect(s.takeaway?.id).toBe("tk2");
+    expect(s.takeaway?.narrative).toBe("later");
+  });
+
+  it("takeaway is null when no takeaway records exist", () => {
+    const s = summarizeGame([voice(), plan()]);
+    expect(s.takeaway).toBeNull();
   });
 });

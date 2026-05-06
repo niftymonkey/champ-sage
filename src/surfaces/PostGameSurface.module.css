@@ -1,22 +1,28 @@
+/* ─── Surface frame ─── */
+
 .surface {
   flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-10);
+  overflow-y: auto;
+  align-content: start;
+}
+
+.left,
+.right {
   display: flex;
   flex-direction: column;
   gap: var(--space-10);
-  padding: var(--space-12) var(--space-10);
-  overflow-y: auto;
-  align-items: stretch;
+  min-width: 0;
 }
 
-/* ─── Header ─── */
-
-.header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  border-bottom: 1px solid var(--line);
-  padding-bottom: var(--space-8);
+.right {
+  gap: var(--space-8);
 }
+
+/* ─── Eyebrow row ─── */
 
 .eyebrow {
   font-family: var(--font-mono);
@@ -24,15 +30,28 @@
   letter-spacing: var(--type-meta-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
 }
+
+.eyebrowResultLoss {
+  color: var(--threat-hi);
+}
+
+.eyebrowResultWin {
+  color: var(--fit-strong);
+}
+
+/* ─── Headline + narrative ─── */
 
 .headline {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: 2.25rem;
   line-height: 1.1;
   letter-spacing: -0.01em;
   color: var(--ink);
-  margin: 0;
+  margin: 0 0 var(--space-5);
 }
 
 .headlineAccent {
@@ -40,39 +59,77 @@
   color: var(--accent);
 }
 
-.statRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-6);
-  font-family: var(--font-ui);
+.narrative {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--ink);
+  margin: 0;
+  max-width: 36rem;
+}
+
+.narrativeEm {
+  font-style: italic;
+  color: var(--accent-2);
+}
+
+.narrativePending {
+  font-family: var(--font-display);
+  font-style: italic;
   font-size: 0.9375rem;
-  color: var(--ink-2);
-  margin-top: var(--space-2);
+  color: var(--ink-3);
+  margin: 0;
 }
 
-.statRow > span {
-  white-space: nowrap;
+/* ─── Stat trio ─── */
+
+.statTrio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: var(--space-5) 0;
 }
 
-.resultWin {
-  color: var(--fit-strong);
-  font-weight: 500;
-}
-
-.resultLoss {
-  color: var(--threat-md);
-  font-weight: 500;
-}
-
-/* ─── Section common ─── */
-
-.section {
+.statBox {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: 0.25rem;
+  min-width: 0;
 }
 
-.sectionLabel {
+.statLabel {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 1.625rem;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+/* ─── Build · followed plan ─── */
+
+.buildSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.buildHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.buildHeaderLeft {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   letter-spacing: var(--type-meta-tracking);
@@ -80,53 +137,217 @@
   color: var(--ink-3);
 }
 
-.sectionMeta {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  color: var(--ink-3);
+.buildAlignmentSummary {
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin: 0;
 }
 
-.sectionTitleRow {
+.buildAlignmentSummary strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ─── Coach-side timeline (right column) ─── */
+
+.timelineCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.timelineHeader {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
 }
 
-/* ─── Plan recap ─── */
-
-.planRecap {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border-left: 2px solid var(--accent-border);
-  background: var(--bg-2);
-}
-
-.planSummary {
+.timelineTitle {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 1rem;
-  line-height: 1.55;
+  font-size: 1.125rem;
   color: var(--ink);
   margin: 0;
 }
 
-.planBuild {
+.timelineCounts {
   font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.timelineSubtitle {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.timelineChart {
+  position: relative;
+  height: 56px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+}
+
+.timelineTick {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+}
+
+.timelineTickPlan {
+  background: var(--accent);
+}
+
+.timelineTickVoice {
+  background: var(--quote);
+}
+
+.timelineTickAugment {
+  background: var(--fit-strong);
+}
+
+.timelineLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.timelineLegendDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+  border-radius: 1px;
+}
+
+.timelineEmpty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-style: italic;
   font-size: 0.8125rem;
-  color: var(--ink-2);
-  letter-spacing: 0.01em;
+  color: var(--ink-3);
+}
+
+/* ─── Final build list (right column) ─── */
+
+.finalBuildSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.finalBuildHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.finalBuildTitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1rem;
+  color: var(--ink);
   margin: 0;
 }
 
-/* ─── Conversation list ─── */
+.finalBuildMeta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
 
-.exchanges {
+.finalBuildList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: 0;
+}
+
+.finalBuildRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  color: var(--ink);
+}
+
+.finalBuildRow:first-child {
+  border-top: none;
+}
+
+.finalBuildRowDimmed {
+  color: var(--ink-3);
+}
+
+.finalBuildName {
+  flex: 1 1 auto;
+}
+
+.finalBuildTag {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid var(--line-2);
+  color: var(--ink-3);
+}
+
+.finalBuildTagOnPlan {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.finalBuildTagRecommended {
+  color: var(--ink-2);
+  border-color: var(--line-2);
+}
+
+/* ─── Conversation block ─── */
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.conversationTitle {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.conversationList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 .exchange {
@@ -158,75 +379,6 @@
   line-height: 1.55;
   color: var(--ink);
   margin: 0;
-}
-
-.exchangeMeta {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  letter-spacing: var(--type-meta-tracking);
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin-top: var(--space-1);
-}
-
-/* ─── Augment list ─── */
-
-.augments {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.augmentRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--line);
-}
-
-.augmentRow:first-child {
-  border-top: none;
-  padding-top: 0;
-}
-
-.augmentName {
-  font-family: var(--font-display);
-  font-size: 0.9375rem;
-  color: var(--ink);
-}
-
-.augmentReason {
-  font-family: var(--font-ui);
-  font-size: 0.8125rem;
-  color: var(--ink-2);
-  flex: 1 1 auto;
-  margin: 0 var(--space-4);
-  line-height: 1.5;
-}
-
-.augmentFit {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: var(--type-meta-tracking);
-  text-transform: uppercase;
-}
-
-.fitExceptional {
-  color: var(--fit-excellent);
-}
-
-.fitStrong {
-  color: var(--fit-strong);
-}
-
-.fitSituational {
-  color: var(--fit-ok);
-}
-
-.fitWeak {
-  color: var(--threat-md);
 }
 
 /* ─── Empty state ─── */

@@ -31,6 +31,10 @@ import {
   type ItemRecTrigger,
 } from "../lib/ai/features/item-rec";
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
+import {
+  postGameTakeawayFeature,
+  type PostGameTakeawayInput,
+} from "../lib/ai/features/post-game-takeaway";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { createMatchSession } from "../lib/ai/match-session";
@@ -210,7 +214,101 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     });
 
     reactiveLog.info("Last game snapshot captured");
-  }, [liveGameState.activePlayer]);
+
+    // Fire post-game takeaway iff there was any coach activity. Skip when
+    // the game produced no decisions — there's nothing to reflect on, and
+    // we don't want to pay for an LLM call to produce empty prose.
+    if (
+      apiKey &&
+      mode &&
+      lastState.activePlayer &&
+      voiceEntries.length + (gamePlanRevRef.current > 0 ? 1 : 0) > 0
+    ) {
+      const championName =
+        activeInfo?.championName ??
+        lastState.activePlayer?.championName ??
+        "Unknown";
+      const finalItems = activeInfo?.items.map((i) => i.name) ?? [];
+      const finalPlan = gamePlan$.getValue();
+      const recommendedBuild = finalPlan?.buildPath.map((b) => b.name) ?? [];
+      const matchedItemCount = recommendedBuild.filter((r) =>
+        finalItems.includes(r)
+      ).length;
+      const allVoiceExchanges = voiceEntries.map((e) => ({
+        question: e.question,
+        answer: e.answer,
+      }));
+
+      const takeawayInput: PostGameTakeawayInput = {
+        champion: championName,
+        gameMode: lastState.gameMode || eog?.gameMode || "",
+        isWin: eog?.isWin ?? false,
+        duration: eog?.gameLength ?? lastState.gameTime,
+        kills: activeInfo?.kills ?? 0,
+        deaths: activeInfo?.deaths ?? 0,
+        assists: activeInfo?.assists ?? 0,
+        finalGold: lastState.activePlayer.currentGold ?? null,
+        finalItems,
+        recommendedBuild,
+        augmentsPicked: chosenAugmentsRef.current,
+        voiceExchanges: allVoiceExchanges,
+        planRevisionCount: gamePlanRevRef.current,
+      };
+
+      const sessionGameId = gameSessionIdRef.current;
+      const sessionGameMode = lastState.gameMode;
+
+      // Throwaway post-game session — the in-game session has been cleared
+      // (or is about to be) by the session-create effect's null branch.
+      const postGameState: GameState = {
+        status: "connected",
+        activePlayer: lastState.activePlayer,
+        players: lastState.players,
+        gameMode: lastState.gameMode,
+        gameTime: lastState.gameTime,
+      };
+      const postGameContext = buildBaseContext({
+        mode,
+        gameData: gameDataRef.current,
+        gameState: postGameState,
+      });
+      const postGameSession = createMatchSession(postGameContext, apiKey, {
+        personality: getPersonality,
+        phase: "post-game",
+      });
+
+      proactiveLog.info("Generating post-game takeaway");
+      postGameSession
+        .ask(postGameTakeawayFeature, takeawayInput)
+        .then(({ value: result, retried }) => {
+          window.electronAPI?.sendCoachingResponse({
+            answer: "",
+            recommendations: [],
+            buildPath: null,
+            retried,
+            source: "takeaway",
+            narrative: result.narrative,
+            champion: championName,
+            isWin: takeawayInput.isWin,
+            duration: takeawayInput.duration,
+            kills: takeawayInput.kills,
+            deaths: takeawayInput.deaths,
+            assists: takeawayInput.assists,
+            finalGold: takeawayInput.finalGold,
+            finalItems,
+            recommendedBuild,
+            matchedItemCount,
+            gameId: sessionGameId,
+            gameMode: sessionGameMode,
+            sentAt: Date.now(),
+          });
+          proactiveLog.info("Post-game takeaway captured");
+        })
+        .catch((err) => {
+          proactiveLog.error(`Post-game takeaway failed: ${err}`);
+        });
+    }
+  }, [liveGameState.activePlayer, apiKey, mode]);
 
   // Auto-generate opening game plan once first full data arrives
   useEffect(() => {
