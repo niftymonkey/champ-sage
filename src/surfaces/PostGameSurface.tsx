@@ -113,20 +113,21 @@ function LeftColumn({
   endedAt,
   error,
 }: LeftColumnProps) {
-  // Source priority: takeaway (LLM-stamped) → match-history (server-
-  // authoritative) → in-memory snapshot. eogStats sometimes returns
-  // null from the LCU, leaving snapshot.isWin defaulting to false even
-  // for wins; match-history corrects that within seconds of game-end.
+  // Source priority: match-history (server-authoritative) → takeaway
+  // (LLM-stamped at game-end, but its isWin/gameMode were captured
+  // from eogStats which sometimes returns null and silently defaults
+  // to false / "" → snapshot. Match-history is what actually shipped
+  // back from Riot's servers, so it wins.
   const champion =
-    takeaway?.champion ??
     authoritativeMatch?.championName ??
+    takeaway?.champion ??
     snapshot?.championName ??
     null;
   const isWin =
-    takeaway?.isWin ?? authoritativeMatch?.isWin ?? snapshot?.isWin ?? null;
+    authoritativeMatch?.isWin ?? takeaway?.isWin ?? snapshot?.isWin ?? null;
   const rawGameMode =
-    takeaway?.gameMode ??
     authoritativeMatch?.gameMode ??
+    takeaway?.gameMode ??
     snapshot?.gameMode ??
     null;
   const gameMode = rawGameMode ? formatGameMode(rawGameMode) : null;

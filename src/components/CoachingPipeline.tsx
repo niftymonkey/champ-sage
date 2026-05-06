@@ -35,6 +35,7 @@ import {
   postGameTakeawayFeature,
   type PostGameTakeawayInput,
 } from "../lib/ai/features/post-game-takeaway";
+import { getSetting, postGameTakeaway } from "../lib/settings";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { createMatchSession } from "../lib/ai/match-session";
@@ -234,10 +235,17 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     ).length;
     const hasActivity = totalDecisions > 0 || gamePlanRevRef.current > 0;
     const lastInGameMode = modeRef.current;
+    const takeawayEnabled = getSetting(postGameTakeaway);
     proactiveLog.info(
-      `Takeaway gate — apiKey=${!!apiKey} mode=${!!lastInGameMode} activePlayer=${!!lastState.activePlayer} totalDecisions=${totalDecisions} planRevs=${gamePlanRevRef.current} voiceTurns=${trueVoiceCount} itemRecs=${itemRecCount}`
+      `Takeaway gate — enabled=${takeawayEnabled} apiKey=${!!apiKey} mode=${!!lastInGameMode} activePlayer=${!!lastState.activePlayer} totalDecisions=${totalDecisions} planRevs=${gamePlanRevRef.current} voiceTurns=${trueVoiceCount} itemRecs=${itemRecCount}`
     );
-    if (apiKey && lastInGameMode && lastState.activePlayer && hasActivity) {
+    if (
+      takeawayEnabled &&
+      apiKey &&
+      lastInGameMode &&
+      lastState.activePlayer &&
+      hasActivity
+    ) {
       const championName =
         activeInfo?.championName ??
         lastState.activePlayer?.championName ??

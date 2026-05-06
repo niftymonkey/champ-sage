@@ -1,0 +1,124 @@
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--line);
+}
+
+.row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.description {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.control {
+  flex-shrink: 0;
+}
+
+/* ─── Boolean (toggle switch) ─── */
+
+.toggle {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background 120ms,
+    border-color 120ms;
+}
+
+.toggleOn {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggleHandle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 120ms;
+}
+
+.toggleOnHandle {
+  transform: translateX(16px);
+  background: var(--bg);
+}
+
+/* ─── Enum (segmented buttons) ─── */
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.segmentedButton {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.segmentedButton + .segmentedButton {
+  border-left: 1px solid var(--line-2);
+}
+
+.segmentedButtonActive {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* ─── String / Number input (lightweight) ─── */
+
+.input {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 6px 10px;
+  min-width: 8rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}

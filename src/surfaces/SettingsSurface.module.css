@@ -3,8 +3,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-12) var(--space-8);
-  gap: var(--space-10);
+  padding: var(--space-10) var(--space-10);
+  gap: var(--space-8);
   overflow-y: auto;
 }
 
@@ -44,12 +44,17 @@
 
 .section {
   width: 100%;
-  max-width: 36rem;
+  max-width: 56rem;
   border-top: 1px solid var(--line);
   padding-top: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.section:first-child {
+  border-top: none;
+  padding-top: 0;
 }
 
 .sectionLabel {
@@ -58,6 +63,14 @@
   letter-spacing: var(--type-meta-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
+}
+
+.sectionDescription {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+  margin: 0;
 }
 
 .sectionNote {

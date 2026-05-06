@@ -1,20 +1,12 @@
 /**
- * Runtime-swappable personality selection.
+ * Legacy personality-store API, rerouted through `src/lib/settings`.
  *
- * The `MatchSession` reads the current personality fresh on every
- * `ask()` call (via the function form of `createMatchSession`'s
- * personality option). That means the player can flip personalities
- * mid-match and the very next coaching response uses the new voice —
- * useful for comparing how `briefPersonality` and `piratePersonality`
- * shape identical state.
- *
- * Persistence: routed through the Electron main process to a JSON file in
- * the user data dir. The renderer's localStorage didn't survive between
- * launches in this setup (writes succeeded mid-session but the storage
- * scope was empty on restart — likely the Vite dev-server origin or the
- * ow-electron renderer session lifecycle). The IPC + file approach avoids
- * that entire class of issue. When #24 lands the full settings UX this
- * store becomes the source of truth the settings picker writes into.
+ * The personality preference is now a `defineEnum` setting; this file
+ * exists only to keep the historical export shape (`personality$`,
+ * `getPersonality`, `setPersonality`, `PERSONALITIES`) working for
+ * existing callers (CoachingPipeline, MatchSession, the old
+ * PersonalityToggle). New code should import from
+ * `src/lib/settings` directly.
  */
 import { BehaviorSubject } from "rxjs";
 import {
@@ -22,63 +14,48 @@ import {
   piratePersonality,
   type PersonalityLayer,
 } from "./personality";
+import { personality, type PersonalityId } from "../settings/registry";
+import { getSetting, setSetting, settings$ } from "../settings/runtime";
+
+const PERSONALITY_BY_ID: Record<PersonalityId, PersonalityLayer> = {
+  brief: briefPersonality,
+  pirate: piratePersonality,
+};
 
 export const PERSONALITIES: readonly PersonalityLayer[] = [
   briefPersonality,
   piratePersonality,
 ];
 
-const SETTINGS_KEY = "personality.id";
-
-interface SettingsBridge {
-  invoke(channel: string, ...args: unknown[]): Promise<unknown>;
+function currentLayer(): PersonalityLayer {
+  return PERSONALITY_BY_ID[getSetting(personality)];
 }
 
-function getBridge(): SettingsBridge | null {
-  if (typeof window === "undefined") return null;
-  const api = (window as unknown as { electronAPI?: SettingsBridge })
-    .electronAPI;
-  return api ?? null;
-}
-
+/**
+ * BehaviorSubject mirror of the personality setting. Subscribes to the
+ * generic settings subject and re-emits when the personality value
+ * changes — preserves the legacy API for callers that read
+ * `personality$.getValue()` or subscribe directly.
+ */
 export const personality$ = new BehaviorSubject<PersonalityLayer>(
-  briefPersonality
+  currentLayer()
 );
 
-// Tracks whether the user has explicitly set a personality this session.
-// Hydrate runs async on module init; if the user toggles before the IPC
-// round-trip resolves, hydrate must NOT clobber that selection with the
-// stale persisted value.
-let userHasSet = false;
-
-void hydrate();
-
-async function hydrate(): Promise<void> {
-  const bridge = getBridge();
-  if (!bridge) return;
-  try {
-    const id = await bridge.invoke("settings:get", SETTINGS_KEY);
-    if (userHasSet) return;
-    if (typeof id !== "string") return;
-    const match = PERSONALITIES.find((p) => p.id === id);
-    if (match && !userHasSet) personality$.next(match);
-  } catch {
-    // Bridge missing or IPC failed (test environment, broken main process)
-    // — keep brief default. The next setPersonality call will retry.
+settings$.subscribe(() => {
+  const next = currentLayer();
+  if (next !== personality$.getValue()) {
+    personality$.next(next);
   }
-}
+});
 
 export function getPersonality(): PersonalityLayer {
-  return personality$.getValue();
+  return currentLayer();
 }
 
-export function setPersonality(personality: PersonalityLayer): void {
-  userHasSet = true;
-  personality$.next(personality);
-  const bridge = getBridge();
-  if (!bridge) return;
-  bridge.invoke("settings:set", SETTINGS_KEY, personality.id).catch(() => {
-    // IPC write failed — in-memory state still reflects the user's choice;
-    // they'll just get the prior persisted value back on next launch.
-  });
+export function setPersonality(p: PersonalityLayer): void {
+  const id = (Object.keys(PERSONALITY_BY_ID) as PersonalityId[]).find(
+    (k) => PERSONALITY_BY_ID[k] === p
+  );
+  if (!id) return;
+  void setSetting(personality, id);
 }
