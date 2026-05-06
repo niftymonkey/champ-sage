@@ -6,6 +6,7 @@ import { useMatchHistory } from "../hooks/useMatchHistory";
 import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type { MatchSummary } from "../lib/match-history/types";
+import { formatGameMode } from "../lib/format-game-mode";
 import styles from "./IdleSurface.module.css";
 
 const WINDOW_DAYS = 7;
@@ -110,7 +111,7 @@ export function IdleSurface({
         <div>
           <div className={styles.sectionLabel}>Last game</div>
           {lastGame ? (
-            <LastGameBlock snapshot={lastGame} />
+            <LastGameBlock snapshot={lastGame} authoritativeMatch={recent[0]} />
           ) : (
             <p className={styles.lastGameStats}>
               No game played in this session yet.
@@ -142,7 +143,9 @@ function RecentGameRow({ match }: { match: MatchSummary }) {
   return (
     <div className={styles.recentRow}>
       <span className={styles.recentChamp}>{match.championName}</span>
-      <span className={styles.recentMode}>{match.gameMode}</span>
+      <span className={styles.recentMode}>
+        {formatGameMode(match.gameMode)}
+      </span>
       <span
         className={`${styles.recentResult} ${match.isWin ? styles.recentResultWin : styles.recentResultLoss}`}
       >
@@ -205,18 +208,32 @@ function PlaceholderRecentRow() {
   );
 }
 
-function LastGameBlock({ snapshot }: { snapshot: LastGameSnapshot }) {
+function LastGameBlock({
+  snapshot,
+  authoritativeMatch,
+}: {
+  snapshot: LastGameSnapshot;
+  authoritativeMatch?: MatchSummary;
+}) {
   const exchange = snapshot.recentExchanges[0];
+  // The Live Client's eog-stats-block sometimes returns null on game end
+  // (observed live), which leaves snapshot.isWin defaulting to false even
+  // for wins. The LCU's match-history endpoint is server-authoritative;
+  // when the most recent match-history entry is back, prefer it.
+  const isWin = authoritativeMatch?.isWin ?? snapshot.isWin;
+  const gameMode = formatGameMode(
+    authoritativeMatch?.gameMode ?? snapshot.gameMode
+  );
   return (
     <div className={styles.lastGameBlock}>
       <div className={styles.lastGameHeader}>
         <span className={styles.lastGameChamp}>{snapshot.championName}</span>
         <span
           className={`${styles.lastGameResult} ${
-            snapshot.isWin ? styles.recentResultWin : styles.recentResultLoss
+            isWin ? styles.recentResultWin : styles.recentResultLoss
           }`}
         >
-          {snapshot.isWin ? "Win" : "Loss"}
+          {isWin ? "Win" : "Loss"}
         </span>
       </div>
       <div className={styles.lastGameStats}>
@@ -226,7 +243,7 @@ function LastGameBlock({ snapshot }: { snapshot: LastGameSnapshot }) {
         <span>·</span>
         <span>{formatDuration(snapshot.gameTime)}</span>
         <span>·</span>
-        <span>{snapshot.gameMode}</span>
+        <span>{gameMode}</span>
       </div>
       {exchange ? (
         <>

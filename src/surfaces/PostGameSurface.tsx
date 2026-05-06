@@ -1,6 +1,7 @@
 import { Fragment, useMemo } from "react";
 import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
+import { useMatchHistory } from "../hooks/useMatchHistory";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type {
   AugmentDecision,
@@ -9,6 +10,8 @@ import type {
   TakeawayDecision,
   VoiceDecision,
 } from "../lib/decision-log/types";
+import type { MatchSummary } from "../lib/match-history/types";
+import { formatGameMode } from "../lib/format-game-mode";
 import styles from "./PostGameSurface.module.css";
 
 const LAST_GAME_QUERY = { kind: "last-game" } as const;
@@ -33,6 +36,8 @@ const RECAP_PENDING_WINDOW_MS = 30_000;
 export function PostGameSurface() {
   const { summary, loading, error } = useDecisionLogQuery(LAST_GAME_QUERY);
   const snapshot = useLastGameSnapshot();
+  const { recentGames } = useMatchHistory();
+  const authoritativeMatch = useMemo(() => recentGames(1)[0], [recentGames]);
 
   if (!loading && summary.totalCount === 0) {
     return (
@@ -61,6 +66,7 @@ export function PostGameSurface() {
         finalPlan={summary.finalPlan}
         voices={summary.byKind.voice}
         snapshot={snapshot}
+        authoritativeMatch={authoritativeMatch}
         endedAt={summary.endedAt}
         error={error}
       />
@@ -90,6 +96,7 @@ interface LeftColumnProps {
   finalPlan: PlanDecision | null;
   voices: VoiceDecision[];
   snapshot: LastGameSnapshot | null;
+  authoritativeMatch: MatchSummary | undefined;
   endedAt: number | null;
   error: Error | null;
 }
@@ -100,15 +107,27 @@ function LeftColumn({
   finalPlan,
   voices,
   snapshot,
+  authoritativeMatch,
   endedAt,
   error,
 }: LeftColumnProps) {
-  // Fall back to lastGameSnapshot when the takeaway hasn't arrived (or
-  // never will). The snapshot is captured at game-end with eogStats in
-  // scope so champion + result are reliable even without the LLM pass.
-  const champion = takeaway?.champion ?? snapshot?.championName ?? null;
-  const isWin = takeaway?.isWin ?? snapshot?.isWin ?? null;
-  const gameMode = takeaway?.gameMode ?? snapshot?.gameMode ?? null;
+  // Source priority: takeaway (LLM-stamped) → match-history (server-
+  // authoritative) → in-memory snapshot. eogStats sometimes returns
+  // null from the LCU, leaving snapshot.isWin defaulting to false even
+  // for wins; match-history corrects that within seconds of game-end.
+  const champion =
+    takeaway?.champion ??
+    authoritativeMatch?.championName ??
+    snapshot?.championName ??
+    null;
+  const isWin =
+    takeaway?.isWin ?? authoritativeMatch?.isWin ?? snapshot?.isWin ?? null;
+  const rawGameMode =
+    takeaway?.gameMode ??
+    authoritativeMatch?.gameMode ??
+    snapshot?.gameMode ??
+    null;
+  const gameMode = rawGameMode ? formatGameMode(rawGameMode) : null;
   const result = isWin === null ? null : isWin ? "victory" : "defeat";
   const resultClass = isWin
     ? styles.eyebrowResultWin

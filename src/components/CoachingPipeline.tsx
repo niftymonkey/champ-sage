@@ -273,6 +273,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
       const sessionGameId = gameSessionIdRef.current;
       const sessionGameMode = lastState.gameMode;
+      proactiveLog.info(
+        `Takeaway will send: sessionGameId=${sessionGameId || "EMPTY"} sessionGameMode=${sessionGameMode || "EMPTY"} championName=${championName}`
+      );
 
       // Throwaway post-game session — the in-game session has been cleared
       // (or is about to be) by the session-create effect's null branch.
