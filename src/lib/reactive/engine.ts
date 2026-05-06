@@ -29,7 +29,12 @@ import {
 import { normalizeGameState, extractMapNumber } from "../game-state/normalize";
 import { resetForNewGame } from "./coaching-feed";
 import type { PlatformBridge, LcuEventPayload } from "./platform-bridge";
-import type { GameflowPhase, LiveGameState, EogStats } from "./types";
+import type {
+  GameflowPhase,
+  LiveGameState,
+  EogStats,
+  RawChampSelectSession,
+} from "./types";
 import { formatGameTime } from "../format";
 import {
   isDebugWorthy,
@@ -484,12 +489,16 @@ export class ReactiveEngine {
         })
     );
 
-    // Slice 6a: Champ select → liveGameState$
+    // Slice 6a: Champ select → liveGameState$.
+    // The WS event's `data` is untyped at the LCU boundary; cast to
+    // `RawChampSelectSession` here so consumers downstream get the
+    // structured shape. The interface uses an index signature for
+    // unread fields so nothing further downstream needs to re-cast.
     this.subscription.add(
       wsFiltered$
         .pipe(
           filter((evt) => evt.uri === "/lol-champ-select/v1/session"),
-          map((evt) => evt.data)
+          map((evt) => evt.data as RawChampSelectSession)
         )
         .subscribe((data) => {
           const current = liveGameState$.getValue();

@@ -1324,9 +1324,26 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("before-quit", () => {
+// `before-quit` is the last hook before the renderer/main exit. The
+// decision log's `appendChain` queues `.then` callbacks - each runs a
+// sync write when its turn comes, so any queued items that haven't
+// reached their callback yet are lost on a hard exit. Defer the quit
+// until the chain drains via `close()`.
+let drainedDecisionLog = false;
+app.on("before-quit", (event) => {
   shuttingDown = true;
   cleanupWebSocket();
+  if (drainedDecisionLog || !coachDecisionLog) return;
+  event.preventDefault();
+  const log = coachDecisionLog;
+  coachDecisionLog = null;
+  log
+    .close()
+    .catch((err) => decisionLog.warn("close failed", err))
+    .finally(() => {
+      drainedDecisionLog = true;
+      app.quit();
+    });
 });
 
 // Suppress EPIPE and other pipe errors during shutdown.

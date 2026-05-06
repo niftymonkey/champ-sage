@@ -171,7 +171,7 @@ describe("hasGameStateChangedMeaningfully", () => {
 
   it("detects champ select appearing", () => {
     const a = makeState({ champSelect: null });
-    const b = makeState({ champSelect: { some: "data" } as unknown });
+    const b = makeState({ champSelect: { some: "data" } });
     expect(hasGameStateChangedMeaningfully(a, b)).toBe(true);
   });
 

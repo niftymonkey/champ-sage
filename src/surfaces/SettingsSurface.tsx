@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 import { ClearOverlaysButton } from "../components/ClearOverlaysButton";
 import { ResetStripSizeButton } from "../components/ResetStripSizeButton";
 import { SettingRow } from "../components/settings/SettingRow";
@@ -160,7 +167,7 @@ interface SectionProps {
   title: string;
   description?: string;
   anchorRef: (el: HTMLElement | null) => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 function Section({
@@ -188,7 +195,7 @@ function UtilityRow({
 }: {
   label: string;
   description: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className={styles.utilityRow}>
@@ -202,7 +209,7 @@ function UtilityRow({
 }
 
 function registerAnchor(
-  refs: React.MutableRefObject<Map<string, HTMLElement>>,
+  refs: MutableRefObject<Map<string, HTMLElement>>,
   id: string,
   el: HTMLElement | null
 ): void {

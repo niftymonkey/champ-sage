@@ -57,8 +57,35 @@ export interface LiveGameState {
    */
   lcuGameId: string;
   gameTime: number;
-  champSelect: unknown | null;
+  champSelect: RawChampSelectSession | null;
   eogStats: EogStats | null;
+}
+
+/**
+ * Shape of one player slot inside the LCU's
+ * `/lol-champ-select/v1/session` payload. Every field optional because
+ * the LCU surfaces partial slots during the pick window. The index
+ * signature keeps the type honest about the boundary - LCU includes
+ * fields like `assignedPosition`, `gameName`, etc. that we don't read
+ * but tests construct in fixtures.
+ */
+export interface RawChampSelectMember {
+  cellId?: number;
+  championId?: number;
+  championPickIntent?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Shape of the LCU's `/lol-champ-select/v1/session` payload as we
+ * consume it. See `RawChampSelectMember` re: the index signature -
+ * applies for the same reason.
+ */
+export interface RawChampSelectSession {
+  localPlayerCellId?: number;
+  myTeam?: RawChampSelectMember[];
+  theirTeam?: RawChampSelectMember[];
+  [key: string]: unknown;
 }
 
 export interface EogStats {

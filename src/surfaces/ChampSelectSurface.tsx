@@ -2,22 +2,11 @@ import type { LoadedGameData } from "../lib/data-ingest";
 import type { Champion } from "../lib/data-ingest/types";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { resolveChampionName } from "../lib/data-ingest/champion-id-map";
+import type { RawChampSelectMember } from "../lib/reactive/types";
 import styles from "./ChampSelectSurface.module.css";
 
 interface ChampSelectSurfaceProps {
   data: LoadedGameData;
-}
-
-interface RawChampSelectMember {
-  cellId?: number;
-  championId?: number;
-  championPickIntent?: number;
-}
-
-interface RawChampSelectSession {
-  localPlayerCellId?: number;
-  myTeam?: RawChampSelectMember[];
-  theirTeam?: RawChampSelectMember[];
 }
 
 interface SlotData {
@@ -37,7 +26,7 @@ interface SlotData {
  */
 export function ChampSelectSurface({ data }: ChampSelectSurfaceProps) {
   const liveGame = useLiveGameState();
-  const session = liveGame.champSelect as RawChampSelectSession | null;
+  const session = liveGame.champSelect;
 
   if (!session) {
     return (
@@ -125,7 +114,11 @@ function Slot({ slot }: { slot: SlotData }) {
           alt={slot.champion.name}
         />
       ) : (
-        <div className={`${styles.portrait} ${styles.portraitEmpty}`} />
+        <div
+          className={`${styles.portrait} ${styles.portraitEmpty}`}
+          role="img"
+          aria-label="No champion selected"
+        />
       )}
       <span
         className={`${styles.name} ${slot.pending || !slot.champion ? styles.namePending : ""}`}
