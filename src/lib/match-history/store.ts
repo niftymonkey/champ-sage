@@ -67,10 +67,13 @@ export function createMatchHistoryStore(
 
   const fetchPuuid = async (): Promise<string> => {
     if (puuid) return puuid;
-    if (!creds) throw new Error("LCU credentials unavailable");
+    // Snapshot creds before any await — `lcuCredentials$` can null it
+    // out mid-fetch on disconnect, and the next dereference would NPE.
+    const c = creds;
+    if (!c) throw new Error("LCU credentials unavailable");
     const raw = await inputs.bridge.fetchLcu(
-      creds.port,
-      creds.token,
+      c.port,
+      c.token,
       "/lol-summoner/v1/current-summoner"
     );
     const parsed = JSON.parse(raw) as { puuid?: string };
@@ -95,13 +98,15 @@ export function createMatchHistoryStore(
   };
 
   const doFetch = async (): Promise<void> => {
-    if (!creds) {
+    // Snapshot creds before any await; same TOCTOU reasoning as above.
+    const c = creds;
+    if (!c) {
       error$.next(new Error("LCU credentials unavailable"));
       return;
     }
     const summonerPuuid = await fetchPuuid();
     const endpoint = `/lol-match-history/v1/products/lol/${summonerPuuid}/matches?begIndex=0&endIndex=${pageSize - 1}`;
-    const raw = await inputs.bridge.fetchLcu(creds.port, creds.token, endpoint);
+    const raw = await inputs.bridge.fetchLcu(c.port, c.token, endpoint);
     const parsed = JSON.parse(raw) as {
       games?: { games?: unknown[] };
     };

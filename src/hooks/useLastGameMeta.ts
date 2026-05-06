@@ -3,6 +3,8 @@ import { useLastGameSnapshot } from "./useLastGameSnapshot";
 import { useMatchHistory } from "./useMatchHistory";
 import { useDecisionLogQuery } from "./useDecisionLogQuery";
 import type { TakeawayDecision } from "../lib/decision-log/types";
+import type { MatchSummary } from "../lib/match-history/types";
+import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 
 /**
  * Resolved metadata for the just-finished (or currently-being-viewed)
@@ -67,30 +69,9 @@ export function useLastGameMeta(): LastGameMeta {
  * non-null source.
  */
 export function mergeMeta(
-  match:
-    | {
-        gameId: string;
-        championName: string;
-        isWin: boolean;
-        gameMode: string;
-        kills: number;
-        deaths: number;
-        assists: number;
-        durationSeconds: number;
-        finalItems: string[];
-        largestKillingSpree: number;
-      }
-    | undefined,
+  match: MatchSummary | undefined,
   takeaway: TakeawayDecision | null,
-  snapshot: {
-    championName: string;
-    isWin: boolean;
-    gameMode: string;
-    kills: number;
-    deaths: number;
-    assists: number;
-    gameTime: number;
-  } | null
+  snapshot: LastGameSnapshot | null
 ): LastGameMeta {
   return {
     gameId: match?.gameId ?? takeaway?.gameId ?? null,

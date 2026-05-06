@@ -115,7 +115,6 @@ function toSlotData(
 }
 
 function Slot({ slot }: { slot: SlotData }) {
-  const tag = slot.champion ? primaryTag(slot.champion.tags) : null;
   return (
     <div className={`${styles.slot} ${slot.isMine ? styles.slotMine : ""}`}>
       {slot.isMine ? <span className={styles.slotMineEyebrow}>You</span> : null}
@@ -133,55 +132,6 @@ function Slot({ slot }: { slot: SlotData }) {
       >
         {slot.champion?.name ?? "Picking…"}
       </span>
-      <span
-        className={`${styles.classTag} ${tag ? tagClass(tag) : styles.tagUnknown}`}
-      >
-        {tag ?? "—"}
-      </span>
     </div>
   );
-}
-
-/**
- * Pick the single class tag for the slot label. DDragon returns multi-tag
- * arrays ordered primary-first (Malphite is ["Tank","Mage"], Lux is
- * ["Mage","Support"]) and the redesign asks for one badge per slot, so we
- * trust Riot's ordering. An earlier priority-list approach overrode that
- * ordering and labeled tank/mage hybrids like Malphite as "AP", which
- * misrepresented the player's typical build intent.
- */
-function primaryTag(tags: string[]): string | null {
-  return tags[0] ? tagToLabel(tags[0]) : null;
-}
-
-function tagToLabel(tag: string): string {
-  switch (tag) {
-    case "Marksman":
-    case "Fighter":
-    case "Assassin":
-      return "AD";
-    case "Mage":
-      return "AP";
-    case "Tank":
-      return "Tank";
-    case "Support":
-      return "Supp";
-    default:
-      return tag;
-  }
-}
-
-function tagClass(label: string): string {
-  switch (label) {
-    case "AD":
-      return styles.tagAd;
-    case "AP":
-      return styles.tagAp;
-    case "Tank":
-      return styles.tagTank;
-    case "Supp":
-      return styles.tagSupp;
-    default:
-      return styles.tagUnknown;
-  }
 }

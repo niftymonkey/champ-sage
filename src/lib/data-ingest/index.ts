@@ -108,8 +108,12 @@ async function fetchAndCacheWithFallback(): Promise<LoadedGameData> {
       );
       throw err;
     }
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const refreshedAtIso = Number.isFinite(cached.lastRefreshedAt)
+      ? new Date(cached.lastRefreshedAt).toISOString()
+      : "unknown-time";
     log.warn(
-      `Data ingest failed (${(err as Error).message}); serving cached payload from ${new Date(cached.lastRefreshedAt).toISOString()}`
+      `Data ingest failed (${errMsg}); serving cached payload from ${refreshedAtIso}`
     );
     const data = fromCached(cached);
     data.metaBuilds = await loadMetaBuilds();

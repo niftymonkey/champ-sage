@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { createCoachDecisionLog, type CoachDecisionLog } from "./log";
 import { createInMemoryStorage } from "./storage";
 import type { DecisionInput, DecisionStorage } from "./storage";
-import type { VoiceDecision } from "../../src/lib/decision-log/types";
 
 function makeClock(start = 1_000): () => number {
   let t = start;
@@ -18,9 +17,11 @@ function makeIdGen(prefix = "rec-"): () => string {
   return () => `${prefix}${++n}`;
 }
 
+type VoiceDecisionInput = Extract<DecisionInput, { source: "voice" }>;
+
 const voiceInput = (
-  overrides: Partial<DecisionInput & { source: "voice" }> = {}
-): DecisionInput => ({
+  overrides: Partial<VoiceDecisionInput> = {}
+): VoiceDecisionInput => ({
   source: "voice",
   gameId: "G1",
   gameMode: "ARAM",
@@ -78,9 +79,13 @@ describe("createCoachDecisionLog", () => {
         voiceInput({ question: "armor or MR?", answer: "armor" })
       );
       expect(record.source).toBe("voice");
-      const v = record as VoiceDecision;
-      expect(v.question).toBe("armor or MR?");
-      expect(v.answer).toBe("armor");
+      // record.source === "voice" already narrows the union, but
+      // TypeScript doesn't propagate that across the await boundary
+      // here — re-narrow via the discriminator before reading
+      // voice-only fields.
+      if (record.source !== "voice") throw new Error("expected voice");
+      expect(record.question).toBe("armor or MR?");
+      expect(record.answer).toBe("armor");
       expect(record.gameId).toBe("G1");
       expect(record.gameMode).toBe("ARAM");
       expect(record.retried).toBe(false);

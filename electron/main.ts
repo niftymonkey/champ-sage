@@ -711,12 +711,21 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
     // and any process restart. Also log absolute + screen-relative
     // fractions so the user can settle the strip where they want and
     // capture values to bake in as new defaults if needed.
+    // Drag/resize on Windows fires `move`/`resize` per pixel, and the
+    // bounds store does a synchronous read-modify-write of settings.json
+    // each time. Persist on a debounce so only the resting bounds at
+    // the end of a gesture hit disk; everything else is just a log.
+    let persistTimer: ReturnType<typeof setTimeout> | null = null;
     const logStripBounds = (verb: "moved" | "resized"): void => {
       try {
         const win = stripOverlay?.window;
         if (!win) return;
         const b = win.getBounds();
-        stripBoundsStore.set(b);
+        if (persistTimer) clearTimeout(persistTimer);
+        persistTimer = setTimeout(() => {
+          stripBoundsStore.set(b);
+          persistTimer = null;
+        }, 250);
         const fx = (b.x / width).toFixed(4);
         const fy = (b.y / height).toFixed(4);
         const fw = (b.width / width).toFixed(4);

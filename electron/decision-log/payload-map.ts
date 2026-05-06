@@ -1,7 +1,10 @@
 import type {
   DecisionGameMode,
   DecisionInput,
+  PlanDecision,
 } from "../../src/lib/decision-log/types";
+
+type BuildPathCategory = PlanDecision["buildPath"][number]["category"];
 
 /**
  * Shape of the coaching-response IPC payload sent by the renderer's
@@ -26,7 +29,7 @@ export interface CoachingResponsePayload {
   }>;
   buildPath?: Array<{
     name: string;
-    category: string;
+    category: BuildPathCategory;
     targetEnemy: string | null;
     reason: string;
   }> | null;
@@ -90,13 +93,7 @@ export function coachingPayloadToDecisionInput(
         answer: payload.answer ?? "",
         buildPath: (payload.buildPath ?? []).map((b) => ({
           name: b.name,
-          category: b.category as
-            | "core"
-            | "counter"
-            | "defensive"
-            | "damage"
-            | "utility"
-            | "situational",
+          category: b.category,
           targetEnemy: b.targetEnemy,
           reason: b.reason,
         })),

@@ -141,32 +141,6 @@
   font-style: italic;
 }
 
-.classTag {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: var(--type-meta-tracking);
-  text-transform: uppercase;
-}
-
-.tagAd {
-  color: var(--tag-ad);
-}
-.tagAp {
-  color: var(--tag-ap);
-}
-.tagTank {
-  color: var(--tag-tank);
-}
-.tagSupp {
-  color: var(--tag-supp);
-}
-.tagTrue {
-  color: var(--tag-true);
-}
-.tagUnknown {
-  color: var(--ink-3);
-}
-
 /* ─── Matchup read ─── */
 
 .read {

@@ -36,7 +36,7 @@ export interface WindowStats {
   losses: number;
   /** (kills + assists) / max(deaths, 1), averaged across matches. */
   avgKDA: number;
-  /** Sum of kills + assists across the window (denominator for KDA). */
+  /** Sum of kills across the window (KDA denominator remains deaths). */
   totalKills: number;
   totalDeaths: number;
   totalAssists: number;

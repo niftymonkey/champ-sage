@@ -108,6 +108,34 @@ export function createFileStorage(dir: string): DecisionStorage {
       if (index === null) {
         index = rebuildIndexFromFiles();
         if (index.games.length > 0) writeIndex(index);
+      } else {
+        // Reconcile orphan ndjson files. `appendRecord` writes the
+        // record before updating the index, so a crash between those
+        // two syncs leaves a valid game file with no index entry.
+        // Without this pass the orphan game's records would never be
+        // returned again.
+        const known = new Set(index.games.map((g) => g.gameId));
+        const files = existsSync(dir)
+          ? readdirSync(dir).filter((n) => n.endsWith(".ndjson"))
+          : [];
+        let dirty = false;
+        for (const file of files) {
+          const gameId = file.replace(/\.ndjson$/, "");
+          if (known.has(gameId)) continue;
+          const { records } = parseGameFile(gameId);
+          const first = records[0];
+          if (first) {
+            index.games.push({
+              gameId,
+              firstSentAt: first.sentAt,
+            });
+            dirty = true;
+          }
+        }
+        if (dirty) {
+          index.games.sort((a, b) => a.firstSentAt - b.firstSentAt);
+          writeIndex(index);
+        }
       }
 
       const games: Array<{ gameId: string; records: DecisionRecord[] }> = [];

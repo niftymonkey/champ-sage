@@ -242,12 +242,18 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     proactiveLog.info(
       `Takeaway gate — enabled=${takeawayEnabled} apiKey=${!!apiKey} mode=${!!lastInGameMode} activePlayer=${!!lastState.activePlayer} totalDecisions=${totalDecisions} planRevs=${gamePlanRevRef.current} voiceTurns=${trueVoiceCount} itemRecs=${itemRecCount}`
     );
+    // gameSessionIdRef is empty when the LCU never surfaced a gameId
+    // for this match (early disconnect, LCU lag). Without it every such
+    // takeaway would collapse onto the same empty-string key in the
+    // decision log and conflate unrelated games — skip instead.
+    const sessionGameIdGuard = gameSessionIdRef.current;
     if (
       takeawayEnabled &&
       apiKey &&
       lastInGameMode &&
       lastState.activePlayer &&
-      hasActivity
+      hasActivity &&
+      sessionGameIdGuard
     ) {
       const championName =
         activeInfo?.championName ??

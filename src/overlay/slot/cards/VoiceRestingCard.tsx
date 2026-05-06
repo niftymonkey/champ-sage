@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { VoiceAnswerPayload } from "../types";
 import styles from "./cards.module.css";
 
@@ -15,6 +16,7 @@ interface VoiceRestingCardProps {
  * answer body in italic Fraunces warm-bone.
  */
 export function VoiceRestingCard({ payload, pinned }: VoiceRestingCardProps) {
+  const relative = useRelativeTime(payload.timestamp);
   return (
     <div
       className={`${styles.card} ${pinned ? styles.pinned : ""}`}
@@ -28,18 +30,37 @@ export function VoiceRestingCard({ payload, pinned }: VoiceRestingCardProps) {
           <span className={styles.chipSep}>·</span>
           <span>answering you · via voice</span>
         </span>
-        <span className={styles.timestamp}>
-          {formatRelative(payload.timestamp)}
-        </span>
+        <span className={styles.timestamp}>{relative}</span>
       </div>
       <p className={styles.answer}>{payload.answer}</p>
     </div>
   );
 }
 
-function formatRelative(_timestamp: number): string {
-  // Wall-clock-to-relative formatting is host-driven (e.g. "now", "12s")
-  // and depends on the current frame; keep it static for the slot test
-  // surface and let the host pass a pre-formatted string in a future pass.
-  return "now";
+/**
+ * Re-derives the relative-time label every second so a card sitting in
+ * the slot for minutes doesn't keep reading "now". A 1s tick is plenty
+ * granular for the labels we render.
+ */
+function useRelativeTime(timestamp: number): string {
+  const [label, setLabel] = useState(() => formatRelative(timestamp));
+  useEffect(() => {
+    setLabel(formatRelative(timestamp));
+    const interval = setInterval(
+      () => setLabel(formatRelative(timestamp)),
+      1000
+    );
+    return () => clearInterval(interval);
+  }, [timestamp]);
+  return label;
+}
+
+function formatRelative(timestamp: number): string {
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 5) return "now";
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h`;
 }

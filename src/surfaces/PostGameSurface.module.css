@@ -73,12 +73,11 @@
    between headline and stat trio — the trio's border-top serves as
    the visual separator. */
 .narrative {
-  margin-bottom: var(--space-4);
+  margin: 0 0 var(--space-4);
   font-family: var(--font-ui);
   font-size: 1rem;
   line-height: 1.65;
   color: var(--ink);
-  margin: 0;
   max-width: 36rem;
 }
 

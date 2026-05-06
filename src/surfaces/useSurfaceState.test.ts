@@ -15,7 +15,10 @@ function emitPhase(phase: GameflowPhase): void {
 describe("useSurfaceState", () => {
   afterEach(() => {
     // Reset shared observables back to their default so tests don't bleed.
+    // gameLifecycle$ is a BehaviorSubject — explicitly reset the phase too,
+    // otherwise the previous test's phase persists into the next.
     gameLifecycle$.next({ type: "connection", connected: false });
+    gameLifecycle$.next({ type: "phase", phase: "None" });
     liveGameState$.next(createDefaultLiveGameState());
   });
 

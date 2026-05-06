@@ -7,6 +7,23 @@ import { SETTING_GROUPS } from "../lib/settings";
 import styles from "./SettingsSurface.module.css";
 
 /**
+ * Section list combines the typed-settings registry with the
+ * surface-only sections (Overlays, About). Defined once at module
+ * scope so the rail effect's dependency array stays stable across
+ * renders — otherwise the scroll listener would tear down on every
+ * render.
+ */
+const SECTIONS: ReadonlyArray<{
+  id: string;
+  title: string;
+  caption?: string;
+}> = [
+  ...SETTING_GROUPS.map(({ id, title, caption }) => ({ id, title, caption })),
+  { id: "overlays", title: "Overlays", caption: "Strip + clear" },
+  { id: "about", title: "About", caption: "Patch + dataset" },
+];
+
+/**
  * Settings surface — v16 layout: a left-rail nav of sections with a
  * scrollable canvas of grouped rows on the right. Clicking a rail
  * entry scrolls the canvas to that section's anchor; the rail's
@@ -19,7 +36,7 @@ import styles from "./SettingsSurface.module.css";
  */
 export function SettingsSurface() {
   const { gameData } = useCoachingContext();
-  const sections = useSectionsList();
+  const sections = SECTIONS;
   const [activeId, setActiveId] = useState<string>(sections[0]?.id ?? "");
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -136,23 +153,6 @@ export function SettingsSurface() {
       </div>
     </div>
   );
-}
-
-/**
- * Section list combines the typed-settings registry with the
- * surface-only sections (Overlays, About). Defined once so the rail
- * and the canvas share the same source of truth.
- */
-function useSectionsList(): ReadonlyArray<{
-  id: string;
-  title: string;
-  caption?: string;
-}> {
-  return [
-    ...SETTING_GROUPS.map(({ id, title, caption }) => ({ id, title, caption })),
-    { id: "overlays", title: "Overlays", caption: "Strip + clear" },
-    { id: "about", title: "About", caption: "Patch + dataset" },
-  ];
 }
 
 interface SectionProps {

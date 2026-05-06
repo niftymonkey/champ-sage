@@ -19,8 +19,8 @@ export type {
   BooleanSetting,
   EnumSetting,
   NumberSetting,
-  Setting,
   SettingGroup,
+  SettingValue,
   SettingsIO,
   StringSetting,
 } from "./types";

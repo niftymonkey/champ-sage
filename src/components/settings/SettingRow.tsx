@@ -36,12 +36,18 @@ function SettingControl({ setting }: SettingRowProps) {
     case "boolean":
       return <BooleanControl setting={setting} />;
     case "enum":
-      return <EnumControl setting={setting as EnumSetting<string>} />;
+      return <EnumControl setting={setting} />;
     case "string":
-      return <StringControl setting={setting as StringSetting} />;
+      return <StringControl setting={setting} />;
     case "number":
-      return <NumberControl setting={setting as NumberSetting} />;
+      return <NumberControl setting={setting} />;
+    default:
+      return assertNever(setting);
   }
+}
+
+function assertNever(_value: never): never {
+  throw new Error("Unhandled setting type");
 }
 
 function BooleanControl({ setting }: { setting: BooleanSetting }) {
@@ -114,7 +120,8 @@ function NumberControl({ setting }: { setting: NumberSetting }) {
       max={setting.max}
       aria-label={setting.label}
       onChange={(e) => {
-        const next = Number(e.target.value);
+        if (e.currentTarget.value === "") return;
+        const next = e.currentTarget.valueAsNumber;
         if (Number.isFinite(next)) void setValue(next);
       }}
     />

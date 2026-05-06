@@ -1,5 +1,6 @@
 import type { EffectivePlayer } from "../lib/mode/types";
 import type { LoadedGameData } from "../lib/data-ingest";
+import { primaryClassTag } from "../lib/champion-class";
 import styles from "./EnemyStrip.module.css";
 
 interface EnemyStripProps {
@@ -67,21 +68,4 @@ function EnemyRow({
       <span className={styles.role}>Lv {enemy.level}</span>
     </div>
   );
-}
-
-/**
- * Map DDragon's free-form `tags` array (e.g. ["Marksman", "Assassin"])
- * to one of the four class slots the v16 palette covers — "ad" / "ap"
- * / "tank" / "supp". Returns null when none matches; the row drops the
- * tag pill in that case rather than guessing.
- */
-function primaryClassTag(tags: string[]): "ad" | "ap" | "tank" | "supp" | null {
-  for (const t of tags) {
-    const k = t.toLowerCase();
-    if (k === "marksman" || k === "fighter" || k === "assassin") return "ad";
-    if (k === "mage") return "ap";
-    if (k === "tank") return "tank";
-    if (k === "support") return "supp";
-  }
-  return null;
 }

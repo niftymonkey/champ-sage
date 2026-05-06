@@ -97,7 +97,9 @@ describe("summarizeGame", () => {
     expect(s.byKind.plan).toEqual([]);
     expect(s.byKind.augment).toEqual([]);
     expect(s.byKind.itemRec).toEqual([]);
+    expect(s.byKind.takeaway).toEqual([]);
     expect(s.finalPlan).toBeNull();
+    expect(s.takeaway).toBeNull();
     expect(s.retriedCount).toBe(0);
     expect(s.totalCount).toBe(0);
   });

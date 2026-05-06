@@ -56,8 +56,14 @@ export type AnySetting =
   | NumberSetting
   | EnumSetting<string>;
 
-/** Generic setting handle used by `getSetting<T>` / `setSetting<T>`. */
-export type Setting<T> = SettingBase<T> & { type: AnySetting["type"] };
+/**
+ * Maps a concrete setting descriptor back to its value type so the
+ * store/hook generics can stay discriminated. Avoids the intersection
+ * hack (`SettingBase<T> & { type: AnySetting["type"] }`) that would
+ * widen `type` and let `BooleanSetting` masquerade as `NumberSetting`.
+ */
+export type SettingValue<S extends AnySetting> =
+  S extends SettingBase<infer T> ? T : never;
 
 /**
  * Persistence transport. The renderer wires this to

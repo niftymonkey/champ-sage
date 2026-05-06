@@ -382,8 +382,10 @@ export class ReactiveEngine {
           const lcuGameId =
             typeof rawGameId === "number" && rawGameId > 0
               ? String(rawGameId)
-              : typeof rawGameId === "string" && rawGameId !== "0"
-                ? rawGameId
+              : typeof rawGameId === "string" &&
+                  /^\d+$/.test(rawGameId.trim()) &&
+                  rawGameId.trim() !== "0"
+                ? rawGameId.trim()
                 : null;
 
           const current = liveGameState$.getValue();

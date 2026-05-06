@@ -16,7 +16,13 @@ export function createElectronSettingsIO(): SettingsIO {
       const api = electronApi();
       if (!api) return null;
       try {
-        return await api.invoke("settings:get", key);
+        const raw = await api.invoke("settings:get", key);
+        // main wraps this handler with quietHandler, which resolves
+        // errors as `{ __error: string }` instead of rejecting. Treat
+        // those as a fallback-to-default signal so the descriptor's
+        // parse() doesn't cache the error envelope as the value.
+        if (isErrorEnvelope(raw)) return null;
+        return raw;
       } catch {
         return null;
       }
@@ -26,13 +32,24 @@ export function createElectronSettingsIO(): SettingsIO {
       if (!api) return;
       try {
         await api.invoke("settings:set", key, value);
+        // We intentionally don't surface a write failure: the
+        // in-memory subject already reflects the user's choice and
+        // the store does not retry. Discarding any `{ __error }`
+        // envelope keeps that contract.
       } catch {
-        // Fail silently — the in-memory subject already reflects the
-        // user's choice; they'll get the prior persisted value back
-        // on next launch. The store does not retry.
+        // Same reasoning as above — see the comment in the try block.
       }
     },
   };
+}
+
+function isErrorEnvelope(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "__error" in value &&
+    typeof (value as { __error: unknown }).__error === "string"
+  );
 }
 
 function electronApi(): ElectronInvoke | null {

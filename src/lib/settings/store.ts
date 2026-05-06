@@ -1,5 +1,5 @@
 import { BehaviorSubject, type Observable } from "rxjs";
-import type { Setting, SettingsIO } from "./types";
+import type { AnySetting, SettingValue, SettingsIO } from "./types";
 
 /**
  * Reactive snapshot of every loaded setting's parsed value, keyed by
@@ -18,16 +18,19 @@ export interface SettingsStore {
    */
   loadSettings(
     io: SettingsIO,
-    registered: ReadonlyArray<Setting<unknown>>
+    registered: ReadonlyArray<AnySetting>
   ): Promise<void>;
   /** Sync read — returns descriptor's default until `loadSettings` runs. */
-  getSetting<T>(setting: Setting<T>): T;
+  getSetting<S extends AnySetting>(setting: S): SettingValue<S>;
   /**
    * Persist a new value through IO, then emit. The subject reflects
    * the new value before the IO promise's resolution returns to the
    * caller — readers can rely on `getSetting` immediately afterward.
    */
-  setSetting<T>(setting: Setting<T>, value: T): Promise<void>;
+  setSetting<S extends AnySetting>(
+    setting: S,
+    value: SettingValue<S>
+  ): Promise<void>;
 }
 
 export function createSettingsStore(): SettingsStore {
@@ -53,12 +56,16 @@ export function createSettingsStore(): SettingsStore {
       emit();
     },
 
-    getSetting<T>(setting: Setting<T>): T {
-      if (!values.has(setting.storageKey)) return setting.defaultValue;
-      return values.get(setting.storageKey) as T;
+    getSetting<S extends AnySetting>(setting: S): SettingValue<S> {
+      if (!values.has(setting.storageKey))
+        return setting.defaultValue as SettingValue<S>;
+      return values.get(setting.storageKey) as SettingValue<S>;
     },
 
-    async setSetting<T>(setting: Setting<T>, value: T): Promise<void> {
+    async setSetting<S extends AnySetting>(
+      setting: S,
+      value: SettingValue<S>
+    ): Promise<void> {
       values.set(setting.storageKey, value);
       emit();
       if (io) {

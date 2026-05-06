@@ -9,6 +9,7 @@
  * `src/lib/settings` directly.
  */
 import { BehaviorSubject } from "rxjs";
+import log from "electron-log/renderer";
 import {
   briefPersonality,
   piratePersonality,
@@ -57,5 +58,10 @@ export function setPersonality(p: PersonalityLayer): void {
     (k) => PERSONALITY_BY_ID[k] === p
   );
   if (!id) return;
-  void setSetting(personality, id);
+  setSetting(personality, id).catch((err) => {
+    // Persistence failure shouldn't be silent — the in-memory value
+    // updated, so a discrepancy with disk would surface only on the
+    // next launch. Log so it's at least diagnosable.
+    log.warn("personality-store: persist failed", err);
+  });
 }
