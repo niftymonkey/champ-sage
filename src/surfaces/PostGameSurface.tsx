@@ -334,24 +334,16 @@ function RightColumn({
           records={allRecords}
         />
         <div className={styles.timelineLegend}>
-          <LegendRow
-            color="var(--accent)"
-            label="Plan revisions"
-            count={plans.length}
-          />
-          <LegendRow
-            color="var(--quote)"
-            label="Your voice"
-            count={voices.length}
-          />
+          <LegendRow color="var(--accent)" label="Plans" count={plans.length} />
+          <LegendRow color="var(--quote)" label="Voice" count={voices.length} />
           <LegendRow
             color="var(--fit-strong)"
-            label="Augment picks"
+            label="Augments"
             count={augments.length}
           />
           <LegendRow
             color="var(--fit-excellent)"
-            label="Item recs"
+            label="Items"
             count={itemRecs.length}
           />
         </div>
