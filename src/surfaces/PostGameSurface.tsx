@@ -327,58 +327,58 @@ function RightColumn({
   return (
     <aside className={styles.right}>
       <div className={styles.timelineCard}>
-        <div className={styles.timelineHeader}>
-          <h2 className={styles.timelineTitle}>Coach-side timeline</h2>
-          <span className={styles.timelineCounts}>decisions · questions</span>
-        </div>
-        <div className={styles.timelineHeader}>
-          <span className={styles.timelineSubtitle}>
-            What the coach did, when
-          </span>
-          <span className={styles.timelineCounts}>
-            {plans.length} plan revs · {voices.length} voice turns ·{" "}
-            {augments.length} augments · {itemRecs.length} item recs
-          </span>
-        </div>
+        <h2 className={styles.timelineTitle}>Coach-side timeline</h2>
         <Timeline
           startedAt={startedAt}
           endedAt={endedAt}
           records={allRecords}
         />
         <div className={styles.timelineLegend}>
-          <span>
-            <span
-              className={styles.timelineLegendDot}
-              style={{ background: "var(--accent)" }}
-            />
-            Coach decision
-          </span>
-          <span>
-            <span
-              className={styles.timelineLegendDot}
-              style={{ background: "var(--quote)" }}
-            />
-            Your voice
-          </span>
-          <span>
-            <span
-              className={styles.timelineLegendDot}
-              style={{ background: "var(--fit-strong)" }}
-            />
-            Augment pick
-          </span>
-          <span>
-            <span
-              className={styles.timelineLegendDot}
-              style={{ background: "var(--fit-excellent)" }}
-            />
-            Item rec
-          </span>
+          <LegendRow
+            color="var(--accent)"
+            label="Plan revisions"
+            count={plans.length}
+          />
+          <LegendRow
+            color="var(--quote)"
+            label="Your voice"
+            count={voices.length}
+          />
+          <LegendRow
+            color="var(--fit-strong)"
+            label="Augment picks"
+            count={augments.length}
+          />
+          <LegendRow
+            color="var(--fit-excellent)"
+            label="Item recs"
+            count={itemRecs.length}
+          />
         </div>
       </div>
 
       <FinalBuildSection takeaway={takeaway} finalPlan={finalPlan} />
     </aside>
+  );
+}
+
+function LegendRow({
+  color,
+  label,
+  count,
+}: {
+  color: string;
+  label: string;
+  count: number;
+}) {
+  return (
+    <span>
+      <span
+        className={styles.timelineLegendDot}
+        style={{ background: color }}
+      />
+      {label} <span className={styles.timelineLegendCount}>{count}</span>
+    </span>
   );
 }
 

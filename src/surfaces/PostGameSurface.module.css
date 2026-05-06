@@ -253,12 +253,17 @@
 .timelineLegend {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-5);
+  gap: var(--space-2) var(--space-5);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   letter-spacing: var(--type-meta-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
+}
+
+.timelineLegendCount {
+  color: var(--ink);
+  margin-left: var(--space-1);
 }
 
 .timelineLegendDot {
