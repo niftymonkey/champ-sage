@@ -29,6 +29,7 @@ interface ElectronAPI {
   requestOverlayFlush(label: "badge" | "strip"): void;
   clearOverlays(): void;
   onClearOverlays(callback: () => void): () => void;
+  decisionLogQuery(query: unknown): Promise<unknown>;
 }
 
 declare global {

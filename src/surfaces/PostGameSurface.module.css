@@ -1,0 +1,240 @@
+.surface {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  padding: var(--space-12) var(--space-10);
+  overflow-y: auto;
+  align-items: stretch;
+}
+
+/* ─── Header ─── */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-8);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+
+.headlineAccent {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.statRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  color: var(--ink-2);
+  margin-top: var(--space-2);
+}
+
+.statRow > span {
+  white-space: nowrap;
+}
+
+.resultWin {
+  color: var(--fit-strong);
+  font-weight: 500;
+}
+
+.resultLoss {
+  color: var(--threat-md);
+  font-weight: 500;
+}
+
+/* ─── Section common ─── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.sectionLabel {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.sectionMeta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.sectionTitleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* ─── Plan recap ─── */
+
+.planRecap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-left: 2px solid var(--accent-border);
+  background: var(--bg-2);
+}
+
+.planSummary {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+}
+
+.planBuild {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+/* ─── Conversation list ─── */
+
+.exchanges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.exchange {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--line);
+}
+
+.exchange:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.exchangeQuestion {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--quote);
+  margin: 0;
+}
+
+.exchangeAnswer {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+}
+
+.exchangeMeta {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-top: var(--space-1);
+}
+
+/* ─── Augment list ─── */
+
+.augments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.augmentRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+}
+
+.augmentRow:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.augmentName {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  color: var(--ink);
+}
+
+.augmentReason {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  flex: 1 1 auto;
+  margin: 0 var(--space-4);
+  line-height: 1.5;
+}
+
+.augmentFit {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+}
+
+.fitExceptional {
+  color: var(--fit-excellent);
+}
+
+.fitStrong {
+  color: var(--fit-strong);
+}
+
+.fitSituational {
+  color: var(--fit-ok);
+}
+
+.fitWeak {
+  color: var(--threat-md);
+}
+
+/* ─── Empty state ─── */
+
+.empty {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9375rem;
+  color: var(--ink-3);
+  margin: 0;
+}

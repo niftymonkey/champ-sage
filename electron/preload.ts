@@ -150,4 +150,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("clear-overlays", handler);
     return () => ipcRenderer.removeListener("clear-overlays", handler);
   },
+
+  // Coach decision log query (renderer reads from main's persistent log).
+  // Main owns the writer side via the existing coaching-response IPC tap;
+  // renderer only reads via this typed wrapper around `invoke`.
+  decisionLogQuery: (query: unknown) =>
+    ipcRenderer.invoke("decision-log:query", query),
 });

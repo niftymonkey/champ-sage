@@ -89,6 +89,7 @@ beforeEach(() => {
     resizeStripToContent: vi.fn(),
     setStripSize: vi.fn(),
     resetStripSize: vi.fn(),
+    decisionLogQuery: vi.fn(),
   };
 });
 
@@ -138,6 +139,7 @@ describe("useVoiceInput", () => {
       resizeStripToContent: vi.fn(),
       setStripSize: vi.fn(),
       resetStripSize: vi.fn(),
+      decisionLogQuery: vi.fn(),
     };
   });
 
