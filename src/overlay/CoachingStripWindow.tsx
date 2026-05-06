@@ -6,12 +6,10 @@ import { createSlotResolver } from "./slot/resolver";
 import type {
   ActiveSlotItem,
   PlanRevisionPayload,
-  ThreatSpikePayload,
   VoiceAnswerPayload,
 } from "./slot/types";
 import { VoiceRestingCard } from "./slot/cards/VoiceRestingCard";
 import { PlanRevisionCard } from "./slot/cards/PlanRevisionCard";
-import { ThreatSpikeCard } from "./slot/cards/ThreatSpikeCard";
 import { EmptyPromptCard } from "./slot/cards/EmptyPromptCard";
 import { PUSH_TO_TALK_HOTKEY, formatHotkeyLabel } from "../hooks/useVoiceInput";
 
@@ -60,7 +58,6 @@ export function CoachingStripWindow() {
     () => ({
       voiceAnswer$: new Subject<VoiceAnswerPayload>(),
       planRevision$: new Subject<PlanRevisionPayload>(),
-      threatSpike$: new Subject<ThreatSpikePayload>(),
       // Empty visibility intentionally false in Phase 4. The visibility
       // module exists with full tests; wiring the gameStarted IPC channel
       // from main -> overlay so the empty card can fire is a follow-up.
@@ -71,8 +68,6 @@ export function CoachingStripWindow() {
     []
   );
 
-  // Build the resolver once. Threat-spike stays suppressed by default
-  // until the Riot policy gate (Phase 0) clears.
   const slot$ = useMemo(() => createSlotResolver(inputs), [inputs]);
 
   useEffect(() => {
@@ -294,8 +289,6 @@ function ActiveCard({ item, hotkeyLabel }: ActiveCardProps) {
       return <VoiceRestingCard payload={item.payload} pinned={item.pinned} />;
     case "plan-revision":
       return <PlanRevisionCard payload={item.payload} />;
-    case "threat-spike":
-      return <ThreatSpikeCard payload={item.payload} />;
     case "empty":
       return <EmptyPromptCard hotkeyLabel={hotkeyLabel} />;
   }

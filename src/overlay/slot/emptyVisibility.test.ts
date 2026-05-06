@@ -7,7 +7,6 @@ interface Harness {
   pttPressed$: Subject<void>;
   voiceAnswer$: Subject<void>;
   planRevision$: Subject<void>;
-  threatSpike$: Subject<void>;
   hasLearnedPtt: ReturnType<typeof vi.fn>;
   emissions: boolean[];
   unsubscribe: () => void;
@@ -20,7 +19,6 @@ function buildHarness(
   const pttPressed$ = new Subject<void>();
   const voiceAnswer$ = new Subject<void>();
   const planRevision$ = new Subject<void>();
-  const threatSpike$ = new Subject<void>();
   const hasLearnedPtt = vi.fn(() => false);
 
   const visible$ = createEmptyVisibility(
@@ -29,7 +27,6 @@ function buildHarness(
       pttPressed$,
       voiceAnswer$,
       planRevision$,
-      threatSpike$,
       hasLearnedPtt,
     },
     opts
@@ -43,7 +40,6 @@ function buildHarness(
     pttPressed$,
     voiceAnswer$,
     planRevision$,
-    threatSpike$,
     hasLearnedPtt,
     emissions,
     unsubscribe: () => sub.unsubscribe(),

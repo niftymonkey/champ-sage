@@ -2,7 +2,6 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { VoiceRestingCard } from "./VoiceRestingCard";
 import { PlanRevisionCard } from "./PlanRevisionCard";
-import { ThreatSpikeCard } from "./ThreatSpikeCard";
 import { EmptyPromptCard } from "./EmptyPromptCard";
 
 describe("VoiceRestingCard", () => {
@@ -63,23 +62,6 @@ describe("PlanRevisionCard", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /tap to ask why/i }));
     expect(onAskWhy).toHaveBeenCalledOnce();
-  });
-});
-
-describe("ThreatSpikeCard", () => {
-  it("front-loads the threat noun and renders the reason", () => {
-    render(
-      <ThreatSpikeCard
-        payload={{
-          threat: "Veigar ult",
-          reason: "stay outside cage range",
-          timestamp: 0,
-        }}
-      />
-    );
-    expect(screen.getByText("Veigar ult")).toBeInTheDocument();
-    expect(screen.getByText(/stay outside cage range/)).toBeInTheDocument();
-    expect(screen.getByText(/threat/i)).toBeInTheDocument();
   });
 });
 

@@ -5,7 +5,6 @@ import type {
   ItemRecDecision,
   PlanDecision,
   TakeawayDecision,
-  ThreatSpikeDecision,
   VoiceDecision,
 } from "./types";
 
@@ -66,20 +65,6 @@ function itemRec(overrides: Partial<ItemRecDecision> = {}): ItemRecDecision {
   };
 }
 
-function threat(
-  overrides: Partial<ThreatSpikeDecision> = {}
-): ThreatSpikeDecision {
-  return {
-    ...baseEnvelope,
-    id: "t1",
-    sentAt: 5_000,
-    source: "threat-spike",
-    threat: "Veigar ult",
-    reason: "stay outside cage range",
-    ...overrides,
-  };
-}
-
 function takeaway(overrides: Partial<TakeawayDecision> = {}): TakeawayDecision {
   return {
     ...baseEnvelope,
@@ -112,7 +97,6 @@ describe("summarizeGame", () => {
     expect(s.byKind.plan).toEqual([]);
     expect(s.byKind.augment).toEqual([]);
     expect(s.byKind.itemRec).toEqual([]);
-    expect(s.byKind.threatSpike).toEqual([]);
     expect(s.finalPlan).toBeNull();
     expect(s.retriedCount).toBe(0);
     expect(s.totalCount).toBe(0);
@@ -172,8 +156,8 @@ describe("summarizeGame", () => {
   });
 
   it("totalCount equals records.length", () => {
-    const s = summarizeGame([voice(), plan(), augment(), itemRec(), threat()]);
-    expect(s.totalCount).toBe(5);
+    const s = summarizeGame([voice(), plan(), augment(), itemRec()]);
+    expect(s.totalCount).toBe(4);
   });
 
   it("buckets every source variant into the right kind list", () => {
@@ -182,14 +166,12 @@ describe("summarizeGame", () => {
       plan(),
       augment(),
       itemRec(),
-      threat(),
       takeaway(),
     ]);
     expect(s.byKind.voice).toHaveLength(1);
     expect(s.byKind.plan).toHaveLength(1);
     expect(s.byKind.augment).toHaveLength(1);
     expect(s.byKind.itemRec).toHaveLength(1);
-    expect(s.byKind.threatSpike).toHaveLength(1);
     expect(s.byKind.takeaway).toHaveLength(1);
   });
 

@@ -5,7 +5,6 @@ import type {
   ItemRecDecision,
   PlanDecision,
   TakeawayDecision,
-  ThreatSpikeDecision,
   VoiceDecision,
 } from "./types";
 
@@ -25,7 +24,6 @@ export function summarizeGame(records: DecisionRecord[]): GameSummary {
   const plan: PlanDecision[] = [];
   const augment: AugmentDecision[] = [];
   const itemRec: ItemRecDecision[] = [];
-  const threatSpike: ThreatSpikeDecision[] = [];
   const takeaway: TakeawayDecision[] = [];
 
   let startedAt = records[0].sentAt;
@@ -53,9 +51,6 @@ export function summarizeGame(records: DecisionRecord[]): GameSummary {
       case "item-rec":
         itemRec.push(r);
         break;
-      case "threat-spike":
-        threatSpike.push(r);
-        break;
       case "takeaway":
         takeaway.push(r);
         if (latestTakeaway === null || r.sentAt > latestTakeaway.sentAt) {
@@ -71,7 +66,6 @@ export function summarizeGame(records: DecisionRecord[]): GameSummary {
   plan.sort(bySentAt);
   augment.sort(bySentAt);
   itemRec.sort(bySentAt);
-  threatSpike.sort(bySentAt);
   takeaway.sort(bySentAt);
 
   return {
@@ -79,7 +73,7 @@ export function summarizeGame(records: DecisionRecord[]): GameSummary {
     gameMode: records[0].gameMode,
     startedAt,
     endedAt,
-    byKind: { voice, plan, augment, itemRec, threatSpike, takeaway },
+    byKind: { voice, plan, augment, itemRec, takeaway },
     finalPlan,
     takeaway: latestTakeaway,
     retriedCount,
@@ -98,7 +92,6 @@ function emptySummary(): GameSummary {
       plan: [],
       augment: [],
       itemRec: [],
-      threatSpike: [],
       takeaway: [],
     },
     finalPlan: null,

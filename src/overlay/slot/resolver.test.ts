@@ -4,14 +4,12 @@ import { createSlotResolver } from "./resolver";
 import type {
   ActiveSlotItem,
   PlanRevisionPayload,
-  ThreatSpikePayload,
   VoiceAnswerPayload,
 } from "./types";
 
 interface Harness {
   voiceAnswer$: Subject<VoiceAnswerPayload>;
   planRevision$: Subject<PlanRevisionPayload>;
-  threatSpike$: Subject<ThreatSpikePayload>;
   emptyVisible$: BehaviorSubject<boolean>;
   dismiss$: Subject<void>;
   pin$: Subject<void>;
@@ -24,7 +22,6 @@ function buildHarness(
 ): Harness {
   const voiceAnswer$ = new Subject<VoiceAnswerPayload>();
   const planRevision$ = new Subject<PlanRevisionPayload>();
-  const threatSpike$ = new Subject<ThreatSpikePayload>();
   const emptyVisible$ = new BehaviorSubject<boolean>(false);
   const dismiss$ = new Subject<void>();
   const pin$ = new Subject<void>();
@@ -33,7 +30,6 @@ function buildHarness(
     {
       voiceAnswer$,
       planRevision$,
-      threatSpike$,
       emptyVisible$,
       dismiss$,
       pin$,
@@ -47,7 +43,6 @@ function buildHarness(
   return {
     voiceAnswer$,
     planRevision$,
-    threatSpike$,
     emptyVisible$,
     dismiss$,
     pin$,
@@ -58,7 +53,6 @@ function buildHarness(
 
 const VOICE_DWELL_MS = 30_000;
 const PLAN_DWELL_MS = 8_000;
-const THREAT_DWELL_MS = 6_000;
 
 describe("createSlotResolver", () => {
   beforeEach(() => {
@@ -195,42 +189,6 @@ describe("createSlotResolver", () => {
       // After plan-rev expires
       vi.advanceTimersByTime(PLAN_DWELL_MS + 100);
       expect(h.emissions[h.emissions.length - 1]?.kind).toBe("voice-resting");
-      h.unsubscribe();
-    });
-  });
-
-  describe("threat-spike", () => {
-    it("is suppressed by default while the Riot policy gate is open", () => {
-      // suppressThreatSpike defaults to true. Threat events fire but never
-      // surface to the slot.
-      const h = buildHarness();
-      h.threatSpike$.next({
-        threat: "Veigar ult",
-        reason: "stay back",
-        timestamp: 0,
-      });
-      expect(h.emissions[h.emissions.length - 1]).toBeNull();
-      h.unsubscribe();
-    });
-
-    it("emits threat-spike when suppression is disabled, replacing all lower priorities", () => {
-      const h = buildHarness({ suppressThreatSpike: false });
-      h.voiceAnswer$.next({ question: "?", answer: "!", timestamp: 0 });
-      h.planRevision$.next({ summary: "pivot", rev: 2, timestamp: 1 });
-      h.threatSpike$.next({
-        threat: "Veigar ult",
-        reason: "stay back",
-        timestamp: 2,
-      });
-      expect(h.emissions[h.emissions.length - 1]?.kind).toBe("threat-spike");
-      h.unsubscribe();
-    });
-
-    it("auto-expires after the 6s dwell when enabled", () => {
-      const h = buildHarness({ suppressThreatSpike: false });
-      h.threatSpike$.next({ threat: "x", reason: "y", timestamp: 0 });
-      vi.advanceTimersByTime(THREAT_DWELL_MS + 100);
-      expect(h.emissions[h.emissions.length - 1]).toBeNull();
       h.unsubscribe();
     });
   });

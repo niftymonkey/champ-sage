@@ -16,7 +16,6 @@ export interface EmptyVisibilityInputs {
    *  >5min silence timer. */
   voiceAnswer$: Observable<void>;
   planRevision$: Observable<void>;
-  threatSpike$: Observable<void>;
   /**
    * Lifetime "has the player ever successfully used voice Q&A" flag. When
    * this returns true, the >5min silence re-show is disabled - the player
@@ -44,7 +43,7 @@ const DEFAULT_SILENCE_MS = 5 * 60_000;
  *     player has not yet learned the push-to-talk gesture.
  *   - Hides immediately on PTT press; the first press in a session
  *     disables further auto-show for that session.
- *   - Any coach activity (voice answer, plan revision, threat spike) hides
+ *   - Any coach activity (voice answer, plan revision) hides
  *     the empty card and resets the silence timer.
  */
 export function createEmptyVisibility(
@@ -129,7 +128,6 @@ export function createEmptyVisibility(
     };
     subs.add(inputs.voiceAnswer$.subscribe(onActivity));
     subs.add(inputs.planRevision$.subscribe(onActivity));
-    subs.add(inputs.threatSpike$.subscribe(onActivity));
 
     return () => {
       cancelShowTimer();

@@ -3,7 +3,6 @@ import { distinctUntilChanged } from "rxjs/operators";
 import type {
   ActiveSlotItem,
   PlanRevisionPayload,
-  ThreatSpikePayload,
   VoiceAnswerPayload,
 } from "./types";
 import { SLOT_PRIORITY } from "./types";
@@ -19,9 +18,6 @@ export interface SlotResolverInputs {
   voiceAnswer$: Observable<VoiceAnswerPayload>;
   /** Coach revised the build plan mid-game. */
   planRevision$: Observable<PlanRevisionPayload>;
-  /** Threat-spike detector fired. Phase 4 ships with this typed but
-   *  suppressed at runtime per the Phase 0 policy gate. */
-  threatSpike$: Observable<ThreatSpikePayload>;
   /** Whether the empty/prompt body should currently be visible. */
   emptyVisible$: Observable<boolean>;
   /** User clicked the active card to dismiss it. */
@@ -31,25 +27,13 @@ export interface SlotResolverInputs {
 }
 
 export interface SlotResolverOptions {
-  /**
-   * When true, the threat-spike variant is suppressed even if its input
-   * stream emits. Default true while the Riot policy gate is open. Setting
-   * false unlocks priority=3 without any other code changes.
-   */
-  suppressThreatSpike?: boolean;
   /** Per-state dwell durations. Override only in tests. */
-  dwellMs?: Partial<
-    Record<"voice-resting" | "plan-revision" | "threat-spike", number>
-  >;
+  dwellMs?: Partial<Record<"voice-resting" | "plan-revision", number>>;
 }
 
-const DEFAULT_DWELL_MS: Record<
-  "voice-resting" | "plan-revision" | "threat-spike",
-  number
-> = {
+const DEFAULT_DWELL_MS: Record<"voice-resting" | "plan-revision", number> = {
   "voice-resting": 30_000,
   "plan-revision": 8_000,
-  "threat-spike": 6_000,
 };
 
 /**
@@ -60,16 +44,15 @@ const DEFAULT_DWELL_MS: Record<
 type ResolverState =
   | { kind: "idle" }
   | { kind: "voice-resting"; payload: VoiceAnswerPayload; pinned: boolean }
-  | { kind: "plan-revision"; payload: PlanRevisionPayload }
-  | { kind: "threat-spike"; payload: ThreatSpikePayload };
+  | { kind: "plan-revision"; payload: PlanRevisionPayload };
 
 /**
  * Build the activeSlot$ observable from the input streams.
  *
- * The resolver is a small reducer over four kinds of events (voice answer
- * arrived, plan revision arrived, threat-spike arrived, dismiss/pin). Per-
- * state dwell timers are scheduled with setTimeout against the host clock;
- * tests use vi.useFakeTimers to drive them.
+ * The resolver is a small reducer over events (voice answer arrived, plan
+ * revision arrived, dismiss/pin). Per-state dwell timers are scheduled
+ * with setTimeout against the host clock; tests use vi.useFakeTimers to
+ * drive them.
  *
  * Invariants:
  *   - Higher-priority arrivals replace lower-priority active cards.
@@ -84,7 +67,6 @@ export function createSlotResolver(
   options: SlotResolverOptions = {}
 ): Observable<ActiveSlotItem | null> {
   const dwell = { ...DEFAULT_DWELL_MS, ...(options.dwellMs ?? {}) };
-  const suppressThreat = options.suppressThreatSpike ?? true;
 
   return new Observable<ActiveSlotItem | null>((subscriber) => {
     let state: ResolverState = { kind: "idle" };
@@ -111,9 +93,7 @@ export function createSlotResolver(
                 payload: state.payload,
                 pinned: state.pinned,
               }
-            : state.kind === "plan-revision"
-              ? { kind: "plan-revision", payload: state.payload }
-              : { kind: "threat-spike", payload: state.payload };
+            : { kind: "plan-revision", payload: state.payload };
       subscriber.next(item);
     };
 
@@ -173,18 +153,6 @@ export function createSlotResolver(
         if (incomingPriority >= currentPriority) {
           enter({ kind: "plan-revision", payload });
         }
-        // Plan-revision arriving under threat-spike is dropped today.
-        // Spec calls for queueing; threat-spike is deferred so this is
-        // unreachable in practice. Revisit when threat-spike unlocks.
-      })
-    );
-
-    subs.add(
-      inputs.threatSpike$.subscribe((payload) => {
-        if (suppressThreat) return;
-        // Threat-spike is the highest priority; always replaces.
-        queuedVoice = null;
-        enter({ kind: "threat-spike", payload });
       })
     );
 
