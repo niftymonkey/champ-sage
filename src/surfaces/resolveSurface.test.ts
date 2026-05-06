@@ -11,6 +11,7 @@ describe("resolveSurface", () => {
           phase: "InProgress",
           hasActivePlayer: true,
           manualOverride: "settings",
+          hasSeenInGamePhase: true,
         })
       ).toBe("settings");
     });
@@ -23,6 +24,7 @@ describe("resolveSurface", () => {
           phase: null,
           hasActivePlayer: false,
           manualOverride: null,
+          hasSeenInGamePhase: true,
         })
       ).toBe("idle");
     });
@@ -39,6 +41,7 @@ describe("resolveSurface", () => {
             phase,
             hasActivePlayer: false,
             manualOverride: null,
+            hasSeenInGamePhase: true,
           })
         ).toBe("idle");
       }
@@ -50,6 +53,7 @@ describe("resolveSurface", () => {
           phase: "ChampSelect",
           hasActivePlayer: false,
           manualOverride: null,
+          hasSeenInGamePhase: true,
         })
       ).toBe("champ-select");
     });
@@ -63,6 +67,7 @@ describe("resolveSurface", () => {
           phase: "GameStart",
           hasActivePlayer: false,
           manualOverride: null,
+          hasSeenInGamePhase: true,
         })
       ).toBe("in-game");
       expect(
@@ -70,6 +75,7 @@ describe("resolveSurface", () => {
           phase: "InProgress",
           hasActivePlayer: true,
           manualOverride: null,
+          hasSeenInGamePhase: true,
         })
       ).toBe("in-game");
     });
@@ -85,6 +91,7 @@ describe("resolveSurface", () => {
             phase,
             hasActivePlayer: true,
             manualOverride: null,
+            hasSeenInGamePhase: true,
           })
         ).toBe("post-game");
       }
@@ -96,8 +103,37 @@ describe("resolveSurface", () => {
           phase: "TerminatedInError",
           hasActivePlayer: false,
           manualOverride: null,
+          hasSeenInGamePhase: true,
         })
       ).toBe("idle");
+    });
+  });
+
+  describe("fresh-launch behaviour", () => {
+    it("falls back to idle on EndOfGame when we have not yet seen an in-game phase", () => {
+      // Fresh app launch finds the LCU still reporting EndOfGame from the
+      // previous match. The user expects Home, not History.
+      expect(
+        resolveSurface({
+          phase: "EndOfGame",
+          hasActivePlayer: false,
+          manualOverride: null,
+          hasSeenInGamePhase: false,
+        })
+      ).toBe("idle");
+    });
+
+    it("routes to post-game once an in-game phase has been seen this session", () => {
+      // Same EndOfGame phase, but we observed an InProgress earlier — the
+      // user did finish a match this session, so the post-game view applies.
+      expect(
+        resolveSurface({
+          phase: "EndOfGame",
+          hasActivePlayer: false,
+          manualOverride: null,
+          hasSeenInGamePhase: true,
+        })
+      ).toBe("post-game");
     });
   });
 
@@ -110,6 +146,7 @@ describe("resolveSurface", () => {
           phase: null,
           hasActivePlayer: true,
           manualOverride: null,
+          hasSeenInGamePhase: true,
         })
       ).toBe("in-game");
     });

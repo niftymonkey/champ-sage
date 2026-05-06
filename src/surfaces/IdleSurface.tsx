@@ -96,13 +96,6 @@ export function IdleSurface({
             }
           />
         </div>
-
-        <div>
-          <div className={styles.sectionLabel}>Pinned for next time</div>
-          <div className={styles.notes}>
-            <PlaceholderNote body="Pinned notes from past games will live here once the coach-decision log is wired (Phase 5)." />
-          </div>
-        </div>
       </section>
 
       <aside className={styles.right}>
@@ -210,15 +203,6 @@ function StatBox({ label, value, delta }: StatBoxProps) {
       <div className={styles.statLabel}>{label}</div>
       <div className={styles.statValue}>{value}</div>
       <div className={styles.statDelta}>{delta}</div>
-    </div>
-  );
-}
-
-function PlaceholderNote({ body }: { body: string }) {
-  return (
-    <div className={styles.note}>
-      <p className={styles.noteBody}>{body}</p>
-      <span className={styles.noteMeta}>From — · waiting for first game</span>
     </div>
   );
 }

@@ -64,6 +64,15 @@
   border-bottom-color: var(--accent);
 }
 
+.tabDisabled {
+  color: var(--ink-4);
+  cursor: not-allowed;
+}
+
+.tabDisabled:hover {
+  color: var(--ink-4);
+}
+
 .right {
   justify-self: end;
   display: flex;

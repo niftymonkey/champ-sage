@@ -11,14 +11,18 @@ export function GamePlanPanel() {
 
   return (
     <div className={styles.panel}>
-      <div className={styles.title}>
-        <span className={styles.titleDot} />
-        Game Plan
+      <div className={styles.heading}>
+        <h2 className={styles.headingTitle}>Game plan</h2>
+        {plan ? (
+          <span className={styles.headingMeta}>
+            updated {formatGameTime(plan.updatedAt)}
+          </span>
+        ) : null}
       </div>
       {plan ? (
         <>
           <div className={styles.summary}>{plan.summary}</div>
-          <div className={styles.buildTitle}>Build Path</div>
+          <div className={styles.buildTitle}>Build path</div>
           <div className={styles.buildList}>
             {plan.buildPath.map((item, i) => (
               <BuildStep
@@ -28,9 +32,6 @@ export function GamePlanPanel() {
                 owned={ownedNames.has(item.name.toLowerCase())}
               />
             ))}
-          </div>
-          <div className={styles.updated}>
-            Updated at {formatGameTime(plan.updatedAt)}
           </div>
         </>
       ) : (

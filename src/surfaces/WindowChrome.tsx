@@ -20,6 +20,12 @@ interface WindowChromeProps {
   statusContent?: ReactNode;
   /** Optional eyebrow text immediately after the wordmark, e.g. "WELCOME BACK · 17:42". */
   eyebrow?: string;
+  /**
+   * True when there is no live game (no active player, no champ-select).
+   * IN GAME becomes a no-op until something is happening; the visual
+   * affordance also dims so the player knows the tab isn't useful.
+   */
+  inGameDisabled?: boolean;
 }
 
 export function WindowChrome({
@@ -27,6 +33,7 @@ export function WindowChrome({
   onNavigate,
   statusContent,
   eyebrow,
+  inGameDisabled = false,
 }: WindowChromeProps) {
   return (
     <header className={styles.bar}>
@@ -37,11 +44,13 @@ export function WindowChrome({
       <nav className={styles.nav}>
         {TABS.map((tab) => {
           const active = isTabActive(tab.id, surface);
+          const disabled = tab.id === "in-game" && inGameDisabled;
           return (
             <button
               key={tab.id}
               type="button"
-              className={`${styles.tab} ${active ? styles.tabActive : ""}`}
+              disabled={disabled}
+              className={`${styles.tab} ${active ? styles.tabActive : ""} ${disabled ? styles.tabDisabled : ""}`}
               onClick={() => onNavigate(tab.id)}
             >
               {tab.label}

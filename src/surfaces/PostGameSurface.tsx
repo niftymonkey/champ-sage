@@ -79,8 +79,6 @@ export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
       <div className={styles.surface}>
         <section className={styles.left}>
           <div className={styles.eyebrow}>
-            <span>04</span>
-            <span>·</span>
             <span>Post-game</span>
           </div>
           <h1 className={styles.headline}>{headline}</h1>
@@ -175,8 +173,6 @@ function LeftColumn({
   return (
     <section className={styles.left}>
       <div className={styles.eyebrow}>
-        <span>04</span>
-        <span>·</span>
         <span>Post-game</span>
         {result !== null ? (
           <>

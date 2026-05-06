@@ -31,6 +31,14 @@ interface ResolveSurfaceInput {
    * if you want auto-routing to resume.
    */
   manualOverride: Surface | null;
+  /**
+   * True once the renderer has observed at least one in-game-ish phase
+   * (ChampSelect, GameStart, InProgress) since launch. Post-game routing
+   * is gated on this so a fresh app launch into a stale `EndOfGame` phase
+   * (the LCU still reports the last match's wind-down) doesn't drop the
+   * user on History when they expect Home.
+   */
+  hasSeenInGamePhase: boolean;
 }
 
 /**
@@ -43,6 +51,8 @@ interface ResolveSurfaceInput {
  *   ChampSelect                                                  -> champ-select
  *   GameStart / InProgress                                       -> in-game
  *   PreEndOfGame / EndOfGame / WaitingForStats                   -> post-game
+ *     (only after we've seen an in-game-ish phase this session;
+ *      otherwise treated as idle so a fresh launch lands at Home)
  *
  * The simulator can inject an active player without emitting LCU phase
  * events, so a non-null `hasActivePlayer` short-circuits to in-game.
@@ -59,7 +69,7 @@ export function resolveSurface(input: ResolveSurfaceInput): Surface {
     case "PreEndOfGame":
     case "EndOfGame":
     case "WaitingForStats":
-      return "post-game";
+      return input.hasSeenInGamePhase ? "post-game" : "idle";
     default:
       // None, Lobby, Matchmaking, ReadyCheck, TerminatedInError, or null.
       // Fall through to the simulator escape hatch.

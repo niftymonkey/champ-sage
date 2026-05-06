@@ -287,6 +287,7 @@ function App() {
         <WindowChrome
           surface={surface}
           onNavigate={navigate}
+          inGameDisabled={!liveGame.activePlayer && lastPhase !== "ChampSelect"}
           statusContent={
             <ChromeStatus
               isRecording={voice.isRecording}

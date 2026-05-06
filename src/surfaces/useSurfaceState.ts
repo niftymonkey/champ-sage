@@ -26,10 +26,25 @@ export function useSurfaceState(): UseSurfaceStateResult {
 
   const [override, setOverride] = useState<Surface | null>(null);
 
+  // Latches once a real in-game-ish phase has been seen this session.
+  // Until then, post-game phases auto-route to idle so a fresh launch
+  // doesn't strand the user on History when the LCU is still reporting
+  // EndOfGame from the previous match.
+  const seenInGameRef = useRef(false);
+  if (
+    lastPhase === "ChampSelect" ||
+    lastPhase === "GameStart" ||
+    lastPhase === "InProgress" ||
+    hasActivePlayer
+  ) {
+    seenInGameRef.current = true;
+  }
+
   const autoSurface = resolveSurface({
     phase: lastPhase,
     hasActivePlayer,
     manualOverride: null,
+    hasSeenInGamePhase: seenInGameRef.current,
   });
 
   // Track the prior auto-resolved surface so we can detect a "real" change.
@@ -48,6 +63,7 @@ export function useSurfaceState(): UseSurfaceStateResult {
     phase: lastPhase,
     hasActivePlayer,
     manualOverride: override,
+    hasSeenInGamePhase: seenInGameRef.current,
   });
 
   return { surface, navigate: setOverride };
