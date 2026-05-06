@@ -153,7 +153,14 @@
 
 .recentRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) auto auto auto auto;
+  /* Fixed-width tail columns so champion / mode / result / KDA / ago
+     line up vertically across rows. Champion takes whatever's left. */
+  grid-template-columns:
+    minmax(0, 1fr)
+    5rem
+    3.5rem
+    6rem
+    4.5rem;
   gap: var(--space-3);
   align-items: baseline;
   padding: var(--space-2) 0;
@@ -180,6 +187,7 @@
   letter-spacing: var(--type-meta-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
+  text-align: right;
 }
 
 .recentResult {
@@ -187,6 +195,7 @@
   font-size: 0.7rem;
   letter-spacing: var(--type-meta-tracking);
   text-transform: uppercase;
+  text-align: right;
 }
 
 .recentResultLoss {
@@ -194,13 +203,14 @@
 }
 
 .recentResultWin {
-  color: var(--ink);
+  color: var(--fit-strong);
 }
 
 .recentKda {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   color: var(--ink-2);
+  text-align: right;
 }
 
 .recentAgo {
