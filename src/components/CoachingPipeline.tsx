@@ -104,7 +104,13 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     lastInGameStateRef.current = liveGameState;
   }
   gameDataRef.current = gameData;
-  modeRef.current = mode;
+  // Only persist non-null mode; the game-end effect needs the last
+  // in-game mode and `mode` flips to null when activePlayer becomes
+  // null (the post-game render no longer satisfies detectMode's
+  // "connected" precondition).
+  if (mode) {
+    modeRef.current = mode;
+  }
   enemyStatsRef.current = enemyStats;
   chosenAugmentsRef.current = chosenAugments;
 
@@ -227,10 +233,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       (e) => e.source === "voice"
     ).length;
     const hasActivity = totalDecisions > 0 || gamePlanRevRef.current > 0;
+    const lastInGameMode = modeRef.current;
     proactiveLog.info(
-      `Takeaway gate — apiKey=${!!apiKey} mode=${!!mode} activePlayer=${!!lastState.activePlayer} totalDecisions=${totalDecisions} planRevs=${gamePlanRevRef.current} voiceTurns=${trueVoiceCount} itemRecs=${itemRecCount}`
+      `Takeaway gate — apiKey=${!!apiKey} mode=${!!lastInGameMode} activePlayer=${!!lastState.activePlayer} totalDecisions=${totalDecisions} planRevs=${gamePlanRevRef.current} voiceTurns=${trueVoiceCount} itemRecs=${itemRecCount}`
     );
-    if (apiKey && mode && lastState.activePlayer && hasActivity) {
+    if (apiKey && lastInGameMode && lastState.activePlayer && hasActivity) {
       const championName =
         activeInfo?.championName ??
         lastState.activePlayer?.championName ??
@@ -277,7 +284,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         gameTime: lastState.gameTime,
       };
       const postGameContext = buildBaseContext({
-        mode,
+        mode: lastInGameMode,
         gameData: gameDataRef.current,
         gameState: postGameState,
       });

@@ -1,5 +1,7 @@
 import { Fragment, useMemo } from "react";
 import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
+import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
+import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type {
   AugmentDecision,
   DecisionRecord,
@@ -10,6 +12,12 @@ import type {
 import styles from "./PostGameSurface.module.css";
 
 const LAST_GAME_QUERY = { kind: "last-game" } as const;
+/**
+ * How long after the game ends to keep showing "writing the recap" before
+ * switching to a factual fallback headline. Matches the typical LLM
+ * post-game-takeaway latency (a couple of seconds) plus generous slack.
+ */
+const RECAP_PENDING_WINDOW_MS = 30_000;
 
 /**
  * Post-game surface — render the just-finished game from the decision log.
@@ -24,6 +32,7 @@ const LAST_GAME_QUERY = { kind: "last-game" } as const;
  */
 export function PostGameSurface() {
   const { summary, loading, error } = useDecisionLogQuery(LAST_GAME_QUERY);
+  const snapshot = useLastGameSnapshot();
 
   if (!loading && summary.totalCount === 0) {
     return (
@@ -51,6 +60,8 @@ export function PostGameSurface() {
         planRevisions={summary.byKind.plan.length}
         finalPlan={summary.finalPlan}
         voices={summary.byKind.voice}
+        snapshot={snapshot}
+        endedAt={summary.endedAt}
         error={error}
       />
       <RightColumn
@@ -78,6 +89,8 @@ interface LeftColumnProps {
   planRevisions: number;
   finalPlan: PlanDecision | null;
   voices: VoiceDecision[];
+  snapshot: LastGameSnapshot | null;
+  endedAt: number | null;
   error: Error | null;
 }
 
@@ -86,13 +99,26 @@ function LeftColumn({
   planRevisions,
   finalPlan,
   voices,
+  snapshot,
+  endedAt,
   error,
 }: LeftColumnProps) {
-  const champion = takeaway?.champion ?? "—";
-  const result = takeaway?.isWin ? "victory" : takeaway ? "defeat" : "—";
-  const resultClass = takeaway?.isWin
+  // Fall back to lastGameSnapshot when the takeaway hasn't arrived (or
+  // never will). The snapshot is captured at game-end with eogStats in
+  // scope so champion + result are reliable even without the LLM pass.
+  const champion = takeaway?.champion ?? snapshot?.championName ?? null;
+  const isWin = takeaway?.isWin ?? snapshot?.isWin ?? null;
+  const gameMode = takeaway?.gameMode ?? snapshot?.gameMode ?? null;
+  const result = isWin === null ? null : isWin ? "victory" : "defeat";
+  const resultClass = isWin
     ? styles.eyebrowResultWin
     : styles.eyebrowResultLoss;
+
+  // The takeaway can take a few seconds to land. Show the "writing"
+  // copy only inside that window; after that, switch to a factual
+  // fallback so the page doesn't claim to be in flight forever.
+  const recapStillPending =
+    endedAt !== null && Date.now() - endedAt < RECAP_PENDING_WINDOW_MS;
 
   return (
     <section className={styles.left}>
@@ -100,12 +126,16 @@ function LeftColumn({
         <span>04</span>
         <span>·</span>
         <span>Post-game</span>
-        {takeaway ? (
+        {result !== null ? (
           <>
             <span>·</span>
             <span className={resultClass}>{result.toUpperCase()}</span>
+          </>
+        ) : null}
+        {gameMode ? (
+          <>
             <span>·</span>
-            <span>{takeaway.gameMode || "—"}</span>
+            <span>{gameMode}</span>
           </>
         ) : null}
       </div>
@@ -116,23 +146,47 @@ function LeftColumn({
             Three takeaways from{" "}
             <span className={styles.headlineAccent}>{champion}</span>.
           </h1>
+        ) : champion ? (
+          <h1 className={styles.headline}>
+            Match recap for{" "}
+            <span className={styles.headlineAccent}>{champion}</span>.
+          </h1>
         ) : (
-          <h1 className={styles.headline}>The coach is writing the recap.</h1>
+          <h1 className={styles.headline}>Match recap.</h1>
         )}
-        {takeaway ? <Narrative text={takeaway.narrative} /> : null}
+        {takeaway ? (
+          <Narrative text={takeaway.narrative} />
+        ) : recapStillPending ? (
+          <p className={styles.narrativePending}>
+            The coach is writing the recap…
+          </p>
+        ) : (
+          <p className={styles.narrativePending}>
+            No coach narrative for this match — the structured stats and
+            timeline below still capture what happened.
+          </p>
+        )}
       </div>
 
       <div className={styles.statTrio}>
         <StatBox
           label="Length"
-          value={takeaway ? formatDuration(takeaway.duration) : "—"}
+          value={
+            takeaway
+              ? formatDuration(takeaway.duration)
+              : snapshot
+                ? formatDuration(snapshot.gameTime)
+                : "—"
+          }
         />
         <StatBox
           label="KDA"
           value={
             takeaway
               ? `${takeaway.kills} / ${takeaway.deaths} / ${takeaway.assists}`
-              : "—"
+              : snapshot
+                ? `${snapshot.kills} / ${snapshot.deaths} / ${snapshot.assists}`
+                : "—"
           }
         />
         <StatBox
@@ -173,17 +227,23 @@ function BuildSection({
   planRevisions,
   finalPlan,
 }: BuildSectionProps) {
-  const matched = takeaway?.matchedItemCount ?? 0;
   const total =
     takeaway?.recommendedBuild.length ?? finalPlan?.buildPath.length ?? 0;
-  const summaryText =
-    !takeaway || total === 0
-      ? "No coach-recommended build was generated for this match."
-      : matched === total
+  let summaryText: string;
+  if (total === 0) {
+    summaryText = "No coach-recommended build was generated for this match.";
+  } else if (takeaway) {
+    const matched = takeaway.matchedItemCount;
+    summaryText =
+      matched === total
         ? `You bought every item the coach recommended (${matched} of ${total}).`
         : matched === 0
           ? `None of the ${total} coach-recommended items made it into the final build.`
           : `You bought ${matched} of ${total} items the coach recommended.`;
+  } else {
+    const items = finalPlan?.buildPath.map((b) => b.name).join(" → ") ?? "";
+    summaryText = `Coach recommended a ${total}-item build: ${items}. Final build comparison lands when the takeaway arrives.`;
+  }
 
   return (
     <div className={styles.buildSection}>
