@@ -1,0 +1,116 @@
+/*
+ * Champ Sage v16 design tokens - Oxblood Two-Color palette.
+ *
+ * Source of truth:
+ *   plans/champ-sage/design_handoff_champ_sage_redesign/README.md
+ *
+ * Tokens are split into three families:
+ *   - Color: locked palette per the design handoff.
+ *   - Typography: Fraunces (display + player voice italic), Inter (UI body),
+ *     JetBrains Mono (numbers, eyebrows, key glyphs).
+ *   - Layout: spacing scale, radii, motion. Match the visual rhythm rather
+ *     than measuring single pixels.
+ */
+
+:root {
+  /* ─── Surfaces ─── */
+  --bg: #111315;
+  --bg-2: #181a1d;
+  --line: #24272b;
+  --line-2: #353941;
+
+  /* ─── Text ─── */
+  --ink: #e8eaee;
+  --ink-2: #a3a8b0;
+  --ink-3: #6c717a;
+  --ink-4: #404550;
+
+  /* ─── Primary (oxblood) - coach voice, recommended items, primary CTAs ─── */
+  --accent: #b04a4e;
+  --accent-2: #d6797b;
+  --accent-soft: rgba(176, 74, 78, 0.14);
+  --accent-border: rgba(176, 74, 78, 0.38);
+
+  /* ─── Secondary (deep teal) - player voice italic, minor data callouts ─── */
+  --quote: #5d8a8e;
+  --secondary: #5d8a8e;
+  --secondary-2: #84b3b6;
+
+  /* ─── Coach voice body ─── */
+  --coach: #f0eef0;
+
+  /* ─── Threat ladder ─── */
+  --threat-hi: #c14848;
+  --threat-md: #d4a050;
+  --threat-lo: #6c717a;
+
+  /* ─── Champion-class tags ─── */
+  --tag-ad: #c97550;
+  --tag-ap: #b06a9c;
+  --tag-tank: #5d8a8e;
+  --tag-supp: #8aa37c;
+  --tag-true: #e8eaee;
+
+  /* ─── Augment-fit ladder ─── */
+  /* fit-strong was #8aa37c (sage) but read as gray on the augment badge
+     and on KDA kills counters. Bumped saturation so "strong" is
+     unambiguously a green positive indicator while still feeling v16. */
+  --fit-strong: #6db05c;
+  --fit-excellent: #d4a050;
+  --fit-ok: #a3a8b0;
+
+  /* ─── Typography ─── */
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:
+    "JetBrains Mono", "SF Mono", "Cascadia Code", "Fira Code", monospace;
+
+  /* Type scale (per handoff). Sized in rem so the existing useZoom hook
+     still scales the whole UI off the root font-size. */
+  --type-h1-size: 3.5rem; /* 56px */
+  --type-h1-leading: 1.05;
+  --type-h1-tracking: -0.02em;
+
+  --type-h2-size: 2rem; /* 32px */
+  --type-h2-leading: 1.15;
+
+  --type-body-size: 0.875rem; /* 14px */
+  --type-body-leading: 1.55;
+
+  --type-meta-size: 0.6875rem; /* 11px */
+  --type-meta-tracking: 0.08em;
+
+  --type-coach-size: 0.9375rem; /* 15px */
+
+  /* ─── Spacing scale (4px increments) ─── */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-14: 3.5rem;
+  --space-20: 5rem;
+
+  /* ─── Radii ─── */
+  --radius-card: 4px;
+  --radius-glass: 6px;
+  --radius-chip: 2px;
+
+  /* ─── Motion ─── */
+  --motion-color: 150ms ease;
+  --motion-transform: 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  --motion-overlay-enter: 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  --motion-overlay-exit: 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  --motion-threat-enter: 120ms cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* ─── Glass overlay recipe (in-game) ─── */
+  --glass-bg: rgba(17, 19, 21, 0.82);
+  --glass-blur: blur(14px);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.06);
+  --glass-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}

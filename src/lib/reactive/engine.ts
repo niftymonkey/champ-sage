@@ -23,10 +23,18 @@ import {
   userInput$,
   manualInput$,
   playerIntent$,
+  lcuCredentials$,
+  gameEnded$,
 } from "./streams";
-import { normalizeGameState } from "../game-state/normalize";
+import { normalizeGameState, extractMapNumber } from "../game-state/normalize";
+import { resetForNewGame } from "./coaching-feed";
 import type { PlatformBridge, LcuEventPayload } from "./platform-bridge";
-import type { GameflowPhase, LiveGameState, EogStats } from "./types";
+import type {
+  GameflowPhase,
+  LiveGameState,
+  EogStats,
+  RawChampSelectSession,
+} from "./types";
 import { formatGameTime } from "../format";
 import {
   isDebugWorthy,
@@ -174,6 +182,9 @@ export class ReactiveEngine {
         if (status.connected) {
           this.currentPort = status.port;
           this.currentToken = status.token;
+          lcuCredentials$.next({ port: status.port, token: status.token });
+        } else {
+          lcuCredentials$.next(null);
         }
         // Only emit if the connection status actually changed from what
         // the BehaviorSubject already holds (avoids duplicate on startup)
@@ -279,6 +290,23 @@ export class ReactiveEngine {
       })
     );
 
+    // Clear the prior game's coaching feed + plan the moment a new game
+    // begins. ChampSelect is the unambiguous "new game starting" signal -
+    // both queued play and Practice Tool reach it before any in-game state
+    // is produced - so resetting here guarantees the user does not flash
+    // stale feed/plan content when routing back to the in-game surface.
+    // The CoachingPipeline's session-creation effect calls the same reset
+    // once polling produces a new active player; that path remains as a
+    // safety net for app launches mid-game where ChampSelect was missed.
+    this.subscription.add(
+      gameflowPhase$
+        .pipe(filter((phase) => phase === "ChampSelect"))
+        .subscribe(() => {
+          engineLog.info("New ChampSelect detected - clearing coaching feed");
+          resetForNewGame();
+        })
+    );
+
     // Log honor and pre-end-of-game events to understand post-game transitions
     this.subscription.add(
       wsFiltered$
@@ -339,16 +367,44 @@ export class ReactiveEngine {
         )
         .subscribe((data) => {
           gameLifecycle$.next({ type: "session", data });
-          // Extract LCU game mode from session (e.g., KIWI for Mayhem)
+          // Extract LCU game mode from session (e.g., KIWI for Mayhem) and
+          // mirror it onto liveGameState. The instance field captures it for
+          // the polling path; renderers (resolveSurface, ChromeStatus, etc.)
+          // need it on the observable too, otherwise they read an empty
+          // string for the entire pre-game flow because polling is gated to
+          // the InProgress phase.
           const session = data as Record<string, unknown> | null;
           const gameData = session?.gameData as
             | Record<string, unknown>
             | undefined;
           const queue = gameData?.queue as Record<string, unknown> | undefined;
           const lcuMode = queue?.gameMode as string | undefined;
-          if (lcuMode) {
+          // gameData.gameId is the Riot-issued match identifier. It is
+          // 0 / undefined outside InProgress and a non-zero number while
+          // a match is live. Stringify so it carries cleanly through
+          // IPC; treat 0 as "not yet known" and don't surface it.
+          const rawGameId = gameData?.gameId;
+          const lcuGameId =
+            typeof rawGameId === "number" && rawGameId > 0
+              ? String(rawGameId)
+              : typeof rawGameId === "string" &&
+                  /^\d+$/.test(rawGameId.trim()) &&
+                  rawGameId.trim() !== "0"
+                ? rawGameId.trim()
+                : null;
+
+          const current = liveGameState$.getValue();
+          let next = current;
+          if (lcuMode && current.lcuGameMode !== lcuMode) {
             this.lcuGameMode = lcuMode;
+            next = { ...next, lcuGameMode: lcuMode };
           }
+          if (lcuGameId && current.lcuGameId !== lcuGameId) {
+            next = { ...next, lcuGameId };
+          } else if (!lcuGameId && current.lcuGameId !== "") {
+            next = { ...next, lcuGameId: "" };
+          }
+          if (next !== current) liveGameState$.next(next);
         })
     );
 
@@ -429,15 +485,20 @@ export class ReactiveEngine {
             ...current,
             eogStats: parseEogStats(eogData),
           });
+          gameEnded$.next();
         })
     );
 
-    // Slice 6a: Champ select → liveGameState$
+    // Slice 6a: Champ select → liveGameState$.
+    // The WS event's `data` is untyped at the LCU boundary; cast to
+    // `RawChampSelectSession` here so consumers downstream get the
+    // structured shape. The interface uses an index signature for
+    // unread fields so nothing further downstream needs to re-cast.
     this.subscription.add(
       wsFiltered$
         .pipe(
           filter((evt) => evt.uri === "/lol-champ-select/v1/session"),
-          map((evt) => evt.data)
+          map((evt) => evt.data as RawChampSelectSession)
         )
         .subscribe((data) => {
           const current = liveGameState$.getValue();
@@ -524,12 +585,17 @@ export class ReactiveEngine {
             (json) => {
               const raw: unknown = JSON.parse(json);
               const normalized = normalizeGameState(raw);
+              const mapNumber = extractMapNumber(raw);
               const status = `OK — ${normalized.gameMode} ${formatGameTime(normalized.gameTime)} ${normalized.players.length}p`;
               if (shouldLogPollStatus("OK", this.lastPollStatus)) {
                 engineLog.debug(`Poll ${status}`);
               }
               this.lastPollStatus = "OK";
-              return { success: true as const, data: normalized };
+              return {
+                success: true as const,
+                data: normalized,
+                mapNumber,
+              };
             },
             (err) => {
               const errMsg = err instanceof Error ? err.message : String(err);
@@ -566,6 +632,7 @@ export class ReactiveEngine {
                 players: result.data.players,
                 gameMode: result.data.gameMode,
                 lcuGameMode: this.lcuGameMode,
+                mapNumber: result.mapNumber,
                 gameTime: result.data.gameTime,
               };
               subscriber.next(gameState);

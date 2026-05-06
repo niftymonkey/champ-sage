@@ -31,6 +31,7 @@ Before creating a commit, review `docs/reference/technical-reference.md` and upd
 
 - **TDD: write tests first, then implementation.** Every time. No exceptions for testable code.
 - **Red phase must fail on assertions, not missing modules.** Create the module with stub implementations (empty returns, placeholder values) first so it compiles. Then write tests that fail because the stubs return wrong values. Then implement the real logic and watch them go green.
+- **Every test must be red before green.** If any test passes against the stubs, the stubs are too permissive — pick stub return values that violate every assertion. A test that passes during the red phase is testing nothing the implementation will actually need to satisfy. Re-run the suite and confirm 100% red before writing implementation.
 - Tests verify behavior through public interfaces, not implementation details.
 - Mock external dependencies (fetch, Electron IPC via `window.electronAPI`), not internal modules where possible.
 - Use factory functions for test fixtures that might be mutated (avoid shared mutable state across tests).

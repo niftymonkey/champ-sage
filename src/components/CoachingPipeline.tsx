@@ -31,6 +31,11 @@ import {
   type ItemRecTrigger,
 } from "../lib/ai/features/item-rec";
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
+import {
+  postGameTakeawayFeature,
+  type PostGameTakeawayInput,
+} from "../lib/ai/features/post-game-takeaway";
+import { getSetting, postGameTakeaway } from "../lib/settings";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { createMatchSession } from "../lib/ai/match-session";
@@ -84,6 +89,16 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     GamePlanResult
   > | null>(null);
   const gamePlanFiredRef = useRef(false);
+  // Per-game plan revision counter. Increments each time a plan is sent to
+  // the overlay so the slot's plan-revision card chip can show "plan rev N".
+  // Reset to 0 alongside resetForNewGame() in the session-create effect.
+  const gamePlanRevRef = useRef(0);
+  // Riot-issued gameId for the current match. Pulled from
+  // `liveGameState.lcuGameId` (sourced from the LCU's gameflow session
+  // `gameData.gameId`). Updated on every render where lcuGameId is
+  // non-empty; preserves the last in-game id at game-end so the
+  // takeaway / final writes still attach to the right match.
+  const gameSessionIdRef = useRef<string>("");
   const lastAugmentResponseRef = useRef<AugmentFitResult | null>(null);
 
   liveGameStateRef.current = liveGameState;
@@ -91,7 +106,19 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     lastInGameStateRef.current = liveGameState;
   }
   gameDataRef.current = gameData;
-  modeRef.current = mode;
+  // Only persist non-null mode; the game-end effect needs the last
+  // in-game mode and `mode` flips to null when activePlayer becomes
+  // null (the post-game render no longer satisfies detectMode's
+  // "connected" precondition).
+  if (mode) {
+    modeRef.current = mode;
+  }
+  // Same shape for the Riot gameId: keep the last non-empty value
+  // through game-end so writes that fire on the post-game transition
+  // still attach to the just-finished match.
+  if (liveGameState.lcuGameId) {
+    gameSessionIdRef.current = liveGameState.lcuGameId;
+  }
   enemyStatsRef.current = enemyStats;
   chosenAugmentsRef.current = chosenAugments;
 
@@ -140,6 +167,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     gamePlanFeatureRef.current = createGamePlanFeature(gameDataRef.current);
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
+    gamePlanRevRef.current = 0;
     resetForNewGame();
 
     reactiveLog.info(
@@ -196,7 +224,127 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     });
 
     reactiveLog.info("Last game snapshot captured");
-  }, [liveGameState.activePlayer]);
+
+    // Fire post-game takeaway iff there was any coach activity. Skip when
+    // the game produced no decisions — there's nothing to reflect on, and
+    // we don't want to pay for an LLM call to produce empty prose.
+    const totalDecisions = feed.length;
+    const itemRecCount = feed.filter(
+      (e): e is CoachingExchangeEntry =>
+        e.type === "coaching-exchange" && e.source === "item-rec"
+    ).length;
+    const trueVoiceCount = voiceEntries.filter(
+      (e) => e.source === "voice"
+    ).length;
+    const hasActivity = totalDecisions > 0 || gamePlanRevRef.current > 0;
+    const lastInGameMode = modeRef.current;
+    const takeawayEnabled = getSetting(postGameTakeaway);
+    proactiveLog.info(
+      `Takeaway gate — enabled=${takeawayEnabled} apiKey=${!!apiKey} mode=${!!lastInGameMode} activePlayer=${!!lastState.activePlayer} totalDecisions=${totalDecisions} planRevs=${gamePlanRevRef.current} voiceTurns=${trueVoiceCount} itemRecs=${itemRecCount}`
+    );
+    // gameSessionIdRef is empty when the LCU never surfaced a gameId
+    // for this match (early disconnect, LCU lag). Without it every such
+    // takeaway would collapse onto the same empty-string key in the
+    // decision log and conflate unrelated games — skip instead.
+    const sessionGameIdGuard = gameSessionIdRef.current;
+    if (
+      takeawayEnabled &&
+      apiKey &&
+      lastInGameMode &&
+      lastState.activePlayer &&
+      hasActivity &&
+      sessionGameIdGuard
+    ) {
+      const championName =
+        activeInfo?.championName ??
+        lastState.activePlayer?.championName ??
+        "Unknown";
+      const finalItems = activeInfo?.items.map((i) => i.name) ?? [];
+      const finalPlan = gamePlan$.getValue();
+      const recommendedBuild = finalPlan?.buildPath.map((b) => b.name) ?? [];
+      const matchedItemCount = recommendedBuild.filter((r) =>
+        finalItems.includes(r)
+      ).length;
+      // Only true voice exchanges go into the LLM context — proactive
+      // item-rec firings are auto-prompted ("I just died...") and shouldn't
+      // be retold to the model as if the player had asked them.
+      const allVoiceExchanges = voiceEntries
+        .filter((e) => e.source === "voice")
+        .map((e) => ({ question: e.question, answer: e.answer }));
+
+      const takeawayInput: PostGameTakeawayInput = {
+        champion: championName,
+        gameMode: lastState.gameMode || eog?.gameMode || "",
+        isWin: eog?.isWin ?? false,
+        duration: eog?.gameLength ?? lastState.gameTime,
+        kills: activeInfo?.kills ?? 0,
+        deaths: activeInfo?.deaths ?? 0,
+        assists: activeInfo?.assists ?? 0,
+        finalGold: lastState.activePlayer.currentGold ?? null,
+        finalItems,
+        recommendedBuild,
+        augmentsPicked: chosenAugmentsRef.current,
+        voiceExchanges: allVoiceExchanges,
+        planRevisionCount: gamePlanRevRef.current,
+      };
+
+      const sessionGameId = gameSessionIdRef.current;
+      const sessionGameMode = lastState.gameMode;
+      proactiveLog.info(
+        `Takeaway will send: sessionGameId=${sessionGameId || "EMPTY"} sessionGameMode=${sessionGameMode || "EMPTY"} championName=${championName}`
+      );
+
+      // Throwaway post-game session — the in-game session has been cleared
+      // (or is about to be) by the session-create effect's null branch.
+      const postGameState: GameState = {
+        status: "connected",
+        activePlayer: lastState.activePlayer,
+        players: lastState.players,
+        gameMode: lastState.gameMode,
+        gameTime: lastState.gameTime,
+      };
+      const postGameContext = buildBaseContext({
+        mode: lastInGameMode,
+        gameData: gameDataRef.current,
+        gameState: postGameState,
+      });
+      const postGameSession = createMatchSession(postGameContext, apiKey, {
+        personality: getPersonality,
+        phase: "post-game",
+      });
+
+      proactiveLog.info("Generating post-game takeaway");
+      postGameSession
+        .ask(postGameTakeawayFeature, takeawayInput)
+        .then(({ value: result, retried }) => {
+          window.electronAPI?.sendCoachingResponse({
+            answer: "",
+            recommendations: [],
+            buildPath: null,
+            retried,
+            source: "takeaway",
+            narrative: result.narrative,
+            champion: championName,
+            isWin: takeawayInput.isWin,
+            duration: takeawayInput.duration,
+            kills: takeawayInput.kills,
+            deaths: takeawayInput.deaths,
+            assists: takeawayInput.assists,
+            finalGold: takeawayInput.finalGold,
+            finalItems,
+            recommendedBuild,
+            matchedItemCount,
+            gameId: sessionGameId,
+            gameMode: sessionGameMode,
+            sentAt: Date.now(),
+          });
+          proactiveLog.info("Post-game takeaway captured");
+        })
+        .catch((err) => {
+          proactiveLog.error(`Post-game takeaway failed: ${err}`);
+        });
+    }
+  }, [liveGameState.activePlayer, apiKey, mode]);
 
   // Auto-generate opening game plan once first full data arrives
   useEffect(() => {
@@ -279,12 +427,17 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       // Relay to overlay. Overlay's CoachingResponse shape wants
       // recommendations + buildPath even when the feature doesn't use
       // recommendations (empty array here).
-      proactiveLog.info("Sending game plan response to overlay");
+      gamePlanRevRef.current += 1;
+      const rev = gamePlanRevRef.current;
+      proactiveLog.info(`Sending game plan response to overlay (rev=${rev})`);
       window.electronAPI?.sendCoachingResponse({
         answer: response.answer,
         recommendations: [],
         buildPath,
         source: "plan",
+        rev,
+        gameId: gameSessionIdRef.current,
+        gameMode: liveGameStateRef.current.gameMode,
         sentAt: Date.now(),
       });
     },
@@ -367,6 +520,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           buildPath: null,
           retried,
           source: "augment" as const,
+          question,
+          gameId: gameSessionIdRef.current,
+          gameMode: liveGameStateRef.current.gameMode,
           sentAt,
         };
         reactiveLog.info(
@@ -516,6 +672,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           buildPath: null,
           retried,
           source: "reactive" as const,
+          question,
+          gameId: gameSessionIdRef.current,
+          gameMode: liveGameStateRef.current.gameMode,
           sentAt,
         };
         reactiveLog.info(
@@ -610,7 +769,14 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           recommendations: response.recommendations,
           buildPath: null,
           retried,
-          source: "reactive",
+          // Proactive item-rec — auto-fired on shop-moment / gold-available.
+          // Distinguished from voice-query (source: "reactive") so the
+          // post-game surface doesn't fold it into the conversation block
+          // as if the player had asked.
+          source: "item-rec",
+          question,
+          gameId: gameSessionIdRef.current,
+          gameMode: liveGameStateRef.current.gameMode,
           sentAt,
         });
       } catch (err) {

@@ -3,26 +3,26 @@
   align-items: center;
   gap: 0.3rem;
   background: transparent;
-  color: #8890a4;
-  border: 1px solid #2a2f3e;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
   padding: 0.15rem 0.5rem;
-  border-radius: 0.2rem;
+  border-radius: var(--radius-card);
   cursor: pointer;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.65rem;
   transition:
-    background 0.12s,
-    color 0.12s,
-    border-color 0.12s;
+    background var(--motion-color),
+    color var(--motion-color),
+    border-color var(--motion-color);
 }
 
 .button:hover {
-  background: #181c26;
-  color: #e8a0a0;
-  border-color: #6e3f3f;
+  background: var(--bg-2);
+  color: var(--accent-2);
+  border-color: var(--accent-border);
 }
 
 .hint {
-  color: #4a5168;
+  color: var(--ink-4);
   font-size: 0.6rem;
 }

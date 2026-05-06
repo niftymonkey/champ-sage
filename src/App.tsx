@@ -1,7 +1,8 @@
 import "./App.css";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import { CoachingProvider } from "./hooks/useCoachingContext";
 import { useGameData } from "./hooks/useGameData";
+import { setMatchHistoryGameData } from "./lib/match-history/runtime";
 import { useGameLifecycle } from "./hooks/useGameLifecycle";
 import { useLiveGameState } from "./hooks/useLiveGameState";
 import { useUserInput } from "./hooks/useUserInput";
@@ -16,18 +17,23 @@ import {
   WhisperProvider,
   LocalWhisperProvider,
 } from "./lib/voice/stt-provider";
-import { StatusBar } from "./components/StatusBar";
 import { InGameView } from "./components/InGameView";
-import { LastGameCard } from "./components/coaching";
 import { CoachingPipeline } from "./components/CoachingPipeline";
-import { ConnectionStatus } from "./components/ConnectionStatus";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
+import { WindowChrome } from "./surfaces/WindowChrome";
+import { ChromeStatus } from "./surfaces/ChromeStatus";
+import { IdleSurface } from "./surfaces/IdleSurface";
+import { ChampSelectSurface } from "./surfaces/ChampSelectSurface";
+import { PostGameSurface } from "./surfaces/PostGameSurface";
+import { SettingsSurface } from "./surfaces/SettingsSurface";
+import { useSurfaceState } from "./surfaces/useSurfaceState";
 import {
   createModeRegistry,
   aramMayhemMode,
   aramMode,
   classicMode,
   buildEffectiveGameState,
+  detectMode,
 } from "./lib/mode";
 import { addSelectedAugment } from "./lib/mode/augment-selection";
 import { ensureAbilities } from "./lib/data-ingest/ensure-abilities";
@@ -84,6 +90,10 @@ function App() {
   useUserInput();
   useZoom();
 
+  useEffect(() => {
+    setMatchHistoryGameData(data);
+  }, [data]);
+
   const whisperProvider = useMemo(() => {
     const localUrl = import.meta.env.VITE_LOCAL_WHISPER_URL as
       | string
@@ -116,9 +126,14 @@ function App() {
     const championNames = liveGame.players.map((p) => p.championName);
     ensureAbilities(data, championNames, data.version).catch(() => {});
 
-    const detectedMode = registry.detect(liveGame.gameMode);
+    const detectedMode = detectMode(
+      registry,
+      liveGame.gameMode,
+      liveGame.lcuGameMode,
+      liveGame.mapNumber
+    );
     appLog.info(
-      `Game detected: ${liveGame.gameMode} | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.length} | augments in data: ${data.augments.size}`
+      `Game detected: ${liveGame.gameMode} (lcu: ${liveGame.lcuGameMode || "n/a"}, map: ${liveGame.mapNumber || "n/a"}) | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.length} | augments in data: ${data.augments.size}`
     );
   }, [data, liveGame.players]);
 
@@ -165,8 +180,19 @@ function App() {
 
   const detectedMode = useMemo(() => {
     if (!data || gameState.status !== "connected") return null;
-    return registry.detect(gameState.gameMode);
-  }, [data, gameState.status, gameState.gameMode]);
+    return detectMode(
+      registry,
+      gameState.gameMode,
+      liveGame.lcuGameMode,
+      liveGame.mapNumber
+    );
+  }, [
+    data,
+    gameState.status,
+    gameState.gameMode,
+    liveGame.lcuGameMode,
+    liveGame.mapNumber,
+  ]);
 
   const effectiveState = useMemo(() => {
     if (!data || gameState.status !== "connected") {
@@ -192,12 +218,39 @@ function App() {
     return buildEffectiveGameState(gameState, modeContext);
   }, [gameState, data, selectedAugments, detectedMode]);
 
-  const inGame = liveGame.activePlayer !== null;
+  const { surface, navigate } = useSurfaceState();
+
+  // When the user clicks a recent-games row, route to the post-game
+  // surface for that specific Riot gameId. Auto-routing (game just
+  // ended) leaves this null so PostGameSurface falls back to its
+  // "last game" query. Cleared when navigating away from post-game
+  // so a later auto-route shows the most recent game, not the one
+  // the user clicked into earlier.
+  const [viewingGameId, setViewingGameId] = useState<string | null>(null);
+  const handleSelectGame = useCallback(
+    (gameId: string) => {
+      setViewingGameId(gameId);
+      navigate("post-game");
+    },
+    [navigate]
+  );
+  useEffect(() => {
+    if (surface !== "post-game") setViewingGameId(null);
+  }, [surface]);
 
   if (loading && !data) {
     return (
       <main className="app-root">
-        <StatusBar isRecording={voice.isRecording} />
+        <WindowChrome
+          surface={surface}
+          onNavigate={navigate}
+          statusContent={
+            <ChromeStatus
+              isRecording={voice.isRecording}
+              voiceAvailable={whisperProvider !== null}
+            />
+          }
+        />
         <div className="app-loading">Loading game data...</div>
       </main>
     );
@@ -206,7 +259,16 @@ function App() {
   if (error && !data) {
     return (
       <main className="app-root">
-        <StatusBar isRecording={voice.isRecording} />
+        <WindowChrome
+          surface={surface}
+          onNavigate={navigate}
+          statusContent={
+            <ChromeStatus
+              isRecording={voice.isRecording}
+              voiceAvailable={whisperProvider !== null}
+            />
+          }
+        />
         <div className="app-error">Error: {error}</div>
       </main>
     );
@@ -216,30 +278,38 @@ function App() {
 
   return (
     <main className="app-root">
-      <StatusBar isRecording={voice.isRecording} />
       <CoachingProvider
         mode={detectedMode}
         liveGameState={liveGame}
         gameData={data}
       >
         <CoachingPipeline gameData={data} />
+        <WindowChrome
+          surface={surface}
+          onNavigate={navigate}
+          statusContent={
+            <ChromeStatus
+              isRecording={voice.isRecording}
+              voiceAvailable={whisperProvider !== null}
+            />
+          }
+        />
         <div className="app-body">
-          {inGame ? (
+          {surface === "in-game" ? (
             <InGameView state={effectiveState} gameData={data} />
+          ) : surface === "champ-select" ? (
+            <ChampSelectSurface data={data} />
+          ) : surface === "post-game" ? (
+            <PostGameSurface gameId={viewingGameId} />
+          ) : surface === "settings" ? (
+            <SettingsSurface />
           ) : (
-            <div className="app-idle">
-              <ConnectionStatus
-                lifecycle={lifecycle}
-                lastPhase={lastPhase}
-                championName={championName}
-              />
-              <LastGameCard
-                dataVersion={data.version}
-                championCount={data.champions.size}
-                itemCount={data.items.size}
-                augmentCount={data.augments.size}
-              />
-            </div>
+            <IdleSurface
+              lifecycle={lifecycle}
+              lastPhase={lastPhase}
+              championName={championName}
+              onSelectGame={handleSelectGame}
+            />
           )}
           {devMode && <SimulatorPanel gameData={data} />}
         </div>

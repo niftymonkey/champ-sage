@@ -1,10 +1,9 @@
 .panel {
-  width: 22rem;
-  background: #12151c;
-  border-left: 1px solid #2a2f3e;
-  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
-  flex-shrink: 0;
 }
 
 .panel::-webkit-scrollbar {
@@ -14,44 +13,51 @@
   background: transparent;
 }
 .panel::-webkit-scrollbar-thumb {
-  background: #2a2f3e;
+  background: var(--line);
 }
 
-.title {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #b8a0e8;
-  margin-bottom: 0.6rem;
+.heading {
   display: flex;
-  align-items: center;
-  gap: 0.3rem;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 0 var(--space-3);
+  flex-shrink: 0;
 }
 
-.titleDot {
-  width: 0.28rem;
-  height: 0.28rem;
-  border-radius: 50%;
-  background: #b8a0e8;
+.headingTitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--ink);
+  margin: 0;
+}
+
+.headingMeta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 .summary {
-  font-size: 0.85rem;
-  line-height: 1.6;
-  color: #8890a4;
-  margin-bottom: 0.8rem;
-  padding-bottom: 0.8rem;
-  border-bottom: 1px solid #2a2f3e;
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0 0 var(--space-5);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--line);
 }
 
 .buildTitle {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #565e74;
-  margin-bottom: 0.4rem;
+  letter-spacing: var(--type-meta-tracking);
+  color: var(--ink-3);
+  margin-bottom: var(--space-3);
 }
 
 .buildList {
@@ -65,11 +71,11 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.25rem 0.35rem;
-  border-radius: 0.2rem;
+  border-radius: var(--radius-chip);
   font-size: 0.8rem;
-  color: #8890a4;
+  color: var(--ink-2);
   cursor: help;
-  transition: background 0.12s;
+  transition: background var(--motion-color);
 }
 
 /* Child text/SVG default to their own cursors (I-beam, auto) and
@@ -80,7 +86,7 @@
 }
 
 .buildStep:hover {
-  background: #181c26;
+  background: var(--bg);
 }
 
 .buildStep:hover .buildIcon {
@@ -88,9 +94,9 @@
 }
 
 .buildNum {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.7rem;
-  color: #565e74;
+  color: var(--ink-3);
   min-width: 0.8rem;
   flex-shrink: 0;
 }
@@ -108,11 +114,11 @@
 }
 
 .counterTarget {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #e8a0a0;
+  color: var(--accent-2);
   flex-shrink: 0;
 }
 
@@ -122,49 +128,41 @@
 
 .owned .buildName {
   text-decoration: line-through;
-  text-decoration-color: #565e74;
+  text-decoration-color: var(--ink-3);
 }
 
 .ownedBadge {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.55rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #565e74;
+  letter-spacing: var(--type-meta-tracking);
+  color: var(--ink-3);
   flex-shrink: 0;
 }
 
 .cat_core {
-  color: #d7c997;
+  color: var(--threat-md);
 }
 .cat_counter {
-  color: #e89898;
+  color: var(--accent-2);
 }
 .cat_defensive {
-  color: #9cc9e8;
+  color: var(--secondary-2);
 }
 .cat_damage {
-  color: #e8a078;
+  color: var(--tag-ad);
 }
 .cat_utility {
-  color: #a8e0b8;
+  color: var(--fit-strong);
 }
 .cat_situational {
-  color: #8890a4;
-}
-
-.updated {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 0.6rem;
-  color: #565e74;
-  margin-top: 0.8rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid #2a2f3e;
+  color: var(--ink-2);
 }
 
 .empty {
-  color: #565e74;
-  font-size: 0.85rem;
-  padding-top: 1rem;
-  text-align: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--ink-3);
+  font-size: 0.9375rem;
+  padding-top: var(--space-4);
 }

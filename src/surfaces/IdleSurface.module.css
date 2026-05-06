@@ -1,0 +1,301 @@
+.surface {
+  flex: 1;
+  display: grid;
+  /* Same 1.4 / 1 split used by Post-game and In-game so left/right
+     columns line up across the three two-column surfaces. */
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-10);
+  padding: var(--space-10);
+  overflow-y: auto;
+  align-content: start;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  min-width: 0;
+}
+
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* ─── Hero ─── */
+
+.heroEyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-3);
+}
+
+.headline {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+
+.headlineAccent {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.heroBody {
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 32rem;
+  margin: var(--space-4) 0 0;
+}
+
+/* ─── 3-stat strip ─── */
+
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: var(--space-5) 0;
+}
+
+.statBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.statLabel {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.statDelta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.statDeltaPositive {
+  color: var(--fit-strong);
+}
+
+.statDeltaNegative {
+  color: var(--threat-hi);
+}
+
+/* ─── Pinned notes ─── */
+
+.sectionLabel {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-3);
+}
+
+/* ─── Right column ─── */
+
+.recent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.recentRow {
+  display: grid;
+  /* Fixed-width tail columns so champion / mode / result / KDA / ago
+     line up vertically across rows. Tail columns are sized to their
+     max content (MAYHEM, LOSS, two-digit KDAs, "10h ago") with no
+     extra padding so the champion name keeps as much width as
+     possible — long names like "Aurelion Sol" survive a zoom-in. */
+  grid-template-columns:
+    minmax(0, 1fr)
+    4.25rem
+    2.5rem
+    4.75rem
+    3.75rem;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+
+.recentRow:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.recentRowClickable {
+  cursor: pointer;
+  transition: background-color 80ms;
+}
+
+.recentRowClickable:hover,
+.recentRowClickable:focus-visible {
+  background-color: var(--bg-2);
+  outline: none;
+}
+
+.recentChamp {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recentMode {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: right;
+}
+
+.recentResult {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.recentResultLoss {
+  color: var(--threat-hi);
+}
+
+.recentResultWin {
+  color: var(--fit-strong);
+}
+
+.recentKda {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-2);
+  text-align: right;
+}
+
+.recentAgo {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  text-align: right;
+}
+
+/* ─── Connection state pill (replaces the old rune circle) ─── */
+
+.connectionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-chip);
+  padding: 0.25rem 0.6rem;
+  align-self: flex-start;
+}
+
+.connectionDot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--ink-4);
+}
+
+.connectionDotConnected {
+  background: var(--fit-strong);
+}
+
+.connectionDotActive {
+  background: var(--secondary-2);
+}
+
+.connectionDotError {
+  background: var(--threat-hi);
+}
+
+/* Placeholder section: borrowed last-game card content rendered in the
+   redesign rhythm. Phase 5 replaces this block with the real recent-games
+   list pulled from the LCU match-history endpoint. */
+.lastGameBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lastGameHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.lastGameChamp {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.lastGameResult {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+}
+
+.lastGameStats {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.lastGameQuestion {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--quote);
+  border-left: 2px solid var(--quote);
+  padding-left: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.lastGameAnswer {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--coach);
+  line-height: 1.55;
+  margin-top: var(--space-1);
+}

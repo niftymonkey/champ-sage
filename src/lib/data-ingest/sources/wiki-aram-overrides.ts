@@ -1,4 +1,5 @@
 import * as luaparse from "luaparse";
+import { sanitizeForLuaParse } from "../parsers/lua-parser";
 import type { AramOverrides } from "../types";
 
 const CHAMPION_DATA_URL =
@@ -19,11 +20,7 @@ export async function fetchAramOverrides(): Promise<
 
   let lua = await res.text();
   lua = lua.replace(/^--\s*<pre>\s*\n?/, "").replace(/\n?--\s*<\/pre>\s*$/, "");
-  // Replace unicode quotes/dashes that luaparse can't handle
-  lua = lua
-    .replace(/[\u2018\u2019\u201A]/g, "'")
-    .replace(/[\u201C\u201D\u201E]/g, '"')
-    .replace(/[\u2013\u2014]/g, "-");
+  lua = sanitizeForLuaParse(lua);
 
   const ast = luaparse.parse(lua, { encodingMode: "x-user-defined" });
   const overrides = new Map<string, AramOverrides>();

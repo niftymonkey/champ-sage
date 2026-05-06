@@ -264,6 +264,8 @@ describe("takeGameSnapshot", () => {
       ],
       gameMode: "ARAM",
       lcuGameMode: "ARAM",
+      mapNumber: 0,
+      lcuGameId: "",
       gameTime: 600,
       champSelect: null,
       eogStats: null,

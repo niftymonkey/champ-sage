@@ -47,6 +47,18 @@ export function normalizeGameState(raw: any): GameState {
   };
 }
 
+/**
+ * Extract the Riot map id from a raw Live Client Data API response.
+ * 11 = Summoner's Rift, 12 = Howling Abyss (ARAM), 30 = Arena, 0 if unknown.
+ *
+ * Kept separate from `normalizeGameState` because `mapNumber` lives on
+ * `LiveGameState` (renderer-side session state) rather than `GameState`
+ * (the narrower coaching-context shape). The polling layer calls both.
+ */
+export function extractMapNumber(raw: any): number {
+  return raw?.gameData?.mapNumber ?? 0;
+}
+
 function normalizeRunes(raw: any): ActivePlayerRunes {
   return {
     keystone: raw?.keystone?.displayName ?? "",

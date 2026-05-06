@@ -117,4 +117,24 @@ describe("parseLuaTable", () => {
     const result = parseLuaTable(lua);
     expect(result["A"].x).toBe("y");
   });
+
+  it("normalizes unicode dashes and smart quotes the wiki occasionally emits", () => {
+    // luaparse runs in encodingMode "x-user-defined" and rejects code points
+    // outside that subset with errors like "code unit U+2013 is not allowed
+    // in the current encoding mode". The wiki has been observed emitting
+    // U+2013 (en dash), U+2014 (em dash), U+2018/U+2019 (curly singles), and
+    // U+201C/U+201D (curly doubles) inside augment descriptions. The shared
+    // parser must normalize these to their ASCII equivalents before parsing
+    // so a wiki-side text change cannot crash the data ingest.
+    const lua = `return {
+      ["Test"] = {
+        ["description"] = "Deals 2–3 damage — it’s “great”.",
+        ["tier"] = "Gold",
+      },
+    }`;
+    const result = parseLuaTable(lua);
+    expect(result["Test"].description).toBe(
+      'Deals 2-3 damage - it\'s "great".'
+    );
+  });
 });

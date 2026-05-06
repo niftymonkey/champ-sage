@@ -1,0 +1,141 @@
+/*
+ * Glass-card recipe used by every state body in the bottom-right slot.
+ * Per the v16 spec - same surface, different accent treatments per state.
+ */
+
+.card {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: var(--radius-glass);
+  padding: 0.875rem 1rem;
+  box-shadow: var(--glass-shadow);
+  max-width: 380px;
+  font-family: var(--font-ui);
+  color: var(--coach);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ─── Header row: chip + timestamp ─── */
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.chip {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: lowercase;
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.chipKeyword {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.chipKeywordThreat {
+  color: var(--threat-hi);
+}
+
+.chipSep {
+  color: var(--ink-4);
+}
+
+.timestamp {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+
+.dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+
+/* ─── Body shapes ─── */
+
+.question {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--quote);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.answer {
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  color: var(--coach);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.hint {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.6875rem;
+  color: var(--ink-2);
+  margin: 0;
+  margin-top: 0.25rem;
+}
+
+/* ─── Plan revision: 2px oxblood left edge ─── */
+
+.planRevision {
+  border-left: 2px solid var(--accent);
+}
+
+/* ─── Pinned voice-resting: thin oxblood top border ─── */
+
+.pinned {
+  box-shadow:
+    inset 0 1px 0 var(--accent),
+    var(--glass-shadow);
+}
+
+/* ─── Empty / prompt ─── */
+
+.empty {
+  /* No accent treatment - this is the rest state. The chip reads
+     "coach · listening" so the user knows the gesture is ready. */
+}
+
+.emptyBody {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 0.9375rem;
+  color: var(--coach);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.emptyHotkey {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-chip);
+  padding: 0.05rem 0.4rem;
+  margin: 0 0.15em;
+  vertical-align: 1px;
+}

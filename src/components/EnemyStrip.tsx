@@ -1,6 +1,6 @@
 import type { EffectivePlayer } from "../lib/mode/types";
 import type { LoadedGameData } from "../lib/data-ingest";
-import { deriveItemCategories } from "../lib/item-categories";
+import { primaryClassTag } from "../lib/champion-class";
 import styles from "./EnemyStrip.module.css";
 
 interface EnemyStripProps {
@@ -8,15 +8,29 @@ interface EnemyStripProps {
   gameData: LoadedGameData;
 }
 
+/**
+ * Compact enemy-team list for the in-game right column. Layout matches
+ * the v16 design: per-enemy row with tile + name + class tag + role
+ * descriptor.
+ *
+ * Two design fields are intentionally not yet populated — both require
+ * analysis we don't compute today:
+ *   - Threat tier (hi/md/lo coloring per row).
+ *   - Role descriptor ("220 armor", "behind", "dot · poke").
+ * Until those land we substitute the player level for the role slot.
+ */
 export function EnemyStrip({ enemies, gameData }: EnemyStripProps) {
   if (enemies.length === 0) return null;
 
   return (
     <div className={styles.strip}>
-      <div className={styles.title}>Enemy Team</div>
-      <div className={styles.grid}>
+      <div className={styles.heading}>
+        <span className={styles.headingTitle}>Enemy team</span>
+        <span className={styles.headingMeta}>what they're building</span>
+      </div>
+      <div className={styles.list}>
         {enemies.map((enemy) => (
-          <EnemyCard
+          <EnemyRow
             key={enemy.riotIdGameName}
             enemy={enemy}
             gameData={gameData}
@@ -27,49 +41,31 @@ export function EnemyStrip({ enemies, gameData }: EnemyStripProps) {
   );
 }
 
-interface EnemyCardProps {
+function EnemyRow({
+  enemy,
+  gameData,
+}: {
   enemy: EffectivePlayer;
   gameData: LoadedGameData;
-}
-
-function EnemyCard({ enemy, gameData }: EnemyCardProps) {
-  const itemsWithStats = enemy.items.map((pi) => {
-    const fullItem = gameData.items.get(pi.id);
-    return fullItem
-      ? { name: pi.name, stats: fullItem.stats, tags: fullItem.tags }
-      : { name: pi.name, stats: {}, tags: [] };
-  });
-
-  const categories = deriveItemCategories(itemsWithStats);
-
+}) {
+  const champion = gameData.champions.get(enemy.championName.toLowerCase());
+  const tag = primaryClassTag(champion?.tags ?? []);
   return (
-    <div className={styles.card}>
-      <div className={styles.cardHeader}>
-        <span className={styles.champName}>{enemy.championName}</span>
-        <span className={styles.level}>Lv{enemy.level}</span>
+    <div className={styles.row}>
+      <div className={styles.tile}>
+        {champion?.image ? (
+          <img src={champion.image} alt="" loading="lazy" />
+        ) : null}
       </div>
-      <div className={styles.body}>
-        <div className={styles.items}>
-          {itemsWithStats.map((item, i) => (
-            <span
-              key={`${enemy.riotIdGameName}-${i}`}
-              className={styles.item}
-              title={item.name}
-            >
-              {item.name}
-            </span>
-          ))}
-        </div>
-        {categories.length > 0 && (
-          <div className={styles.pills}>
-            {categories.map((cat) => (
-              <span key={cat} className={styles.pill}>
-                {cat}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      <span className={styles.name}>{enemy.championName}</span>
+      {tag ? (
+        <span className={`${styles.tag} ${styles[`tag_${tag}`] ?? ""}`}>
+          {tag}
+        </span>
+      ) : (
+        <span />
+      )}
+      <span className={styles.role}>Lv {enemy.level}</span>
     </div>
   );
 }

@@ -174,14 +174,15 @@ Available at the `PreEndOfGame` phase transition (immediately when the nexus die
 
 ### Game mode internal names
 
-| Display name    | Live Client Data API `gameMode` | LCU `gameMode` | Constant           |
-| --------------- | ------------------------------- | -------------- | ------------------ |
-| ARAM Mayhem     | `KIWI`                          | `KIWI`         | `GAME_MODE_MAYHEM` |
-| Regular ARAM    | `ARAM` (assumed, untested)      | `ARAM`         | `GAME_MODE_ARAM`   |
-| Summoner's Rift | `CLASSIC`                       | `CLASSIC`      | —                  |
-| Arena           | `CHERRY`                        | `CHERRY`       | `GAME_MODE_ARENA`  |
+| Display name    | Live Client Data API `gameMode` | LCU `gameMode` | Live Client `mapNumber` | Constant           |
+| --------------- | ------------------------------- | -------------- | ----------------------- | ------------------ |
+| ARAM Mayhem     | `KIWI`                          | `KIWI`         | 12                      | `GAME_MODE_MAYHEM` |
+| Regular ARAM    | `ARAM` (assumed, untested)      | `ARAM`         | 12                      | `GAME_MODE_ARAM`   |
+| Summoner's Rift | `CLASSIC`                       | `CLASSIC`      | 11                      | -                  |
+| Arena           | `CHERRY`                        | `CHERRY`       | 30                      | `GAME_MODE_ARENA`  |
+| Practice Tool   | `PRACTICETOOL`                  | `PRACTICETOOL` | underlying map id       | n/a                |
 
-Both sources return the same mode string for all tested modes. Regular ARAM has not been tested in-game yet — the `GAME_MODE_ARAM` ("ARAM") value is assumed from documentation and used as a fallback in mode detection. ARAM Mayhem consistently returns "KIWI" (tested patch 15.6). Constants are defined in `src/lib/mode/types.ts`.
+For all queued modes, `gameMode` and the LCU `gameMode` agree. Practice Tool is the exception: BOTH sources echo `PRACTICETOOL` (verified empirically with the LCU `/lol-gameflow/v1/session` queue block) regardless of which map the player picked, so the only way to recover the underlying mode for a Practice Tool session is the Live Client `gameData.mapNumber` field. Mode detection uses `detectMode(registry, liveGameMode, lcuGameMode, mapNumber)` in `src/lib/mode/detect.ts`. The function tries `liveGameMode` first, falls back to `lcuGameMode`, and finally translates `mapNumber` through a `MAP_TO_MODE` table (11 -> CLASSIC, 12 -> ARAM, 30 -> CHERRY). Without these fallbacks Practice Tool silently disables the coaching pipeline because no registered mode matches `PRACTICETOOL`. Note: Mayhem (KIWI) shares map 12 with regular ARAM but is queue-only and cannot be opened in Practice Tool, so map 12 in Practice Tool resolves to ARAM. Regular ARAM has not been tested in-game yet - the `GAME_MODE_ARAM` ("ARAM") value is assumed from documentation. ARAM Mayhem consistently returns "KIWI" (tested patch 15.6). Constants are defined in `src/lib/mode/types.ts`.
 
 ### WebSocket (real-time events)
 
@@ -497,8 +498,9 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 
 - Use `luaparse` (not regex). Augment descriptions contain `}}` from wiki templates that break regex-based entry matching.
 - The raw Lua has a `-- <pre>` wrapper that must be stripped before parsing.
-- `ChampionData` contains unicode right quotes (U+2019) and em dashes that luaparse chokes on — replace with ASCII equivalents before parsing.
+- `ChampionData`, `MayhemAugmentData`, and `ArenaAugmentData` all contain unicode characters luaparse rejects in `x-user-defined` mode (U+2018/U+2019 curly singles, U+201C/U+201D curly doubles, U+2013 en dash, U+2014 em dash). The wiki adds and removes these without warning. `sanitizeForLuaParse` in `src/lib/data-ingest/parsers/lua-parser.ts` is the single normalization point; every wiki Lua source must run input through it before calling `luaparse.parse`. Curly doubles are mapped to `\"` (escaped) since they almost always appear inside double-quoted Lua string literals; mapping to a bare `"` would terminate the literal mid-content.
 - Wiki markup in descriptions uses `{{as|...}}`, `{{tip|key|display}}`, `{{pp|...}}`, `[[[File:...]]`, `'''bold'''`, `''italic''`. All stripped during ingest.
+- `loadGameData` falls back to the last cached payload when any ingest source throws (network failure, wiki parse break, schema drift). The error is logged via the `data-ingest` logger but the app stays usable on stale data. Only when there is no cache to fall back to does the error propagate. Forced refreshes via the exported `fetchAndCache` deliberately do NOT have this fallback - if a user explicitly asks for a refresh and it fails, they should be told.
 
 ### Community Dragon (augment IDs/icons)
 
@@ -625,3 +627,14 @@ When champ-sage attaches to an already-running League game, Overwolf's GEP repla
 - **Reset:** `augmentReplayFilter.reset()` fires on GEP `game-exit` so the next match starts clean.
 - **Assumption:** in ARAM Mayhem / Arena, an augment cannot be picked twice, so current-offer vs. prior-pick overlap is always a replay. If a future mode permits re-picking, the filter needs a time-bounded variant.
 - **Overlay is a separate renderer:** the overlay window (`src/overlay/OverlayApp.tsx`) parses GEP info updates directly via `window.electronAPI.onGepInfoUpdate`, not through the main-window `augmentOffer$` Subject. Filtering has to live at the broadcast boundary in `electron/main.ts` to affect both windows.
+
+### Coach decision log — synthetic gameId for in-game records
+
+Phase 5a's persistent coach decision log records every `coaching-response` IPC payload. Persistence happens passively in main: the existing `coaching-response` handler taps off into `coachDecisionLog.append(...)` after the overlay relay, so emitters in the renderer never reach for a writer.
+
+- **Synthetic session id:** the Live Client Data API only exposes `gameId` via `eogStats` at end-of-game. For in-game writes the renderer (`CoachingPipeline.tsx`) generates a per-game `gameSessionIdRef` (UUID) when the session-create effect fires and reuses it on every overlay payload as `gameId`. The real Riot `gameId` (when available via eogStats) is not used — correlating the synthetic id to it would be a future enhancement.
+- **Reset coupling:** the gameSessionIdRef resets alongside `gamePlanRevRef` and `gamePlanFiredRef` in the same effect, so a new game starts with a fresh id, fresh rev counter, and fresh plan-fired latch atomically.
+- **Storage layout:** `<userData>/decision-log/<gameId>.ndjson` per-game files plus a sibling `index.json` listing games chronologically. The index is rebuilt from existing `.ndjson` files if missing or unparseable, so deleting it forces a clean re-scan without touching record data.
+- **Recovery:** corrupt lines (process killed mid-write, or an external edit) are dropped on hydrate and surfaced via `log.warnings()`. Main logs the count; the app keeps running with the longest valid prefix.
+- **Failure isolation:** an `append` failure never blocks the overlay relay. Main catches the rejection, warns via electron-log, and moves on. The overlay still renders the response.
+- **Module split:** record types and the pure `summarizeGame` helper live in `src/lib/decision-log/` so renderer-side consumers (post-game takeaways, idle recap) can import them without crossing into Electron-only code. The storage adapter, log factory, and payload→input mapper live in `electron/decision-log/` (Node fs imports, main-process only).
