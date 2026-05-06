@@ -7,6 +7,7 @@ import type { BuildPathItem, FitRating } from "../../lib/ai/types";
 import type { LoadedGameData } from "../../lib/data-ingest";
 import { useCoachingContext } from "../../hooks/useCoachingContext";
 import { BuildPathIcon, BUILD_PATH_CATEGORY_LABELS } from "./BuildPathIcon";
+import { ItemIcon as SharedItemIcon } from "../items/ItemIcon";
 import styles from "./CoachingCard.module.css";
 
 interface CoachingCardProps {
@@ -109,24 +110,17 @@ function ItemIcon({
   name: string;
   gameData: LoadedGameData | null;
 }) {
-  if (!gameData) return null;
-  // Items map is keyed by ID; linear scan by name is fine — ~200 entries,
-  // 2-3 recs per render. Item.image is already a fully-resolved DDragon URL.
-  let url: string | null = null;
-  for (const item of gameData.items.values()) {
-    if (item.name === name) {
-      url = item.image;
-      break;
-    }
-  }
-  if (!url) return null;
   return (
-    <img
-      src={url}
-      alt=""
-      aria-hidden="true"
+    <SharedItemIcon
+      name={name}
+      gameData={gameData}
       className={styles.recItemIcon}
-      loading="lazy"
+      title={null}
+      // Existing card uses a token-tuned 3.55rem; SharedItemIcon's
+      // numeric size prop is ignored when className supplies its own
+      // dimensions, but pass through a sane default in case the
+      // class omits sizing in some future restyle.
+      size={56}
     />
   );
 }

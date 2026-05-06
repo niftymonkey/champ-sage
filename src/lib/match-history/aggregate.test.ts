@@ -16,6 +16,7 @@ function match(overrides: Partial<MatchSummary> = {}): MatchSummary {
     kills: 10,
     deaths: 5,
     assists: 15,
+    largestKillingSpree: 2,
     durationSeconds: 1500,
     gameCreation: NOW - 1 * DAY,
     ...overrides,

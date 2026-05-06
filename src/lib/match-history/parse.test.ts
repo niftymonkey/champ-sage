@@ -23,6 +23,7 @@ const fullPayload = {
         kills: 12,
         deaths: 4,
         assists: 18,
+        largestKillingSpree: 3,
       },
     },
   ],
@@ -41,6 +42,7 @@ describe("lcuMatchToSummary", () => {
     expect(m?.kills).toBe(12);
     expect(m?.deaths).toBe(4);
     expect(m?.assists).toBe(18);
+    expect(m?.largestKillingSpree).toBe(3);
     expect(m?.durationSeconds).toBe(1634);
     expect(m?.gameCreation).toBe(1_700_000_000_000);
   });

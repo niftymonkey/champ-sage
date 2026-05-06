@@ -35,7 +35,13 @@ const matchPayload = {
   participants: [
     {
       championId: 99,
-      stats: { win: true, kills: 12, deaths: 4, assists: 18 },
+      stats: {
+        win: true,
+        kills: 12,
+        deaths: 4,
+        assists: 18,
+        largestKillingSpree: 3,
+      },
     },
   ],
 };

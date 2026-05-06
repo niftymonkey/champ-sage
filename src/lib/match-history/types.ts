@@ -19,6 +19,8 @@ export interface MatchSummary {
   kills: number;
   deaths: number;
   assists: number;
+  /** Largest killing spree from this match (0 if no spree). */
+  largestKillingSpree: number;
   /** Match length in seconds. */
   durationSeconds: number;
   /** ms-epoch when the match started. */

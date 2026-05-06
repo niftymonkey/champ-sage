@@ -2,6 +2,8 @@ import { Fragment, useMemo } from "react";
 import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
 import { useMatchHistory } from "../hooks/useMatchHistory";
+import { useCoachingContext } from "../hooks/useCoachingContext";
+import { ItemIcon } from "../components/items/ItemIcon";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type {
   AugmentDecision,
@@ -209,10 +211,10 @@ function LeftColumn({
           }
         />
         <StatBox
-          label="Final gold"
+          label="Largest spree"
           value={
-            takeaway?.finalGold !== null && takeaway?.finalGold !== undefined
-              ? takeaway.finalGold.toLocaleString()
+            authoritativeMatch
+              ? String(authoritativeMatch.largestKillingSpree)
               : "—"
           }
         />
@@ -246,28 +248,29 @@ function BuildSection({
   planRevisions,
   finalPlan,
 }: BuildSectionProps) {
-  const total =
-    takeaway?.recommendedBuild.length ?? finalPlan?.buildPath.length ?? 0;
+  const { gameData } = useCoachingContext();
+  const items: string[] =
+    takeaway?.recommendedBuild ?? finalPlan?.buildPath.map((b) => b.name) ?? [];
+  const total = items.length;
   let summaryText: string;
   if (total === 0) {
-    summaryText = "No coach-recommended build was generated for this match.";
+    summaryText = "No initial build path was generated for this match.";
   } else if (takeaway) {
     const matched = takeaway.matchedItemCount;
     summaryText =
       matched === total
-        ? `You bought every item the coach recommended (${matched} of ${total}).`
+        ? `You ended up with every item from the coach's initial path (${matched} of ${total}).`
         : matched === 0
-          ? `None of the ${total} coach-recommended items made it into the final build.`
-          : `You bought ${matched} of ${total} items the coach recommended.`;
+          ? `None of the ${total} items from the coach's initial path made it into your final build.`
+          : `You finished with ${matched} of ${total} items from the coach's initial path.`;
   } else {
-    const items = finalPlan?.buildPath.map((b) => b.name).join(" → ") ?? "";
-    summaryText = `Coach recommended a ${total}-item build: ${items}. Final build comparison lands when the takeaway arrives.`;
+    summaryText = `Coach recommended a ${total}-item opening build path. Final build will populate once the takeaway lands.`;
   }
 
   return (
     <div className={styles.buildSection}>
       <div className={styles.buildHeader}>
-        <span className={styles.buildHeaderLeft}>Build · followed plan</span>
+        <span className={styles.buildHeaderLeft}>Initial build path</span>
         <span className={styles.buildHeaderLeft}>
           {planRevisions === 0
             ? "no plan recorded"
@@ -275,6 +278,25 @@ function BuildSection({
         </span>
       </div>
       <p className={styles.buildAlignmentSummary}>{summaryText}</p>
+      {items.length > 0 ? (
+        <div className={styles.buildPathRow}>
+          {items.map((name, i) => (
+            <Fragment key={`${name}-${i}`}>
+              {i > 0 ? (
+                <span className={styles.buildPathArrow} aria-hidden="true">
+                  →
+                </span>
+              ) : null}
+              <ItemIcon
+                name={name}
+                gameData={gameData}
+                size={40}
+                className={styles.buildPathIcon}
+              />
+            </Fragment>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -413,6 +435,7 @@ interface FinalBuildSectionProps {
 }
 
 function FinalBuildSection({ takeaway, finalPlan }: FinalBuildSectionProps) {
+  const { gameData } = useCoachingContext();
   const recommended =
     takeaway?.recommendedBuild ?? finalPlan?.buildPath.map((b) => b.name) ?? [];
   const finalItems = takeaway?.finalItems ?? [];
@@ -420,28 +443,22 @@ function FinalBuildSection({ takeaway, finalPlan }: FinalBuildSectionProps) {
   const totalRecommended = recommended.length;
   const recommendedSet = new Set(recommended);
 
-  // Render: every item the player ended with, then any recommended items
-  // that weren't bought (dimmed). Tags: ON PLAN (item appears in both
-  // lists); RECOMMENDED (in plan only). Items in finalItems that aren't
-  // recommended get no tag.
-  const builtRows = finalItems.map((name) => ({
-    name,
-    inFinal: true,
-    onPlan: recommendedSet.has(name),
-  }));
-  const builtSet = new Set(finalItems);
-  const missedRows = recommended
-    .filter((n) => !builtSet.has(n))
-    .map((name) => ({ name, inFinal: false, onPlan: true }));
-  const rows = [...builtRows, ...missedRows];
-
-  if (rows.length === 0) {
+  // Show only what the player actually ended with. Each row gets an
+  // "On plan" tag if it appears in the coach's initial build path;
+  // otherwise no tag (a deliberate purchase off-plan is information,
+  // not noise). Items the coach recommended but the player never
+  // bought live in the left column's Initial Build Path block.
+  if (finalItems.length === 0) {
     return (
       <div className={styles.finalBuildSection}>
         <div className={styles.finalBuildHeader}>
           <h2 className={styles.finalBuildTitle}>Your final build</h2>
         </div>
-        <p className={styles.empty}>No final items captured.</p>
+        <p className={styles.empty}>
+          {takeaway
+            ? "No items captured for this match."
+            : "Final items will populate once the takeaway lands."}
+        </p>
       </div>
     );
   }
@@ -452,32 +469,34 @@ function FinalBuildSection({ takeaway, finalPlan }: FinalBuildSectionProps) {
         <h2 className={styles.finalBuildTitle}>Your final build</h2>
         {totalRecommended > 0 ? (
           <span className={styles.finalBuildMeta}>
-            {matched} / {totalRecommended} from EOG block
+            {matched} / {totalRecommended} matched plan
           </span>
         ) : null}
       </div>
       <div className={styles.finalBuildList}>
-        {rows.map((row) => (
-          <div
-            key={row.name}
-            className={`${styles.finalBuildRow} ${row.inFinal ? "" : styles.finalBuildRowDimmed}`}
-          >
-            <span className={styles.finalBuildName}>{row.name}</span>
-            {row.inFinal && row.onPlan ? (
-              <span
-                className={`${styles.finalBuildTag} ${styles.finalBuildTagOnPlan}`}
-              >
-                On plan
+        {finalItems.map((name) => {
+          const onPlan = recommendedSet.has(name);
+          return (
+            <div key={name} className={styles.finalBuildRow}>
+              <span className={styles.finalBuildIconWrap}>
+                <ItemIcon
+                  name={name}
+                  gameData={gameData}
+                  size={28}
+                  className={styles.finalBuildIcon}
+                />
               </span>
-            ) : !row.inFinal ? (
-              <span
-                className={`${styles.finalBuildTag} ${styles.finalBuildTagRecommended}`}
-              >
-                Recommended
-              </span>
-            ) : null}
-          </div>
-        ))}
+              <span className={styles.finalBuildName}>{name}</span>
+              {onPlan ? (
+                <span
+                  className={`${styles.finalBuildTag} ${styles.finalBuildTagOnPlan}`}
+                >
+                  On plan
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

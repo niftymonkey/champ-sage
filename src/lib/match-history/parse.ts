@@ -14,6 +14,7 @@ interface LcuMatchParticipant {
     kills?: number;
     deaths?: number;
     assists?: number;
+    largestKillingSpree?: number;
   };
 }
 
@@ -83,6 +84,10 @@ export function lcuMatchToSummary(
     kills: typeof stats.kills === "number" ? stats.kills : 0,
     deaths: typeof stats.deaths === "number" ? stats.deaths : 0,
     assists: typeof stats.assists === "number" ? stats.assists : 0,
+    largestKillingSpree:
+      typeof stats.largestKillingSpree === "number"
+        ? stats.largestKillingSpree
+        : 0,
     durationSeconds,
     gameCreation,
   };
