@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useCallback, useState, useEffect, useRef, useMemo } from "react";
 import { CoachingProvider } from "./hooks/useCoachingContext";
 import { useGameData } from "./hooks/useGameData";
 import { setMatchHistoryGameData } from "./lib/match-history/runtime";
@@ -220,6 +220,24 @@ function App() {
 
   const { surface, navigate } = useSurfaceState();
 
+  // When the user clicks a recent-games row, route to the post-game
+  // surface for that specific Riot gameId. Auto-routing (game just
+  // ended) leaves this null so PostGameSurface falls back to its
+  // "last game" query. Cleared when navigating away from post-game
+  // so a later auto-route shows the most recent game, not the one
+  // the user clicked into earlier.
+  const [viewingGameId, setViewingGameId] = useState<string | null>(null);
+  const handleSelectGame = useCallback(
+    (gameId: string) => {
+      setViewingGameId(gameId);
+      navigate("post-game");
+    },
+    [navigate]
+  );
+  useEffect(() => {
+    if (surface !== "post-game") setViewingGameId(null);
+  }, [surface]);
+
   if (loading && !data) {
     return (
       <main className="app-root">
@@ -282,7 +300,7 @@ function App() {
           ) : surface === "champ-select" ? (
             <ChampSelectSurface data={data} />
           ) : surface === "post-game" ? (
-            <PostGameSurface />
+            <PostGameSurface gameId={viewingGameId} />
           ) : surface === "settings" ? (
             <SettingsSurface />
           ) : (
@@ -291,6 +309,7 @@ function App() {
               lifecycle={lifecycle}
               lastPhase={lastPhase}
               championName={championName}
+              onSelectGame={handleSelectGame}
             />
           )}
           {devMode && <SimulatorPanel gameData={data} />}

@@ -20,6 +20,7 @@ function createDefaultLiveGameState(): LiveGameState {
     gameMode: "ARAM",
     lcuGameMode: "ARAM",
     mapNumber: 0,
+    lcuGameId: "",
     gameTime: 0,
     champSelect: null,
     eogStats: null,

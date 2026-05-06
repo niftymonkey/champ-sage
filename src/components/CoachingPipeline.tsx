@@ -93,10 +93,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   // the overlay so the slot's plan-revision card chip can show "plan rev N".
   // Reset to 0 alongside resetForNewGame() in the session-create effect.
   const gamePlanRevRef = useRef(0);
-  // Per-game synthetic id. The Live Client only exposes gameId via eogStats
-  // (end of game), so for the in-game decision-log writes we generate a
-  // session id when CoachingPipeline creates the session and reuse it for
-  // every payload. Reset alongside the session-create effect.
+  // Riot-issued gameId for the current match. Pulled from
+  // `liveGameState.lcuGameId` (sourced from the LCU's gameflow session
+  // `gameData.gameId`). Updated on every render where lcuGameId is
+  // non-empty; preserves the last in-game id at game-end so the
+  // takeaway / final writes still attach to the right match.
   const gameSessionIdRef = useRef<string>("");
   const lastAugmentResponseRef = useRef<AugmentFitResult | null>(null);
 
@@ -111,6 +112,12 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   // "connected" precondition).
   if (mode) {
     modeRef.current = mode;
+  }
+  // Same shape for the Riot gameId: keep the last non-empty value
+  // through game-end so writes that fire on the post-game transition
+  // still attach to the just-finished match.
+  if (liveGameState.lcuGameId) {
+    gameSessionIdRef.current = liveGameState.lcuGameId;
   }
   enemyStatsRef.current = enemyStats;
   chosenAugmentsRef.current = chosenAugments;
@@ -161,10 +168,6 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
     gamePlanRevRef.current = 0;
-    gameSessionIdRef.current =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     resetForNewGame();
 
     reactiveLog.info(

@@ -171,6 +171,17 @@
   border-bottom: 1px solid var(--line);
 }
 
+.recentRowClickable {
+  cursor: pointer;
+  transition: background-color 80ms;
+}
+
+.recentRowClickable:hover,
+.recentRowClickable:focus-visible {
+  background-color: var(--bg-2);
+  outline: none;
+}
+
 .recentChamp {
   font-family: var(--font-display);
   font-style: italic;

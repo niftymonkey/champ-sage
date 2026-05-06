@@ -24,6 +24,7 @@ describe("useLiveGameState", () => {
       gameMode: "ARAM",
       lcuGameMode: "KIWI",
       mapNumber: 0,
+      lcuGameId: "",
       gameTime: 120,
       champSelect: null,
       eogStats: null,

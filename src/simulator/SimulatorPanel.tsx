@@ -113,6 +113,7 @@ export function SimulatorPanel({ gameData }: SimulatorPanelProps) {
         gameMode: "",
         lcuGameMode: "",
         mapNumber: 0,
+        lcuGameId: "",
         gameTime: 0,
         champSelect: null,
         eogStats: eog,

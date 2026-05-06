@@ -18,6 +18,12 @@ interface IdleSurfaceProps {
   lifecycle: GameLifecycleEvent;
   lastPhase: GameflowPhase | null;
   championName: string | null;
+  /**
+   * Click handler for a recent-games row. App routes to the post-game
+   * surface for that specific Riot gameId. Optional so the surface
+   * still renders without click behavior in tests / storybook.
+   */
+  onSelectGame?: (gameId: string) => void;
 }
 
 /**
@@ -33,6 +39,7 @@ export function IdleSurface({
   lifecycle,
   lastPhase,
   championName,
+  onSelectGame,
 }: IdleSurfaceProps) {
   const lastGame = useLastGameSnapshot();
   const { matches, windowStats, recentGames } = useMatchHistory();
@@ -126,7 +133,13 @@ export function IdleSurface({
               ? Array.from({ length: 3 }).map((_, i) => (
                   <PlaceholderRecentRow key={i} />
                 ))
-              : recent.map((m) => <RecentGameRow key={m.gameId} match={m} />)}
+              : recent.map((m) => (
+                  <RecentGameRow
+                    key={m.gameId}
+                    match={m}
+                    onSelect={onSelectGame}
+                  />
+                ))}
           </div>
         </div>
 
@@ -139,9 +152,31 @@ export function IdleSurface({
   );
 }
 
-function RecentGameRow({ match }: { match: MatchSummary }) {
+function RecentGameRow({
+  match,
+  onSelect,
+}: {
+  match: MatchSummary;
+  onSelect?: (gameId: string) => void;
+}) {
+  const clickable = onSelect !== undefined;
+  const handleClick = clickable ? () => onSelect?.(match.gameId) : undefined;
+  const handleKey = clickable
+    ? (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect?.(match.gameId);
+        }
+      }
+    : undefined;
   return (
-    <div className={styles.recentRow}>
+    <div
+      className={`${styles.recentRow} ${clickable ? styles.recentRowClickable : ""}`}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={handleClick}
+      onKeyDown={handleKey}
+    >
       <span className={styles.recentChamp}>{match.championName}</span>
       <span className={styles.recentMode}>
         {formatGameMode(match.gameMode)}

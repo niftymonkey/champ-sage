@@ -471,6 +471,7 @@ function buildFixtureState(f: MultiTurnFixture): {
     gameMode: f.gameState.gameMode,
     lcuGameMode: f.gameModeId === "aram-mayhem" ? "KIWI" : f.gameState.gameMode,
     mapNumber: 0,
+    lcuGameId: "",
     gameTime: f.gameState.gameTime,
     champSelect: null,
     eogStats: null,

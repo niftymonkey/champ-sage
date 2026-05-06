@@ -17,6 +17,17 @@ import { formatGameMode } from "../lib/format-game-mode";
 import styles from "./PostGameSurface.module.css";
 
 const LAST_GAME_QUERY = { kind: "last-game" } as const;
+
+interface PostGameSurfaceProps {
+  /**
+   * Specific Riot gameId to render. When null, the surface shows the
+   * just-finished game via the `last-game` query — used by auto-routing
+   * (game ended) and direct nav to the post-game tab. When a string,
+   * the surface queries that specific match — used when the user
+   * clicks a row in the IdleSurface recent-games list.
+   */
+  gameId?: string | null;
+}
 /**
  * How long after the game ends to keep showing "writing the recap" before
  * switching to a factual fallback headline. Matches the typical LLM
@@ -35,13 +46,35 @@ const RECAP_PENDING_WINDOW_MS = 30_000;
  * conversation). When no takeaway exists yet (in-flight LLM call or a
  * zero-coach game), a calm pending state shows.
  */
-export function PostGameSurface() {
-  const { summary, loading, error } = useDecisionLogQuery(LAST_GAME_QUERY);
+export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
+  const query = useMemo(
+    () => (gameId ? { kind: "by-game" as const, gameId } : LAST_GAME_QUERY),
+    [gameId]
+  );
+  const { summary, loading, error } = useDecisionLogQuery(query);
   const snapshot = useLastGameSnapshot();
-  const { recentGames } = useMatchHistory();
-  const authoritativeMatch = useMemo(() => recentGames(1)[0], [recentGames]);
+  const { recentGames, matches } = useMatchHistory();
+  // For the auto-routed "last game" view, the most-recent match-history
+  // row is the authoritative source. For a specific gameId (clicked
+  // from the recent-games list), find that exact match.
+  const authoritativeMatch = useMemo(() => {
+    if (gameId) return matches.find((m) => m.gameId === gameId);
+    return recentGames(1)[0];
+  }, [gameId, matches, recentGames]);
 
   if (!loading && summary.totalCount === 0) {
+    // No records for this query. Two reasons we end up here:
+    // 1. Nothing has been played yet — fall back to the welcome copy.
+    // 2. The user clicked an older row in Recent games whose records
+    //    were written before the renderer started using the Riot
+    //    gameId (everything pre-this-feature). Those rows are
+    //    permanently orphaned from coach data; tell the user plainly.
+    const headline = gameId
+      ? "No coach data for this match."
+      : "Honest about what we both did.";
+    const body = gameId
+      ? "This match was played before per-game coach history shipped, so there's nothing to show. Newer matches will fill out fully."
+      : "No completed game yet this session. Once a match wraps, the recap and conversation log land here.";
     return (
       <div className={styles.surface}>
         <section className={styles.left}>
@@ -50,11 +83,8 @@ export function PostGameSurface() {
             <span>·</span>
             <span>Post-game</span>
           </div>
-          <h1 className={styles.headline}>Honest about what we both did.</h1>
-          <p className={styles.empty}>
-            No completed game yet this session. Once a match wraps, the recap
-            and conversation log land here.
-          </p>
+          <h1 className={styles.headline}>{headline}</h1>
+          <p className={styles.empty}>{body}</p>
         </section>
       </div>
     );

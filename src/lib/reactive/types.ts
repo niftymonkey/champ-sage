@@ -47,6 +47,15 @@ export interface LiveGameState {
    * Last-resort signal when both gameMode and lcuGameMode report PRACTICETOOL.
    */
   mapNumber: number;
+  /**
+   * Riot-issued gameId from the LCU's `/lol-gameflow/v1/session`
+   * `gameData.gameId` field. Available during the InProgress phase;
+   * empty string outside it. Used as the canonical per-game identifier
+   * across the decision log and match-history surfaces — when both
+   * surface types reference the same Riot gameId, navigation between
+   * them just works.
+   */
+  lcuGameId: string;
   gameTime: number;
   champSelect: unknown | null;
   eogStats: EogStats | null;

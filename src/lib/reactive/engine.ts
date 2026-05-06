@@ -374,13 +374,30 @@ export class ReactiveEngine {
             | undefined;
           const queue = gameData?.queue as Record<string, unknown> | undefined;
           const lcuMode = queue?.gameMode as string | undefined;
-          if (lcuMode) {
+          // gameData.gameId is the Riot-issued match identifier. It is
+          // 0 / undefined outside InProgress and a non-zero number while
+          // a match is live. Stringify so it carries cleanly through
+          // IPC; treat 0 as "not yet known" and don't surface it.
+          const rawGameId = gameData?.gameId;
+          const lcuGameId =
+            typeof rawGameId === "number" && rawGameId > 0
+              ? String(rawGameId)
+              : typeof rawGameId === "string" && rawGameId !== "0"
+                ? rawGameId
+                : null;
+
+          const current = liveGameState$.getValue();
+          let next = current;
+          if (lcuMode && current.lcuGameMode !== lcuMode) {
             this.lcuGameMode = lcuMode;
-            const current = liveGameState$.getValue();
-            if (current.lcuGameMode !== lcuMode) {
-              liveGameState$.next({ ...current, lcuGameMode: lcuMode });
-            }
+            next = { ...next, lcuGameMode: lcuMode };
           }
+          if (lcuGameId && current.lcuGameId !== lcuGameId) {
+            next = { ...next, lcuGameId };
+          } else if (!lcuGameId && current.lcuGameId !== "") {
+            next = { ...next, lcuGameId: "" };
+          }
+          if (next !== current) liveGameState$.next(next);
         })
     );
 

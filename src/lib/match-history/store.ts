@@ -145,7 +145,15 @@ export function createMatchHistoryStore(
 
   subs.add(
     inputs.gameData$.subscribe((next) => {
+      const wasMissing = gameData === null;
       gameData = next;
+      // If matches were already fetched without DDragon data (e.g. the
+      // LCU connected before DDragon finished loading), every row will
+      // have fallen back to "Champion <id>". Re-fetch once data lands so
+      // those rows resolve to real champion names.
+      if (wasMissing && gameData !== null && creds !== null) {
+        runFetch();
+      }
     })
   );
 
