@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { GameLifecycleEvent, GameflowPhase } from "../lib/reactive/types";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
+import { useLastGameMeta } from "../hooks/useLastGameMeta";
 import { useMatchHistory } from "../hooks/useMatchHistory";
 import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
@@ -108,7 +109,7 @@ export function IdleSurface({
         <div>
           <div className={styles.sectionLabel}>Last game</div>
           {lastGame ? (
-            <LastGameBlock snapshot={lastGame} authoritativeMatch={recent[0]} />
+            <LastGameBlock snapshot={lastGame} />
           ) : (
             <p className={styles.lastGameStats}>
               No game played in this session yet.
@@ -219,26 +220,20 @@ function PlaceholderRecentRow() {
   );
 }
 
-function LastGameBlock({
-  snapshot,
-  authoritativeMatch,
-}: {
-  snapshot: LastGameSnapshot;
-  authoritativeMatch?: MatchSummary;
-}) {
+function LastGameBlock({ snapshot }: { snapshot: LastGameSnapshot }) {
   const exchange = snapshot.recentExchanges[0];
-  // The Live Client's eog-stats-block sometimes returns null on game end
-  // (observed live), which leaves snapshot.isWin defaulting to false even
-  // for wins. The LCU's match-history endpoint is server-authoritative;
-  // when the most recent match-history entry is back, prefer it.
-  const isWin = authoritativeMatch?.isWin ?? snapshot.isWin;
-  const gameMode = formatGameMode(
-    authoritativeMatch?.gameMode ?? snapshot.gameMode
-  );
+  // Single source of truth for "what was the last game's result" —
+  // see useLastGameMeta. Prefers match-history (server-authoritative)
+  // over the in-memory snapshot, which has been observed to default
+  // to a loss when the LCU's eog-stats-block returns null.
+  const meta = useLastGameMeta();
+  const isWin = meta.isWin ?? false;
+  const gameMode = formatGameMode(meta.gameMode);
+  const championName = meta.championName ?? snapshot.championName;
   return (
     <div className={styles.lastGameBlock}>
       <div className={styles.lastGameHeader}>
-        <span className={styles.lastGameChamp}>{snapshot.championName}</span>
+        <span className={styles.lastGameChamp}>{championName}</span>
         <span
           className={`${styles.lastGameResult} ${
             isWin ? styles.recentResultWin : styles.recentResultLoss
@@ -249,10 +244,11 @@ function LastGameBlock({
       </div>
       <div className={styles.lastGameStats}>
         <span>
-          {snapshot.kills} / {snapshot.deaths} / {snapshot.assists}
+          {meta.kills ?? snapshot.kills} / {meta.deaths ?? snapshot.deaths} /{" "}
+          {meta.assists ?? snapshot.assists}
         </span>
         <span>·</span>
-        <span>{formatDuration(snapshot.gameTime)}</span>
+        <span>{formatDuration(meta.duration ?? snapshot.gameTime)}</span>
         <span>·</span>
         <span>{gameMode}</span>
       </div>

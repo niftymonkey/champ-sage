@@ -8,7 +8,7 @@ describe("WindowChrome", () => {
 
     expect(screen.getByText("Champ Sage")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Home" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "In Game" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Game" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "History" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Settings" })
@@ -32,7 +32,7 @@ describe("WindowChrome", () => {
       <WindowChrome surface="champ-select" onNavigate={() => {}} />
     );
 
-    const inGameTab = screen.getByRole("button", { name: "In Game" });
+    const inGameTab = screen.getByRole("button", { name: "Game" });
     expect(inGameTab.className).toContain("tabActive");
     // Sanity: only one tab should be active.
     const actives = container.querySelectorAll("[class*='tabActive']");

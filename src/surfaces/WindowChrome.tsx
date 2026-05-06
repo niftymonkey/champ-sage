@@ -4,7 +4,12 @@ import styles from "./WindowChrome.module.css";
 
 const TABS: ReadonlyArray<{ id: Surface; label: string }> = [
   { id: "idle", label: "Home" },
-  { id: "in-game", label: "In Game" },
+  // Labelled "Game" rather than "In Game" so the tab still reads
+  // sensibly when it's showing the just-finished match's snapshot
+  // (post-end-of-game, before the next game starts). Issue #84 will
+  // generalise this surface to "the game I'm viewing" with a real
+  // rejoin affordance.
+  { id: "in-game", label: "Game" },
   { id: "post-game", label: "History" },
   { id: "settings", label: "Settings" },
 ];

@@ -3,6 +3,7 @@ import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
 import { useMatchHistory } from "../hooks/useMatchHistory";
 import { useCoachingContext } from "../hooks/useCoachingContext";
+import { mergeMeta } from "../hooks/useLastGameMeta";
 import { ItemIcon } from "../components/items/ItemIcon";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type {
@@ -142,13 +143,11 @@ function LeftColumn({
   endedAt,
   error,
 }: LeftColumnProps) {
-  // Match-history is server-authoritative; takeaway and snapshot are
-  // best-effort fallbacks captured client-side at game-end.
-  const champion =
-    authoritativeMatch?.championName ??
-    takeaway?.champion ??
-    snapshot?.championName ??
-    null;
+  // Single source of truth for the merged metadata (champion, KDA,
+  // mode, win/loss, etc.) — see useLastGameMeta. Match-history wins,
+  // then takeaway, then snapshot.
+  const meta = mergeMeta(authoritativeMatch, takeaway, snapshot);
+  const champion = meta.championName;
 
   // The takeaway can take a few seconds to land. Show the "writing"
   // copy only inside that window; after that, switch to a factual
@@ -319,13 +318,12 @@ function RightColumn({
   authoritativeMatch,
 }: RightColumnProps) {
   // Eyebrow lives over here so the left column's headline ("Match recap
-  // for X.") is the first thing the eye lands on top-left.
-  const isWin = authoritativeMatch?.isWin ?? takeaway?.isWin ?? null;
-  const rawGameMode =
-    authoritativeMatch?.gameMode ?? takeaway?.gameMode ?? null;
-  const gameMode = rawGameMode ? formatGameMode(rawGameMode) : null;
-  const result = isWin === null ? null : isWin ? "victory" : "defeat";
-  const resultClass = isWin
+  // for X.") is the first thing the eye lands on top-left. Win / mode
+  // come from the same merged source the left column uses.
+  const meta = mergeMeta(authoritativeMatch, takeaway, null);
+  const gameMode = meta.gameMode ? formatGameMode(meta.gameMode) : null;
+  const result = meta.isWin === null ? null : meta.isWin ? "victory" : "defeat";
+  const resultClass = meta.isWin
     ? styles.eyebrowResultWin
     : styles.eyebrowResultLoss;
   return (
