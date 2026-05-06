@@ -803,9 +803,11 @@ function registerOverlayIpc(): void {
   });
 
   ipcMain.on("coaching-response", (_event, data) => {
-    const source = (data as { source?: string })?.source ?? "unknown";
+    const payload = data as { source?: string; gameId?: unknown } | undefined;
+    const source = payload?.source ?? "unknown";
+    const incomingGameId = payload?.gameId;
     overlayLog.info(
-      `Relaying coaching-response to all windows (source=${source})`
+      `Relaying coaching-response to all windows (source=${source}, gameId=${incomingGameId ?? "MISSING"})`
     );
     sendToAllWindows("coaching-response", data);
 
@@ -825,8 +827,8 @@ function registerOverlayIpc(): void {
           .append(input)
           .catch((err) => decisionLog.warn("append failed", err));
       } else {
-        decisionLog.debug(
-          `coaching-response dropped (source=${source}, no gameId or unknown source)`
+        decisionLog.warn(
+          `coaching-response dropped (source=${source}, gameId=${incomingGameId ?? "MISSING"}, type=${typeof incomingGameId})`
         );
       }
     }
