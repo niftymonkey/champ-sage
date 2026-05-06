@@ -23,6 +23,7 @@ import {
   parseAugmentPickedName,
 } from "./gep-replay-filter";
 import { createStripResizeLock } from "./strip-resize-lock";
+import { createStripBoundsStore } from "./strip-bounds-store";
 import {
   createCoachDecisionLog,
   type CoachDecisionLog,
@@ -534,6 +535,18 @@ const stripResizeLock = createStripResizeLock({
 });
 
 /**
+ * Persisted strip bounds — `createOverlayWindows` re-runs per game,
+ * which would otherwise reset the strip to its computed defaults each
+ * time. Saving the user's drag position on every move/resize event and
+ * reading it back on window creation keeps placement sticky across
+ * games and across launches.
+ */
+const stripBoundsStore = createStripBoundsStore({
+  read: readSettingsFile,
+  write: writeSettingsFile,
+});
+
+/**
  * Coach decision log — persistent record of every coaching response that
  * crosses the main process. Constructed lazily at IPC-register time so
  * userData is available; log handle is null until then. Failures during
@@ -630,12 +643,23 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
   try {
     const clamp = (v: number, lo: number, hi: number): number =>
       Math.max(lo, Math.min(hi, v));
-    const stripWidth = clamp(Math.round(width * 0.22), 420, 600);
-    const stripHeight = clamp(Math.round(height * 0.2), 200, 320);
+    const defaultStripWidth = clamp(Math.round(width * 0.22), 420, 600);
+    const defaultStripHeight = clamp(Math.round(height * 0.2), 200, 320);
     // Right edge offset: leave room for the minimap (~18% of width).
-    // Bottom offset: leave room for the item bar (~16% of height).
-    const stripX = width - stripWidth - Math.round(width * 0.18);
-    const stripY = height - stripHeight - Math.round(height * 0.16);
+    // Bottom offset: ~16% from screen bottom kept the strip too high in
+    // playtest; +100px puts it noticeably lower without colliding with
+    // the item bar (still inside the dead-space corridor at 1080p+).
+    const defaultStripX = width - defaultStripWidth - Math.round(width * 0.18);
+    const defaultStripY =
+      height - defaultStripHeight - Math.round(height * 0.16) + 100;
+
+    // Persisted user drag position wins over computed defaults so the
+    // strip survives the per-game `createOverlayWindows` cycle.
+    const savedBounds = stripBoundsStore.get();
+    const stripWidth = savedBounds?.width ?? defaultStripWidth;
+    const stripHeight = savedBounds?.height ?? defaultStripHeight;
+    const stripX = savedBounds?.x ?? defaultStripX;
+    const stripY = savedBounds?.y ?? defaultStripY;
 
     stripOverlay = await overlayApi.createWindow({
       // Bumped from "champ-sage-strip" to "champ-sage-strip-v2" once the
@@ -682,15 +706,17 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
       `Coaching strip overlay created (${stripWidth}x${stripHeight} at ${stripX},${stripY})`
     );
 
-    // Diagnostic: log every move/resize so the user can settle the strip
-    // where they want and capture the values to bake in as the resolution-
-    // aware defaults. Logs both absolute pixels and screen-relative
-    // fractions so the same placement reproduces at any resolution.
+    // Persist the strip's bounds on every move/resize so the user's
+    // drag position survives the per-game `createOverlayWindows` cycle
+    // and any process restart. Also log absolute + screen-relative
+    // fractions so the user can settle the strip where they want and
+    // capture values to bake in as new defaults if needed.
     const logStripBounds = (verb: "moved" | "resized"): void => {
       try {
         const win = stripOverlay?.window;
         if (!win) return;
         const b = win.getBounds();
+        stripBoundsStore.set(b);
         const fx = (b.x / width).toFixed(4);
         const fy = (b.y / height).toFixed(4);
         const fw = (b.width / width).toFixed(4);
