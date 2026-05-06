@@ -23,6 +23,8 @@ import {
   userInput$,
   manualInput$,
   playerIntent$,
+  lcuCredentials$,
+  gameEnded$,
 } from "./streams";
 import { normalizeGameState, extractMapNumber } from "../game-state/normalize";
 import { resetForNewGame } from "./coaching-feed";
@@ -175,6 +177,9 @@ export class ReactiveEngine {
         if (status.connected) {
           this.currentPort = status.port;
           this.currentToken = status.token;
+          lcuCredentials$.next({ port: status.port, token: status.token });
+        } else {
+          lcuCredentials$.next(null);
         }
         // Only emit if the connection status actually changed from what
         // the BehaviorSubject already holds (avoids duplicate on startup)
@@ -456,6 +461,7 @@ export class ReactiveEngine {
             ...current,
             eogStats: parseEogStats(eogData),
           });
+          gameEnded$.next();
         })
     );
 

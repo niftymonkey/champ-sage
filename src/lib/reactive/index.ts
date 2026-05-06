@@ -39,6 +39,8 @@ export {
   manualInput$,
   playerIntent$,
   debugInput$,
+  lcuCredentials$,
+  gameEnded$,
   createDefaultLiveGameState,
 } from "./streams";
 export type { DebugInputEvent } from "./streams";

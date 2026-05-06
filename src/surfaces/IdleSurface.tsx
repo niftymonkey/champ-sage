@@ -1,8 +1,16 @@
+import { useMemo } from "react";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameLifecycleEvent, GameflowPhase } from "../lib/reactive/types";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
+import { useMatchHistory } from "../hooks/useMatchHistory";
+import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
+import type { MatchSummary } from "../lib/match-history/types";
 import styles from "./IdleSurface.module.css";
+
+const WINDOW_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const RECENT_GAMES_QUERY = { kind: "recent-games", n: 50 } as const;
 
 interface IdleSurfaceProps {
   data: LoadedGameData;
@@ -26,6 +34,17 @@ export function IdleSurface({
   championName,
 }: IdleSurfaceProps) {
   const lastGame = useLastGameSnapshot();
+  const { matches, windowStats, recentGames } = useMatchHistory();
+  const stats = useMemo(
+    () => windowStats({ days: WINDOW_DAYS }),
+    [windowStats]
+  );
+  const recent = useMemo(() => recentGames(5), [recentGames]);
+  const { records: recentDecisions } = useDecisionLogQuery(RECENT_GAMES_QUERY);
+  const interventionCount = useMemo(() => {
+    const cutoff = Date.now() - WINDOW_DAYS * DAY_MS;
+    return recentDecisions.filter((r) => r.sentAt >= cutoff).length;
+  }, [recentDecisions]);
 
   return (
     <div className={styles.surface}>
@@ -38,18 +57,38 @@ export function IdleSurface({
           </h1>
           <p className={styles.heroBody}>
             The coach is watching the League client and will pick up the moment
-            you queue. Pattern reads across recent games will appear here once
-            Phase 5 lands match-history aggregation.
+            you queue. Below: your last week of matches, pulled live from the
+            League client, with how often the coach weighed in.
           </p>
         </div>
 
         <div className={styles.statStrip}>
-          <StatBox label="Last 7 days" value="—" delta="No data yet" />
-          <StatBox label="Avg KDA" value="—" delta="No data yet" />
+          <StatBox
+            label="Last 7 days"
+            value={stats.totalGames > 0 ? `${stats.wins}-${stats.losses}` : "—"}
+            delta={
+              stats.totalGames > 0
+                ? `${stats.totalGames} ${stats.totalGames === 1 ? "game" : "games"}`
+                : "No matches yet"
+            }
+          />
+          <StatBox
+            label="Avg KDA"
+            value={stats.totalGames > 0 ? stats.avgKDA.toFixed(2) : "—"}
+            delta={
+              stats.totalGames > 0
+                ? `${stats.totalKills}/${stats.totalDeaths}/${stats.totalAssists} total`
+                : "No matches yet"
+            }
+          />
           <StatBox
             label="Coach interventions"
-            value="—"
-            delta="Tracking begins next game"
+            value={interventionCount > 0 ? String(interventionCount) : "—"}
+            delta={
+              interventionCount > 0
+                ? `across ${matches.length} ${matches.length === 1 ? "match" : "matches"}`
+                : "Tracking begins next game"
+            }
           />
         </div>
 
@@ -82,9 +121,11 @@ export function IdleSurface({
         <div>
           <div className={styles.sectionLabel}>Recent games</div>
           <div className={styles.recent}>
-            <PlaceholderRecentRow />
-            <PlaceholderRecentRow />
-            <PlaceholderRecentRow />
+            {recent.length === 0
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <PlaceholderRecentRow key={i} />
+                ))
+              : recent.map((m) => <RecentGameRow key={m.gameId} match={m} />)}
           </div>
         </div>
 
@@ -95,6 +136,36 @@ export function IdleSurface({
       </aside>
     </div>
   );
+}
+
+function RecentGameRow({ match }: { match: MatchSummary }) {
+  return (
+    <div className={styles.recentRow}>
+      <span className={styles.recentChamp}>{match.championName}</span>
+      <span className={styles.recentMode}>{match.gameMode}</span>
+      <span
+        className={`${styles.recentResult} ${match.isWin ? styles.recentResultWin : styles.recentResultLoss}`}
+      >
+        {match.isWin ? "Win" : "Loss"}
+      </span>
+      <span className={styles.recentKda}>
+        {match.kills}/{match.deaths}/{match.assists}
+      </span>
+      <span className={styles.recentAgo}>
+        {formatRelativeTime(match.gameCreation)}
+      </span>
+    </div>
+  );
+}
+
+function formatRelativeTime(ms: number): string {
+  const diff = Date.now() - ms;
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 60) return `${Math.max(1, minutes)}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 interface StatBoxProps {

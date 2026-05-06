@@ -2,6 +2,7 @@ import "./App.css";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { CoachingProvider } from "./hooks/useCoachingContext";
 import { useGameData } from "./hooks/useGameData";
+import { setMatchHistoryGameData } from "./lib/match-history/runtime";
 import { useGameLifecycle } from "./hooks/useGameLifecycle";
 import { useLiveGameState } from "./hooks/useLiveGameState";
 import { useUserInput } from "./hooks/useUserInput";
@@ -88,6 +89,10 @@ function App() {
   const liveGame = useLiveGameState();
   useUserInput();
   useZoom();
+
+  useEffect(() => {
+    setMatchHistoryGameData(data);
+  }, [data]);
 
   const whisperProvider = useMemo(() => {
     const localUrl = import.meta.env.VITE_LOCAL_WHISPER_URL as
