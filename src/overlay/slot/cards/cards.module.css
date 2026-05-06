@@ -81,8 +81,7 @@
 }
 
 .answer {
-  font-family: var(--font-display);
-  font-style: italic;
+  font-family: var(--font-ui);
   font-size: 0.9375rem;
   color: var(--coach);
   line-height: 1.55;

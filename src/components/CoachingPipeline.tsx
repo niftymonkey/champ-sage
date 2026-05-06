@@ -218,12 +218,19 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     // Fire post-game takeaway iff there was any coach activity. Skip when
     // the game produced no decisions — there's nothing to reflect on, and
     // we don't want to pay for an LLM call to produce empty prose.
-    if (
-      apiKey &&
-      mode &&
-      lastState.activePlayer &&
-      voiceEntries.length + (gamePlanRevRef.current > 0 ? 1 : 0) > 0
-    ) {
+    const totalDecisions = feed.length;
+    const itemRecCount = feed.filter(
+      (e): e is CoachingExchangeEntry =>
+        e.type === "coaching-exchange" && e.source === "item-rec"
+    ).length;
+    const trueVoiceCount = voiceEntries.filter(
+      (e) => e.source === "voice"
+    ).length;
+    const hasActivity = totalDecisions > 0 || gamePlanRevRef.current > 0;
+    proactiveLog.info(
+      `Takeaway gate — apiKey=${!!apiKey} mode=${!!mode} activePlayer=${!!lastState.activePlayer} totalDecisions=${totalDecisions} planRevs=${gamePlanRevRef.current} voiceTurns=${trueVoiceCount} itemRecs=${itemRecCount}`
+    );
+    if (apiKey && mode && lastState.activePlayer && hasActivity) {
       const championName =
         activeInfo?.championName ??
         lastState.activePlayer?.championName ??
@@ -234,10 +241,12 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       const matchedItemCount = recommendedBuild.filter((r) =>
         finalItems.includes(r)
       ).length;
-      const allVoiceExchanges = voiceEntries.map((e) => ({
-        question: e.question,
-        answer: e.answer,
-      }));
+      // Only true voice exchanges go into the LLM context — proactive
+      // item-rec firings are auto-prompted ("I just died...") and shouldn't
+      // be retold to the model as if the player had asked them.
+      const allVoiceExchanges = voiceEntries
+        .filter((e) => e.source === "voice")
+        .map((e) => ({ question: e.question, answer: e.answer }));
 
       const takeawayInput: PostGameTakeawayInput = {
         champion: championName,
@@ -733,7 +742,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           recommendations: response.recommendations,
           buildPath: null,
           retried,
-          source: "reactive",
+          // Proactive item-rec — auto-fired on shop-moment / gold-available.
+          // Distinguished from voice-query (source: "reactive") so the
+          // post-game surface doesn't fold it into the conversation block
+          // as if the player had asked.
+          source: "item-rec",
           question,
           gameId: gameSessionIdRef.current,
           gameMode: liveGameStateRef.current.gameMode,

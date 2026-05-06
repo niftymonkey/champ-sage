@@ -60,7 +60,7 @@
 }
 
 .narrative {
-  font-family: var(--font-display);
+  font-family: var(--font-ui);
   font-size: 1rem;
   line-height: 1.65;
   color: var(--ink);
@@ -213,6 +213,10 @@
 
 .timelineTickAugment {
   background: var(--fit-strong);
+}
+
+.timelineTickItemRec {
+  background: var(--fit-excellent);
 }
 
 .timelineLegend {
@@ -373,8 +377,7 @@
 }
 
 .exchangeAnswer {
-  font-family: var(--font-display);
-  font-style: italic;
+  font-family: var(--font-ui);
   font-size: 0.9375rem;
   line-height: 1.55;
   color: var(--ink);

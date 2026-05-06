@@ -61,10 +61,12 @@ export function PostGameSurface() {
         voices={summary.byKind.voice}
         plans={summary.byKind.plan}
         augments={summary.byKind.augment}
+        itemRecs={summary.byKind.itemRec}
         allRecords={[
           ...summary.byKind.voice,
           ...summary.byKind.plan,
           ...summary.byKind.augment,
+          ...summary.byKind.itemRec,
         ]}
       />
     </div>
@@ -109,17 +111,15 @@ function LeftColumn({
       </div>
 
       <div>
-        <h1 className={styles.headline}>
-          {takeaway ? "Three takeaways from " : "Reflecting on "}
-          <span className={styles.headlineAccent}>{champion}</span>.
-        </h1>
         {takeaway ? (
-          <Narrative text={takeaway.narrative} />
+          <h1 className={styles.headline}>
+            Three takeaways from{" "}
+            <span className={styles.headlineAccent}>{champion}</span>.
+          </h1>
         ) : (
-          <p className={styles.narrativePending}>
-            The coach is writing the recap…
-          </p>
+          <h1 className={styles.headline}>The coach is writing the recap.</h1>
         )}
+        {takeaway ? <Narrative text={takeaway.narrative} /> : null}
       </div>
 
       <div className={styles.statTrio}>
@@ -208,6 +208,7 @@ interface RightColumnProps {
   voices: VoiceDecision[];
   plans: PlanDecision[];
   augments: AugmentDecision[];
+  itemRecs: DecisionRecord[];
   allRecords: DecisionRecord[];
 }
 
@@ -219,6 +220,7 @@ function RightColumn({
   voices,
   plans,
   augments,
+  itemRecs,
   allRecords,
 }: RightColumnProps) {
   return (
@@ -234,7 +236,7 @@ function RightColumn({
           </span>
           <span className={styles.timelineCounts}>
             {plans.length} plan revs · {voices.length} voice turns ·{" "}
-            {augments.length} augments
+            {augments.length} augments · {itemRecs.length} item recs
           </span>
         </div>
         <Timeline
@@ -263,6 +265,13 @@ function RightColumn({
               style={{ background: "var(--fit-strong)" }}
             />
             Augment pick
+          </span>
+          <span>
+            <span
+              className={styles.timelineLegendDot}
+              style={{ background: "var(--fit-excellent)" }}
+            />
+            Item rec
           </span>
         </div>
       </div>
@@ -301,7 +310,11 @@ function Timeline({ startedAt, endedAt, records }: TimelineProps) {
             ? styles.timelineTickPlan
             : r.source === "voice"
               ? styles.timelineTickVoice
-              : styles.timelineTickAugment;
+              : r.source === "augment"
+                ? styles.timelineTickAugment
+                : r.source === "item-rec"
+                  ? styles.timelineTickItemRec
+                  : styles.timelineTickPlan;
         return (
           <span
             key={r.id}
