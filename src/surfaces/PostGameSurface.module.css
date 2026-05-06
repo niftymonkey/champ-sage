@@ -14,12 +14,20 @@
 .right {
   display: flex;
   flex-direction: column;
-  gap: var(--space-10);
+  gap: var(--space-3);
   min-width: 0;
 }
 
 .right {
-  gap: var(--space-8);
+  gap: var(--space-5);
+}
+
+/* ─── Header block (eyebrow + headline + narrative grouped) ─── */
+
+.headerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 /* ─── Eyebrow row ─── */
@@ -51,7 +59,7 @@
   line-height: 1.1;
   letter-spacing: -0.01em;
   color: var(--ink);
-  margin: 0 0 var(--space-5);
+  margin: 0;
 }
 
 .headlineAccent {
@@ -59,7 +67,13 @@
   color: var(--accent);
 }
 
+/* Narrative carries its own bottom breathing room so when the LLM
+   takeaway IS present, the gap to the stat trio reads "comfortable".
+   When narrative is absent, the .left gap (space-3) is the only space
+   between headline and stat trio — the trio's border-top serves as
+   the visual separator. */
 .narrative {
+  margin-bottom: var(--space-4);
   font-family: var(--font-ui);
   font-size: 1rem;
   line-height: 1.65;

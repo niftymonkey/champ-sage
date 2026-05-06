@@ -101,6 +101,7 @@ export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
         error={error}
       />
       <RightColumn
+        authoritativeMatch={authoritativeMatch}
         takeaway={summary.takeaway}
         finalPlan={summary.finalPlan}
         startedAt={summary.startedAt}
@@ -141,28 +142,13 @@ function LeftColumn({
   endedAt,
   error,
 }: LeftColumnProps) {
-  // Source priority: match-history (server-authoritative) → takeaway
-  // (LLM-stamped at game-end, but its isWin/gameMode were captured
-  // from eogStats which sometimes returns null and silently defaults
-  // to false / "" → snapshot. Match-history is what actually shipped
-  // back from Riot's servers, so it wins.
+  // Match-history is server-authoritative; takeaway and snapshot are
+  // best-effort fallbacks captured client-side at game-end.
   const champion =
     authoritativeMatch?.championName ??
     takeaway?.champion ??
     snapshot?.championName ??
     null;
-  const isWin =
-    authoritativeMatch?.isWin ?? takeaway?.isWin ?? snapshot?.isWin ?? null;
-  const rawGameMode =
-    authoritativeMatch?.gameMode ??
-    takeaway?.gameMode ??
-    snapshot?.gameMode ??
-    null;
-  const gameMode = rawGameMode ? formatGameMode(rawGameMode) : null;
-  const result = isWin === null ? null : isWin ? "victory" : "defeat";
-  const resultClass = isWin
-    ? styles.eyebrowResultWin
-    : styles.eyebrowResultLoss;
 
   // The takeaway can take a few seconds to land. Show the "writing"
   // copy only inside that window; after that, switch to a factual
@@ -172,23 +158,7 @@ function LeftColumn({
 
   return (
     <section className={styles.left}>
-      <div className={styles.eyebrow}>
-        <span>Post-game</span>
-        {result !== null ? (
-          <>
-            <span>·</span>
-            <span className={resultClass}>{result.toUpperCase()}</span>
-          </>
-        ) : null}
-        {gameMode ? (
-          <>
-            <span>·</span>
-            <span>{gameMode}</span>
-          </>
-        ) : null}
-      </div>
-
-      <div>
+      <div className={styles.headerBlock}>
         {takeaway ? (
           <h1 className={styles.headline}>
             Three takeaways from{" "}
@@ -208,12 +178,7 @@ function LeftColumn({
           <p className={styles.narrativePending}>
             The coach is writing the recap…
           </p>
-        ) : (
-          <p className={styles.narrativePending}>
-            No coach narrative for this match — the structured stats and
-            timeline below still capture what happened.
-          </p>
-        )}
+        ) : null}
       </div>
 
       <div className={styles.statTrio}>
@@ -338,6 +303,7 @@ interface RightColumnProps {
   augments: AugmentDecision[];
   itemRecs: DecisionRecord[];
   allRecords: DecisionRecord[];
+  authoritativeMatch: MatchSummary | undefined;
 }
 
 function RightColumn({
@@ -350,9 +316,35 @@ function RightColumn({
   augments,
   itemRecs,
   allRecords,
+  authoritativeMatch,
 }: RightColumnProps) {
+  // Eyebrow lives over here so the left column's headline ("Match recap
+  // for X.") is the first thing the eye lands on top-left.
+  const isWin = authoritativeMatch?.isWin ?? takeaway?.isWin ?? null;
+  const rawGameMode =
+    authoritativeMatch?.gameMode ?? takeaway?.gameMode ?? null;
+  const gameMode = rawGameMode ? formatGameMode(rawGameMode) : null;
+  const result = isWin === null ? null : isWin ? "victory" : "defeat";
+  const resultClass = isWin
+    ? styles.eyebrowResultWin
+    : styles.eyebrowResultLoss;
   return (
     <aside className={styles.right}>
+      <div className={styles.eyebrow}>
+        <span>Post-game</span>
+        {result !== null ? (
+          <>
+            <span>·</span>
+            <span className={resultClass}>{result.toUpperCase()}</span>
+          </>
+        ) : null}
+        {gameMode ? (
+          <>
+            <span>·</span>
+            <span>{gameMode}</span>
+          </>
+        ) : null}
+      </div>
       <div className={styles.timelineCard}>
         <h2 className={styles.timelineTitle}>Coach-side timeline</h2>
         <Timeline
@@ -376,7 +368,11 @@ function RightColumn({
         </div>
       </div>
 
-      <FinalBuildSection takeaway={takeaway} finalPlan={finalPlan} />
+      <FinalBuildSection
+        takeaway={takeaway}
+        finalPlan={finalPlan}
+        authoritativeMatch={authoritativeMatch}
+      />
     </aside>
   );
 }
@@ -451,14 +447,28 @@ function Timeline({ startedAt, endedAt, records }: TimelineProps) {
 interface FinalBuildSectionProps {
   takeaway: TakeawayDecision | null;
   finalPlan: PlanDecision | null;
+  authoritativeMatch: MatchSummary | undefined;
 }
 
-function FinalBuildSection({ takeaway, finalPlan }: FinalBuildSectionProps) {
+function FinalBuildSection({
+  takeaway,
+  finalPlan,
+  authoritativeMatch,
+}: FinalBuildSectionProps) {
   const { gameData } = useCoachingContext();
   const recommended =
     takeaway?.recommendedBuild ?? finalPlan?.buildPath.map((b) => b.name) ?? [];
-  const finalItems = takeaway?.finalItems ?? [];
-  const matched = takeaway?.matchedItemCount ?? 0;
+  // Source priority: takeaway record (LLM-stamped at game-end) →
+  // match-history (server-authoritative, fills in when eogStats was
+  // null and the takeaway captured an empty list).
+  const finalItems =
+    takeaway?.finalItems && takeaway.finalItems.length > 0
+      ? takeaway.finalItems
+      : (authoritativeMatch?.finalItems ?? []);
+  const matched =
+    takeaway && takeaway.finalItems.length > 0
+      ? takeaway.matchedItemCount
+      : finalItems.filter((n) => recommended.includes(n)).length;
   const totalRecommended = recommended.length;
   const recommendedSet = new Set(recommended);
 
@@ -546,9 +556,13 @@ function ConversationBlock({ voices }: ConversationBlockProps) {
         {voices.map((v) => (
           <article key={v.id} className={styles.exchange}>
             {v.question ? (
-              <p className={styles.exchangeQuestion}>{v.question}</p>
+              <p className={styles.exchangeQuestion}>
+                <RichText text={v.question} />
+              </p>
             ) : null}
-            <p className={styles.exchangeAnswer}>{v.answer}</p>
+            <p className={styles.exchangeAnswer}>
+              <RichText text={v.answer} />
+            </p>
           </article>
         ))}
       </div>
@@ -577,36 +591,79 @@ function StatBox({ label, value }: StatBoxProps) {
  * convention the prompt opts into.
  */
 function Narrative({ text }: { text: string }) {
-  const parts = useMemo(() => splitItalics(text), [text]);
   return (
     <p className={styles.narrative}>
-      {parts.map((part, i) => (
-        <Fragment key={i}>
-          {part.italic ? (
-            <em className={styles.narrativeEm}>{part.text}</em>
-          ) : (
-            part.text
-          )}
-        </Fragment>
-      ))}
+      <RichText text={text} emClassName={styles.narrativeEm} />
     </p>
   );
 }
 
-function splitItalics(text: string): Array<{ text: string; italic: boolean }> {
-  const out: Array<{ text: string; italic: boolean }> = [];
-  const re = /\*([^*]+)\*/g;
+type InlineToken =
+  | { kind: "text"; text: string }
+  | { kind: "italic"; text: string }
+  | { kind: "bold"; text: string };
+
+/**
+ * Render `**bold**` and `*italic*` inline emphasis from LLM output.
+ * Strips `++…++` markers (some prompts emit them; not standard
+ * markdown). Does not handle headings, links, code — this is just
+ * inline emphasis for prose. Used by the takeaway narrative AND the
+ * post-game conversation answers so both render the same way.
+ */
+function RichText({
+  text,
+  emClassName,
+  strongClassName,
+}: {
+  text: string;
+  emClassName?: string;
+  strongClassName?: string;
+}) {
+  const tokens = useMemo(() => parseInline(text), [text]);
+  return (
+    <>
+      {tokens.map((t, i) => {
+        if (t.kind === "italic") {
+          return (
+            <em key={i} className={emClassName}>
+              {t.text}
+            </em>
+          );
+        }
+        if (t.kind === "bold") {
+          return (
+            <strong key={i} className={strongClassName}>
+              {t.text}
+            </strong>
+          );
+        }
+        return <Fragment key={i}>{t.text}</Fragment>;
+      })}
+    </>
+  );
+}
+
+function parseInline(input: string): InlineToken[] {
+  // Strip the non-standard ++…++ markers some prompts emit.
+  const text = input.replace(/\+\+([^+]+)\+\+/g, "$1");
+  const out: InlineToken[] = [];
+  // Match **bold** OR *italic* (bold first because ** is a superset).
+  const re = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) {
-      out.push({ text: text.slice(last, m.index), italic: false });
+      out.push({ kind: "text", text: text.slice(last, m.index) });
     }
-    out.push({ text: m[1], italic: true });
+    if (m[0].startsWith("**")) {
+      out.push({ kind: "bold", text: m[0].slice(2, -2) });
+    } else {
+      out.push({ kind: "italic", text: m[0].slice(1, -1) });
+    }
     last = m.index + m[0].length;
   }
   if (last < text.length) {
-    out.push({ text: text.slice(last), italic: false });
+    out.push({ kind: "text", text: text.slice(last) });
   }
   return out;
 }

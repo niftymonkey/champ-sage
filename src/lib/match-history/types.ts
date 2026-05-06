@@ -21,6 +21,8 @@ export interface MatchSummary {
   assists: number;
   /** Largest killing spree from this match (0 if no spree). */
   largestKillingSpree: number;
+  /** Resolved item names from the match's final inventory. Length 0-7. */
+  finalItems: string[];
   /** Match length in seconds. */
   durationSeconds: number;
   /** ms-epoch when the match started. */

@@ -89,6 +89,11 @@ export function createMatchHistoryStore(
     return null;
   };
 
+  const resolveItemName = (itemId: number): string | null => {
+    if (!gameData) return null;
+    return gameData.items.get(itemId)?.name ?? null;
+  };
+
   const doFetch = async (): Promise<void> => {
     if (!creds) {
       error$.next(new Error("LCU credentials unavailable"));
@@ -103,7 +108,7 @@ export function createMatchHistoryStore(
     const rawGames = parsed?.games?.games ?? [];
     const summaries: MatchSummary[] = [];
     for (const g of rawGames) {
-      const m = lcuMatchToSummary(g, resolveChampionName);
+      const m = lcuMatchToSummary(g, resolveChampionName, resolveItemName);
       if (m !== null) summaries.push(m);
     }
     summaries.sort((a, b) => b.gameCreation - a.gameCreation);

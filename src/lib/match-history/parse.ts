@@ -15,6 +15,13 @@ interface LcuMatchParticipant {
     deaths?: number;
     assists?: number;
     largestKillingSpree?: number;
+    item0?: number;
+    item1?: number;
+    item2?: number;
+    item3?: number;
+    item4?: number;
+    item5?: number;
+    item6?: number;
   };
 }
 
@@ -36,6 +43,14 @@ interface LcuMatchRaw {
 export type ChampionNameResolver = (championId: number) => string | null;
 
 /**
+ * Item-id-to-name resolver. LCU match payloads carry numeric item ids
+ * in `stats.item0` … `stats.item6`; we resolve to display names via
+ * `gameData.items`. Returns null when the id is unknown (item rotated
+ * out of the catalog, etc.) so the parser can drop it.
+ */
+export type ItemNameResolver = (itemId: number) => string | null;
+
+/**
  * Convert one LCU match-history entry to a stable MatchSummary. Returns
  * null when required fields are missing or the participant array is
  * empty — the caller should silently skip those rather than render
@@ -43,7 +58,8 @@ export type ChampionNameResolver = (championId: number) => string | null;
  */
 export function lcuMatchToSummary(
   raw: unknown,
-  resolveChampionName: ChampionNameResolver
+  resolveChampionName: ChampionNameResolver,
+  resolveItemName: ItemNameResolver = () => null
 ): MatchSummary | null {
   if (!isObject(raw)) return null;
   const r = raw as LcuMatchRaw;
@@ -74,12 +90,28 @@ export function lcuMatchToSummary(
     resolveChampionName(championId) ?? `Champion ${championId}`;
   const gameMode = normalizeGameMode(r.gameMode, queueId);
 
+  const itemIds: number[] = [
+    stats.item0,
+    stats.item1,
+    stats.item2,
+    stats.item3,
+    stats.item4,
+    stats.item5,
+    stats.item6,
+  ].filter((id): id is number => typeof id === "number" && id > 0);
+  const finalItems: string[] = [];
+  for (const id of itemIds) {
+    const name = resolveItemName(id);
+    if (name) finalItems.push(name);
+  }
+
   return {
     gameId,
     championName,
     championId,
     gameMode,
     queueId,
+    finalItems,
     isWin: stats.win === true,
     kills: typeof stats.kills === "number" ? stats.kills : 0,
     deaths: typeof stats.deaths === "number" ? stats.deaths : 0,
