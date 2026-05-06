@@ -23,6 +23,17 @@ import {
   parseAugmentPickedName,
 } from "./gep-replay-filter";
 import { createStripResizeLock } from "./strip-resize-lock";
+import {
+  createCoachDecisionLog,
+  type CoachDecisionLog,
+} from "./decision-log/log";
+import { createFileStorage } from "./decision-log/file-storage";
+import {
+  coachingPayloadToDecisionInput,
+  type CoachingResponsePayload,
+} from "./decision-log/payload-map";
+import { randomUUID } from "node:crypto";
+import type { DecisionQuery } from "../src/lib/decision-log/types";
 
 const app = electronApp;
 
@@ -522,6 +533,15 @@ const stripResizeLock = createStripResizeLock({
   write: writeSettingsFile,
 });
 
+/**
+ * Coach decision log — persistent record of every coaching response that
+ * crosses the main process. Constructed lazily at IPC-register time so
+ * userData is available; log handle is null until then. Failures during
+ * append never block the overlay relay; we log and move on.
+ */
+let coachDecisionLog: CoachDecisionLog | null = null;
+const decisionLog = log.scope("decision-log");
+
 function loadOverlayContent(
   win: BrowserWindow,
   page: "overlay" | "overlay-strip"
@@ -693,6 +713,28 @@ async function createOverlayWindows(overlayApi: any): Promise<void> {
   }
 }
 
+async function initCoachDecisionLog(): Promise<void> {
+  if (coachDecisionLog) return;
+  try {
+    const dir = join(app.getPath("userData"), "decision-log");
+    mkdirSync(dir, { recursive: true });
+    coachDecisionLog = await createCoachDecisionLog({
+      storage: createFileStorage(dir),
+      clock: () => Date.now(),
+      idGen: () => randomUUID(),
+    });
+    const w = coachDecisionLog.warnings();
+    if (w.length > 0) {
+      decisionLog.warn(`Hydrated with ${w.length} recovery warnings`, w);
+    } else {
+      decisionLog.info("Hydrated cleanly");
+    }
+  } catch (err) {
+    decisionLog.error("Failed to initialize decision log", err);
+    coachDecisionLog = null;
+  }
+}
+
 function registerOverlayIpc(): void {
   // Calibration screenshot capture
   ipcMain.handle(
@@ -747,7 +789,30 @@ function registerOverlayIpc(): void {
     if (stripOverlay?.window) {
       forceCompositorFlush(stripOverlay.window, "strip");
     }
+
+    if (coachDecisionLog) {
+      const input = coachingPayloadToDecisionInput(
+        data as CoachingResponsePayload
+      );
+      if (input) {
+        coachDecisionLog
+          .append(input)
+          .catch((err) => decisionLog.warn("append failed", err));
+      } else {
+        decisionLog.debug(
+          `coaching-response dropped (source=${source}, no gameId or unknown source)`
+        );
+      }
+    }
   });
+
+  ipcMain.handle(
+    "decision-log:query",
+    quietHandler(async (_event: unknown, q: DecisionQuery) => {
+      if (!coachDecisionLog) return [];
+      return coachDecisionLog.query(q);
+    })
+  );
 
   // Coaching strip drag — renderer sends mousedown, we call startDragging()
   ipcMain.on("start-strip-drag", (e) => {
@@ -1191,10 +1256,11 @@ function buildAppMenu(): void {
 // App lifecycle
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   initLogger();
   registerIpcHandlers();
   registerOverlayIpc();
+  await initCoachDecisionLog();
   buildAppMenu();
   createMainWindow();
 

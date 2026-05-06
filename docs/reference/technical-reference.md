@@ -627,3 +627,14 @@ When champ-sage attaches to an already-running League game, Overwolf's GEP repla
 - **Reset:** `augmentReplayFilter.reset()` fires on GEP `game-exit` so the next match starts clean.
 - **Assumption:** in ARAM Mayhem / Arena, an augment cannot be picked twice, so current-offer vs. prior-pick overlap is always a replay. If a future mode permits re-picking, the filter needs a time-bounded variant.
 - **Overlay is a separate renderer:** the overlay window (`src/overlay/OverlayApp.tsx`) parses GEP info updates directly via `window.electronAPI.onGepInfoUpdate`, not through the main-window `augmentOffer$` Subject. Filtering has to live at the broadcast boundary in `electron/main.ts` to affect both windows.
+
+### Coach decision log — synthetic gameId for in-game records
+
+Phase 5a's persistent coach decision log records every `coaching-response` IPC payload. Persistence happens passively in main: the existing `coaching-response` handler taps off into `coachDecisionLog.append(...)` after the overlay relay, so emitters in the renderer never reach for a writer.
+
+- **Synthetic session id:** the Live Client Data API only exposes `gameId` via `eogStats` at end-of-game. For in-game writes the renderer (`CoachingPipeline.tsx`) generates a per-game `gameSessionIdRef` (UUID) when the session-create effect fires and reuses it on every overlay payload as `gameId`. The real Riot `gameId` (when available via eogStats) is not used — correlating the synthetic id to it would be a future enhancement.
+- **Reset coupling:** the gameSessionIdRef resets alongside `gamePlanRevRef` and `gamePlanFiredRef` in the same effect, so a new game starts with a fresh id, fresh rev counter, and fresh plan-fired latch atomically.
+- **Storage layout:** `<userData>/decision-log/<gameId>.ndjson` per-game files plus a sibling `index.json` listing games chronologically. The index is rebuilt from existing `.ndjson` files if missing or unparseable, so deleting it forces a clean re-scan without touching record data.
+- **Recovery:** corrupt lines (process killed mid-write, or an external edit) are dropped on hydrate and surfaced via `log.warnings()`. Main logs the count; the app keeps running with the longest valid prefix.
+- **Failure isolation:** an `append` failure never blocks the overlay relay. Main catches the rejection, warns via electron-log, and moves on. The overlay still renders the response.
+- **Module split:** record types and the pure `summarizeGame` helper live in `src/lib/decision-log/` so renderer-side consumers (post-game takeaways, idle recap) can import them without crossing into Electron-only code. The storage adapter, log factory, and payload→input mapper live in `electron/decision-log/` (Node fs imports, main-process only).

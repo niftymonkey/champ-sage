@@ -88,6 +88,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   // the overlay so the slot's plan-revision card chip can show "plan rev N".
   // Reset to 0 alongside resetForNewGame() in the session-create effect.
   const gamePlanRevRef = useRef(0);
+  // Per-game synthetic id. The Live Client only exposes gameId via eogStats
+  // (end of game), so for the in-game decision-log writes we generate a
+  // session id when CoachingPipeline creates the session and reuse it for
+  // every payload. Reset alongside the session-create effect.
+  const gameSessionIdRef = useRef<string>("");
   const lastAugmentResponseRef = useRef<AugmentFitResult | null>(null);
 
   liveGameStateRef.current = liveGameState;
@@ -145,6 +150,10 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     setChosenAugments([]);
     gamePlanFiredRef.current = false;
     gamePlanRevRef.current = 0;
+    gameSessionIdRef.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     resetForNewGame();
 
     reactiveLog.info(
@@ -293,6 +302,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         buildPath,
         source: "plan",
         rev,
+        gameId: gameSessionIdRef.current,
+        gameMode: liveGameStateRef.current.gameMode,
         sentAt: Date.now(),
       });
     },
@@ -376,6 +387,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           retried,
           source: "augment" as const,
           question,
+          gameId: gameSessionIdRef.current,
+          gameMode: liveGameStateRef.current.gameMode,
           sentAt,
         };
         reactiveLog.info(
@@ -526,6 +539,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           retried,
           source: "reactive" as const,
           question,
+          gameId: gameSessionIdRef.current,
+          gameMode: liveGameStateRef.current.gameMode,
           sentAt,
         };
         reactiveLog.info(
@@ -622,6 +637,8 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           retried,
           source: "reactive",
           question,
+          gameId: gameSessionIdRef.current,
+          gameMode: liveGameStateRef.current.gameMode,
           sentAt,
         });
       } catch (err) {
