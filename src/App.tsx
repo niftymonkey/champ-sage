@@ -305,7 +305,6 @@ function App() {
             <SettingsSurface />
           ) : (
             <IdleSurface
-              data={data}
               lifecycle={lifecycle}
               lastPhase={lastPhase}
               championName={championName}

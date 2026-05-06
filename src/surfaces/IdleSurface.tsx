@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameLifecycleEvent, GameflowPhase } from "../lib/reactive/types";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
 import { useMatchHistory } from "../hooks/useMatchHistory";
@@ -14,7 +13,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const RECENT_GAMES_QUERY = { kind: "recent-games", n: 50 } as const;
 
 interface IdleSurfaceProps {
-  data: LoadedGameData;
   lifecycle: GameLifecycleEvent;
   lastPhase: GameflowPhase | null;
   championName: string | null;
@@ -35,7 +33,6 @@ interface IdleSurfaceProps {
  * content so the layout reads finished, not gutted.
  */
 export function IdleSurface({
-  data,
   lifecycle,
   lastPhase,
   championName,
@@ -141,11 +138,6 @@ export function IdleSurface({
                   />
                 ))}
           </div>
-        </div>
-
-        <div className={styles.dataset}>
-          Patch {data.version} · {data.champions.size} champions ·{" "}
-          {data.items.size} items · {data.augments.size} augments
         </div>
       </aside>
     </div>

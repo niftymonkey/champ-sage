@@ -267,18 +267,6 @@
   background: var(--threat-hi);
 }
 
-/* ─── Dataset footer ─── */
-
-.dataset {
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  letter-spacing: 0.04em;
-  color: var(--ink-3);
-  border-top: 1px solid var(--line);
-  padding-top: var(--space-3);
-  margin-top: auto;
-}
-
 /* Placeholder section: borrowed last-game card content rendered in the
    redesign rhythm. Phase 5 replaces this block with the real recent-games
    list pulled from the LCU match-history endpoint. */

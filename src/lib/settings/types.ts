@@ -73,9 +73,19 @@ export interface SettingsIO {
 /**
  * Group descriptor for the Settings UI to iterate. Pure presentation —
  * the store doesn't read this; it only knows individual settings.
+ *
+ * The `id` is a stable anchor used by the left-rail nav to scroll the
+ * canvas to a section. The `caption` is a short mono-uppercase tagline
+ * shown under the rail entry (e.g. "DATA + MIC"). When `settings` is
+ * empty, the canvas section can still render via a custom component
+ * passed at the surface level — useful for sections like "Overlays"
+ * that mix typed settings with one-off action buttons, or "About"
+ * which renders information rather than controls.
  */
 export interface SettingGroup {
+  id: string;
   title: string;
+  caption?: string;
   description?: string;
   settings: ReadonlyArray<AnySetting>;
 }

@@ -1,111 +1,188 @@
 .surface {
   flex: 1;
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: var(--space-8);
+  padding: var(--space-10) var(--space-10);
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ─── Left rail ─── */
+
+.rail {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: var(--space-10) var(--space-10);
-  gap: var(--space-8);
+  gap: var(--space-1);
+  border-right: 1px solid var(--line);
+  padding-right: var(--space-5);
+  min-height: 0;
   overflow-y: auto;
 }
 
-.intro {
+.railItem {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  text-align: center;
-  max-width: 32rem;
+  gap: 0.125rem;
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  color: var(--ink-2);
+  transition:
+    background-color 80ms,
+    border-color 80ms,
+    color 80ms;
 }
 
-.eyebrow {
+.railItem:hover,
+.railItem:focus-visible {
+  background: var(--bg-2);
+  color: var(--ink);
+  outline: none;
+}
+
+.railItemActive {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.railLabel {
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  line-height: 1.2;
+}
+
+.railCaption {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   letter-spacing: var(--type-meta-tracking);
   text-transform: uppercase;
   color: var(--ink-3);
 }
 
-.headline {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 2rem;
-  line-height: 1.15;
-  color: var(--ink);
-  margin: 0;
-}
+/* ─── Right canvas ─── */
 
-.subhead {
-  font-family: var(--font-ui);
-  font-size: 0.875rem;
-  line-height: 1.55;
-  color: var(--ink-2);
-  margin: 0;
+.canvas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: var(--space-4);
 }
 
 .section {
-  width: 100%;
-  max-width: 56rem;
-  border-top: 1px solid var(--line);
-  padding-top: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  scroll-margin-top: var(--space-4);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-8);
 }
 
-.section:first-child {
-  border-top: none;
-  padding-top: 0;
+.section:last-child {
+  border-bottom: none;
 }
 
-.sectionLabel {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: var(--type-meta-tracking);
-  text-transform: uppercase;
-  color: var(--ink-3);
+.sectionTitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: var(--ink);
+  margin: 0;
 }
 
 .sectionDescription {
   font-family: var(--font-ui);
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--ink-2);
-  margin: 0;
-}
-
-.sectionNote {
-  font-family: var(--font-ui);
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  color: var(--ink-2);
-  margin: 0;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.rowLabel {
-  font-family: var(--font-ui);
   font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+  margin: 0;
+  max-width: 36rem;
+}
+
+.sectionRows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Utility row (Overlays section, ad-hoc controls) ─── */
+
+.utilityRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--line);
+}
+
+.utilityRow:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.utilityText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.utilityLabel {
+  font-family: var(--font-display);
+  font-size: 1rem;
   color: var(--ink);
 }
 
-.rowDescription {
+.utilityDescription {
   font-family: var(--font-ui);
-  font-size: 0.75rem;
-  color: var(--ink-3);
-  line-height: 1.45;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--ink-2);
   margin: 0;
 }
 
-.rowText {
+.utilityControl {
+  flex-shrink: 0;
+}
+
+/* ─── About block ─── */
+
+.aboutBlock {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  flex: 1;
-  min-width: 0;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.aboutLine {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+
+.aboutLine:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.aboutLabel {
+  color: var(--ink-3);
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+}
+
+.aboutValue {
+  color: var(--ink);
 }

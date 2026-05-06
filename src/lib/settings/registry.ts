@@ -51,11 +51,15 @@ export const ALL_SETTINGS: ReadonlyArray<AnySetting> = [
  */
 export const SETTING_GROUPS: ReadonlyArray<SettingGroup> = [
   {
+    id: "coach-features",
     title: "Coach features",
+    caption: "Toggles · LLM",
     settings: [postGameTakeaway],
   },
   {
+    id: "coach-voice",
     title: "Coach voice",
+    caption: "Tone + speed",
     settings: [personality],
   },
 ];
