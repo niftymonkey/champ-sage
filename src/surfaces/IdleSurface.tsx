@@ -83,7 +83,7 @@ export function IdleSurface({
             }
           />
           <StatBox
-            label="Coach interventions"
+            label="Coaching moments"
             value={interventionCount > 0 ? String(interventionCount) : "—"}
             delta={
               interventionCount > 0
