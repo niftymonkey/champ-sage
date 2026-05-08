@@ -272,9 +272,9 @@ function StatBox({ label, value, delta }: StatBoxProps) {
 function LoadingDots() {
   return (
     <span className={styles.loadingDots} aria-label="Loading">
-      <span>·</span>
-      <span>·</span>
-      <span>·</span>
+      <span aria-hidden="true">·</span>
+      <span aria-hidden="true">·</span>
+      <span aria-hidden="true">·</span>
     </span>
   );
 }

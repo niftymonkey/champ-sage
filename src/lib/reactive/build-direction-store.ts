@@ -21,14 +21,14 @@ export const playerBuildDirection$ = new BehaviorSubject<BuildDirection | null>(
 
 export function setPlayerBuildDirection(next: BuildDirection): void {
   const prev = playerBuildDirection$.getValue();
+  if (prev === next) return;
   log.info(`set: ${prev ?? "null"} → ${next}`);
   playerBuildDirection$.next(next);
 }
 
 export function clearPlayerBuildDirection(reason: string = "unknown"): void {
   const prev = playerBuildDirection$.getValue();
-  if (prev !== null) {
-    log.info(`clear: ${prev} → null (reason: ${reason})`);
-  }
+  if (prev === null) return;
+  log.info(`clear: ${prev} → null (reason: ${reason})`);
   playerBuildDirection$.next(null);
 }

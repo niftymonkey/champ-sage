@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { BehaviorSubject, firstValueFrom, Subject, take } from "rxjs";
 import { createMatchHistoryStore } from "./store";
 import type { PlatformBridge } from "../reactive/platform-bridge";
@@ -87,6 +87,14 @@ describe("createMatchHistoryStore", () => {
 
   beforeEach(() => {
     harness = makeHarness(fakeBridge());
+  });
+
+  // Safety net: if a fake-timer test asserts mid-flight and skips its
+  // own `vi.useRealTimers()`, the next test that depends on real
+  // setTimeout (e.g. the `await new Promise((r) => setTimeout(r, 0))`
+  // pattern) hangs indefinitely. This guarantees a clean reset.
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("starts with empty matches and no error", async () => {

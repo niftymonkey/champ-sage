@@ -26,9 +26,9 @@ export function GamePlanPanel() {
   // "nothing selected" even when the user expected a default hint).
   const activeChampion =
     inGame && gameData && liveGameState.activePlayer
-      ? (gameData.champions.get(
+      ? gameData.champions.get(
           liveGameState.activePlayer.championName.toLowerCase()
-        ) ?? undefined)
+        )
       : undefined;
 
   // Diagnostic: log the picker's effective inputs once per championName

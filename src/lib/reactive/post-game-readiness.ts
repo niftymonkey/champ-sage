@@ -25,7 +25,11 @@ let snapshotUpdatedAt: number = 0;
 export const postGameReady$ = new BehaviorSubject<boolean>(true);
 
 function recompute(): void {
-  const ready = gameEndedAt === null || snapshotUpdatedAt > gameEndedAt;
+  // `>=` (not strictly `>`) so a snapshot refresh that happens in the
+  // same millisecond as the game-end mark still satisfies the gate —
+  // otherwise sub-ms back-to-back calls leave the surface stuck
+  // hidden indefinitely.
+  const ready = gameEndedAt === null || snapshotUpdatedAt >= gameEndedAt;
   if (postGameReady$.getValue() !== ready) {
     postGameReady$.next(ready);
   }

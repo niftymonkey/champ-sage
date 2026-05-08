@@ -79,6 +79,14 @@ export function inferEnemyDirection(
     if (bucket !== null) counts[bucket] += 1;
   }
 
+  // If every completed item was unclassifiable (boots-only, plain
+  // stat-stick, etc.), there's no real evidence yet — stay at
+  // stereotype confidence rather than reporting "low" with no signal.
+  const classifiedEvidence = counts.ad + counts.ap + counts.tank + counts.supp;
+  if (classifiedEvidence === 0) {
+    return { direction: input.stereotype, confidence: "stereotype" };
+  }
+
   const stereotypeCount = counts[input.stereotype];
   let winner: BuildDirection = input.stereotype;
   let winnerCount = stereotypeCount;

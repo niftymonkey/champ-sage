@@ -116,7 +116,7 @@
 }
 
 .loadingDots span {
-  animation: loadingDotPulse 1.4s ease-in-out infinite;
+  animation: loading-dot-pulse 1.4s ease-in-out infinite;
   opacity: 0;
 }
 
@@ -128,7 +128,7 @@
   animation-delay: 0.36s;
 }
 
-@keyframes loadingDotPulse {
+@keyframes loading-dot-pulse {
   0%,
   80%,
   100% {

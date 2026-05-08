@@ -14,10 +14,10 @@
    instead of popping. The outer element is keyed by gameId so the
    animation re-fires when the user finishes a new match. */
 .surfaceFadeIn {
-  animation: surfaceFadeIn 1000ms ease forwards;
+  animation: surface-fade-in 1000ms ease forwards;
 }
 
-@keyframes surfaceFadeIn {
+@keyframes surface-fade-in {
   from {
     opacity: 0;
   }

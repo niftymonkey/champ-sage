@@ -23,7 +23,7 @@ export interface MatchHistoryStoreInputs {
 }
 
 export interface MatchHistoryStoreOptions {
-  /** How many matches to fetch per refresh. Default 20. */
+  /** How many matches to fetch per refresh. Default 100. */
   pageSize?: number;
 }
 
@@ -87,6 +87,11 @@ export function createMatchHistoryStore(
 
   const scheduleRetry = (): void => {
     if (creds === null) return;
+    // Don't stack: if a retry is already pending and a manual refresh
+    // (or any other path) calls runFetch in the meantime and fails
+    // again, we'd otherwise leak orphaned timers and burst-fetch when
+    // they all fire.
+    if (retryTimer !== null) return;
     if (retryAttempt >= RETRY_DELAYS_MS.length) return;
     const delay = RETRY_DELAYS_MS[retryAttempt];
     retryAttempt += 1;

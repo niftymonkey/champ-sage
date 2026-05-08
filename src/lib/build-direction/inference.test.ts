@@ -179,6 +179,22 @@ describe("inferEnemyDirection — tie-break", () => {
       confidence: "low",
     });
   });
+
+  it("returns stereotype confidence when no completed items classify into a bucket", () => {
+    // Boots and plain stat-sticks pass `isCompleted` (no `into`) but
+    // `bucketItem` returns null because they carry no AD/AP/tank
+    // /supp signal. Treat that as "no evidence yet," not "low".
+    const bootsLikeItem = item({ stats: {}, into: [] });
+    expect(
+      inferEnemyDirection({
+        stereotype: "ap",
+        itemsOwned: [bootsLikeItem, bootsLikeItem],
+      })
+    ).toEqual<DirectionReading>({
+      direction: "ap",
+      confidence: "stereotype",
+    });
+  });
 });
 
 describe("inferEnemyDirection — hysteresis", () => {
