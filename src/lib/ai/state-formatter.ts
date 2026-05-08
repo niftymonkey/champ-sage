@@ -10,6 +10,9 @@ import type { LiveGameState } from "../reactive/types";
 import type { LoadedGameData } from "../data-ingest";
 import type { AugmentSet } from "../data-ingest/types";
 import type { ComputedStats } from "./enemy-stats";
+import type { BuildDirection } from "../build-direction/taxonomy";
+import { label as directionLabel } from "../build-direction/taxonomy";
+import type { DirectionReading } from "../build-direction/inference";
 
 export interface AugmentSnapshot {
   name: string;
@@ -49,6 +52,18 @@ export interface GameSnapshot {
   enemies: EnemySnapshot[];
   gameTime: number;
   augmentSetProgress: SetProgressEntry[];
+  /**
+   * Player's declared build direction for this game. `null` when the player
+   * hasn't picked one yet (or this is a context that doesn't surface a
+   * picker, like the eval harness).
+   */
+  playerBuildDirection: BuildDirection | null;
+  /**
+   * Per-enemy build-direction reading keyed by champion name. Empty when
+   * the inference stream hasn't populated yet (champ-select, very early
+   * in-game, eval harness).
+   */
+  enemyBuildDirections: ReadonlyMap<string, DirectionReading>;
 }
 
 /**
@@ -63,7 +78,9 @@ export function takeGameSnapshot(
   liveGameState: LiveGameState,
   enemyStats: Map<string, ComputedStats>,
   gameData: LoadedGameData,
-  chosenAugments: string[] = []
+  chosenAugments: string[] = [],
+  playerBuildDirection: BuildDirection | null = null,
+  enemyBuildDirections: ReadonlyMap<string, DirectionReading> = new Map()
 ): GameSnapshot | null {
   if (!liveGameState.activePlayer) return null;
 
@@ -131,6 +148,8 @@ export function takeGameSnapshot(
     enemies,
     gameTime: liveGameState.gameTime,
     augmentSetProgress,
+    playerBuildDirection,
+    enemyBuildDirections,
   };
 }
 
@@ -160,6 +179,11 @@ export function formatStateSnapshot(
   const kda = `${p.kda.kills}/${p.kda.deaths}/${p.kda.assists}`;
   sections.push(`Player Champion: ${p.championName} (Level ${p.level})`);
   sections.push(`KDA: ${kda}`);
+  if (snapshot.playerBuildDirection !== null) {
+    sections.push(
+      `Build Direction: ${directionLabel(snapshot.playerBuildDirection)}`
+    );
+  }
 
   // Player items
   if (p.items.length > 0) {
@@ -207,7 +231,8 @@ export function formatStateSnapshot(
   if (snapshot.enemies.length > 0) {
     sections.push("\nEnemy Team:");
     for (const enemy of snapshot.enemies) {
-      sections.push(formatEnemyLine(enemy));
+      const reading = snapshot.enemyBuildDirections.get(enemy.championName);
+      sections.push(formatEnemyLine(enemy, reading));
     }
   }
 
@@ -231,9 +256,15 @@ function formatPlayerStats(stats: ActivePlayerStats): string {
   return `Stats: ${parts.join(", ")}`;
 }
 
-function formatEnemyLine(enemy: EnemySnapshot): string {
+function formatEnemyLine(
+  enemy: EnemySnapshot,
+  reading: DirectionReading | undefined
+): string {
   const kda = `${enemy.kda.kills}/${enemy.kda.deaths}/${enemy.kda.assists}`;
   const items = enemy.items.length > 0 ? enemy.items.join(", ") : "no items";
+  const directionSuffix = reading
+    ? ` — building ${directionLabel(reading.direction)} (${reading.confidence})`
+    : "";
 
   if (enemy.stats) {
     const stats = [
@@ -245,10 +276,10 @@ function formatEnemyLine(enemy: EnemySnapshot): string {
       `${enemy.stats.moveSpeed} MS`,
       `${enemy.stats.maxHealth} HP`,
     ].join(", ");
-    return `- ${enemy.championName} (Level ${enemy.level}, ${kda}): ${stats} — ${items}`;
+    return `- ${enemy.championName} (Level ${enemy.level}, ${kda}): ${stats} — ${items}${directionSuffix}`;
   }
 
-  return `- ${enemy.championName} (Level ${enemy.level}, ${kda}): ${items}`;
+  return `- ${enemy.championName} (Level ${enemy.level}, ${kda}): ${items}${directionSuffix}`;
 }
 
 /** Count how many chosen augments belong to each set */

@@ -10,6 +10,7 @@
  */
 
 import type { BuildPathItem, Recommendation } from "../ai/types";
+import type { BuildDirection } from "../build-direction/taxonomy";
 
 export type DecisionSource =
   | "voice"
@@ -49,6 +50,12 @@ export interface PlanDecision extends DecisionEnvelope {
   answer: string;
   buildPath: BuildPathItem[];
   rev: number;
+  /**
+   * Player-declared build direction at the moment this plan was sent.
+   * Optional because pre-direction-feature records and contexts that
+   * don't surface a picker (eval harness) won't have one.
+   */
+  playerBuildDirection?: BuildDirection | null;
 }
 
 export interface AugmentDecision extends DecisionEnvelope {

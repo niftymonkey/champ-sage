@@ -10,6 +10,22 @@
   align-content: start;
 }
 
+/* Applied on the auto-routed view so each new game's data fades in
+   instead of popping. The outer element is keyed by gameId so the
+   animation re-fires when the user finishes a new match. */
+.surfaceFadeIn {
+  animation: surfaceFadeIn 1000ms ease forwards;
+}
+
+@keyframes surfaceFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .left,
 .right {
   display: flex;

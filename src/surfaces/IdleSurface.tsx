@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { GameLifecycleEvent, GameflowPhase } from "../lib/reactive/types";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
 import { useLastGameMeta } from "../hooks/useLastGameMeta";
 import { useMatchHistory } from "../hooks/useMatchHistory";
 import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
+import { useLcuConnected } from "../hooks/useLcuConnected";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type { MatchSummary } from "../lib/match-history/types";
 import { formatGameMode } from "../lib/format-game-mode";
@@ -12,6 +13,7 @@ import styles from "./IdleSurface.module.css";
 const WINDOW_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RECENT_GAMES_QUERY = { kind: "recent-games", n: 50 } as const;
+const OFFLINE_HINT = "League client offline";
 
 interface IdleSurfaceProps {
   lifecycle: GameLifecycleEvent;
@@ -40,16 +42,37 @@ export function IdleSurface({
   onSelectGame,
 }: IdleSurfaceProps) {
   const lastGame = useLastGameSnapshot();
-  const { matches, windowStats, recentGames } = useMatchHistory();
+  const {
+    windowStats,
+    recentGames,
+    loading: matchesLoading,
+  } = useMatchHistory();
+  const lcuConnected = useLcuConnected();
   const stats = useMemo(
     () => windowStats({ days: WINDOW_DAYS }),
     [windowStats]
   );
   const recent = useMemo(() => recentGames(5), [recentGames]);
-  const { records: recentDecisions } = useDecisionLogQuery(RECENT_GAMES_QUERY);
-  const interventionCount = useMemo(() => {
+  const { records: recentDecisions, loading: decisionsLoading } =
+    useDecisionLogQuery(RECENT_GAMES_QUERY);
+  // "Loading" only counts when we expect data to land — i.e. the LCU is
+  // up. If the client is offline we already show the offline copy and
+  // shouldn't spin a fake ellipsis.
+  const matchesLoadingNow = matchesLoading && lcuConnected;
+  const decisionsLoadingNow = decisionsLoading;
+  // Coaching moments are persisted to disk and survive across launches —
+  // unlike `matches.length` which is in-memory and only populated when
+  // the LCU has been reachable this session. Counting unique gameIds in
+  // the decision log gives a denominator that always matches the numerator.
+  const { interventionCount, interventionMatchCount } = useMemo(() => {
     const cutoff = Date.now() - WINDOW_DAYS * DAY_MS;
-    return recentDecisions.filter((r) => r.sentAt >= cutoff).length;
+    const inWindow = recentDecisions.filter((r) => r.sentAt >= cutoff);
+    const gameIds = new Set<string>();
+    for (const r of inWindow) gameIds.add(r.gameId);
+    return {
+      interventionCount: inWindow.length,
+      interventionMatchCount: gameIds.size,
+    };
   }, [recentDecisions]);
 
   return (
@@ -71,29 +94,63 @@ export function IdleSurface({
         <div className={styles.statStrip}>
           <StatBox
             label="Last 7 days"
-            value={stats.totalGames > 0 ? `${stats.wins}-${stats.losses}` : "—"}
+            value={
+              stats.totalGames > 0 ? (
+                `${stats.wins}-${stats.losses}`
+              ) : matchesLoadingNow ? (
+                <LoadingDots />
+              ) : (
+                "—"
+              )
+            }
             delta={
               stats.totalGames > 0
                 ? `${stats.totalGames} ${stats.totalGames === 1 ? "game" : "games"}`
-                : "No matches yet"
+                : matchesLoadingNow
+                  ? "Pulling match history…"
+                  : lcuConnected
+                    ? "No matches yet"
+                    : OFFLINE_HINT
             }
           />
           <StatBox
             label="Avg KDA"
-            value={stats.totalGames > 0 ? stats.avgKDA.toFixed(2) : "—"}
+            value={
+              stats.totalGames > 0 ? (
+                stats.avgKDA.toFixed(2)
+              ) : matchesLoadingNow ? (
+                <LoadingDots />
+              ) : (
+                "—"
+              )
+            }
             delta={
               stats.totalGames > 0
                 ? `${stats.totalKills}/${stats.totalDeaths}/${stats.totalAssists} total`
-                : "No matches yet"
+                : matchesLoadingNow
+                  ? "Pulling match history…"
+                  : lcuConnected
+                    ? "No matches yet"
+                    : OFFLINE_HINT
             }
           />
           <StatBox
             label="Coaching moments"
-            value={interventionCount > 0 ? String(interventionCount) : "—"}
+            value={
+              interventionCount > 0 ? (
+                String(interventionCount)
+              ) : decisionsLoadingNow ? (
+                <LoadingDots />
+              ) : (
+                "—"
+              )
+            }
             delta={
               interventionCount > 0
-                ? `across ${matches.length} ${matches.length === 1 ? "match" : "matches"}`
-                : "Tracking begins next game"
+                ? `across ${interventionMatchCount} ${interventionMatchCount === 1 ? "match" : "matches"}`
+                : decisionsLoadingNow
+                  ? "Reading the decision log…"
+                  : "Tracking begins next game"
             }
           />
         </div>
@@ -120,17 +177,21 @@ export function IdleSurface({
         <div>
           <div className={styles.sectionLabel}>Recent games</div>
           <div className={styles.recent}>
-            {recent.length === 0
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <PlaceholderRecentRow key={i} />
-                ))
-              : recent.map((m) => (
-                  <RecentGameRow
-                    key={m.gameId}
-                    match={m}
-                    onSelect={onSelectGame}
-                  />
-                ))}
+            {recent.length === 0 ? (
+              <p className={styles.recentEmpty}>
+                {lcuConnected
+                  ? "No matches in your client history yet."
+                  : "League client offline — recent matches load once the client is up."}
+              </p>
+            ) : (
+              recent.map((m) => (
+                <RecentGameRow
+                  key={m.gameId}
+                  match={m}
+                  onSelect={onSelectGame}
+                />
+              ))
+            )}
           </div>
         </div>
       </aside>
@@ -194,8 +255,8 @@ function formatRelativeTime(ms: number): string {
 
 interface StatBoxProps {
   label: string;
-  value: string;
-  delta: string;
+  value: ReactNode;
+  delta: ReactNode;
 }
 
 function StatBox({ label, value, delta }: StatBoxProps) {
@@ -208,15 +269,13 @@ function StatBox({ label, value, delta }: StatBoxProps) {
   );
 }
 
-function PlaceholderRecentRow() {
+function LoadingDots() {
   return (
-    <div className={styles.recentRow}>
-      <span className={styles.recentChamp}>—</span>
-      <span className={styles.recentMode}>Mayhem</span>
-      <span className={`${styles.recentResult}`}>—</span>
-      <span className={styles.recentKda}>—</span>
-      <span className={styles.recentAgo}>—</span>
-    </div>
+    <span className={styles.loadingDots} aria-label="Loading">
+      <span>·</span>
+      <span>·</span>
+      <span>·</span>
+    </span>
   );
 }
 

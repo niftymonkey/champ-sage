@@ -141,6 +141,20 @@
   font-style: italic;
 }
 
+.directionPicker {
+  margin-top: 0.4rem;
+}
+
+.directionPickerLabel {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.2rem;
+  text-align: center;
+}
+
 /* ─── Matchup read ─── */
 
 .read {

@@ -89,4 +89,20 @@ describe("postGameTakeawayFeature", () => {
     const result = { narrative: "x" };
     expect(postGameTakeawayFeature.extractResult(result)).toBe(result);
   });
+
+  it("user message includes the declared build direction when set", () => {
+    const message = postGameTakeawayFeature.buildUserMessage({
+      ...baseInput,
+      playerBuildDirection: "ap",
+    });
+    expect(message).toContain("Build direction declared: AP");
+  });
+
+  it("user message omits build direction when not declared", () => {
+    const message = postGameTakeawayFeature.buildUserMessage({
+      ...baseInput,
+      playerBuildDirection: null,
+    });
+    expect(message).not.toContain("Build direction declared");
+  });
 });

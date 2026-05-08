@@ -30,6 +30,7 @@ interface ElectronAPI {
   clearOverlays(): void;
   onClearOverlays(callback: () => void): () => void;
   decisionLogQuery(query: unknown): Promise<unknown>;
+  onDecisionLogUpdated(callback: (data: unknown) => void): () => void;
 }
 
 declare global {

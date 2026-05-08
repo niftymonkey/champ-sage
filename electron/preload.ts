@@ -156,4 +156,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // renderer only reads via this typed wrapper around `invoke`.
   decisionLogQuery: (query: unknown) =>
     ipcRenderer.invoke("decision-log:query", query),
+
+  // Fires after main successfully appends a coaching record to the
+  // decision log. Renderer-side query hooks subscribe so they can
+  // refetch without waiting on a tab toggle.
+  onDecisionLogUpdated: (callback: (data: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("decision-log:updated", handler);
+    return () => ipcRenderer.removeListener("decision-log:updated", handler);
+  },
 });

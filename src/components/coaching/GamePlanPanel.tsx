@@ -1,13 +1,65 @@
+import { useEffect, useRef } from "react";
 import type { BuildPathItem } from "../../lib/ai/types";
 import { useGamePlan } from "../../hooks/useGamePlan";
 import { useLiveGameState } from "../../hooks/useLiveGameState";
+import { usePlayerBuildDirection } from "../../hooks/usePlayerBuildDirection";
+import { useCoachingContext } from "../../hooks/useCoachingContext";
+import { setPlayerBuildDirection } from "../../lib/reactive/build-direction-store";
+import { stereotypeFromClassTag } from "../../lib/build-direction/taxonomy";
+import { BuildDirectionPicker } from "../BuildDirectionPicker";
 import { BuildPathIcon, BUILD_PATH_CATEGORY_LABELS } from "./BuildPathIcon";
+import { getLogger } from "../../lib/logger";
 import styles from "./GamePlanPanel.module.css";
+
+const log = getLogger("build-direction");
 
 export function GamePlanPanel() {
   const plan = useGamePlan();
   const liveGameState = useLiveGameState();
+  const { gameData } = useCoachingContext();
   const ownedNames = useOwnedItemNames(liveGameState);
+  const playerDirection = usePlayerBuildDirection();
+  const inGame = liveGameState.activePlayer !== null;
+  // Look up the active player's champion so the picker can render the
+  // dashed-stereotype indicator (matches the in-champ-select picker
+  // affordance — without this prop the in-game picker reads as
+  // "nothing selected" even when the user expected a default hint).
+  const activeChampion =
+    inGame && gameData && liveGameState.activePlayer
+      ? (gameData.champions.get(
+          liveGameState.activePlayer.championName.toLowerCase()
+        ) ?? undefined)
+      : undefined;
+
+  // Diagnostic: log the picker's effective inputs once per championName
+  // change so the log lets us tell from outside whether the in-game
+  // dashed-stereotype indicator should be visible. Catches the silent
+  // case where the Live Client's championName doesn't match the
+  // DDragon catalog key (e.g. Wukong vs MonkeyKing) — without this we
+  // can't distinguish "lookup missed" from "user picked nothing".
+  const championName = liveGameState.activePlayer?.championName ?? null;
+  const lastLoggedChampionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!inGame || !championName) return;
+    if (lastLoggedChampionRef.current === championName) return;
+    lastLoggedChampionRef.current = championName;
+    if (!gameData) {
+      log.info(
+        `In-game picker: gameData not loaded yet (championName=${championName})`
+      );
+      return;
+    }
+    if (!activeChampion) {
+      log.warn(
+        `In-game picker: champion lookup MISS for "${championName}" (lowercased "${championName.toLowerCase()}"); dashed-stereotype indicator will not render`
+      );
+      return;
+    }
+    const stereotype = stereotypeFromClassTag(activeChampion.tags?.[0]);
+    log.info(
+      `In-game picker: champion=${activeChampion.name} tags=[${(activeChampion.tags ?? []).join(",")}] stereotype=${stereotype ?? "null"}`
+    );
+  }, [inGame, championName, gameData, activeChampion]);
 
   return (
     <div className={styles.panel}>
@@ -19,6 +71,17 @@ export function GamePlanPanel() {
           </span>
         ) : null}
       </div>
+      {inGame ? (
+        <div className={styles.directionRow}>
+          <span className={styles.directionLabel}>Build direction</span>
+          <BuildDirectionPicker
+            value={playerDirection}
+            onChange={setPlayerBuildDirection}
+            champion={activeChampion}
+            size="compact"
+          />
+        </div>
+      ) : null}
       {plan ? (
         <>
           <div className={styles.summary}>{plan.summary}</div>
@@ -35,7 +98,7 @@ export function GamePlanPanel() {
           </div>
         </>
       ) : (
-        <div className={styles.empty}>Waiting for game to start...</div>
+        <div className={styles.empty}>The coach is drafting the plan.</div>
       )}
     </div>
   );

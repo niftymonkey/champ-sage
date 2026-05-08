@@ -21,29 +21,34 @@ interface InGameViewProps {
  * Three render states:
  *   1. Live game in progress — no banner, normal layout, enemy strip
  *      reads from the live state.
- *   2. Game just ended but feed/plan still in memory — "Last game"
- *      banner above the layout. Enemy strip drops out (its data
- *      depends on live polling). Tracking for Issue #84 (rejoin a
- *      specific past game) will eventually replace this with an
- *      explicit "viewing match X" affordance.
- *   3. Truly empty (fresh launch, never played) — a calm "No live
- *      game" empty state.
+ *   2. Game just ended same session, feed/plan still in memory — "Last
+ *      game" banner above the layout so the player can scroll back
+ *      through what just happened. Enemy strip drops out (live-only).
+ *      Cross-launch state intentionally falls through to (3): the
+ *      banner without in-memory feed content reads as "you have nothing
+ *      to scroll back to," which is misleading.
+ *   3. Truly empty (fresh launch, between sessions, or never played) —
+ *      a calm "No live game" empty state.
  */
 export function InGameView({ state, gameData }: InGameViewProps) {
   const feed = useCoachingFeed();
   const plan = useGamePlan();
   const lastGame = useLastGameMeta();
   const isLive = state.status === "connected";
-  const hasPastContent =
-    feed.length > 0 || plan !== null || lastGame.championName !== null;
+  // Only count *in-memory* signals here. Persistent signals like match
+  // history make `lastGame.championName` non-null even on a fresh
+  // launch, which used to drop the user into the banner-+-empty-columns
+  // state with two redundant "waiting for…" messages.
+  const hasInSessionContent = feed.length > 0 || plan !== null;
 
-  if (!isLive && !hasPastContent) {
+  if (!isLive && !hasInSessionContent) {
     return (
       <div className={styles.empty}>
-        <p className={styles.emptyTitle}>No live game.</p>
+        <p className={styles.emptyTitle}>No live game yet.</p>
         <p className={styles.emptyBody}>
-          The coach picks up the moment League sends us live state. Until then
-          there is nothing to show.
+          The coach picks up the moment League sends us live state. Start a
+          match and this surface will fill in with the running plan, the
+          conversation, and what the enemy team is building.
         </p>
       </div>
     );

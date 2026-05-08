@@ -1,0 +1,68 @@
+.picker {
+  display: inline-flex;
+  gap: var(--space-1, 4px);
+  padding: 2px;
+  background: var(--bg-2, rgba(255, 255, 255, 0.04));
+  border-radius: 6px;
+}
+
+.pickerVertical {
+  flex-direction: column;
+}
+
+.pill {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.pillCompact {
+  padding: 2px 8px;
+  font-size: 0.625rem;
+}
+
+.pill:hover {
+  color: var(--ink);
+  background: var(--bg-3, rgba(255, 255, 255, 0.06));
+}
+
+.pillSelected {
+  color: var(--ink);
+  background: var(--bg-3, rgba(255, 255, 255, 0.1));
+  border-color: var(--line, rgba(255, 255, 255, 0.12));
+}
+
+/* Stereotype = the default suggestion based on the champion's class
+   tag. Uses `currentColor` so the dashed border picks up the direction
+   pill's tint (AD red, AP blue, etc.) — visually links the dashed
+   ring to "this is the AP/AD/Tank/Supp default" without competing
+   with the solid-fill selected state. */
+.pillStereotype {
+  border-color: currentColor;
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.pill_ad {
+  color: var(--tag-ad);
+}
+.pill_ap {
+  color: var(--tag-ap);
+}
+.pill_tank {
+  color: var(--tag-tank);
+}
+.pill_supp {
+  color: var(--tag-supp);
+}

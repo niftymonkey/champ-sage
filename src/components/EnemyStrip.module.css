@@ -95,6 +95,10 @@
   color: var(--tag-supp);
 }
 
+.tagMuted {
+  opacity: 0.5;
+}
+
 .role {
   font-family: var(--font-mono);
   font-size: 0.6875rem;

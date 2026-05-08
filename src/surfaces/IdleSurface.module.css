@@ -105,6 +105,40 @@
   color: var(--threat-hi);
 }
 
+/* Animated three-dot ellipsis used in place of the em-dash placeholder
+   while a fetch is in flight. Each dot pulses on a staggered delay so
+   the value reads as "still working" rather than "no data." */
+.loadingDots {
+  display: inline-flex;
+  gap: 0.18em;
+  color: var(--ink-3);
+  letter-spacing: 0;
+}
+
+.loadingDots span {
+  animation: loadingDotPulse 1.4s ease-in-out infinite;
+  opacity: 0;
+}
+
+.loadingDots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.loadingDots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes loadingDotPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
 /* ─── Pinned notes ─── */
 
 .sectionLabel {
@@ -279,6 +313,15 @@
   display: flex;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+.recentEmpty {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--ink-3);
+  font-size: 0.875rem;
+  margin: 0;
+  padding: var(--space-2) 0;
 }
 
 .lastGameQuestion {

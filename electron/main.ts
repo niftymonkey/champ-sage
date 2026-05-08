@@ -834,6 +834,12 @@ function registerOverlayIpc(): void {
       if (input) {
         coachDecisionLog
           .append(input)
+          .then(() => {
+            // Notify renderers so per-game queries (post-game surface,
+            // history list) refetch and pick up the freshly-written
+            // record without waiting for a tab toggle.
+            sendToAllWindows("decision-log:updated", { source: input.source });
+          })
           .catch((err) => decisionLog.warn("append failed", err));
       } else {
         decisionLog.warn(

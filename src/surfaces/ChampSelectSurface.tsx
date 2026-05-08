@@ -1,8 +1,12 @@
+import { usePlayerBuildDirection } from "../hooks/usePlayerBuildDirection";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { Champion } from "../lib/data-ingest/types";
 import { useLiveGameState } from "../hooks/useLiveGameState";
 import { resolveChampionName } from "../lib/data-ingest/champion-id-map";
 import type { RawChampSelectMember } from "../lib/reactive/types";
+import { setPlayerBuildDirection } from "../lib/reactive/build-direction-store";
+import { BuildDirectionPicker } from "../components/BuildDirectionPicker";
+import type { BuildDirection } from "../lib/build-direction/taxonomy";
 import styles from "./ChampSelectSurface.module.css";
 
 interface ChampSelectSurfaceProps {
@@ -27,6 +31,7 @@ interface SlotData {
 export function ChampSelectSurface({ data }: ChampSelectSurfaceProps) {
   const liveGame = useLiveGameState();
   const session = liveGame.champSelect;
+  const playerDirection = usePlayerBuildDirection();
 
   if (!session) {
     return (
@@ -57,7 +62,12 @@ export function ChampSelectSurface({ data }: ChampSelectSurfaceProps) {
       <div className={styles.strip}>
         <div className={styles.team}>
           {ally.map((slot, i) => (
-            <Slot key={`ally-${i}`} slot={slot} />
+            <Slot
+              key={`ally-${i}`}
+              slot={slot}
+              playerDirection={playerDirection}
+              onPickDirection={setPlayerBuildDirection}
+            />
           ))}
         </div>
         <div className={styles.divider}>
@@ -103,7 +113,13 @@ function toSlotData(
   };
 }
 
-function Slot({ slot }: { slot: SlotData }) {
+interface SlotProps {
+  slot: SlotData;
+  playerDirection?: BuildDirection | null;
+  onPickDirection?: (next: BuildDirection) => void;
+}
+
+function Slot({ slot, playerDirection, onPickDirection }: SlotProps) {
   return (
     <div className={`${styles.slot} ${slot.isMine ? styles.slotMine : ""}`}>
       {slot.isMine ? <span className={styles.slotMineEyebrow}>You</span> : null}
@@ -125,6 +141,17 @@ function Slot({ slot }: { slot: SlotData }) {
       >
         {slot.champion?.name ?? "Picking…"}
       </span>
+      {slot.isMine && slot.champion && onPickDirection ? (
+        <div className={styles.directionPicker}>
+          <div className={styles.directionPickerLabel}>Build direction</div>
+          <BuildDirectionPicker
+            value={playerDirection ?? null}
+            onChange={onPickDirection}
+            champion={slot.champion}
+            size="compact"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

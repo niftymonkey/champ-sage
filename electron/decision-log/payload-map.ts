@@ -3,6 +3,7 @@ import type {
   DecisionInput,
   PlanDecision,
 } from "../../src/lib/decision-log/types";
+import type { BuildDirection } from "../../src/lib/build-direction/taxonomy";
 
 type BuildPathCategory = PlanDecision["buildPath"][number]["category"];
 
@@ -36,6 +37,8 @@ export interface CoachingResponsePayload {
   rev?: number;
   retried?: boolean;
   sentAt?: number;
+  /** Plan-only: player's declared build direction at the moment this plan was issued. */
+  playerBuildDirection?: BuildDirection | null;
   // Takeaway-only fields (source: "takeaway")
   narrative?: string;
   champion?: string;
@@ -98,6 +101,7 @@ export function coachingPayloadToDecisionInput(
           reason: b.reason,
         })),
         rev: typeof payload.rev === "number" ? payload.rev : 1,
+        playerBuildDirection: payload.playerBuildDirection ?? null,
       };
 
     case "augment":

@@ -61,6 +61,15 @@ export interface GamePlan {
 
 /** Snapshot of a completed game for the idle state card */
 export interface LastGameSnapshot {
+  /**
+   * Riot-issued game id for the just-finished match (from
+   * `liveGameState.lcuGameId`). `null` when the LCU never surfaced an
+   * id for this session (early disconnect / LCU lag). Used by the
+   * post-game surface to scope its decision-log query to the
+   * just-finished game and avoid flicker-rendering the previous
+   * game's takeaway while the new one is being written.
+   */
+  gameId: string | null;
   championName: string;
   isWin: boolean;
   kills: number;
