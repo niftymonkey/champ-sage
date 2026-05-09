@@ -69,18 +69,14 @@
   opacity: 1;
 }
 
-.placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  color: var(--ink-3);
+/* Matches GamePlanPanel's `.empty` rule so the two columns share the
+   same shape when both panels are waiting for content. Top-aligned
+   intentionally — centering in the tall scroll region read as
+   asymmetric next to the right column's top-aligned placeholder. */
+.empty {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 0.95rem;
-  gap: 0.4rem;
-  opacity: 0.6;
-  padding: var(--space-12) 0;
-  text-align: center;
+  color: var(--ink-3);
+  font-size: 0.9375rem;
+  padding-top: var(--space-4);
 }

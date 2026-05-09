@@ -146,6 +146,7 @@ describe("pushCoachingExchange", () => {
 describe("captureLastGameSnapshot", () => {
   it("stores the snapshot in lastGameSnapshot$", () => {
     captureLastGameSnapshot({
+      gameId: "test-game-1",
       championName: "Katarina",
       isWin: true,
       kills: 12,
@@ -181,6 +182,7 @@ describe("resetForNewGame", () => {
     pushGamePlan("Plan", sixCoreItems(["A", "B", "C", "D", "E", "F"]), 10);
     pushCoachingExchange("q", "a", [], 50);
     captureLastGameSnapshot({
+      gameId: "test-game-1",
       championName: "Katarina",
       isWin: true,
       kills: 8,

@@ -41,6 +41,24 @@
   color: var(--ink-3);
 }
 
+.directionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.directionLabel {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: var(--type-meta-tracking);
+  color: var(--ink-3);
+}
+
 .summary {
   font-family: var(--font-ui);
   font-size: 0.9375rem;

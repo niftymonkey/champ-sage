@@ -23,7 +23,7 @@ export interface MatchHistoryStoreInputs {
 }
 
 export interface MatchHistoryStoreOptions {
-  /** How many matches to fetch per refresh. Default 20. */
+  /** How many matches to fetch per refresh. Default 100. */
   pageSize?: number;
 }
 
@@ -34,7 +34,7 @@ export interface MatchHistoryStore {
   dispose(): void;
 }
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 100;
 
 /**
  * Reactive match-history store. Holds the most recent N matches in
@@ -62,8 +62,44 @@ export function createMatchHistoryStore(
   let puuid: string | null = null;
   let inFlight = false;
   let pendingRefresh = false;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let retryAttempt = 0;
 
   const subs = new Subscription();
+
+  // The LCU lockfile appears a few seconds before the HTTPS server is
+  // ready to accept connections. We get credentials immediately on
+  // discovery and the first fetch reliably fails with ECONNREFUSED.
+  // Retry on transient connection failures with exponential backoff
+  // until the server is up; bail on permanent errors (auth, malformed
+  // payload) since those won't fix themselves.
+  const TRANSIENT =
+    /ECONNREFUSED|CONNECTION_FAILED|fetch failed|ENOTFOUND|ETIMEDOUT/i;
+  const RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 30_000];
+
+  const cancelRetry = (): void => {
+    if (retryTimer !== null) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+    retryAttempt = 0;
+  };
+
+  const scheduleRetry = (): void => {
+    if (creds === null) return;
+    // Don't stack: if a retry is already pending and a manual refresh
+    // (or any other path) calls runFetch in the meantime and fails
+    // again, we'd otherwise leak orphaned timers and burst-fetch when
+    // they all fire.
+    if (retryTimer !== null) return;
+    if (retryAttempt >= RETRY_DELAYS_MS.length) return;
+    const delay = RETRY_DELAYS_MS[retryAttempt];
+    retryAttempt += 1;
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      if (creds !== null) runFetch();
+    }, delay);
+  };
 
   const fetchPuuid = async (): Promise<string> => {
     if (puuid) return puuid;
@@ -128,8 +164,17 @@ export function createMatchHistoryStore(
     }
     inFlight = true;
     doFetch()
+      .then(() => {
+        cancelRetry();
+      })
       .catch((err: unknown) => {
-        error$.next(err instanceof Error ? err : new Error(String(err)));
+        const e = err instanceof Error ? err : new Error(String(err));
+        error$.next(e);
+        if (TRANSIENT.test(e.message)) {
+          scheduleRetry();
+        } else {
+          cancelRetry();
+        }
       })
       .finally(() => {
         inFlight = false;
@@ -147,6 +192,7 @@ export function createMatchHistoryStore(
       if (creds === null) {
         // LCU went away — keep last-known matches, just stop trying.
         puuid = null;
+        cancelRetry();
         return;
       }
       if (wasOffline) runFetch();
@@ -184,6 +230,7 @@ export function createMatchHistoryStore(
     error$: error$.asObservable(),
     refresh: () => refresh$.next(),
     dispose: () => {
+      cancelRetry();
       subs.unsubscribe();
       matches$.complete();
       error$.complete();

@@ -42,7 +42,26 @@ import { createMatchSession } from "../lib/ai/match-session";
 import { getPersonality } from "../lib/ai/personality-store";
 import { buildBaseContext } from "../lib/ai/base-context";
 import { takeGameSnapshot } from "../lib/ai/state-formatter";
-import { playerIntent$, manualInput$, liveGameState$ } from "../lib/reactive";
+import {
+  playerIntent$,
+  manualInput$,
+  liveGameState$,
+  gameEnded$,
+  gameLifecycle$,
+} from "../lib/reactive";
+import { isChampSelectEntry } from "../lib/reactive/champ-select-entry";
+import {
+  playerBuildDirection$,
+  clearPlayerBuildDirection,
+} from "../lib/reactive/build-direction-store";
+import {
+  markGameEnded,
+  markSnapshotRefreshed,
+} from "../lib/reactive/post-game-readiness";
+import { distinctUntilChanged, filter, skip } from "rxjs";
+import type { EogStats, GameflowPhase } from "../lib/reactive/types";
+import { waitForEogStats } from "../lib/reactive/wait-for-eog-stats";
+import type { BuildDirection } from "../lib/build-direction/taxonomy";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { ProactiveEngine } from "../lib/ai/proactive/engine";
 import { createAugmentOfferTrigger } from "../lib/ai/proactive/triggers/augment-offer";
@@ -71,7 +90,7 @@ interface CoachingPipelineProps {
 
 export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const liveGameState = useLiveGameState();
-  const { mode, enemyStats } = useCoachingContext();
+  const { mode, enemyStats, enemyDirections } = useCoachingContext();
   const [chosenAugments, setChosenAugments] = useState<string[]>([]);
   const wasInGameRef = useRef(false);
   // Capture last known in-game state for end-of-game snapshot.
@@ -82,13 +101,22 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const gameDataRef = useRef(gameData);
   const modeRef = useRef(mode);
   const enemyStatsRef = useRef(enemyStats);
+  const enemyDirectionsRef = useRef(enemyDirections);
   const chosenAugmentsRef = useRef(chosenAugments);
   const sessionRef = useRef<MatchSession | null>(null);
   const gamePlanFeatureRef = useRef<CoachingFeature<
     GamePlanInput,
     GamePlanResult
   > | null>(null);
-  const gamePlanFiredRef = useRef(false);
+  // The MatchSession we've already auto-fired the opening plan for.
+  // Identifying the "game" by session reference (instead of
+  // `liveGameState.lcuGameId`) is reliable across modes — KIWI/ARAM
+  // Mayhem's LCU gameflow occasionally doesn't surface a non-zero
+  // gameId, so a gameId-based gate would block the opener forever
+  // for those games. The session ref is bumped exactly when a new
+  // game starts (in the session-create effect), so dedup-by-session
+  // gives "fire once per game" without the LCU dependency.
+  const openedSessionRef = useRef<MatchSession | null>(null);
   // Per-game plan revision counter. Increments each time a plan is sent to
   // the overlay so the slot's plan-revision card chip can show "plan rev N".
   // Reset to 0 alongside resetForNewGame() in the session-create effect.
@@ -120,6 +148,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     gameSessionIdRef.current = liveGameState.lcuGameId;
   }
   enemyStatsRef.current = enemyStats;
+  enemyDirectionsRef.current = enemyDirections;
   chosenAugmentsRef.current = chosenAugments;
 
   const apiKey =
@@ -166,7 +195,6 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     });
     gamePlanFeatureRef.current = createGamePlanFeature(gameDataRef.current);
     setChosenAugments([]);
-    gamePlanFiredRef.current = false;
     gamePlanRevRef.current = 0;
     resetForNewGame();
 
@@ -179,7 +207,13 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     // without triggering a session reset.
   }, [apiKey, mode, liveGameState.activePlayer?.championName]);
 
-  // Capture last game snapshot when transitioning out of a game
+  // Capture last game snapshot when transitioning out of a game.
+  // The LCU emits `/lol-end-of-game/v1/eog-stats-block` a few hundred
+  // milliseconds AFTER `activePlayer` clears, so doing this work
+  // synchronously here would always read `eog === null` and stamp
+  // every match as a defeat. Instead we wait for eogStats to land
+  // (or time out, falling back to the most recent match-history
+  // entry's win/loss).
   useEffect(() => {
     const inGame = liveGameState.activePlayer !== null;
 
@@ -191,12 +225,42 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     if (!wasInGameRef.current) return;
     wasInGameRef.current = false;
 
-    // Game just ended — capture snapshot using last known in-game state
-    // (current liveGameState may already be reset)
+    // Tell the post-game surface to hide its content immediately.
+    // Until `captureLastGameSnapshot` lands (which triggers
+    // `markSnapshotRefreshed` in `finalizeGameEnd`), the surface keeps
+    // a blank slate so the user never sees the previous game's
+    // champion / takeaway flash before the new game's data swaps in.
+    markGameEnded();
+
     const lastState = lastInGameStateRef.current;
+
+    // Wait up to 10s for eogStats to arrive on liveGameState$. The
+    // resolution + timeout logic lives in `waitForEogStats` so it can
+    // be exercised with deterministic streams in tests.
+    const sub = waitForEogStats(liveGameState$).subscribe((eog) => {
+      // Notify the rest of the system (match-history fetcher etc.)
+      // that the game has finished. Fires even on timeout so
+      // downstream subscribers still get a refresh signal.
+      gameEnded$.next();
+      finalizeGameEnd(lastState, eog);
+    });
+
+    return () => sub.unsubscribe();
+    // The body lives inside `finalizeGameEnd` defined just below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveGameState.activePlayer, apiKey, mode]);
+
+  const finalizeGameEnd = (
+    lastState: LiveGameState,
+    eog: EogStats | null
+  ): void => {
     const feed = coachingFeed$.getValue();
     const activeInfo = lastState.players.find((p) => p.isActivePlayer);
-    const eog = liveGameState.eogStats ?? lastState.eogStats;
+    if (eog === null) {
+      proactiveLog.warn(
+        "Game-end reached without eogStats within timeout; isWin will fall back to last-known sources"
+      );
+    }
 
     // Extract last 3 coaching exchanges for the idle card
     const voiceEntries = feed.filter(
@@ -208,6 +272,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     }));
 
     captureLastGameSnapshot({
+      gameId: gameSessionIdRef.current || null,
       championName:
         activeInfo?.championName ??
         lastState.activePlayer?.championName ??
@@ -222,6 +287,12 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       augments: chosenAugmentsRef.current,
       recentExchanges,
     });
+
+    // Snapshot is fresh — let the post-game surface fade its content
+    // back in (champion name, KDA, items all reflect the just-ended
+    // game now; takeaway prose can fill in async without blocking
+    // the visual reveal).
+    markSnapshotRefreshed();
 
     reactiveLog.info("Last game snapshot captured");
 
@@ -286,6 +357,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         augmentsPicked: chosenAugmentsRef.current,
         voiceExchanges: allVoiceExchanges,
         planRevisionCount: gamePlanRevRef.current,
+        playerBuildDirection: playerBuildDirection$.getValue(),
       };
 
       const sessionGameId = gameSessionIdRef.current;
@@ -344,39 +416,73 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           proactiveLog.error(`Post-game takeaway failed: ${err}`);
         });
     }
-  }, [liveGameState.activePlayer, apiKey, mode]);
+  };
 
-  // Auto-generate opening game plan once first full data arrives
+  // Auto-generate opening game plan once first full data arrives.
+  // Idempotent per session: if the renderer remounts (StrictMode dev,
+  // hard reload) and the session-create effect runs again, we won't
+  // re-fire because the session ref hasn't changed. New game → new
+  // session → opener fires once.
+  // Stable deps: the polling layer rebuilds `liveGameState` (and its
+  // `activePlayer` sub-object) every tick, so depending on the object
+  // reference re-fires the effect ~every 2s. Depend on the primitive
+  // championName instead — same value across same-champion polls,
+  // changes when activePlayer transitions in/out or champion swaps.
+  const activeChampionName = liveGameState.activePlayer?.championName ?? null;
   useEffect(() => {
-    if (
-      !sessionRef.current ||
-      !apiKey ||
-      gamePlanFiredRef.current ||
-      !liveGameState.activePlayer ||
-      liveGameState.players.length === 0
-    ) {
+    // Debug breadcrumb — silent bail-outs were leaving us blind in
+    // the log when the opener didn't fire. The "already fired" branch
+    // intentionally skips logging now that the effect's deps are
+    // stable; reaching it means a real remount (StrictMode dev) and
+    // doesn't add diagnostic value over the firing log itself.
+    if (!sessionRef.current) {
+      proactiveLog.debug("Opener gate: no session yet");
       return;
     }
+    if (!apiKey) {
+      proactiveLog.debug("Opener gate: no apiKey");
+      return;
+    }
+    if (!activeChampionName) {
+      proactiveLog.debug("Opener gate: no activePlayer");
+      return;
+    }
+    if (liveGameState.players.length === 0) {
+      proactiveLog.debug("Opener gate: players list empty");
+      return;
+    }
+    if (openedSessionRef.current === sessionRef.current) return;
+    openedSessionRef.current = sessionRef.current;
 
-    gamePlanFiredRef.current = true;
     const gameTime = liveGameState.gameTime;
-
-    proactiveLog.info("Generating opening game plan");
+    proactiveLog.info(
+      `Generating opening game plan (gameId=${liveGameState.lcuGameId || "unknown"})`
+    );
 
     submitGamePlanQuery(gameTime).catch((err) => {
       proactiveLog.error(`Opening game plan failed: ${err}`);
     });
-  }, [apiKey, liveGameState.activePlayer, liveGameState.players.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- liveGameState
+    // values (gameTime, lcuGameId, players.length) read at fire time are
+    // intentionally captured by closure; depending on them would re-fire
+    // every poll. championName + apiKey are the only meaningful triggers.
+  }, [apiKey, activeChampionName]);
 
   const submitGamePlanQuery = useCallback(
     async (gameTime: number) => {
       if (!sessionRef.current || !gamePlanFeatureRef.current || !apiKey) return;
 
+      const directionAtSnapshot = playerBuildDirection$.getValue();
+      proactiveLog.info(
+        `Game plan query — playerBuildDirection=${directionAtSnapshot ?? "null"}`
+      );
       const snapshot = takeGameSnapshot(
         liveGameStateRef.current,
         enemyStatsRef.current,
         gameDataRef.current,
-        chosenAugmentsRef.current
+        chosenAugmentsRef.current,
+        directionAtSnapshot,
+        enemyDirectionsRef.current
       );
 
       proactiveLog.info("Game plan query");
@@ -439,6 +545,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         gameId: gameSessionIdRef.current,
         gameMode: liveGameStateRef.current.gameMode,
         sentAt: Date.now(),
+        playerBuildDirection: playerBuildDirection$.getValue(),
       });
     },
     [apiKey]
@@ -460,7 +567,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         liveGameStateRef.current,
         enemyStatsRef.current,
         gameDataRef.current,
-        chosenAugmentsRef.current
+        chosenAugmentsRef.current,
+        playerBuildDirection$.getValue(),
+        enemyDirectionsRef.current
       );
 
       proactiveLog.info(
@@ -625,7 +734,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         liveGameStateRef.current,
         enemyStatsRef.current,
         gameDataRef.current,
-        chosenAugmentsRef.current
+        chosenAugmentsRef.current,
+        playerBuildDirection$.getValue(),
+        enemyDirectionsRef.current
       );
 
       window.electronAPI?.sendCoachingRequest();
@@ -708,6 +819,52 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     return () => sub.unsubscribe();
   }, [submitQuestion]);
 
+  // Reset the player's declared direction at the start of each new
+  // champ-select session. Triggers off the gameflow phase transition,
+  // not the raw `champSelect` payload — the LCU bounces the latter
+  // null/set mid-session (player swap, position swap, brief
+  // disconnects) which used to read as "fresh session" and clear the
+  // player's pick mid champ-select.
+  useEffect(() => {
+    let prevPhase: GameflowPhase | null = null;
+    const sub = gameLifecycle$.subscribe((evt) => {
+      if (evt.type !== "phase") return;
+      if (isChampSelectEntry(prevPhase, evt.phase)) {
+        proactiveLog.info(
+          `Phase entered ChampSelect (from ${prevPhase ?? "null"}); clearing player direction`
+        );
+        clearPlayerBuildDirection("champ-select-entered");
+      }
+      prevPhase = evt.phase;
+    });
+    return () => sub.unsubscribe();
+  }, []);
+
+  // Plan revision on mid-game build-direction pivot. The filter discards
+  // null emissions (system-driven resets between games shouldn't read as
+  // a player pivot). distinctUntilChanged ignores no-op re-selects of the
+  // same direction; skip(1) drops the first non-null value so the
+  // initial champ-select declaration doesn't fire a revision in-game.
+  // Guard against firing outside an in-game session.
+  useEffect(() => {
+    const sub = playerBuildDirection$
+      .pipe(
+        filter((d): d is BuildDirection => d !== null),
+        distinctUntilChanged(),
+        skip(1)
+      )
+      .subscribe(() => {
+        if (!sessionRef.current || !liveGameStateRef.current.activePlayer) {
+          return;
+        }
+        proactiveLog.info("Player pivoted build direction; revising plan");
+        submitGamePlanQuery(liveGameStateRef.current.gameTime).catch((err) => {
+          proactiveLog.error(`Plan revision after pivot failed: ${err}`);
+        });
+      });
+    return () => sub.unsubscribe();
+  }, [submitGamePlanQuery]);
+
   // Proactive engine — routes decision-point triggers to feature calls.
   // Triggers: augment-offer (Phase 1), shop-moment + gold-available (Phase 2).
   // Passive-observation triggers land in Phase 3.
@@ -742,7 +899,9 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           state,
           enemyStatsRef.current,
           gameDataRef.current,
-          chosenAugmentsRef.current
+          chosenAugmentsRef.current,
+          playerBuildDirection$.getValue(),
+          enemyDirectionsRef.current
         );
         proactiveLog.info(`Item-rec ${trigger} fired`);
         const { value: response, retried } = await sessionRef.current.ask(

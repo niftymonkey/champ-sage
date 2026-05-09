@@ -1,4 +1,8 @@
 import type { CoachingFeature } from "../../feature";
+import {
+  label as directionLabel,
+  type BuildDirection,
+} from "../../../build-direction/taxonomy";
 import { POST_GAME_TAKEAWAY_TASK_PROMPT } from "./prompt";
 import { postGameTakeawaySchema, type PostGameTakeawayResult } from "./schema";
 
@@ -26,6 +30,11 @@ export interface PostGameTakeawayInput {
     answer: string;
   }>;
   readonly planRevisionCount: number;
+  /**
+   * Player's declared build direction at game end (or last value before
+   * the store cleared). `null` when the player never picked one.
+   */
+  readonly playerBuildDirection?: BuildDirection | null;
 }
 
 function formatDuration(seconds: number): string {
@@ -80,6 +89,9 @@ export const postGameTakeawayFeature: CoachingFeature<
       input.augmentsPicked.length > 0
         ? `Augments picked: ${input.augmentsPicked.join(", ")}.`
         : "No augments picked.";
+    const directionLine = input.playerBuildDirection
+      ? `Build direction declared: ${directionLabel(input.playerBuildDirection)}`
+      : null;
     return [
       "[Game Summary]",
       `${input.champion} · ${input.gameMode} · ${result} · ${formatDuration(input.duration)}`,
@@ -89,12 +101,13 @@ export const postGameTakeawayFeature: CoachingFeature<
       formatBuildComparison(input.finalItems, input.recommendedBuild),
       "",
       augLine,
+      directionLine,
       `Plan revisions during the game: ${input.planRevisionCount}.`,
       "",
       "[Voice Exchanges]",
       formatVoiceExchanges(input.voiceExchanges),
     ]
-      .filter((line) => line !== undefined)
+      .filter((line): line is string => line !== null && line !== undefined)
       .join("\n");
   },
 

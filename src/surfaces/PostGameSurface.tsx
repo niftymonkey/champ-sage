@@ -1,9 +1,10 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useRef } from "react";
 import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
 import { useMatchHistory } from "../hooks/useMatchHistory";
 import { useCoachingContext } from "../hooks/useCoachingContext";
 import { mergeMeta } from "../hooks/useLastGameMeta";
+import { usePostGameReady } from "../hooks/usePostGameReady";
 import { ItemIcon } from "../components/items/ItemIcon";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type {
@@ -13,11 +14,18 @@ import type {
   TakeawayDecision,
   VoiceDecision,
 } from "../lib/decision-log/types";
+import { mostRecentCompletedGameSlice } from "../lib/decision-log/most-recent-completed-game";
+import { summarizeGame } from "../lib/decision-log/summarize";
 import type { MatchSummary } from "../lib/match-history/types";
 import { formatGameMode } from "../lib/format-game-mode";
 import styles from "./PostGameSurface.module.css";
 
-const LAST_GAME_QUERY = { kind: "last-game" } as const;
+// Pull a window of recent records and pick the most-recently-COMPLETED
+// game from them in the renderer. Querying "last-game" directly would
+// flicker through partial state (plan-only, no takeaway yet) right
+// after a game ended; the renderer-side filter keeps the previous
+// fully-completed game on screen until the new takeaway lands.
+const RECENT_WINDOW_QUERY = { kind: "recent-games", n: 10 } as const;
 
 interface PostGameSurfaceProps {
   /**
@@ -48,11 +56,43 @@ const RECAP_PENDING_WINDOW_MS = 30_000;
  * zero-coach game), a calm pending state shows.
  */
 export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
+  // Auto-routed (no explicit gameId) views hide their content the
+  // moment a game ends, then fade in once the in-memory snapshot has
+  // refreshed for the just-ended game. Direct-nav (by gameId from
+  // Recent Games) bypasses this — the user explicitly asked for that
+  // game's data and there's no stale-flash risk.
+  const ready = usePostGameReady();
+  const shouldHide = !gameId && !ready;
+
+  // Trigger the fade-in animation ONLY on the render that transitions
+  // hidden → ready. Initial mounts (e.g. user clicks the History tab
+  // manually) and steady-state re-renders don't get the class. Init
+  // the ref to the current `ready` value so the very first render
+  // doesn't read as a transition.
+  const prevReadyRef = useRef(ready);
+  const justRevealed = !prevReadyRef.current && ready;
+  useEffect(() => {
+    prevReadyRef.current = ready;
+  });
+
   const query = useMemo(
-    () => (gameId ? { kind: "by-game" as const, gameId } : LAST_GAME_QUERY),
+    () => (gameId ? { kind: "by-game" as const, gameId } : RECENT_WINDOW_QUERY),
     [gameId]
   );
-  const { summary, loading, error } = useDecisionLogQuery(query);
+  const {
+    records,
+    summary: directSummary,
+    loading,
+    error,
+  } = useDecisionLogQuery(query);
+  // For the "most recent" view (no explicit gameId), filter the
+  // recent-games window down to the latest game with a takeaway and
+  // build the summary from that slice. For the "by gameId" view, use
+  // the direct summary as-is.
+  const summary = useMemo(() => {
+    if (gameId) return directSummary;
+    return summarizeGame(mostRecentCompletedGameSlice(records));
+  }, [gameId, records, directSummary]);
   const snapshot = useLastGameSnapshot();
   const { recentGames, matches } = useMatchHistory();
   // For the auto-routed "last game" view, the most-recent match-history
@@ -62,6 +102,14 @@ export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
     if (gameId) return matches.find((m) => m.gameId === gameId);
     return recentGames(1)[0];
   }, [gameId, matches, recentGames]);
+
+  if (shouldHide) {
+    // Empty placeholder: same surface root so layout is stable, but
+    // no children. The fade-in animation lives on a class that's only
+    // applied while `ready`; the absence here means the placeholder
+    // stays at opacity 0 until snapshot data lands.
+    return <div className={styles.surface} aria-hidden="true" />;
+  }
 
   if (!loading && summary.totalCount === 0) {
     // No records for this query. Two reasons we end up here:
@@ -89,8 +137,20 @@ export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
     );
   }
 
+  // Apply the fade-in class for exactly one render — the transition
+  // out of `shouldHide`. The keyed outer element ensures the animation
+  // re-fires from a clean mount each time; without the key, browsers
+  // may not restart a `forwards` animation when the same class is
+  // re-added to an element already in its `to` state.
+  const surfaceClass = justRevealed
+    ? `${styles.surface} ${styles.surfaceFadeIn}`
+    : styles.surface;
+  const fadeKey = justRevealed
+    ? `revealed-${snapshot?.gameId ?? "none"}`
+    : "static";
+
   return (
-    <div className={styles.surface}>
+    <div key={fadeKey} className={surfaceClass}>
       <LeftColumn
         takeaway={summary.takeaway}
         planRevisions={summary.byKind.plan.length}

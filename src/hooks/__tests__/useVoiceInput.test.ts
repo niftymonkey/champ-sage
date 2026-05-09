@@ -90,6 +90,7 @@ beforeEach(() => {
     setStripSize: vi.fn(),
     resetStripSize: vi.fn(),
     decisionLogQuery: vi.fn(),
+    onDecisionLogUpdated: vi.fn(() => () => {}),
   };
 });
 
@@ -140,6 +141,7 @@ describe("useVoiceInput", () => {
       setStripSize: vi.fn(),
       resetStripSize: vi.fn(),
       decisionLogQuery: vi.fn(),
+      onDecisionLogUpdated: vi.fn(() => () => {}),
     };
   });
 

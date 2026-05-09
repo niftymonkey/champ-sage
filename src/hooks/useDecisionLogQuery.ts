@@ -64,6 +64,19 @@ export function useDecisionLogQuery(
     run();
   }, [run]);
 
+  // Refetch whenever main signals that the decision log has new content.
+  // Without this, the renderer keeps a stale snapshot of the just-finished
+  // game between writes — most visibly, the post-game surface stays in
+  // "writing the recap…" until the user toggles tabs.
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.onDecisionLogUpdated) return;
+    const unsub = api.onDecisionLogUpdated(() => {
+      run();
+    });
+    return unsub;
+  }, [run]);
+
   const summary = useMemo(() => summarizeGame(records), [records]);
 
   return { records, summary, loading, error, refetch: run };

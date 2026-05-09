@@ -77,6 +77,8 @@ function createSnapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
     ],
     gameTime: 600,
     augmentSetProgress: [],
+    playerBuildDirection: null,
+    enemyBuildDirections: new Map(),
     ...overrides,
   };
 }
@@ -204,6 +206,37 @@ describe("formatStateSnapshot", () => {
     expect(output).toContain(
       "- Zed (Level 11, 8/1/3): Duskblade of Draktharr, Edge of Night"
     );
+  });
+
+  it("includes the player's declared build direction when set", () => {
+    const snapshot = createSnapshot({ playerBuildDirection: "ap" });
+    const output = formatStateSnapshot(snapshot);
+    expect(output).toContain("Build Direction: AP");
+  });
+
+  it("omits the player's build-direction line when null", () => {
+    const output = formatStateSnapshot(
+      createSnapshot({ playerBuildDirection: null })
+    );
+    expect(output).not.toContain("Build Direction:");
+  });
+
+  it("appends each enemy's inferred direction with confidence", () => {
+    const snapshot = createSnapshot({
+      enemyBuildDirections: new Map([
+        ["Zed", { direction: "ad", confidence: "high" }],
+        ["Sona", { direction: "supp", confidence: "stereotype" }],
+      ]),
+    });
+    const output = formatStateSnapshot(snapshot);
+    expect(output).toContain("building AD (high)");
+    expect(output).toContain("building Support (stereotype)");
+  });
+
+  it("omits direction text on enemy lines without a reading", () => {
+    const snapshot = createSnapshot({ enemyBuildDirections: new Map() });
+    const output = formatStateSnapshot(snapshot);
+    expect(output).not.toContain("building ");
   });
 });
 

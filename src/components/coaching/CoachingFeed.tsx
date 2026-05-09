@@ -21,17 +21,15 @@ export function CoachingFeed() {
     <div className={styles.feed}>
       <div className={styles.heading}>
         <h2 className={styles.headingTitle}>Conversation</h2>
-        <span className={styles.headingMeta}>
-          {feed.length === 0
-            ? "Waiting for first turn"
-            : `${feed.length} ${feed.length === 1 ? "turn" : "turns"} woven`}
-        </span>
+        {feed.length > 0 ? (
+          <span className={styles.headingMeta}>
+            {feed.length} {feed.length === 1 ? "turn" : "turns"} woven
+          </span>
+        ) : null}
       </div>
       <div className={styles.scroll} ref={scrollRef}>
         {feed.length === 0 ? (
-          <div className={styles.placeholder}>
-            The coach will weigh in once the game gets going.
-          </div>
+          <div className={styles.empty}>The coach is listening.</div>
         ) : (
           feed.map((entry) => <CoachingCard key={entry.id} entry={entry} />)
         )}

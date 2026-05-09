@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { BehaviorSubject, firstValueFrom, Subject, take } from "rxjs";
 import { createMatchHistoryStore } from "./store";
 import type { PlatformBridge } from "../reactive/platform-bridge";
@@ -87,6 +87,14 @@ describe("createMatchHistoryStore", () => {
 
   beforeEach(() => {
     harness = makeHarness(fakeBridge());
+  });
+
+  // Safety net: if a fake-timer test asserts mid-flight and skips its
+  // own `vi.useRealTimers()`, the next test that depends on real
+  // setTimeout (e.g. the `await new Promise((r) => setTimeout(r, 0))`
+  // pattern) hangs indefinitely. This guarantees a clean reset.
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("starts with empty matches and no error", async () => {
@@ -194,6 +202,78 @@ describe("createMatchHistoryStore", () => {
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
     expect(callCount).toBe(2);
+    store.dispose();
+  });
+
+  it("retries on connection-refused failures until the LCU HTTPS server binds", async () => {
+    vi.useFakeTimers();
+    let attempts = 0;
+    const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
+      if (endpoint === "/lol-summoner/v1/current-summoner") {
+        attempts += 1;
+        if (attempts < 3) {
+          throw new Error(
+            "CONNECTION_FAILED:connect ECONNREFUSED 127.0.0.1:1234"
+          );
+        }
+        return JSON.stringify({ puuid: "puuid-x" });
+      }
+      return JSON.stringify({ games: { games: [matchPayload] } });
+    });
+    const harness = makeHarness(fakeBridge(fetchLcu));
+    const store = createMatchHistoryStore(harness);
+    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+
+    // First attempt fails immediately.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(attempts).toBe(1);
+
+    // Second attempt fires after the first backoff, also fails.
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(attempts).toBe(2);
+
+    // Third attempt succeeds.
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(attempts).toBeGreaterThanOrEqual(3);
+
+    const matches = await firstValueFrom(store.matches$.pipe(take(1)));
+    expect(matches).toHaveLength(1);
+    vi.useRealTimers();
+    store.dispose();
+  });
+
+  it("stops retrying when credentials clear", async () => {
+    vi.useFakeTimers();
+    const fetchLcu = vi.fn(async () => {
+      throw new Error("CONNECTION_FAILED:connect ECONNREFUSED 127.0.0.1:1234");
+    });
+    const harness = makeHarness(fakeBridge(fetchLcu));
+    const store = createMatchHistoryStore(harness);
+    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+    await vi.advanceTimersByTimeAsync(0);
+
+    const callsAfterFirstFail = fetchLcu.mock.calls.length;
+    harness.lcuCredentials$.next(null);
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(fetchLcu.mock.calls.length).toBe(callsAfterFirstFail);
+    vi.useRealTimers();
+    store.dispose();
+  });
+
+  it("does not retry on permanent errors (e.g. malformed payload)", async () => {
+    vi.useFakeTimers();
+    const fetchLcu = vi.fn(async () => "not-json");
+    const harness = makeHarness(fakeBridge(fetchLcu));
+    const store = createMatchHistoryStore(harness);
+    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+    await vi.advanceTimersByTimeAsync(0);
+
+    const callsAfterFirstFail = fetchLcu.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(fetchLcu.mock.calls.length).toBe(callsAfterFirstFail);
+    vi.useRealTimers();
     store.dispose();
   });
 
