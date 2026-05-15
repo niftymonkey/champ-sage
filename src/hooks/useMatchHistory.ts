@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { getMatchHistoryStore } from "../lib/match-history/runtime";
+import { useCallback, useMemo } from "react";
+import useSWR from "swr";
+import {
+  getMatchHistoryStore,
+  MATCH_HISTORY_KEY,
+} from "../lib/match-history/runtime";
 import {
   recentGames as recentGamesPure,
   windowStats as windowStatsPure,
@@ -9,38 +13,31 @@ import type { MatchSummary, WindowStats } from "../lib/match-history/types";
 
 export interface UseMatchHistoryResult {
   matches: MatchSummary[];
-  loading: boolean;
+  /**
+   * True when SWR is fetching in the background. Surfaces drive the
+   * existing pulsing-dots affordance from this — appears when the LCU
+   * connects after a cold launch and the renderer is re-pulling.
+   */
+  isValidating: boolean;
   error: Error | null;
-  refresh(): void;
   windowStats(options?: { days?: number }): WindowStats;
   recentGames(n: number): MatchSummary[];
 }
 
 /**
- * Renderer hook that exposes the singleton match-history store. Returns
- * the current `matches`, error state, a manual `refresh`, and two
- * memoized convenience wrappers around the pure aggregators (so callers
- * don't have to thread `Date.now()` themselves).
+ * Renderer hook for match history. Backed by SWR with a localStorage
+ * cache provider — cached matches render synchronously on first render,
+ * trigger-driven `mutate(MATCH_HISTORY_KEY)` calls from the engine layer
+ * (LCU connect, gameEnded$) cause background revalidation.
  */
 export function useMatchHistory(): UseMatchHistoryResult {
   const store = useMemo(() => getMatchHistoryStore(), []);
-  const [matches, setMatches] = useState<MatchSummary[]>([]);
-  const [error, setError] = useState<Error | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, error, isValidating } = useSWR<MatchSummary[], Error>(
+    MATCH_HISTORY_KEY,
+    () => store.fetchMatches(),
+  );
 
-  useEffect(() => {
-    const matchSub = store.matches$.subscribe((next) => {
-      setMatches(next);
-      setLoading(false);
-    });
-    const errorSub = store.error$.subscribe((next) => {
-      setError(next);
-    });
-    return () => {
-      matchSub.unsubscribe();
-      errorSub.unsubscribe();
-    };
-  }, [store]);
+  const matches = data ?? [];
 
   const windowStats = useCallback(
     (options: { days?: number } = {}): WindowStats => {
@@ -50,19 +47,18 @@ export function useMatchHistory(): UseMatchHistoryResult {
       };
       return windowStatsPure(matches, opts);
     },
-    [matches]
+    [matches],
   );
 
   const recentGames = useCallback(
     (n: number): MatchSummary[] => recentGamesPure(matches, n),
-    [matches]
+    [matches],
   );
 
   return {
     matches,
-    loading,
-    error,
-    refresh: useCallback(() => store.refresh(), [store]),
+    isValidating,
+    error: error ?? null,
     windowStats,
     recentGames,
   };

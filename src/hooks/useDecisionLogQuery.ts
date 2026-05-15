@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
+import useSWR from "swr";
 import type {
   DecisionQuery,
   DecisionRecord,
@@ -9,75 +10,56 @@ import { summarizeGame } from "../lib/decision-log/summarize";
 export interface DecisionLogQueryResult {
   records: DecisionRecord[];
   summary: GameSummary;
-  loading: boolean;
+  /**
+   * True when SWR is fetching in the background. Surfaces drive the
+   * existing pulsing-dots affordance from this — appears when an
+   * `onDecisionLogUpdated` IPC event has fired and the renderer is
+   * pulling the fresh slice.
+   */
+  isValidating: boolean;
   error: Error | null;
-  refetch: () => void;
 }
 
 /**
- * Renderer hook that runs a decision-log query via the main-process IPC
- * bridge and exposes the records along with a derived per-game summary.
+ * Renderer hook for decision-log queries. Backed by SWR with a
+ * localStorage cache provider — cached records render synchronously on
+ * first render, and `mutate(predicate)` calls fanned out from the
+ * `onDecisionLogUpdated` IPC listener (registered once in `<SWRBridge>`)
+ * cause background revalidation.
  *
- * The summary is computed locally via `summarizeGame` so the renderer
- * pays for derived shape on its own thread (the IPC payload stays a flat
- * record list). Refetch is exposed for explicit re-runs (e.g. after a
- * post-game phase transition fires).
+ * Per-hook overrides on top of the global SWRConfig:
+ * - `revalidateOnMount: true` — without it, a cold cache stays empty
+ *   forever (decision-log has no LCU-connect-style trigger to seed it).
+ * - `dedupingInterval: 30 min` — prevents tab-nav remounts from firing
+ *   redundant IPC calls. The `mutate(predicate)` invalidation from the
+ *   bridge bypasses dedup, so a real upstream change still fetches.
  */
+const DEDUPING_INTERVAL_MS = 30 * 60 * 1000;
+
 export function useDecisionLogQuery(
-  query: DecisionQuery
+  query: DecisionQuery,
 ): DecisionLogQueryResult {
-  const [records, setRecords] = useState<DecisionRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const tickRef = useRef(0);
+  const { data, error, isValidating } = useSWR<DecisionRecord[], Error>(
+    ["decision-log", query] as const,
+    async ([, q]) => {
+      const api = window.electronAPI;
+      if (!api?.decisionLogQuery) return [];
+      const result = await api.decisionLogQuery(q);
+      return Array.isArray(result) ? (result as DecisionRecord[]) : [];
+    },
+    {
+      revalidateOnMount: true,
+      dedupingInterval: DEDUPING_INTERVAL_MS,
+    },
+  );
 
-  const memoQuery = useMemo(() => query, [JSON.stringify(query)]);
-
-  const run = useCallback(() => {
-    const api = window.electronAPI;
-    if (!api?.decisionLogQuery) {
-      setRecords([]);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    const tick = ++tickRef.current;
-    setLoading(true);
-    setError(null);
-
-    api
-      .decisionLogQuery(memoQuery)
-      .then((result) => {
-        if (tickRef.current !== tick) return;
-        setRecords(Array.isArray(result) ? (result as DecisionRecord[]) : []);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (tickRef.current !== tick) return;
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setLoading(false);
-      });
-  }, [memoQuery]);
-
-  useEffect(() => {
-    run();
-  }, [run]);
-
-  // Refetch whenever main signals that the decision log has new content.
-  // Without this, the renderer keeps a stale snapshot of the just-finished
-  // game between writes — most visibly, the post-game surface stays in
-  // "writing the recap…" until the user toggles tabs.
-  useEffect(() => {
-    const api = window.electronAPI;
-    if (!api?.onDecisionLogUpdated) return;
-    const unsub = api.onDecisionLogUpdated(() => {
-      run();
-    });
-    return unsub;
-  }, [run]);
-
+  const records = data ?? [];
   const summary = useMemo(() => summarizeGame(records), [records]);
 
-  return { records, summary, loading, error, refetch: run };
+  return {
+    records,
+    summary,
+    isValidating,
+    error: error ?? null,
+  };
 }

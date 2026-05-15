@@ -1,19 +1,11 @@
-import { useEffect, useState } from "react";
 import { lcuCredentials$ } from "../lib/reactive";
+import { useBehaviorSubject } from "./useBehaviorSubject";
 
 /**
- * Mirrors the reactive `lcuCredentials$` subject into React state so
- * surfaces can render LCU-aware copy (e.g. "League client offline" vs
- * "No matches yet") without subscribing inline. `true` while creds are
- * present; `false` while the engine reports the LCU as offline.
+ * Mirrors the reactive `lcuCredentials$` subject into a boolean. `true`
+ * while creds are present; `false` while the engine reports the LCU as
+ * offline. Surfaces use this for LCU-aware copy without subscribing inline.
  */
 export function useLcuConnected(): boolean {
-  const [connected, setConnected] = useState<boolean>(
-    lcuCredentials$.getValue() !== null
-  );
-  useEffect(() => {
-    const sub = lcuCredentials$.subscribe((c) => setConnected(c !== null));
-    return () => sub.unsubscribe();
-  }, []);
-  return connected;
+  return useBehaviorSubject(lcuCredentials$) !== null;
 }

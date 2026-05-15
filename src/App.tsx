@@ -1,6 +1,43 @@
 import "./App.css";
 import { useCallback, useState, useEffect, useRef, useMemo } from "react";
+import { SWRConfig, useSWRConfig } from "swr";
 import { CoachingProvider } from "./hooks/useCoachingContext";
+import { localStorageProvider } from "./lib/cache/local-storage-provider";
+import { setScopedMutate } from "./lib/cache/swr-bridge";
+import {
+  wirePostGameReadiness,
+  markMatchesRefreshed,
+  postGameReady$,
+} from "./lib/reactive/post-game-readiness";
+import { MATCH_HISTORY_KEY } from "./lib/match-history/runtime";
+
+/**
+ * Registers the SWRConfig-scoped `mutate` so non-React engine code (RxJS
+ * subscriptions in stores) can invalidate the right cache. Also wires the
+ * `onDecisionLogUpdated` IPC listener once at the app root and fans out
+ * invalidation to every active decision-log query — saves each consumer
+ * from registering its own listener and lets a single write trigger one
+ * coordinated revalidation pass. Renders nothing. Must live inside the
+ * <SWRConfig> subtree.
+ */
+function SWRBridge() {
+  const { mutate } = useSWRConfig();
+  useEffect(() => {
+    setScopedMutate(mutate);
+  }, [mutate]);
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api?.onDecisionLogUpdated) return;
+    return api.onDecisionLogUpdated(() => {
+      void mutate(
+        (key) => Array.isArray(key) && key[0] === "decision-log",
+        undefined,
+        { revalidate: true },
+      );
+    });
+  }, [mutate]);
+  return null;
+}
 import { useGameData } from "./hooks/useGameData";
 import { setMatchHistoryGameData } from "./lib/match-history/runtime";
 import { useGameLifecycle } from "./hooks/useGameLifecycle";
@@ -53,6 +90,7 @@ function App() {
   useEffect(() => {
     let disposed = false;
     engineRef.current = initializeReactiveEngine();
+    const stopReadiness = wirePostGameReadiness();
 
     import("./lib/reactive/gep-bridge")
       .then(({ initGepBridge }) => {
@@ -65,6 +103,7 @@ function App() {
 
     return () => {
       disposed = true;
+      stopReadiness();
       engineRef.current?.stop();
       engineRef.current = null;
       gepCleanupRef.current?.();
@@ -221,11 +260,11 @@ function App() {
   const { surface, navigate } = useSurfaceState();
 
   // When the user clicks a recent-games row, route to the post-game
-  // surface for that specific Riot gameId. Auto-routing (game just
-  // ended) leaves this null so PostGameSurface falls back to its
-  // "last game" query. Cleared when navigating away from post-game
-  // so a later auto-route shows the most recent game, not the one
-  // the user clicked into earlier.
+  // surface for that specific Riot gameId. The selection is preserved
+  // across tab navigation so leaving History and returning to it lands
+  // on the same match the user was last looking at. A new game ending
+  // clears the selection so the freshly-finished match becomes the
+  // default the next time the user opens History.
   const [viewingGameId, setViewingGameId] = useState<string | null>(null);
   const handleSelectGame = useCallback(
     (gameId: string) => {
@@ -234,9 +273,22 @@ function App() {
     },
     [navigate]
   );
+  // Clear any explicit game selection the instant a game ends — that's
+  // when `postGameReady$` flips to false. Without this, a user who was
+  // viewing a specific past game (explicit gameId) when a new game ends
+  // keeps that gameId set, which keeps `shouldHide` from engaging (it's
+  // gated on `!gameId`). Clearing here lets the surface hide on the
+  // transition and then auto-route to the just-finished game.
   useEffect(() => {
-    if (surface !== "post-game") setViewingGameId(null);
-  }, [surface]);
+    let prevReady = postGameReady$.getValue();
+    const sub = postGameReady$.subscribe((ready) => {
+      if (prevReady && !ready) {
+        setViewingGameId(() => null);
+      }
+      prevReady = ready;
+    });
+    return () => sub.unsubscribe();
+  }, []);
 
   if (loading && !data) {
     return (
@@ -278,6 +330,28 @@ function App() {
 
   return (
     <main className="app-root">
+      <SWRConfig
+        value={{
+          provider: localStorageProvider,
+          revalidateOnFocus: false,
+          revalidateOnReconnect: false,
+          revalidateIfStale: false,
+          revalidateOnMount: false,
+          dedupingInterval: 0,
+          shouldRetryOnError: false,
+          onSuccess: (_data, key) => {
+            // `onSuccess` fires AFTER SWR commits the value to its cache,
+            // so by the time the post-game readiness gate flips ready
+            // the renderer's `matches` already reflects the new fetch.
+            // Calling this from inside the fetcher instead would race —
+            // the gate would open before the cache was updated.
+            if (key === MATCH_HISTORY_KEY) {
+              markMatchesRefreshed();
+            }
+          },
+        }}
+      >
+      <SWRBridge />
       <CoachingProvider
         mode={detectedMode}
         liveGameState={liveGame}
@@ -314,6 +388,7 @@ function App() {
           {devMode && <SimulatorPanel gameData={data} />}
         </div>
       </CoachingProvider>
+      </SWRConfig>
     </main>
   );
 }

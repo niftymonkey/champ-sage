@@ -52,6 +52,20 @@ export const lcuCredentials$ = new BehaviorSubject<{
 } | null>(null);
 
 /**
+ * `true` once the LCU's HTTPS server is actually accepting connections
+ * (signaled by the engine's WebSocket having connected and subscribed).
+ * `false` when no LCU is discovered or the WebSocket has dropped.
+ *
+ * Distinct from `lcuCredentials$`, which fires the moment the lockfile
+ * is found — typically several seconds before the HTTPS server is bound.
+ * Consumers that need to actually call LCU endpoints (match-history) should
+ * subscribe to this signal instead of credentials, otherwise their first
+ * fetch reliably fails with ECONNREFUSED and they pay the retry-backoff
+ * latency before the data lands.
+ */
+export const lcuReady$ = new BehaviorSubject<boolean>(false);
+
+/**
  * Fires once when a game has ended (eogStats arrived in liveGameState$).
  * Renderer-side consumers (match history) refresh on this signal so the
  * just-finished match shows up without a manual reload.

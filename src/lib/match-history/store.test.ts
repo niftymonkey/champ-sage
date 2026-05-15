@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { BehaviorSubject, firstValueFrom, Subject, take } from "rxjs";
+import { BehaviorSubject, Subject } from "rxjs";
 import { createMatchHistoryStore } from "./store";
 import type { PlatformBridge } from "../reactive/platform-bridge";
 import type { LoadedGameData } from "../data-ingest";
@@ -67,7 +67,9 @@ interface Harness {
   bridge: PlatformBridge;
   gameData$: BehaviorSubject<LoadedGameData | null>;
   lcuCredentials$: BehaviorSubject<{ port: number; token: string } | null>;
+  lcuReady$: BehaviorSubject<boolean>;
   gameEnded$: Subject<void>;
+  invalidate: ReturnType<typeof vi.fn<() => void>>;
 }
 
 function makeHarness(bridge: PlatformBridge): Harness {
@@ -78,7 +80,9 @@ function makeHarness(bridge: PlatformBridge): Harness {
       port: number;
       token: string;
     } | null>(null),
+    lcuReady$: new BehaviorSubject<boolean>(false),
     gameEnded$: new Subject<void>(),
+    invalidate: vi.fn<() => void>(),
   };
 }
 
@@ -89,214 +93,147 @@ describe("createMatchHistoryStore", () => {
     harness = makeHarness(fakeBridge());
   });
 
-  // Safety net: if a fake-timer test asserts mid-flight and skips its
-  // own `vi.useRealTimers()`, the next test that depends on real
-  // setTimeout (e.g. the `await new Promise((r) => setTimeout(r, 0))`
-  // pattern) hangs indefinitely. This guarantees a clean reset.
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("starts with empty matches and no error", async () => {
-    const store = createMatchHistoryStore(harness);
-    const matches = await firstValueFrom(store.matches$);
-    expect(matches).toEqual([]);
-    const error = await firstValueFrom(store.error$);
-    expect(error).toBeNull();
-    store.dispose();
-  });
-
-  it("fetches matches when LCU credentials become available", async () => {
-    const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
-      if (endpoint === "/lol-summoner/v1/current-summoner") {
-        return JSON.stringify({ puuid: "puuid-x" });
-      }
-      if (endpoint.startsWith("/lol-match-history")) {
-        return JSON.stringify({ games: { games: [matchPayload] } });
-      }
-      throw new Error(`unexpected endpoint: ${endpoint}`);
-    });
-    const harness = makeHarness(fakeBridge(fetchLcu));
-    const store = createMatchHistoryStore(harness);
-    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
-
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-
-    const matches = await firstValueFrom(store.matches$.pipe(take(1)));
-    expect(matches).toHaveLength(1);
-    expect(matches[0].championName).toBe("Lux");
-    expect(matches[0].gameId).toBe("5554483510");
-    store.dispose();
-  });
-
-  it("re-fetches on gameEnded$", async () => {
-    let callCount = 0;
-    const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
-      if (endpoint === "/lol-summoner/v1/current-summoner") {
-        return JSON.stringify({ puuid: "puuid-x" });
-      }
-      callCount += 1;
-      return JSON.stringify({ games: { games: [matchPayload] } });
-    });
-    const harness = makeHarness(fakeBridge(fetchLcu));
-    const store = createMatchHistoryStore(harness);
-    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-    expect(callCount).toBe(1);
-
-    harness.gameEnded$.next();
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-    expect(callCount).toBe(2);
-    store.dispose();
-  });
-
-  it("emits an error when fetchLcu rejects and keeps last-known matches", async () => {
-    let phase = 0;
-    const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
-      if (endpoint === "/lol-summoner/v1/current-summoner") {
-        return JSON.stringify({ puuid: "puuid-x" });
-      }
-      phase += 1;
-      if (phase === 1) {
-        return JSON.stringify({ games: { games: [matchPayload] } });
-      }
-      throw new Error("boom");
-    });
-    const harness = makeHarness(fakeBridge(fetchLcu));
-    const store = createMatchHistoryStore(harness);
-    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-
-    harness.gameEnded$.next();
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-
-    const error = await firstValueFrom(store.error$.pipe(take(1)));
-    expect(error?.message).toBe("boom");
-    const matches = await firstValueFrom(store.matches$.pipe(take(1)));
-    expect(matches).toHaveLength(1); // last-known preserved
-    store.dispose();
-  });
-
-  it("manual refresh triggers a fetch", async () => {
-    let callCount = 0;
-    const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
-      if (endpoint === "/lol-summoner/v1/current-summoner") {
-        return JSON.stringify({ puuid: "puuid-x" });
-      }
-      callCount += 1;
-      return JSON.stringify({ games: { games: [] } });
-    });
-    const harness = makeHarness(fakeBridge(fetchLcu));
-    const store = createMatchHistoryStore(harness);
-    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-    expect(callCount).toBe(1);
-
-    store.refresh();
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
-    expect(callCount).toBe(2);
-    store.dispose();
-  });
-
-  it("retries on connection-refused failures until the LCU HTTPS server binds", async () => {
-    vi.useFakeTimers();
-    let attempts = 0;
-    const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
-      if (endpoint === "/lol-summoner/v1/current-summoner") {
-        attempts += 1;
-        if (attempts < 3) {
-          throw new Error(
-            "CONNECTION_FAILED:connect ECONNREFUSED 127.0.0.1:1234"
-          );
+  describe("fetchMatches", () => {
+    it("returns parsed match summaries on success", async () => {
+      const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
+        if (endpoint === "/lol-summoner/v1/current-summoner") {
+          return JSON.stringify({ puuid: "puuid-x" });
         }
-        return JSON.stringify({ puuid: "puuid-x" });
-      }
-      return JSON.stringify({ games: { games: [matchPayload] } });
+        if (endpoint.startsWith("/lol-match-history")) {
+          return JSON.stringify({ games: { games: [matchPayload] } });
+        }
+        throw new Error(`unexpected endpoint: ${endpoint}`);
+      });
+      const harness = makeHarness(fakeBridge(fetchLcu));
+      const store = createMatchHistoryStore(harness);
+      harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+
+      const matches = await store.fetchMatches();
+      expect(matches).toHaveLength(1);
+      expect(matches[0].championName).toBe("Lux");
+      expect(matches[0].gameId).toBe("5554483510");
+
+      store.dispose();
     });
-    const harness = makeHarness(fakeBridge(fetchLcu));
-    const store = createMatchHistoryStore(harness);
-    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
 
-    // First attempt fails immediately.
-    await vi.advanceTimersByTimeAsync(0);
-    expect(attempts).toBe(1);
+    it("rejects with a useful error when LCU credentials are unavailable", async () => {
+      const store = createMatchHistoryStore(harness);
 
-    // Second attempt fires after the first backoff, also fails.
-    await vi.advanceTimersByTimeAsync(2_000);
-    expect(attempts).toBe(2);
+      await expect(store.fetchMatches()).rejects.toThrow(/credentials/i);
 
-    // Third attempt succeeds.
-    await vi.advanceTimersByTimeAsync(4_000);
-    expect(attempts).toBeGreaterThanOrEqual(3);
+      store.dispose();
+    });
 
-    const matches = await firstValueFrom(store.matches$.pipe(take(1)));
-    expect(matches).toHaveLength(1);
-    vi.useRealTimers();
-    store.dispose();
+    it("caches puuid across calls (single summoner lookup per session)", async () => {
+      let summonerCalls = 0;
+      const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
+        if (endpoint === "/lol-summoner/v1/current-summoner") {
+          summonerCalls += 1;
+          return JSON.stringify({ puuid: "puuid-x" });
+        }
+        return JSON.stringify({ games: { games: [] } });
+      });
+      const harness = makeHarness(fakeBridge(fetchLcu));
+      const store = createMatchHistoryStore(harness);
+      harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+
+      await store.fetchMatches();
+      await store.fetchMatches();
+      await store.fetchMatches();
+
+      expect(summonerCalls).toBe(1);
+
+      store.dispose();
+    });
+
+    it("rejects on connection failures without retrying (lcuReady$ gates invocation)", async () => {
+      // Retry inside the fetcher is removed: invalidation is driven by
+      // `lcuReady$` (HTTPS-ready signal), so the fetcher should only run
+      // when the server is actually accepting connections. If a fetch
+      // does fail transiently, SWR sees the error; the next `lcuReady$`
+      // flip drives a fresh invocation.
+      const fetchLcu = vi.fn(async () => {
+        throw new Error("CONNECTION_FAILED:connect ECONNREFUSED 127.0.0.1:1234");
+      });
+      const harness = makeHarness(fakeBridge(fetchLcu));
+      const store = createMatchHistoryStore(harness);
+      harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+
+      await expect(store.fetchMatches()).rejects.toThrow(/ECONNREFUSED/);
+      expect(fetchLcu).toHaveBeenCalledTimes(1);
+
+      store.dispose();
+    });
+
+    it("rejects on permanent errors (e.g. malformed payload)", async () => {
+      const fetchLcu = vi.fn(async () => "not-json");
+      const harness = makeHarness(fakeBridge(fetchLcu));
+      const store = createMatchHistoryStore(harness);
+      harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+
+      await expect(store.fetchMatches()).rejects.toThrow();
+      expect(fetchLcu).toHaveBeenCalledTimes(1);
+
+      store.dispose();
+    });
   });
 
-  it("stops retrying when credentials clear", async () => {
-    vi.useFakeTimers();
-    const fetchLcu = vi.fn(async () => {
-      throw new Error("CONNECTION_FAILED:connect ECONNREFUSED 127.0.0.1:1234");
+  describe("invalidation triggers", () => {
+    it("invalidates when lcuReady$ flips true (HTTPS server accepting connections)", () => {
+      const store = createMatchHistoryStore(harness);
+      // Credentials arriving alone should NOT trigger invalidation —
+      // the lockfile fires several seconds before the HTTPS server is
+      // bound, and a fetch at that moment reliably fails with ECONNREFUSED.
+      harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+      expect(harness.invalidate).not.toHaveBeenCalled();
+
+      harness.lcuReady$.next(true);
+      expect(harness.invalidate).toHaveBeenCalledTimes(1);
+
+      store.dispose();
     });
-    const harness = makeHarness(fakeBridge(fetchLcu));
-    const store = createMatchHistoryStore(harness);
-    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
-    await vi.advanceTimersByTimeAsync(0);
 
-    const callsAfterFirstFail = fetchLcu.mock.calls.length;
-    harness.lcuCredentials$.next(null);
-    await vi.advanceTimersByTimeAsync(60_000);
+    it("invalidates on gameEnded$ when LCU credentials are present", () => {
+      const store = createMatchHistoryStore(harness);
+      harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+      harness.lcuReady$.next(true);
+      const callsAfterReady = harness.invalidate.mock.calls.length;
 
-    expect(fetchLcu.mock.calls.length).toBe(callsAfterFirstFail);
-    vi.useRealTimers();
-    store.dispose();
-  });
+      harness.gameEnded$.next();
 
-  it("does not retry on permanent errors (e.g. malformed payload)", async () => {
-    vi.useFakeTimers();
-    const fetchLcu = vi.fn(async () => "not-json");
-    const harness = makeHarness(fakeBridge(fetchLcu));
-    const store = createMatchHistoryStore(harness);
-    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
-    await vi.advanceTimersByTimeAsync(0);
+      expect(harness.invalidate.mock.calls.length).toBe(callsAfterReady + 1);
 
-    const callsAfterFirstFail = fetchLcu.mock.calls.length;
-    await vi.advanceTimersByTimeAsync(60_000);
-
-    expect(fetchLcu.mock.calls.length).toBe(callsAfterFirstFail);
-    vi.useRealTimers();
-    store.dispose();
-  });
-
-  it("does not re-fetch puuid on subsequent calls (cached for the session)", async () => {
-    const summonerCalls = vi.fn();
-    const fetchLcu = vi.fn(async (_p, _t, endpoint: string) => {
-      if (endpoint === "/lol-summoner/v1/current-summoner") {
-        summonerCalls();
-        return JSON.stringify({ puuid: "puuid-x" });
-      }
-      return JSON.stringify({ games: { games: [] } });
+      store.dispose();
     });
-    const harness = makeHarness(fakeBridge(fetchLcu));
-    const store = createMatchHistoryStore(harness);
-    harness.lcuCredentials$.next({ port: 1234, token: "tok" });
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
 
-    store.refresh();
-    await new Promise((r) => setTimeout(r, 0));
-    await new Promise((r) => setTimeout(r, 0));
+    it("does not invalidate on gameEnded$ when LCU is offline", () => {
+      const store = createMatchHistoryStore(harness);
+      // No credentials → gameEnded should not trigger a fetch.
+      harness.gameEnded$.next();
 
-    expect(summonerCalls).toHaveBeenCalledTimes(1);
-    store.dispose();
+      expect(harness.invalidate).not.toHaveBeenCalled();
+
+      store.dispose();
+    });
+
+    it("re-invalidates on reconnect after lcuReady$ cycles", () => {
+      const store = createMatchHistoryStore(harness);
+      harness.lcuCredentials$.next({ port: 1234, token: "tok" });
+      harness.lcuReady$.next(true);
+      harness.lcuReady$.next(false);
+      const callsBeforeReconnect = harness.invalidate.mock.calls.length;
+
+      harness.lcuReady$.next(true);
+
+      expect(harness.invalidate.mock.calls.length).toBeGreaterThan(
+        callsBeforeReconnect
+      );
+
+      store.dispose();
+    });
   });
 });
