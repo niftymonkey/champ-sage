@@ -9,10 +9,16 @@ import * as luaparse from "luaparse";
 /**
  * luaparse runs in encodingMode "x-user-defined" and throws on code points
  * outside that subset (e.g. "code unit U+2013 is not allowed in the current
- * encoding mode"). The wiki sporadically emits curly quotes and en/em dashes
- * inside augment descriptions, so every caller of parseLuaTable must run
- * input through this sanitizer first or a single wiki text edit can crash
+ * encoding mode"). The wiki sporadically emits typographic and mathematical
+ * symbols inside augment descriptions, so every caller of parseLuaTable must
+ * run input through this sanitizer first or a single wiki text edit can crash
  * data ingest. Centralized here so any new caller inherits the protection.
+ *
+ * The named replacements rewrite common characters to a readable ASCII
+ * equivalent so descriptions stay legible. The final catch-all strips any
+ * remaining non-ASCII character: it is the load-bearing guard that makes
+ * ingest immune to characters not yet anticipated here — a wiki editor adding
+ * a new symbol should degrade that description, never crash the pipeline.
  *
  * Curly double quotes are mapped to the escaped sequence `\"` (not bare `"`)
  * because they almost always appear inside double-quoted Lua string literals
@@ -23,7 +29,11 @@ export function sanitizeForLuaParse(lua: string): string {
   return lua
     .replace(/[‘’‚]/g, "'")
     .replace(/[“”„]/g, '\\"')
-    .replace(/[–—]/g, "-");
+    .replace(/[–—−]/g, "-")
+    .replace(/÷/g, "/")
+    .replace(/×/g, "x")
+    .replace(/≈/g, "~")
+    .replace(/[^\x00-\x7f]/g, "");
 }
 
 export function parseLuaTable(

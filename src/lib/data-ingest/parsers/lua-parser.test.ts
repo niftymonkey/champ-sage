@@ -137,4 +137,35 @@ describe("parseLuaTable", () => {
       'Deals 2-3 damage - it\'s "great".'
     );
   });
+
+  it("normalizes the math symbols the wiki uses in stat formulas", () => {
+    // The Arena augment module embeds formulas such as
+    // "500 ÷ (500 + 100) + 10% ≈ 93.3%". U+00F7, U+2248, U+00D7 and U+2212
+    // sit outside the x-user-defined subset and crash luaparse if they reach
+    // it; each maps to a readable ASCII equivalent instead.
+    const lua = `return {
+      ["Test"] = {
+        ["description"] = "Deals 500 × 2 − 50 ÷ (500 + 100) ≈ 93.3%.",
+        ["tier"] = "Gold",
+      },
+    }`;
+    const result = parseLuaTable(lua);
+    expect(result["Test"].description).toBe(
+      "Deals 500 x 2 - 50 / (500 + 100) ~ 93.3%."
+    );
+  });
+
+  it("strips any non-ASCII character not covered by an explicit mapping", () => {
+    // Catch-all guard: the named mappings are readability polish, but the
+    // parser must never crash on an unanticipated code point. A wiki editor
+    // adding a new symbol should degrade the text, not the whole ingest.
+    const lua = `return {
+      ["Test"] = {
+        ["description"] = "Heals 5❤ and gains 10⚡.",
+        ["tier"] = "Gold",
+      },
+    }`;
+    const result = parseLuaTable(lua);
+    expect(result["Test"].description).toBe("Heals 5 and gains 10.");
+  });
 });
