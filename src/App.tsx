@@ -32,7 +32,7 @@ function SWRBridge() {
       void mutate(
         (key) => Array.isArray(key) && key[0] === "decision-log",
         undefined,
-        { revalidate: true },
+        { revalidate: true }
       );
     });
   }, [mutate]);
@@ -283,7 +283,7 @@ function App() {
     let prevReady = postGameReady$.getValue();
     const sub = postGameReady$.subscribe((ready) => {
       if (prevReady && !ready) {
-        setViewingGameId(() => null);
+        setViewingGameId(null);
       }
       prevReady = ready;
     });
@@ -351,43 +351,43 @@ function App() {
           },
         }}
       >
-      <SWRBridge />
-      <CoachingProvider
-        mode={detectedMode}
-        liveGameState={liveGame}
-        gameData={data}
-      >
-        <CoachingPipeline gameData={data} />
-        <WindowChrome
-          surface={surface}
-          onNavigate={navigate}
-          statusContent={
-            <ChromeStatus
-              isRecording={voice.isRecording}
-              voiceAvailable={whisperProvider !== null}
-            />
-          }
-        />
-        <div className="app-body">
-          {surface === "in-game" ? (
-            <InGameView state={effectiveState} gameData={data} />
-          ) : surface === "champ-select" ? (
-            <ChampSelectSurface data={data} />
-          ) : surface === "post-game" ? (
-            <PostGameSurface gameId={viewingGameId} />
-          ) : surface === "settings" ? (
-            <SettingsSurface />
-          ) : (
-            <IdleSurface
-              lifecycle={lifecycle}
-              lastPhase={lastPhase}
-              championName={championName}
-              onSelectGame={handleSelectGame}
-            />
-          )}
-          {devMode && <SimulatorPanel gameData={data} />}
-        </div>
-      </CoachingProvider>
+        <SWRBridge />
+        <CoachingProvider
+          mode={detectedMode}
+          liveGameState={liveGame}
+          gameData={data}
+        >
+          <CoachingPipeline gameData={data} />
+          <WindowChrome
+            surface={surface}
+            onNavigate={navigate}
+            statusContent={
+              <ChromeStatus
+                isRecording={voice.isRecording}
+                voiceAvailable={whisperProvider !== null}
+              />
+            }
+          />
+          <div className="app-body">
+            {surface === "in-game" ? (
+              <InGameView state={effectiveState} gameData={data} />
+            ) : surface === "champ-select" ? (
+              <ChampSelectSurface data={data} />
+            ) : surface === "post-game" ? (
+              <PostGameSurface gameId={viewingGameId} />
+            ) : surface === "settings" ? (
+              <SettingsSurface />
+            ) : (
+              <IdleSurface
+                lifecycle={lifecycle}
+                lastPhase={lastPhase}
+                championName={championName}
+                onSelectGame={handleSelectGame}
+              />
+            )}
+            {devMode && <SimulatorPanel gameData={data} />}
+          </div>
+        </CoachingProvider>
       </SWRConfig>
     </main>
   );

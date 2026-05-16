@@ -68,7 +68,7 @@ const DEFAULT_PAGE_SIZE = 100;
  */
 export function createMatchHistoryStore(
   inputs: MatchHistoryStoreInputs,
-  options: MatchHistoryStoreOptions = {},
+  options: MatchHistoryStoreOptions = {}
 ): MatchHistoryStore {
   const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
 
@@ -85,7 +85,7 @@ export function createMatchHistoryStore(
     const raw = await inputs.bridge.fetchLcu(
       c.port,
       c.token,
-      "/lol-summoner/v1/current-summoner",
+      "/lol-summoner/v1/current-summoner"
     );
     const parsed = JSON.parse(raw) as { puuid?: string };
     if (typeof parsed?.puuid !== "string" || parsed.puuid.length === 0) {
@@ -126,7 +126,7 @@ export function createMatchHistoryStore(
     log.debug(
       top
         ? `fetchMatches success — ${summaries.length} matches; top: ${top.championName} (gameId=${top.gameId})`
-        : `fetchMatches success — 0 matches`,
+        : `fetchMatches success — 0 matches`
     );
     return summaries;
   };
@@ -138,13 +138,18 @@ export function createMatchHistoryStore(
   // has connected (the same moment HTTP requests succeed).
   subs.add(
     inputs.lcuCredentials$.subscribe((next) => {
+      // Drop the cached puuid whenever credentials change at all — not
+      // only on a `null` (disconnect). A client restart rotates the
+      // port+token, and a different summoner may have logged in; if
+      // discovery never emits an intermediate `null`, a stale puuid
+      // would otherwise point the next fetch at the wrong account.
+      const rotated =
+        next?.port !== creds?.port || next?.token !== creds?.token;
       creds = next;
-      if (creds === null) {
-        // LCU went away — drop the puuid so the next fetch re-resolves
-        // (a different summoner may have logged in).
+      if (creds === null || rotated) {
         puuid = null;
       }
-    }),
+    })
   );
 
   let wasReady = false;
@@ -156,7 +161,7 @@ export function createMatchHistoryStore(
         log.debug("LCU HTTPS ready — invalidating match-history");
         inputs.invalidate();
       }
-    }),
+    })
   );
 
   subs.add(
@@ -170,13 +175,13 @@ export function createMatchHistoryStore(
       if (wasMissing && gameData !== null && creds !== null) {
         inputs.invalidate();
       }
-    }),
+    })
   );
 
   subs.add(
     inputs.gameEnded$.subscribe(() => {
       if (creds !== null) inputs.invalidate();
-    }),
+    })
   );
 
   return {

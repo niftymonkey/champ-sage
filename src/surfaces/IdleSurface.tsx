@@ -42,8 +42,11 @@ export function IdleSurface({
 }: IdleSurfaceProps) {
   const lastGame = useLastGameSnapshot();
   const meta = useLastGameMeta();
-  const { windowStats, recentGames, isValidating: matchesValidating } =
-    useMatchHistory();
+  const {
+    windowStats,
+    recentGames,
+    isValidating: matchesValidating,
+  } = useMatchHistory();
   const stats = useMemo(
     () => windowStats({ days: WINDOW_DAYS }),
     [windowStats]
@@ -81,7 +84,7 @@ export function IdleSurface({
     if (meta.gameId === null) return null;
     const voicesForGame = recentDecisions.filter(
       (r): r is VoiceDecision =>
-        r.gameId === meta.gameId && r.source === "voice",
+        r.gameId === meta.gameId && r.source === "voice"
     );
     return voicesForGame.at(-1) ?? null;
   }, [meta.gameId, recentDecisions]);
@@ -352,7 +355,11 @@ function LastGameBlock({ meta, snapshot, lastVoice }: LastGameBlockProps) {
           {meta.assists ?? snapshot?.assists ?? "—"}
         </span>
         <span>·</span>
-        <span>{formatDuration(meta.duration ?? snapshot?.gameTime ?? 0)}</span>
+        <span>
+          {(meta.duration ?? snapshot?.gameTime)
+            ? formatDuration(meta.duration ?? snapshot?.gameTime ?? 0)
+            : "—"}
+        </span>
         <span>·</span>
         <span>{gameMode}</span>
       </div>

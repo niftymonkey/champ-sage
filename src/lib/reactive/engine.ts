@@ -212,6 +212,11 @@ export class ReactiveEngine {
           filter((s) => s.connected),
           switchMap((creds) => {
             return new Observable<void>(() => {
+              // Discovery found credentials, but the LCU's HTTPS server
+              // may still be booting. Clear readiness so a consumer
+              // can't observe a stale `true` from a prior connection
+              // cycle and fetch into ECONNREFUSED.
+              lcuReady$.next(false);
               const isRetry = this.wsRetrySeq > 0;
               engineLog.info(
                 isRetry
@@ -249,6 +254,7 @@ export class ReactiveEngine {
                 .catch((err) => {
                   if (failed) return;
                   failed = true;
+                  lcuReady$.next(false);
                   engineLog.warn(
                     `WebSocket connection failed: ${err instanceof Error ? err.message : String(err)}`
                   );
@@ -687,5 +693,8 @@ export class ReactiveEngine {
   stop(): void {
     this.subscription.unsubscribe();
     this.subscription = new Subscription();
+    // A stopped engine has no live LCU connection — clear readiness so
+    // a restart (StrictMode remount, HMR) doesn't inherit a stale `true`.
+    lcuReady$.next(false);
   }
 }

@@ -2,16 +2,16 @@
 
 Architect-deep output for issue #129. The user-visible promise: every surface renders the last-known values instantly on tab-nav AND on cold launch, and only re-renders when the underlying data actually changes. When a refresh is happening behind the scenes (e.g. LCU just connected and we're re-pulling match history), the existing pulsing-dots affordance signals it.
 
-**Headline decision: adopt SWR and `useSyncExternalStore`. Don't hand-roll a cache primitive.** The first draft of this doc proposed a bespoke `CachedSubject<T>` + `DecisionLogCache` module set. Stress-testing that against industry-standard React caching showed it was reinventing SWR for no real reason — the "we need RxJS-shaped caches for project consistency" argument doesn't survive the observation that *cached fetched data and live event streams are conceptually different things and the codebase already conflates them only because no better tool was reached for*.
+**Headline decision: adopt SWR and `useSyncExternalStore`. Don't hand-roll a cache primitive.** The first draft of this doc proposed a bespoke `CachedSubject<T>` + `DecisionLogCache` module set. Stress-testing that against industry-standard React caching showed it was reinventing SWR for no real reason — the "we need RxJS-shaped caches for project consistency" argument doesn't survive the observation that _cached fetched data and live event streams are conceptually different things and the codebase already conflates them only because no better tool was reached for_.
 
 ## The architectural split
 
 Two distinct data shapes; two distinct primitives.
 
-| Shape | Examples | Primitive |
-|---|---|---|
-| **Live event streams** — "what's happening right now" | `liveGameState$`, `gameLifecycle$`, `coachingFeed$`, `gamePlan$`, `playerBuildDirection$`, `lcuCredentials$` | RxJS `BehaviorSubject` (existing) consumed via `useSyncExternalStore` (new) |
-| **Cached fetched data** — "the last-known answer to a question we periodically re-ask" | match history list, decision-log queries, last-game meta | **SWR**, with localStorage cache provider, configured trigger-driven |
+| Shape                                                                                  | Examples                                                                                                     | Primitive                                                                   |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| **Live event streams** — "what's happening right now"                                  | `liveGameState$`, `gameLifecycle$`, `coachingFeed$`, `gamePlan$`, `playerBuildDirection$`, `lcuCredentials$` | RxJS `BehaviorSubject` (existing) consumed via `useSyncExternalStore` (new) |
+| **Cached fetched data** — "the last-known answer to a question we periodically re-ask" | match history list, decision-log queries, last-game meta                                                     | **SWR**, with localStorage cache provider, configured trigger-driven        |
 
 Most React+WebSocket apps do exactly this split. Live feeds via WebSocket/EventSource subscriptions; cached server data via React Query / SWR. They compose cleanly because they answer different questions.
 
@@ -66,8 +66,13 @@ inputs.gameEnded$.subscribe(() => mutate("match-history"));
 
 ```ts
 function useDecisionLogQuery(query: DecisionQuery) {
-  const { data = [], error, isLoading, isValidating } = useSWR(
-    ["decision-log", query],          // array key — SWR handles deep-equal canonicalization
+  const {
+    data = [],
+    error,
+    isLoading,
+    isValidating,
+  } = useSWR(
+    ["decision-log", query], // array key — SWR handles deep-equal canonicalization
     ([, q]) => window.electronAPI.decisionLogQuery(q)
   );
   const summary = useMemo(() => summarizeGame(data), [data]);
@@ -96,7 +101,7 @@ function useBehaviorSubject<T>(subject: BehaviorSubject<T>): T {
       return () => sub.unsubscribe();
     },
     () => subject.getValue(),
-    () => subject.getValue(),  // SSR snapshot — irrelevant here but required by API
+    () => subject.getValue() // SSR snapshot — irrelevant here but required by API
   );
 }
 ```
@@ -108,14 +113,14 @@ Every existing hook (`useLastGameSnapshot`, `useGamePlan`, etc.) becomes a one-l
 ```tsx
 function localStorageProvider(): Cache {
   const map = new Map<string, unknown>(
-    JSON.parse(localStorage.getItem("champ-sage:swr-cache:v1") ?? "[]"),
+    JSON.parse(localStorage.getItem("champ-sage:swr-cache:v1") ?? "[]")
   );
   // Persist on unload AND on every mutation — beforeunload alone is unreliable in Electron.
   const persist = () => {
     try {
       localStorage.setItem(
         "champ-sage:swr-cache:v1",
-        JSON.stringify([...map.entries()]),
+        JSON.stringify([...map.entries()])
       );
     } catch {
       // Quota exceeded or storage disabled — degrade silently.
@@ -129,23 +134,23 @@ function localStorageProvider(): Cache {
         persist();
         return this;
       },
-    }),
+    })
   ) as Cache;
 }
 
 <SWRConfig
   value={{
     provider: localStorageProvider,
-    revalidateOnFocus: false,        // Electron app, no relevant focus signal
-    revalidateOnReconnect: false,    // we trigger ourselves
-    revalidateIfStale: false,        // explicit triggers only
-    revalidateOnMount: false,        // cached value is the answer; mutate() refreshes
-    dedupingInterval: 0,             // we control timing via mutate
-    shouldRetryOnError: false,       // MatchHistoryStore already has retry logic
+    revalidateOnFocus: false, // Electron app, no relevant focus signal
+    revalidateOnReconnect: false, // we trigger ourselves
+    revalidateIfStale: false, // explicit triggers only
+    revalidateOnMount: false, // cached value is the answer; mutate() refreshes
+    dedupingInterval: 0, // we control timing via mutate
+    shouldRetryOnError: false, // MatchHistoryStore already has retry logic
   }}
 >
   <App />
-</SWRConfig>
+</SWRConfig>;
 ```
 
 The configuration above is the entire freshness contract — no automatic revalidation; only explicit `mutate()` calls from RxJS subscriptions in the engine layer cause refetches.
@@ -161,15 +166,19 @@ Size: ~100 matches at ~1KB + ~5 active decision-log queries at ~25KB each ≈ 25
 ## Hook contract
 
 For cached fetches:
+
 ```ts
 const { data, isLoading, isValidating, error } = useSWR(key, fetcher);
 ```
-Surfaces consume `isValidating` directly to drive `<LoadingDots />`. On cold launch with cached data, first render returns `data: cachedValue, isLoading: false, isValidating: true` — exactly the affordance #129 calls for.
+
+Surfaces consume `isValidating` directly to drive `<LoadingDots />`. On cold launch with cached data, the first render returns `data: cachedValue, isLoading: false, isValidating: false` — `revalidateOnMount: false` + `revalidateIfStale: false` mean no fetch fires until a trigger calls `mutate()`. The moment a trigger fires (LCU connect, `gameEnded$`), `isValidating` flips `true` and the `<LoadingDots />` affordance #129 calls for appears.
 
 For live streams:
+
 ```ts
 const lastGame = useBehaviorSubject(lastGameSnapshot$);
 ```
+
 Sync, no loading state, no flash. Same shape as today; just tearing-safe.
 
 ## LCU connection pill behavior
@@ -192,17 +201,17 @@ Pill stays unchanged — it reflects live LCU state, not cache state. The "refre
 
 The acceptance test for #129 is the Home tab rendering its full content from cache on cold launch. Element-by-element, here's where each piece lands:
 
-| Element | Source | Phase | Cold-launch from cache |
-|---|---|---|---|
-| Last 7 days (W-L) | `useMatchHistory().windowStats` | 1 | ✓ |
-| Avg KDA + total K/D/A | same `windowStats` | 1 | ✓ |
-| Coaching moments + match count | `useDecisionLogQuery({ kind: "recent-games", n: 50 })` | 2 | ✓ |
-| Connection pill | `useGameLifecycle()` (live; not cached) | 3 (tearing-safety) | n/a — live |
-| Last game — visibility gate | flips to `meta.gameId !== null` (Phase 1+2 fix) | 1 | ✓ |
-| Last game — champion / W-L / KDA / duration / mode | `useLastGameMeta()` (match-history priority) | 1 | ✓ |
-| Last game — Q&A snippet | derived from decision-log `VoiceDecision` records (Phase 2 fix) | 2 | ✓ |
-| Recent games × 5 | `useMatchHistory().recentGames(5)` | 1 | ✓ |
-| OFFLINE_HINT gates | dropped — cached values render regardless of LCU state | 1 | ✓ |
+| Element                                            | Source                                                          | Phase              | Cold-launch from cache |
+| -------------------------------------------------- | --------------------------------------------------------------- | ------------------ | ---------------------- |
+| Last 7 days (W-L)                                  | `useMatchHistory().windowStats`                                 | 1                  | ✓                      |
+| Avg KDA + total K/D/A                              | same `windowStats`                                              | 1                  | ✓                      |
+| Coaching moments + match count                     | `useDecisionLogQuery({ kind: "recent-games", n: 50 })`          | 2                  | ✓                      |
+| Connection pill                                    | `useGameLifecycle()` (live; not cached)                         | 3 (tearing-safety) | n/a — live             |
+| Last game — visibility gate                        | flips to `meta.gameId !== null` (Phase 1+2 fix)                 | 1                  | ✓                      |
+| Last game — champion / W-L / KDA / duration / mode | `useLastGameMeta()` (match-history priority)                    | 1                  | ✓                      |
+| Last game — Q&A snippet                            | derived from decision-log `VoiceDecision` records (Phase 2 fix) | 2                  | ✓                      |
+| Recent games × 5                                   | `useMatchHistory().recentGames(5)`                              | 1                  | ✓                      |
+| OFFLINE_HINT gates                                 | dropped — cached values render regardless of LCU state          | 1                  | ✓                      |
 
 The two **fix** entries in the matrix are renderer-side adjustments that ship with their respective phases — no new persistence boundary needed. The original first draft of this doc treated them as a Phase 4 snapshot-persistence concern; closer reading of the merge chain showed the data is already in match-history + decision log.
 
@@ -238,31 +247,31 @@ Add `useBehaviorSubject(subject)` helper. Migrate `useLastGameSnapshot`, `useGam
 
 **User-visible win**: Tearing-safe under concurrent rendering. Smaller, more idiomatic hook bodies. No behavior change for callers.
 
-### Phase 4 *(optional)* — localStorage persistence for live-stream subjects
+### Phase 4 _(optional)_ — localStorage persistence for live-stream subjects
 
 If `lastGameSnapshot$`, `gamePlan$`, or `playerBuildDirection$` need to survive app restart, add a small `withLocalStoragePersistence(subject, key, validate)` operator (~20 LOC). Apply selectively. Don't apply uniformly — coaching feed for an in-flight game shouldn't survive a restart.
 
 **Skip if**: SWR-cached match history + decision log already cover the surfaces. The takeaway records in the decision log are typically the right source for "what happened last game."
 
-### Phase 5 *(optional)* — UI state persistence
+### Phase 5 _(optional)_ — UI state persistence
 
 Per-component `useLocalStorageState(key, default)` on AugmentList filters and DataBrowser active tab. ~15 LOC hook. No store.
 
 ## Risks and mitigations
 
-| Risk | Mitigation |
-|---|---|
-| Schema drift — saved cache shape changes between releases | `:v1` key suffix on the SWR cache. Bump on breaking changes; old cache is ignored, system starts cold, triggers populate. |
-| Storage quota exceeded | `localStorageProvider`'s `persist()` swallows errors and degrades to in-memory. The cache is a *cache*; losing it is acceptable. |
-| Stale data confusion (e.g. "Last 7 days: 8-2" from three days ago) | Phase 1 ships without a "stale since" annotation. If users complain, add a small `<time dateTime>` annotation as a follow-up. The cached value is correct *for the data we have*. |
-| `useSWR` re-fires on remount despite `revalidateOnMount: false` | Verify behavior in Phase 1 tests. SWR's docs are explicit that `revalidateOnMount: false` + present cached `data` skips the fetch. If we hit edge cases, fall back to passing `fallbackData` from a one-off cache lookup. |
-| RxJS subscriptions calling `mutate` outside a React tree | `mutate` is exported standalone from `swr` and works outside hooks. Verified. |
-| `useSyncExternalStore` snapshot identity | The function passed as the third (snapshot) argument must return a stable reference for unchanged values. `BehaviorSubject.getValue()` returns the same reference until the next `next()` call, so this is satisfied automatically. |
-| Cache poisoning from a corrupt write | `localStorageProvider` wraps JSON parsing in try/catch; corrupt cache → start with empty `Map`. |
+| Risk                                                               | Mitigation                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema drift — saved cache shape changes between releases          | `:v1` key suffix on the SWR cache. Bump on breaking changes; old cache is ignored, system starts cold, triggers populate.                                                                                                           |
+| Storage quota exceeded                                             | `localStorageProvider`'s `persist()` swallows errors and degrades to in-memory. The cache is a _cache_; losing it is acceptable.                                                                                                    |
+| Stale data confusion (e.g. "Last 7 days: 8-2" from three days ago) | Phase 1 ships without a "stale since" annotation. If users complain, add a small `<time dateTime>` annotation as a follow-up. The cached value is correct _for the data we have_.                                                   |
+| `useSWR` re-fires on remount despite `revalidateOnMount: false`    | Verify behavior in Phase 1 tests. SWR's docs are explicit that `revalidateOnMount: false` + present cached `data` skips the fetch. If we hit edge cases, fall back to passing `fallbackData` from a one-off cache lookup.           |
+| RxJS subscriptions calling `mutate` outside a React tree           | `mutate` is exported standalone from `swr` and works outside hooks. Verified.                                                                                                                                                       |
+| `useSyncExternalStore` snapshot identity                           | The function passed as the third (snapshot) argument must return a stable reference for unchanged values. `BehaviorSubject.getValue()` returns the same reference until the next `next()` call, so this is satisfied automatically. |
+| Cache poisoning from a corrupt write                               | `localStorageProvider` wraps JSON parsing in try/catch; corrupt cache → start with empty `Map`.                                                                                                                                     |
 
 ## Rejected alternatives
 
-- **Custom `CachedSubject<T>` + `DecisionLogCache` + `useCachedSubject`** *(this doc's own first draft)* — reinvents SWR. Larger LOC, no battle-testing, no devtools, requires ad-hoc training for new contributors. Replaced by SWR.
+- **Custom `CachedSubject<T>` + `DecisionLogCache` + `useCachedSubject`** _(this doc's own first draft)_ — reinvents SWR. Larger LOC, no battle-testing, no devtools, requires ad-hoc training for new contributors. Replaced by SWR.
 - **TanStack Query.** Same problem space, more powerful (devtools, infinite queries, mutations with optimistic UI). 13KB vs SWR's 4.5KB. For Champ Sage's ~6 cache entries, the additional features don't earn their weight, and the simpler `data + isValidating` shape SWR exposes is a better fit for the trigger-driven model.
 - **Apollo / RTK Query / Relay.** Designed for normalized entity caches over GraphQL or REST collections. Champ Sage has snapshot-shaped data, not entities. Wrong shape.
 - **Jotai `atomWithStorage` / Zustand `persist`.** Sync-hydrating localStorage atoms — appealing for single values, but no stale-while-revalidate semantics and no fetcher dedup. Would need to rebuild SWR on top.
