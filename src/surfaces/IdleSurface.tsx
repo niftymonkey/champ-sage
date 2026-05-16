@@ -1,19 +1,18 @@
 import { useMemo, type ReactNode } from "react";
 import type { GameLifecycleEvent, GameflowPhase } from "../lib/reactive/types";
 import { useLastGameSnapshot } from "../hooks/useLastGameSnapshot";
-import { useLastGameMeta } from "../hooks/useLastGameMeta";
+import { useLastGameMeta, type LastGameMeta } from "../hooks/useLastGameMeta";
 import { useMatchHistory } from "../hooks/useMatchHistory";
 import { useDecisionLogQuery } from "../hooks/useDecisionLogQuery";
-import { useLcuConnected } from "../hooks/useLcuConnected";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type { MatchSummary } from "../lib/match-history/types";
+import type { VoiceDecision } from "../lib/decision-log/types";
 import { formatGameMode } from "../lib/format-game-mode";
 import styles from "./IdleSurface.module.css";
 
 const WINDOW_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RECENT_GAMES_QUERY = { kind: "recent-games", n: 50 } as const;
-const OFFLINE_HINT = "League client offline";
 
 interface IdleSurfaceProps {
   lifecycle: GameLifecycleEvent;
@@ -42,24 +41,26 @@ export function IdleSurface({
   onSelectGame,
 }: IdleSurfaceProps) {
   const lastGame = useLastGameSnapshot();
+  const meta = useLastGameMeta();
   const {
     windowStats,
     recentGames,
-    loading: matchesLoading,
+    isValidating: matchesValidating,
   } = useMatchHistory();
-  const lcuConnected = useLcuConnected();
   const stats = useMemo(
     () => windowStats({ days: WINDOW_DAYS }),
     [windowStats]
   );
   const recent = useMemo(() => recentGames(5), [recentGames]);
-  const { records: recentDecisions, loading: decisionsLoading } =
+  const { records: recentDecisions, isValidating: decisionsValidating } =
     useDecisionLogQuery(RECENT_GAMES_QUERY);
-  // "Loading" only counts when we expect data to land — i.e. the LCU is
-  // up. If the client is offline we already show the offline copy and
-  // shouldn't spin a fake ellipsis.
-  const matchesLoadingNow = matchesLoading && lcuConnected;
-  const decisionsLoadingNow = decisionsLoading;
+  // The pulsing-dots affordance pulses ONLY when a real revalidation is
+  // in flight — SWR has been told (by an LCU-connect or game-end trigger,
+  // or by the decision-log IPC fan-out in <SWRBridge>) to re-pull. Cached
+  // values render unconditionally; the dots are the visible "we're
+  // refreshing" signal, not a fake spinner.
+  const matchesLoadingNow = matchesValidating;
+  const decisionsLoadingNow = decisionsValidating;
   // Coaching moments are persisted to disk and survive across launches —
   // unlike `matches.length` which is in-memory and only populated when
   // the LCU has been reachable this session. Counting unique gameIds in
@@ -75,14 +76,27 @@ export function IdleSurface({
     };
   }, [recentDecisions]);
 
+  // Last-completed-game's most recent voice exchange — fallback for the
+  // LastGameBlock Q&A snippet when the in-memory snapshot is absent
+  // (post-restart, no live session yet). Voice records are sorted ascending
+  // by `sentAt` per `summarizeGame`, so `.at(-1)` is the most recent.
+  const lastVoice = useMemo<VoiceDecision | null>(() => {
+    if (meta.gameId === null) return null;
+    const voicesForGame = recentDecisions.filter(
+      (r): r is VoiceDecision =>
+        r.gameId === meta.gameId && r.source === "voice"
+    );
+    return voicesForGame.at(-1) ?? null;
+  }, [meta.gameId, recentDecisions]);
+
   return (
     <div className={styles.surface}>
       <section className={styles.left}>
         <div>
           <div className={styles.heroEyebrow}>Welcome back</div>
           <h1 className={styles.headline}>
-            Ready when you are
-            <span className={styles.headlineAccent}> for the next game</span>.
+            Ready for the
+            <span className={styles.headlineAccent}> next game</span>.
           </h1>
           <p className={styles.heroBody}>
             The coach is watching the League client and will pick up the moment
@@ -94,6 +108,7 @@ export function IdleSurface({
         <div className={styles.statStrip}>
           <StatBox
             label="Last 7 days"
+            validating={matchesLoadingNow}
             value={
               stats.totalGames > 0 ? (
                 `${stats.wins}-${stats.losses}`
@@ -108,13 +123,12 @@ export function IdleSurface({
                 ? `${stats.totalGames} ${stats.totalGames === 1 ? "game" : "games"}`
                 : matchesLoadingNow
                   ? "Pulling match history…"
-                  : lcuConnected
-                    ? "No matches yet"
-                    : OFFLINE_HINT
+                  : "No matches yet"
             }
           />
           <StatBox
             label="Avg KDA"
+            validating={matchesLoadingNow}
             value={
               stats.totalGames > 0 ? (
                 stats.avgKDA.toFixed(2)
@@ -129,13 +143,12 @@ export function IdleSurface({
                 ? `${stats.totalKills}/${stats.totalDeaths}/${stats.totalAssists} total`
                 : matchesLoadingNow
                   ? "Pulling match history…"
-                  : lcuConnected
-                    ? "No matches yet"
-                    : OFFLINE_HINT
+                  : "No matches yet"
             }
           />
           <StatBox
             label="Coaching moments"
+            validating={decisionsLoadingNow}
             value={
               interventionCount > 0 ? (
                 String(interventionCount)
@@ -165,23 +178,27 @@ export function IdleSurface({
 
         <div>
           <div className={styles.sectionLabel}>Last game</div>
-          {lastGame ? (
-            <LastGameBlock snapshot={lastGame} />
+          {meta.gameId !== null ? (
+            <LastGameBlock
+              meta={meta}
+              snapshot={lastGame}
+              lastVoice={lastVoice}
+            />
           ) : (
-            <p className={styles.lastGameStats}>
-              No game played in this session yet.
-            </p>
+            <p className={styles.lastGameStats}>No games yet.</p>
           )}
         </div>
 
         <div>
-          <div className={styles.sectionLabel}>Recent games</div>
+          <div className={styles.sectionLabel}>
+            Recent games {matchesLoadingNow ? <LoadingDots /> : null}
+          </div>
           <div className={styles.recent}>
             {recent.length === 0 ? (
               <p className={styles.recentEmpty}>
-                {lcuConnected
-                  ? "No matches in your client history yet."
-                  : "League client offline — recent matches load once the client is up."}
+                {matchesLoadingNow
+                  ? "Pulling recent matches…"
+                  : "No matches in your client history yet."}
               </p>
             ) : (
               recent.map((m) => (
@@ -257,12 +274,23 @@ interface StatBoxProps {
   label: string;
   value: ReactNode;
   delta: ReactNode;
+  /**
+   * True while the underlying source is revalidating in the background.
+   * Surfaces a small dots affordance next to the label so the user sees
+   * that a refresh is happening even when the cached value is unchanged
+   * (the value itself stays put — flickering it to "..." and back would
+   * read as a glitch, not a confirmation).
+   */
+  validating?: boolean;
 }
 
-function StatBox({ label, value, delta }: StatBoxProps) {
+function StatBox({ label, value, delta, validating }: StatBoxProps) {
   return (
     <div className={styles.statBox}>
-      <div className={styles.statLabel}>{label}</div>
+      <div className={styles.statLabel}>
+        {label}
+        {validating ? <LoadingDots /> : null}
+      </div>
       <div className={styles.statValue}>{value}</div>
       <div className={styles.statDelta}>{delta}</div>
     </div>
@@ -279,16 +307,35 @@ function LoadingDots() {
   );
 }
 
-function LastGameBlock({ snapshot }: { snapshot: LastGameSnapshot }) {
-  const exchange = snapshot.recentExchanges[0];
-  // Single source of truth for "what was the last game's result" —
-  // see useLastGameMeta. Prefers match-history (server-authoritative)
-  // over the in-memory snapshot, which has been observed to default
-  // to a loss when the LCU's eog-stats-block returns null.
-  const meta = useLastGameMeta();
+interface LastGameBlockProps {
+  /**
+   * Merged metadata from match-history → decision-log takeaway → snapshot.
+   * The visibility gate above guarantees `meta.gameId !== null`, so every
+   * other field has at least one source — though some (e.g. duration on a
+   * pre-takeaway, pre-history match) may still be null.
+   */
+  meta: LastGameMeta;
+  /**
+   * Optional in-memory snapshot for the just-finished game. Present
+   * during the live session that produced the game; null after a
+   * restart.
+   */
+  snapshot: LastGameSnapshot | null;
+  /**
+   * Most recent voice exchange for `meta.gameId`, derived from the
+   * cached decision-log query. Used as the Q&A fallback when `snapshot`
+   * is absent (e.g. cold launch with no live session yet).
+   */
+  lastVoice: VoiceDecision | null;
+}
+
+function LastGameBlock({ meta, snapshot, lastVoice }: LastGameBlockProps) {
+  // Prefer the in-memory snapshot's most-recent exchange; fall back to
+  // the cached decision-log voice record. Both carry the same shape.
+  const exchange = snapshot?.recentExchanges[0] ?? lastVoice;
   const isWin = meta.isWin ?? false;
   const gameMode = formatGameMode(meta.gameMode);
-  const championName = meta.championName ?? snapshot.championName;
+  const championName = meta.championName ?? snapshot?.championName ?? "—";
   return (
     <div className={styles.lastGameBlock}>
       <div className={styles.lastGameHeader}>
@@ -303,11 +350,16 @@ function LastGameBlock({ snapshot }: { snapshot: LastGameSnapshot }) {
       </div>
       <div className={styles.lastGameStats}>
         <span>
-          {meta.kills ?? snapshot.kills} / {meta.deaths ?? snapshot.deaths} /{" "}
-          {meta.assists ?? snapshot.assists}
+          {meta.kills ?? snapshot?.kills ?? "—"} /{" "}
+          {meta.deaths ?? snapshot?.deaths ?? "—"} /{" "}
+          {meta.assists ?? snapshot?.assists ?? "—"}
         </span>
         <span>·</span>
-        <span>{formatDuration(meta.duration ?? snapshot.gameTime)}</span>
+        <span>
+          {(meta.duration ?? snapshot?.gameTime)
+            ? formatDuration(meta.duration ?? snapshot?.gameTime ?? 0)
+            : "—"}
+        </span>
         <span>·</span>
         <span>{gameMode}</span>
       </div>

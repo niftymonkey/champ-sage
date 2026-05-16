@@ -26,6 +26,69 @@
   }
 }
 
+/* ─── Preparing state (post-game hide window) ───
+   Shown for the few seconds between a game ending and its recap data
+   being fully assembled. Calm, centered, with the pulsing-dots
+   affordance so the wait reads as "working", not "stuck". */
+.preparing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-10);
+  text-align: center;
+  animation: surface-fade-in 400ms ease forwards;
+}
+
+.preparingHeadline {
+  font-family: var(--font-display);
+  font-size: 1.625rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+
+.preparingBody {
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  color: var(--ink-3);
+  margin: 0;
+  max-width: 26rem;
+}
+
+.preparingDots {
+  display: inline-flex;
+  gap: 0.35em;
+  margin-top: var(--space-2);
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.preparingDots span {
+  animation: preparing-dot 1.4s ease-in-out infinite;
+}
+
+.preparingDots span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.preparingDots span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes preparing-dot {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .left,
 .right {
   display: flex;

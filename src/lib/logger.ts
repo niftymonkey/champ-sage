@@ -38,7 +38,10 @@ export type LogModule =
   | "overlay"
   | "overlay:calibration"
   | "overlay:strip"
-  | "build-direction";
+  | "build-direction"
+  | "match-history"
+  | "swr-bridge"
+  | "post-game-readiness";
 
 export interface ScopedLogger {
   error: (...args: unknown[]) => void;

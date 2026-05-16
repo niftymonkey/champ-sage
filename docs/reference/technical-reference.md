@@ -639,3 +639,33 @@ Phase 5a's persistent coach decision log records every `coaching-response` IPC p
 - **Recovery:** corrupt lines (process killed mid-write, or an external edit) are dropped on hydrate and surfaced via `log.warnings()`. Main logs the count; the app keeps running with the longest valid prefix.
 - **Failure isolation:** an `append` failure never blocks the overlay relay. Main catches the rejection, warns via electron-log, and moves on. The overlay still renders the response.
 - **Module split:** record types and the pure `summarizeGame` helper live in `src/lib/decision-log/` so renderer-side consumers (post-game takeaways, idle recap) can import them without crossing into Electron-only code. The storage adapter, log factory, and payload→input mapper live in `electron/decision-log/` (Node fs imports, main-process only).
+
+### SWR scoped cache provider — global `mutate` misses it
+
+`<SWRConfig value={{ provider }}>` creates a *scoped* cache. The package-level `mutate` exported from `swr` only operates on SWR's *default* (unscoped) cache, so calling it does nothing visible when a custom provider is in play — the fetch never fires, the hook never revalidates, and there is no error.
+
+- **Symptom:** an invalidation trigger runs (logs confirm it), but the `useSWR` consumer never re-fetches.
+- **Fix:** the provider-scoped mutator is only reachable via `useSWRConfig().mutate` *inside* the `<SWRConfig>` subtree. Non-React engine code (RxJS store subscriptions) can't call a hook, so `src/lib/cache/swr-bridge.ts` holds a module-level ref: a tiny `<SWRBridge />` component calls `setScopedMutate(useSWRConfig().mutate)` in an effect, and engine code calls `invalidateKey(...)`. Invalidations issued before the bridge mounts are queued and drained on registration.
+- **React Fast Refresh caveat:** HMR can hot-swap a component's definition without the new JSX ever entering the live tree, so a freshly-added `<SWRBridge />` may not actually render until a full reload. Dev-only; a hard refresh fixes it. Production mounts the tree once and is unaffected.
+
+### SWR side effects: fetcher body runs before the cache commits
+
+A side effect placed at the end of a `useSWR` fetcher runs *before* SWR writes the resolved value into its cache. Anything that reads the cache immediately after (a readiness gate, another hook) sees stale data.
+
+- **Observed (#129):** `markMatchesRefreshed()` called inside `fetchMatches` flipped a "data is ready" gate while `useMatchHistory().matches` still held the previous fetch — the post-game surface revealed with the prior game's match row.
+- **Fix:** move the side effect to SWR's `onSuccess` config callback. `onSuccess` fires *after* the cache is committed, so every consumer reading the cache in the render that follows sees the new value.
+
+### LCU lockfile appears seconds before the HTTPS server binds
+
+The LCU lockfile (and thus credentials) becomes readable several seconds before the LCU's HTTPS server actually accepts connections. A fetch fired on credentials-available reliably fails with `ECONNREFUSED`.
+
+- **Wrong trigger:** `lcuCredentials$` (fires on lockfile discovery).
+- **Right trigger:** `lcuReady$` in `src/lib/reactive/streams.ts` — set `true` only once the engine's LCU WebSocket has connected, which is the same moment HTTP requests start succeeding. Match-history fetches key off this. Using it removed ~14s of retry-backoff slack that the old credentials-triggered path paid on every game launch.
+
+### Post-game surface must hide on the phase transition, not on `activePlayer` clearing
+
+When a game ends, the gameflow phase moves to `WaitingForStats`/`PreEndOfGame`/`EndOfGame` — and `resolveSurface` auto-routes to the post-game surface on that signal. `liveGameState.activePlayer` clears separately, ~500ms+ later.
+
+- **Consequence:** a hide gate keyed off `activePlayer` clearing engages *after* the surface has already mounted and rendered cached (previous-game) data — a visible flash.
+- **Fix:** `post-game-readiness.ts` flips `postGameReady$` to `false` on the phase transition into a post-game phase (subscribed via `wirePostGameReadiness`), so the surface mounts already gated. It flips back to `true` only once *both* the in-memory snapshot and the match-history fetch are fresh for the just-ended game; a 15s failsafe forces reveal if a signal never lands.
+- **Display must be pinned to the snapshot's gameId:** `PostGameSurface` scopes its records filter and match-history row lookup to `snapshot.gameId`. When `focusGameId` is known, never substitute another game's match row (e.g. `recentGames(1)[0]`) — return `undefined` and let `mergeMeta` fall back to the takeaway/snapshot champion, which is the same game.

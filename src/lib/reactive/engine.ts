@@ -24,6 +24,7 @@ import {
   manualInput$,
   playerIntent$,
   lcuCredentials$,
+  lcuReady$,
   gameEnded$,
 } from "./streams";
 import { normalizeGameState, extractMapNumber } from "../game-state/normalize";
@@ -185,6 +186,9 @@ export class ReactiveEngine {
           lcuCredentials$.next({ port: status.port, token: status.token });
         } else {
           lcuCredentials$.next(null);
+          // No LCU at all → can't be HTTPS-ready either. Clears the
+          // signal so the next reconnect cycle re-fires it cleanly.
+          lcuReady$.next(false);
         }
         // Only emit if the connection status actually changed from what
         // the BehaviorSubject already holds (avoids duplicate on startup)
@@ -208,6 +212,11 @@ export class ReactiveEngine {
           filter((s) => s.connected),
           switchMap((creds) => {
             return new Observable<void>(() => {
+              // Discovery found credentials, but the LCU's HTTPS server
+              // may still be booting. Clear readiness so a consumer
+              // can't observe a stale `true` from a prior connection
+              // cycle and fetch into ECONNREFUSED.
+              lcuReady$.next(false);
               const isRetry = this.wsRetrySeq > 0;
               engineLog.info(
                 isRetry
@@ -230,6 +239,7 @@ export class ReactiveEngine {
                   if (failed) return;
                   failed = true;
                   engineLog.warn(`WebSocket disconnected: ${event.reason}`);
+                  lcuReady$.next(false);
                   this.wsRetrySeq++;
                 }
               );
@@ -238,11 +248,13 @@ export class ReactiveEngine {
                 .connectLcuWebSocket(creds.port, creds.token)
                 .then(() => {
                   engineLog.info("WebSocket connected and subscribed");
+                  lcuReady$.next(true);
                   this.fetchInitialState(creds.port, creds.token);
                 })
                 .catch((err) => {
                   if (failed) return;
                   failed = true;
+                  lcuReady$.next(false);
                   engineLog.warn(
                     `WebSocket connection failed: ${err instanceof Error ? err.message : String(err)}`
                   );
@@ -681,5 +693,8 @@ export class ReactiveEngine {
   stop(): void {
     this.subscription.unsubscribe();
     this.subscription = new Subscription();
+    // A stopped engine has no live LCU connection — clear readiness so
+    // a restart (StrictMode remount, HMR) doesn't inherit a stale `true`.
+    lcuReady$.next(false);
   }
 }

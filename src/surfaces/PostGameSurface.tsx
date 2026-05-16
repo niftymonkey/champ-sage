@@ -75,6 +75,18 @@ export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
     prevReadyRef.current = ready;
   });
 
+  const snapshot = useLastGameSnapshot();
+
+  // For the auto-routed view, the in-memory snapshot is the canonical
+  // source of "which game are we recapping right now" — it's updated
+  // synchronously when the game ends. All displayed data (header,
+  // narrative, build, voices, KDA) is scoped to this gameId so we
+  // never render a mix of two different games' fields.
+  //
+  // When the user clicks a specific row from Recent Games, the
+  // explicit `gameId` wins.
+  const focusGameId = gameId ?? snapshot?.gameId ?? null;
+
   const query = useMemo(
     () => (gameId ? { kind: "by-game" as const, gameId } : RECENT_WINDOW_QUERY),
     [gameId]
@@ -82,48 +94,90 @@ export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
   const {
     records,
     summary: directSummary,
-    loading,
+    isValidating,
     error,
   } = useDecisionLogQuery(query);
-  // For the "most recent" view (no explicit gameId), filter the
-  // recent-games window down to the latest game with a takeaway and
-  // build the summary from that slice. For the "by gameId" view, use
-  // the direct summary as-is.
+  // For the explicit-gameId path, use the direct summary as-is.
+  // For the auto-routed path, filter records to the snapshot's gameId
+  // so the recap content only reflects the just-finished game. If
+  // there are no records yet (LLM still writing the takeaway), the
+  // surface gracefully shows the "writing the recap…" placeholder
+  // rather than falling through to an older game's data.
   const summary = useMemo(() => {
     if (gameId) return directSummary;
-    return summarizeGame(mostRecentCompletedGameSlice(records));
-  }, [gameId, records, directSummary]);
-  const snapshot = useLastGameSnapshot();
+    if (focusGameId === null) {
+      return summarizeGame(mostRecentCompletedGameSlice(records));
+    }
+    const scoped = records.filter((r) => r.gameId === focusGameId);
+    return summarizeGame(scoped);
+  }, [gameId, focusGameId, records, directSummary]);
   const { recentGames, matches } = useMatchHistory();
-  // For the auto-routed "last game" view, the most-recent match-history
-  // row is the authoritative source. For a specific gameId (clicked
-  // from the recent-games list), find that exact match.
+  // Align the match-history row with the snapshot's gameId in the
+  // auto-routed view so the header metadata always agrees with the
+  // recap content. Falls back to the most-recent row when there's no
+  // snapshot yet (cold launch, never saw a game-end this session).
   const authoritativeMatch = useMemo(() => {
     if (gameId) return matches.find((m) => m.gameId === gameId);
+    if (focusGameId !== null) {
+      // The snapshot pins exactly which game we're recapping. Return
+      // that row or `undefined` — NEVER substitute another game's row.
+      // If match-history hasn't caught up yet, `undefined` lets
+      // `mergeMeta` fall back to the takeaway / snapshot champion,
+      // which is the same game. Falling through to `recentGames(1)[0]`
+      // here would surface the PREVIOUS game's champion in the header.
+      return matches.find((m) => m.gameId === focusGameId);
+    }
     return recentGames(1)[0];
-  }, [gameId, matches, recentGames]);
+  }, [gameId, focusGameId, matches, recentGames]);
 
   if (shouldHide) {
-    // Empty placeholder: same surface root so layout is stable, but
-    // no children. The fade-in animation lives on a class that's only
-    // applied while `ready`; the absence here means the placeholder
-    // stays at opacity 0 until snapshot data lands.
-    return <div className={styles.surface} aria-hidden="true" />;
+    // The just-finished game's data is still being stitched together
+    // (snapshot + match-history not yet fresh). Show a calm "preparing"
+    // state for the few seconds that takes — never the previous game,
+    // never a blank surface. Replaced by the real recap (which fades
+    // in) the moment the readiness gate opens.
+    return (
+      <div className={styles.preparing} aria-live="polite">
+        <div className={styles.eyebrow}>
+          <span>Post-game</span>
+        </div>
+        <h2 className={styles.preparingHeadline}>
+          Wrapping up your last game
+        </h2>
+        <p className={styles.preparingBody}>
+          Pulling the final stats and the coach&apos;s recap together.
+        </p>
+        <span className={styles.preparingDots} aria-hidden="true">
+          <span>·</span>
+          <span>·</span>
+          <span>·</span>
+        </span>
+      </div>
+    );
   }
 
-  if (!loading && summary.totalCount === 0) {
-    // No records for this query. Two reasons we end up here:
-    // 1. Nothing has been played yet — fall back to the welcome copy.
-    // 2. The user clicked an older row in Recent games whose records
-    //    were written before the renderer started using the Riot
-    //    gameId (everything pre-this-feature). Those rows are
-    //    permanently orphaned from coach data; tell the user plainly.
+  if (!isValidating && summary.totalCount === 0) {
     const headline = gameId
       ? "No coach data for this match."
       : "Honest about what we both did.";
-    const body = gameId
-      ? "This match was played before per-game coach history shipped, so there's nothing to show. Newer matches will fill out fully."
-      : "No completed game yet this session. Once a match wraps, the recap and conversation log land here.";
+    let body: string;
+    if (gameId) {
+      const champ = authoritativeMatch?.championName;
+      const playedOn = authoritativeMatch?.gameCreation
+        ? formatMatchDate(authoritativeMatch.gameCreation)
+        : null;
+      if (champ && playedOn) {
+        body = `We couldn't find coaching data for ${champ}'s match on ${playedOn}. Any game you play with Champ Sage open will have a full recap here.`;
+      } else if (champ) {
+        body = `We couldn't find coaching data for ${champ}'s match. Any game you play with Champ Sage open will have a full recap here.`;
+      } else {
+        body =
+          "No coaching records were found for this game. Any game you play with Champ Sage open will have a full recap here.";
+      }
+    } else {
+      body =
+        "No completed game yet. Once a match wraps with Champ Sage open, the recap and conversation log land here.";
+    }
     return (
       <div className={styles.surface}>
         <section className={styles.left}>
@@ -731,4 +785,16 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatMatchDate(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return "";
+  const date = new Date(ms);
+  const now = new Date();
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: sameYear ? undefined : "numeric",
+  }).format(date);
 }

@@ -1,8 +1,12 @@
 import { BehaviorSubject } from "rxjs";
 import type { LoadedGameData } from "../data-ingest";
-import { gameEnded$, lcuCredentials$ } from "../reactive";
+import { gameEnded$, lcuCredentials$, lcuReady$ } from "../reactive";
 import { createElectronBridge } from "../reactive/electron-bridge";
+import { invalidateKey } from "../cache/swr-bridge";
 import { createMatchHistoryStore, type MatchHistoryStore } from "./store";
+
+/** SWR cache key for the match-history list. Shared with `useMatchHistory`. */
+export const MATCH_HISTORY_KEY = "match-history";
 
 /**
  * Process-wide singleton for match-history. Initialized once at app
@@ -26,7 +30,9 @@ export function getMatchHistoryStore(): MatchHistoryStore {
       bridge: createElectronBridge(),
       gameData$,
       lcuCredentials$,
+      lcuReady$,
       gameEnded$,
+      invalidate: () => invalidateKey(MATCH_HISTORY_KEY),
     });
   }
   return store;
