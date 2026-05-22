@@ -182,7 +182,7 @@ describe("hasGameStateChangedMeaningfully", () => {
         gameId: "1",
         gameLength: 600,
         gameMode: "ARAM",
-        isWin: true,
+        result: "win",
         championId: 1,
         items: [],
       },

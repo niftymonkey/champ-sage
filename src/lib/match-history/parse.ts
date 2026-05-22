@@ -1,4 +1,5 @@
 import type { MatchSummary } from "./types";
+import { deriveGameResult } from "../game-result";
 
 /**
  * Subset of the LCU /lol-match-history match payload we read. The real
@@ -11,6 +12,13 @@ interface LcuMatchParticipant {
   championId?: number;
   stats?: {
     win?: boolean;
+    /**
+     * True when the game was remade (a player failed to connect, the
+     * team voided it near the 3-minute mark). Distinct from
+     * `gameEndedInSurrender`, a normal 15:00+ forfeit that still
+     * records a real win or loss.
+     */
+    gameEndedInEarlySurrender?: boolean;
     kills?: number;
     deaths?: number;
     assists?: number;
@@ -112,7 +120,10 @@ export function lcuMatchToSummary(
     gameMode,
     queueId,
     finalItems,
-    isWin: stats.win === true,
+    result: deriveGameResult(
+      stats.win === true,
+      stats.gameEndedInEarlySurrender === true
+    ),
     kills: typeof stats.kills === "number" ? stats.kills : 0,
     deaths: typeof stats.deaths === "number" ? stats.deaths : 0,
     assists: typeof stats.assists === "number" ? stats.assists : 0,

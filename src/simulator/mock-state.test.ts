@@ -176,24 +176,32 @@ describe("createMockGameState", () => {
 describe("createMockEogStats", () => {
   it("creates EOG stats with win/loss", () => {
     const eog = createMockEogStats({
-      isWin: true,
+      result: "win",
       championName: "Ahri",
     });
     expect(eog).not.toBeNull();
-    expect(eog!.isWin).toBe(true);
+    expect(eog!.result).toBe("win");
   });
 
   it("creates EOG stats with defeat", () => {
     const eog = createMockEogStats({
-      isWin: false,
+      result: "loss",
       championName: "Ahri",
     });
-    expect(eog!.isWin).toBe(false);
+    expect(eog!.result).toBe("loss");
+  });
+
+  it("creates EOG stats for a remake", () => {
+    const eog = createMockEogStats({
+      result: "remake",
+      championName: "Ahri",
+    });
+    expect(eog!.result).toBe("remake");
   });
 
   it("uses provided game length", () => {
     const eog = createMockEogStats({
-      isWin: true,
+      result: "win",
       championName: "Ahri",
       gameLength: 1800,
     });
@@ -202,7 +210,7 @@ describe("createMockEogStats", () => {
 
   it("defaults game length to 1200 seconds", () => {
     const eog = createMockEogStats({
-      isWin: true,
+      result: "win",
       championName: "Ahri",
     });
     expect(eog!.gameLength).toBe(1200);

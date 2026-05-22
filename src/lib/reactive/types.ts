@@ -1,5 +1,6 @@
 import type { ActivePlayer, PlayerInfo } from "../game-state/types";
 import type { Augment } from "../data-ingest/types";
+import type { GameResult } from "../game-result";
 
 // Gameflow phases from LCU API
 export type GameflowPhase =
@@ -92,7 +93,7 @@ export interface EogStats {
   gameId: string;
   gameLength: number;
   gameMode: string;
-  isWin: boolean;
+  result: GameResult;
   championId: number;
   items: number[];
 }

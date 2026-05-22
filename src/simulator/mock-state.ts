@@ -6,6 +6,7 @@
  */
 
 import type { LiveGameState, EogStats } from "../lib/reactive/types";
+import type { GameResult } from "../lib/game-result";
 import type { ActivePlayerStats, PlayerInfo } from "../lib/game-state/types";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { ChampionStats } from "../lib/data-ingest/types";
@@ -22,7 +23,7 @@ export interface MockGameOptions {
 }
 
 export interface MockEogOptions {
-  isWin: boolean;
+  result: GameResult;
   championName: string;
   gameLength?: number;
   gameMode?: string;
@@ -179,7 +180,7 @@ export function createMockEogStats(options: MockEogOptions): EogStats {
     gameId: `mock-${Date.now()}`,
     gameLength: options.gameLength ?? 1200,
     gameMode: options.gameMode ?? "ARAM",
-    isWin: options.isWin,
+    result: options.result,
     championId: 0,
     items: [],
   };

@@ -5,6 +5,7 @@ import {
   summarizeUserInput,
 } from "./debug-summarizers";
 import type {
+  EogStats,
   GameLifecycleEvent,
   LiveGameState,
   UserInputEvent,
@@ -299,11 +300,11 @@ describe("summarizeLiveGameState", () => {
   });
 
   it("shows EOG with game mode and duration", () => {
-    const eogStats = {
+    const eogStats: EogStats = {
       gameId: "123",
       gameLength: 1200,
       gameMode: "ARAM",
-      isWin: true,
+      result: "win",
       championId: 103,
       items: [3089],
     };
@@ -313,17 +314,31 @@ describe("summarizeLiveGameState", () => {
   });
 
   it("shows EOG loss", () => {
-    const eogStats = {
+    const eogStats: EogStats = {
       gameId: "456",
       gameLength: 900,
       gameMode: "CHERRY",
-      isWin: false,
+      result: "loss",
       championId: 222,
       items: [],
     };
     expect(
       summarizeLiveGameState(createDefaultLiveGameState({ eogStats }))
     ).toBe("EOG: LOSS | CHERRY | 15:00");
+  });
+
+  it("shows EOG remake", () => {
+    const eogStats: EogStats = {
+      gameId: "789",
+      gameLength: 151,
+      gameMode: "ARAM",
+      result: "remake",
+      championId: 266,
+      items: [],
+    };
+    expect(
+      summarizeLiveGameState(createDefaultLiveGameState({ eogStats }))
+    ).toBe("EOG: REMAKE | ARAM | 2:31");
   });
 
   it("shows champion, level, time, mode, and player count", () => {

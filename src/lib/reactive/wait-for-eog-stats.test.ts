@@ -25,7 +25,7 @@ function makeEog(overrides: Partial<EogStats> = {}): EogStats {
     gameId: "abc",
     gameLength: 1500,
     gameMode: "ARAM",
-    isWin: true,
+    result: "win",
     championId: 99,
     items: [],
     ...overrides,
@@ -42,7 +42,7 @@ afterEach(() => {
 
 describe("waitForEogStats", () => {
   it("resolves immediately when the stream already carries eogStats", async () => {
-    const eog = makeEog({ isWin: true });
+    const eog = makeEog({ result: "win" });
     const live$ = new BehaviorSubject<LiveGameState>(
       makeLiveGameState({ eogStats: eog })
     );
@@ -61,7 +61,7 @@ describe("waitForEogStats", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(seen).toEqual([]);
 
-    const eog = makeEog({ isWin: false });
+    const eog = makeEog({ result: "loss" });
     live$.next(makeLiveGameState({ eogStats: eog }));
     await vi.advanceTimersByTimeAsync(0);
     expect(seen).toEqual([eog]);
@@ -110,7 +110,7 @@ describe("waitForEogStats", () => {
     expect(seen).toEqual([eog]);
     expect(completed).toBe(true);
 
-    live$.next(makeLiveGameState({ eogStats: makeEog({ isWin: false }) }));
+    live$.next(makeLiveGameState({ eogStats: makeEog({ result: "loss" }) }));
     await vi.advanceTimersByTimeAsync(0);
     expect(seen).toEqual([eog]);
   });

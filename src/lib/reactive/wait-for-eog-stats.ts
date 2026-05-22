@@ -5,7 +5,7 @@
  * Why this exists: the LCU emits `/lol-end-of-game/v1/eog-stats-block`
  * a few hundred milliseconds AFTER `activePlayer` becomes null at game
  * end. The post-game-takeaway pipeline (and the last-game snapshot
- * capture) need the authoritative `isWin` from the eog payload — using
+ * capture) need the authoritative `result` from the eog payload — using
  * the synchronous `liveGameState.eogStats` at the activePlayer-null
  * transition reads as `null` and stamps every match as a defeat.
  *

@@ -38,7 +38,7 @@ describe("lcuMatchToSummary", () => {
     expect(m?.championId).toBe(99);
     expect(m?.gameMode).toBe("ARAM");
     expect(m?.queueId).toBe(450);
-    expect(m?.isWin).toBe(true);
+    expect(m?.result).toBe("win");
     expect(m?.kills).toBe(12);
     expect(m?.deaths).toBe(4);
     expect(m?.assists).toBe(18);
@@ -119,7 +119,39 @@ describe("lcuMatchToSummary", () => {
     expect(m?.kills).toBe(0);
     expect(m?.deaths).toBe(0);
     expect(m?.assists).toBe(0);
-    expect(m?.isWin).toBe(false);
+    expect(m?.result).toBe("loss");
+  });
+
+  it("marks result as remake when the game ended in early surrender", () => {
+    const m = lcuMatchToSummary(
+      {
+        ...fullPayload,
+        participants: [
+          {
+            championId: 99,
+            stats: { win: false, gameEndedInEarlySurrender: true },
+          },
+        ],
+      },
+      resolver
+    );
+    expect(m?.result).toBe("remake");
+  });
+
+  it("treats a normal (non-early) surrender as a real loss, not a remake", () => {
+    const m = lcuMatchToSummary(
+      {
+        ...fullPayload,
+        participants: [
+          {
+            championId: 99,
+            stats: { win: false, gameEndedInSurrender: true },
+          },
+        ],
+      },
+      resolver
+    );
+    expect(m?.result).toBe("loss");
   });
 
   it("handles numeric gameId by stringifying it", () => {

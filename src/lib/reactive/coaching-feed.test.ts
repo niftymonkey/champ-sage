@@ -148,7 +148,7 @@ describe("captureLastGameSnapshot", () => {
     captureLastGameSnapshot({
       gameId: "test-game-1",
       championName: "Katarina",
-      isWin: true,
+      result: "win",
       kills: 12,
       deaths: 4,
       assists: 15,
@@ -171,7 +171,7 @@ describe("captureLastGameSnapshot", () => {
     const snapshot = lastGameSnapshot$.getValue();
     expect(snapshot).not.toBeNull();
     expect(snapshot!.championName).toBe("Katarina");
-    expect(snapshot!.isWin).toBe(true);
+    expect(snapshot!.result).toBe("win");
     expect(snapshot!.items).toHaveLength(6);
     expect(snapshot!.recentExchanges).toHaveLength(1);
   });
@@ -184,7 +184,7 @@ describe("resetForNewGame", () => {
     captureLastGameSnapshot({
       gameId: "test-game-1",
       championName: "Katarina",
-      isWin: true,
+      result: "win",
       kills: 8,
       deaths: 3,
       assists: 12,
