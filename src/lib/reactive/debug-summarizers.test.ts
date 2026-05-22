@@ -327,6 +327,20 @@ describe("summarizeLiveGameState", () => {
     ).toBe("EOG: LOSS | CHERRY | 15:00");
   });
 
+  it("shows EOG remake", () => {
+    const eogStats: EogStats = {
+      gameId: "789",
+      gameLength: 151,
+      gameMode: "ARAM",
+      result: "remake",
+      championId: 266,
+      items: [],
+    };
+    expect(
+      summarizeLiveGameState(createDefaultLiveGameState({ eogStats }))
+    ).toBe("EOG: REMAKE | ARAM | 2:31");
+  });
+
   it("shows champion, level, time, mode, and player count", () => {
     const state = createDefaultLiveGameState({
       activePlayer: createActivePlayer({

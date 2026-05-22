@@ -17,21 +17,23 @@ vi.mock("../../lib/match-history/runtime", () => ({
   getMatchHistoryStore: () => mockStore,
 }));
 
-const sampleMatch: MatchSummary = {
-  gameId: "1234567890",
-  championName: "Lux",
-  championId: 99,
-  gameMode: "ARAM",
-  queueId: 450,
-  result: "win",
-  kills: 12,
-  deaths: 4,
-  assists: 18,
-  largestKillingSpree: 3,
-  durationSeconds: 1634,
-  gameCreation: 1_700_000_000_000,
-  finalItems: [],
-};
+function createSampleMatch(): MatchSummary {
+  return {
+    gameId: "1234567890",
+    championName: "Lux",
+    championId: 99,
+    gameMode: "ARAM",
+    queueId: 450,
+    result: "win",
+    kills: 12,
+    deaths: 4,
+    assists: 18,
+    largestKillingSpree: 3,
+    durationSeconds: 1634,
+    gameCreation: 1_700_000_000_000,
+    finalItems: [],
+  };
+}
 
 function wrapper({ children }: { children: ReactNode }) {
   return createElement(
@@ -54,7 +56,7 @@ function wrapper({ children }: { children: ReactNode }) {
 describe("useMatchHistory", () => {
   beforeEach(() => {
     mockStore = {
-      fetchMatches: vi.fn().mockResolvedValue([sampleMatch]),
+      fetchMatches: vi.fn().mockResolvedValue([createSampleMatch()]),
       dispose: vi.fn(),
     };
   });
@@ -74,7 +76,7 @@ describe("useMatchHistory", () => {
   it("renders cached matches on first render with no fetch and no validating state", async () => {
     function wrapperWithCache({ children }: { children: ReactNode }) {
       const cache = new Map<string, unknown>([
-        ["match-history", { data: [sampleMatch] }],
+        ["match-history", { data: [createSampleMatch()] }],
       ]);
       return createElement(
         SWRConfig,
@@ -97,7 +99,7 @@ describe("useMatchHistory", () => {
       wrapper: wrapperWithCache,
     });
 
-    expect(result.current.matches).toEqual([sampleMatch]);
+    expect(result.current.matches).toEqual([createSampleMatch()]);
     expect(result.current.isValidating).toBe(false);
     expect(mockStore.fetchMatches).not.toHaveBeenCalled();
   });
@@ -132,13 +134,13 @@ describe("useMatchHistory", () => {
     });
 
     act(() => {
-      resolve([sampleMatch]);
+      resolve([createSampleMatch()]);
     });
 
     await waitFor(() => {
       expect(result.current.history.isValidating).toBe(false);
     });
-    expect(result.current.history.matches).toEqual([sampleMatch]);
+    expect(result.current.history.matches).toEqual([createSampleMatch()]);
   });
 
   it("exposes windowStats and recentGames convenience wrappers", () => {

@@ -321,6 +321,13 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     // A remade game (player failed to connect, game voided near the
     // 3-minute mark) has nothing worth coaching on. Skip the takeaway
     // LLM call entirely; the game still records elsewhere as a remake.
+    //
+    // When `eog` times out (the LCU never surfaced the stats block
+    // within the wait window) we also skip: without an authoritative
+    // result we cannot tell a remake from a real loss, and writing a
+    // takeaway with a guessed `isWin: false` poisons the on-disk
+    // decision log with a record that contradicts match history once
+    // it lands.
     const isRemake = eog?.result === "remake";
     if (
       takeawayEnabled &&
@@ -329,6 +336,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       lastState.activePlayer &&
       hasActivity &&
       sessionGameIdGuard &&
+      eog !== null &&
       !isRemake
     ) {
       const championName =
