@@ -216,6 +216,7 @@ export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
       <RightColumn
         authoritativeMatch={authoritativeMatch}
         takeaway={summary.takeaway}
+        snapshot={snapshot}
         finalPlan={summary.finalPlan}
         startedAt={summary.startedAt}
         endedAt={summary.endedAt}
@@ -410,6 +411,7 @@ function BuildSection({
 
 interface RightColumnProps {
   takeaway: TakeawayDecision | null;
+  snapshot: LastGameSnapshot | null;
   finalPlan: PlanDecision | null;
   startedAt: number | null;
   endedAt: number | null;
@@ -423,6 +425,7 @@ interface RightColumnProps {
 
 function RightColumn({
   takeaway,
+  snapshot,
   finalPlan,
   startedAt,
   endedAt,
@@ -436,7 +439,7 @@ function RightColumn({
   // Eyebrow lives over here so the left column's headline ("Match recap
   // for X.") is the first thing the eye lands on top-left. Win / mode
   // come from the same merged source the left column uses.
-  const meta = mergeMeta(authoritativeMatch, takeaway, null);
+  const meta = mergeMeta(authoritativeMatch, takeaway, snapshot);
   const gameMode = meta.gameMode ? formatGameMode(meta.gameMode) : null;
   const eyebrowText =
     meta.result === null

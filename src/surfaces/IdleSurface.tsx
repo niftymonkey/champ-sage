@@ -55,6 +55,7 @@ export function IdleSurface({
   const {
     windowStats,
     recentGames,
+    matches,
     isValidating: matchesValidating,
   } = useMatchHistory();
   const stats = useMemo(
@@ -63,17 +64,19 @@ export function IdleSurface({
   );
   const recent = useMemo(() => recentGames(5), [recentGames]);
   // gameIds of remade (voided) games, so their coaching activity can be
-  // dropped from the weekly tally below. Match history is in-memory, so
-  // on a cold launch with no LCU this set is empty and a remade game
-  // slips through; acceptable, since a remake is rare and the count
+  // dropped from the weekly tally below. Iterates the full in-memory
+  // match history rather than a fixed slice so a heavy week never
+  // pushes a remake past the cap. Match history is in-memory, so on a
+  // cold launch with no LCU this set is empty and a remade game slips
+  // through; acceptable, since a remake is rare and the count
   // self-corrects once history loads.
   const remadeGameIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const m of recentGames(200)) {
+    for (const m of matches) {
       if (m.result === "remake") ids.add(m.gameId);
     }
     return ids;
-  }, [recentGames]);
+  }, [matches]);
   const { records: recentDecisions, isValidating: decisionsValidating } =
     useDecisionLogQuery(RECENT_GAMES_QUERY);
   // The pulsing-dots affordance pulses ONLY when a real revalidation is
