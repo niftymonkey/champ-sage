@@ -20,7 +20,11 @@ export function windowStats(
 ): WindowStats {
   const days = options.days ?? 7;
   const cutoff = options.now - days * DAY_MS;
-  const inWindow = matches.filter((m) => m.gameCreation >= cutoff);
+  // A remade game is voided: it carries no win/loss record. Drop it
+  // before tallying so it never skews the W/L count or the KDA average.
+  const inWindow = matches.filter(
+    (m) => m.gameCreation >= cutoff && m.result !== "remake"
+  );
 
   if (inWindow.length === 0) {
     return {
@@ -41,7 +45,7 @@ export function windowStats(
   let kdaSum = 0;
 
   for (const m of inWindow) {
-    if (m.isWin) wins += 1;
+    if (m.result === "win") wins += 1;
     totalKills += m.kills;
     totalDeaths += m.deaths;
     totalAssists += m.assists;

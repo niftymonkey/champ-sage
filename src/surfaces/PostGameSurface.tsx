@@ -141,9 +141,7 @@ export function PostGameSurface({ gameId = null }: PostGameSurfaceProps = {}) {
         <div className={styles.eyebrow}>
           <span>Post-game</span>
         </div>
-        <h2 className={styles.preparingHeadline}>
-          Wrapping up your last game
-        </h2>
+        <h2 className={styles.preparingHeadline}>Wrapping up your last game</h2>
         <p className={styles.preparingBody}>
           Pulling the final stats and the coach&apos;s recap together.
         </p>
@@ -287,6 +285,10 @@ function LeftColumn({
         )}
         {takeaway ? (
           <Narrative text={takeaway.narrative} />
+        ) : meta.result === "remake" ? (
+          <p className={styles.narrativePending}>
+            This game was remade. No result was recorded.
+          </p>
         ) : recapStillPending ? (
           <p className={styles.narrativePending}>
             The coach is writing the recap…
@@ -436,18 +438,28 @@ function RightColumn({
   // come from the same merged source the left column uses.
   const meta = mergeMeta(authoritativeMatch, takeaway, null);
   const gameMode = meta.gameMode ? formatGameMode(meta.gameMode) : null;
-  const result = meta.isWin === null ? null : meta.isWin ? "victory" : "defeat";
-  const resultClass = meta.isWin
-    ? styles.eyebrowResultWin
-    : styles.eyebrowResultLoss;
+  const eyebrowText =
+    meta.result === null
+      ? null
+      : meta.result === "win"
+        ? "victory"
+        : meta.result === "remake"
+          ? "remake"
+          : "defeat";
+  const resultClass =
+    meta.result === "win"
+      ? styles.eyebrowResultWin
+      : meta.result === "remake"
+        ? styles.eyebrowResultRemake
+        : styles.eyebrowResultLoss;
   return (
     <aside className={styles.right}>
       <div className={styles.eyebrow}>
         <span>Post-game</span>
-        {result !== null ? (
+        {eyebrowText !== null ? (
           <>
             <span>·</span>
-            <span className={resultClass}>{result.toUpperCase()}</span>
+            <span className={resultClass}>{eyebrowText.toUpperCase()}</span>
           </>
         ) : null}
         {gameMode ? (

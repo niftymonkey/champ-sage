@@ -5,6 +5,7 @@ import { useDecisionLogQuery } from "./useDecisionLogQuery";
 import type { TakeawayDecision } from "../lib/decision-log/types";
 import type { MatchSummary } from "../lib/match-history/types";
 import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
+import type { GameResult } from "../lib/game-result";
 
 /**
  * Resolved metadata for the just-finished (or currently-being-viewed)
@@ -24,11 +25,11 @@ import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
  *
  * Each field falls back independently so partial sources still
  * contribute something useful — e.g. match-history landing first
- * supplies isWin / mode while we wait for the takeaway.
+ * supplies result / mode while we wait for the takeaway.
  */
 export interface LastGameMeta {
   championName: string | null;
-  isWin: boolean | null;
+  result: GameResult | null;
   /** Coarse mode label, NOT formatted for display (caller normalises). */
   gameMode: string | null;
   kills: number | null;
@@ -80,7 +81,14 @@ export function mergeMeta(
       takeaway?.champion ??
       snapshot?.championName ??
       null,
-    isWin: match?.isWin ?? takeaway?.isWin ?? snapshot?.isWin ?? null,
+    // TakeawayDecision still carries a boolean `isWin`: a takeaway is
+    // only ever written for a coached win/loss game, never a remake, so
+    // it can only contribute "win" or "loss" here.
+    result:
+      match?.result ??
+      (takeaway ? (takeaway.isWin ? "win" : "loss") : undefined) ??
+      snapshot?.result ??
+      null,
     gameMode:
       match?.gameMode ?? takeaway?.gameMode ?? snapshot?.gameMode ?? null,
     kills: match?.kills ?? takeaway?.kills ?? snapshot?.kills ?? null,

@@ -8,7 +8,17 @@ import type { LastGameSnapshot } from "../lib/reactive/coaching-feed-types";
 import type { MatchSummary } from "../lib/match-history/types";
 import type { VoiceDecision } from "../lib/decision-log/types";
 import { formatGameMode } from "../lib/format-game-mode";
+import { resultLabel, type GameResult } from "../lib/game-result";
 import styles from "./IdleSurface.module.css";
+
+/**
+ * CSS class for a result word. Shared by the recent-games rows and the
+ * last-game block, which style win / loss / remake identically.
+ */
+function recentResultClass(result: GameResult): string {
+  if (result === "remake") return styles.recentResultRemake;
+  return result === "win" ? styles.recentResultWin : styles.recentResultLoss;
+}
 
 const WINDOW_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -52,6 +62,18 @@ export function IdleSurface({
     [windowStats]
   );
   const recent = useMemo(() => recentGames(5), [recentGames]);
+  // gameIds of remade (voided) games, so their coaching activity can be
+  // dropped from the weekly tally below. Match history is in-memory, so
+  // on a cold launch with no LCU this set is empty and a remade game
+  // slips through; acceptable, since a remake is rare and the count
+  // self-corrects once history loads.
+  const remadeGameIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const m of recentGames(200)) {
+      if (m.result === "remake") ids.add(m.gameId);
+    }
+    return ids;
+  }, [recentGames]);
   const { records: recentDecisions, isValidating: decisionsValidating } =
     useDecisionLogQuery(RECENT_GAMES_QUERY);
   // The pulsing-dots affordance pulses ONLY when a real revalidation is
@@ -67,14 +89,16 @@ export function IdleSurface({
   // the decision log gives a denominator that always matches the numerator.
   const { interventionCount, interventionMatchCount } = useMemo(() => {
     const cutoff = Date.now() - WINDOW_DAYS * DAY_MS;
-    const inWindow = recentDecisions.filter((r) => r.sentAt >= cutoff);
+    const inWindow = recentDecisions.filter(
+      (r) => r.sentAt >= cutoff && !remadeGameIds.has(r.gameId)
+    );
     const gameIds = new Set<string>();
     for (const r of inWindow) gameIds.add(r.gameId);
     return {
       interventionCount: inWindow.length,
       interventionMatchCount: gameIds.size,
     };
-  }, [recentDecisions]);
+  }, [recentDecisions, remadeGameIds]);
 
   // Last-completed-game's most recent voice exchange — fallback for the
   // LastGameBlock Q&A snippet when the in-memory snapshot is absent
@@ -246,9 +270,9 @@ function RecentGameRow({
         {formatGameMode(match.gameMode)}
       </span>
       <span
-        className={`${styles.recentResult} ${match.isWin ? styles.recentResultWin : styles.recentResultLoss}`}
+        className={`${styles.recentResult} ${recentResultClass(match.result)}`}
       >
-        {match.isWin ? "Win" : "Loss"}
+        {resultLabel(match.result)}
       </span>
       <span className={styles.recentKda}>
         {match.kills}/{match.deaths}/{match.assists}
@@ -333,20 +357,20 @@ function LastGameBlock({ meta, snapshot, lastVoice }: LastGameBlockProps) {
   // Prefer the in-memory snapshot's most-recent exchange; fall back to
   // the cached decision-log voice record. Both carry the same shape.
   const exchange = snapshot?.recentExchanges[0] ?? lastVoice;
-  const isWin = meta.isWin ?? false;
+  const result = meta.result;
   const gameMode = formatGameMode(meta.gameMode);
   const championName = meta.championName ?? snapshot?.championName ?? "—";
   return (
     <div className={styles.lastGameBlock}>
       <div className={styles.lastGameHeader}>
         <span className={styles.lastGameChamp}>{championName}</span>
-        <span
-          className={`${styles.lastGameResult} ${
-            isWin ? styles.recentResultWin : styles.recentResultLoss
-          }`}
-        >
-          {isWin ? "Win" : "Loss"}
-        </span>
+        {result !== null ? (
+          <span
+            className={`${styles.lastGameResult} ${recentResultClass(result)}`}
+          >
+            {resultLabel(result)}
+          </span>
+        ) : null}
       </div>
       <div className={styles.lastGameStats}>
         <span>

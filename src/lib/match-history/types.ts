@@ -1,3 +1,5 @@
+import type { GameResult } from "../game-result";
+
 /**
  * Stable internal shape for one match in the player's history. The LCU's
  * raw payload is normalized through `parse.ts` into this shape so callers
@@ -14,8 +16,8 @@ export interface MatchSummary {
   gameMode: string;
   /** Specific Riot queueId (e.g. 450 = ARAM) — useful when modes alone are coarse. */
   queueId: number;
-  /** True iff the player won this match. */
-  isWin: boolean;
+  /** Win, loss, or remake (a voided game; never counts as win/loss). */
+  result: GameResult;
   kills: number;
   deaths: number;
   assists: number;

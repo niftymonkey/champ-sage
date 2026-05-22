@@ -918,11 +918,11 @@ describe("ReactiveEngine", () => {
       const state = liveGameState$.getValue();
       expect(state.eogStats).not.toBeNull();
       expect(state.eogStats?.gameId).toBe("67890");
-      expect(state.eogStats?.isWin).toBe(true);
+      expect(state.eogStats?.result).toBe("win");
       expect(state.eogStats?.championId).toBe(86);
     });
 
-    it("returns isWin based on the player's team, not teams[0]", async () => {
+    it("returns result based on the player's team, not teams[0]", async () => {
       bridge.setLcuAvailable(12345, "secret");
       bridge.setRiotApiResponse(createRiotApiResponse({ gameTime: 300 }));
       bridge.setFetchLcuResponse({
@@ -955,7 +955,42 @@ describe("ReactiveEngine", () => {
       await vi.advanceTimersByTimeAsync(0);
 
       const state = liveGameState$.getValue();
-      expect(state.eogStats?.isWin).toBe(true);
+      expect(state.eogStats?.result).toBe("win");
+    });
+
+    it("marks result as remake when gameEndedInEarlySurrender is true", async () => {
+      bridge.setLcuAvailable(12345, "secret");
+      bridge.setRiotApiResponse(createRiotApiResponse({ gameTime: 151 }));
+      // A remade game: no team wins, and the LCU flags the early
+      // surrender at the top level of the eog-stats-block.
+      bridge.setFetchLcuResponse({
+        gameId: "70001",
+        gameLength: 151,
+        gameMode: "CLASSIC",
+        gameEndedInEarlySurrender: true,
+        teams: [
+          { isWinningTeam: false, isPlayerTeam: true },
+          { isWinningTeam: false, isPlayerTeam: false },
+        ],
+        localPlayer: { championId: 86, stats: { ITEM0: 1001 } },
+      });
+      engine.start();
+      await vi.advanceTimersByTimeAsync(0);
+
+      bridge.simulateLcuEvent({
+        uri: "/lol-gameflow/v1/gameflow-phase",
+        event_type: "Update",
+        data: "InProgress",
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      bridge.simulateLcuEvent({
+        uri: "/lol-gameflow/v1/gameflow-phase",
+        event_type: "Update",
+        data: "PreEndOfGame",
+      });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(liveGameState$.getValue().eogStats?.result).toBe("remake");
     });
 
     it("handles EOG fetch failure gracefully", async () => {

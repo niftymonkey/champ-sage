@@ -23,7 +23,7 @@ const sampleMatch: MatchSummary = {
   championId: 99,
   gameMode: "ARAM",
   queueId: 450,
-  isWin: true,
+  result: "win",
   kills: 12,
   deaths: 4,
   assists: 18,
@@ -47,7 +47,7 @@ function wrapper({ children }: { children: ReactNode }) {
         shouldRetryOnError: false,
       },
     },
-    children,
+    children
   );
 }
 
@@ -89,7 +89,7 @@ describe("useMatchHistory", () => {
             shouldRetryOnError: false,
           },
         },
-        children,
+        children
       );
     }
 
@@ -108,7 +108,7 @@ describe("useMatchHistory", () => {
       () =>
         new Promise<MatchSummary[]>((r) => {
           resolve = r;
-        }),
+        })
     );
 
     // Use the provider-scoped mutate (the global `mutate` from "swr"
@@ -118,7 +118,7 @@ describe("useMatchHistory", () => {
         history: useMatchHistory(),
         mutate: useSWRConfig().mutate,
       }),
-      { wrapper },
+      { wrapper }
     );
 
     expect(result.current.history.isValidating).toBe(false);

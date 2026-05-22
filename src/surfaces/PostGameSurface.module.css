@@ -130,6 +130,11 @@
   color: var(--fit-strong);
 }
 
+/* Remake: a voided game, neither a win nor a loss. Neutral ink. */
+.eyebrowResultRemake {
+  color: var(--ink-2);
+}
+
 /* ─── Headline + narrative ─── */
 
 .headline {

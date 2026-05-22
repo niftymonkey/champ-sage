@@ -258,7 +258,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     const activeInfo = lastState.players.find((p) => p.isActivePlayer);
     if (eog === null) {
       proactiveLog.warn(
-        "Game-end reached without eogStats within timeout; isWin will fall back to last-known sources"
+        "Game-end reached without eogStats within timeout; result will fall back to last-known sources"
       );
     }
 
@@ -277,7 +277,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         activeInfo?.championName ??
         lastState.activePlayer?.championName ??
         "Unknown",
-      isWin: eog?.isWin ?? false,
+      result: eog?.result ?? "loss",
       kills: activeInfo?.kills ?? 0,
       deaths: activeInfo?.deaths ?? 0,
       assists: activeInfo?.assists ?? 0,
@@ -318,13 +318,18 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     // takeaway would collapse onto the same empty-string key in the
     // decision log and conflate unrelated games — skip instead.
     const sessionGameIdGuard = gameSessionIdRef.current;
+    // A remade game (player failed to connect, game voided near the
+    // 3-minute mark) has nothing worth coaching on. Skip the takeaway
+    // LLM call entirely; the game still records elsewhere as a remake.
+    const isRemake = eog?.result === "remake";
     if (
       takeawayEnabled &&
       apiKey &&
       lastInGameMode &&
       lastState.activePlayer &&
       hasActivity &&
-      sessionGameIdGuard
+      sessionGameIdGuard &&
+      !isRemake
     ) {
       const championName =
         activeInfo?.championName ??
@@ -346,7 +351,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       const takeawayInput: PostGameTakeawayInput = {
         champion: championName,
         gameMode: lastState.gameMode || eog?.gameMode || "",
-        isWin: eog?.isWin ?? false,
+        isWin: eog?.result === "win",
         duration: eog?.gameLength ?? lastState.gameTime,
         kills: activeInfo?.kills ?? 0,
         deaths: activeInfo?.deaths ?? 0,

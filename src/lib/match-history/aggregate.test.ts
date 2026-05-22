@@ -12,7 +12,7 @@ function match(overrides: Partial<MatchSummary> = {}): MatchSummary {
     championId: 99,
     gameMode: "ARAM",
     queueId: 450,
-    isWin: true,
+    result: "win",
     kills: 10,
     deaths: 5,
     assists: 15,
@@ -40,14 +40,57 @@ describe("windowStats", () => {
 
   it("counts wins and losses inside the window", () => {
     const matches = [
-      match({ gameId: "G1", isWin: true, gameCreation: NOW - 1 * DAY }),
-      match({ gameId: "G2", isWin: false, gameCreation: NOW - 2 * DAY }),
-      match({ gameId: "G3", isWin: true, gameCreation: NOW - 3 * DAY }),
+      match({ gameId: "G1", result: "win", gameCreation: NOW - 1 * DAY }),
+      match({ gameId: "G2", result: "loss", gameCreation: NOW - 2 * DAY }),
+      match({ gameId: "G3", result: "win", gameCreation: NOW - 3 * DAY }),
     ];
     const s = windowStats(matches, { days: 7, now: NOW });
     expect(s.totalGames).toBe(3);
     expect(s.wins).toBe(2);
     expect(s.losses).toBe(1);
+  });
+
+  it("excludes remade games from totals, win/loss counts, and KDA", () => {
+    const matches = [
+      match({
+        gameId: "W",
+        result: "win",
+        kills: 10,
+        deaths: 5,
+        assists: 5,
+        gameCreation: NOW - 1 * DAY,
+      }),
+      match({
+        gameId: "R",
+        result: "remake",
+        kills: 7,
+        deaths: 2,
+        assists: 3,
+        gameCreation: NOW - 2 * DAY,
+      }),
+    ];
+    const s = windowStats(matches, { days: 7, now: NOW });
+    expect(s.totalGames).toBe(1);
+    expect(s.wins).toBe(1);
+    expect(s.losses).toBe(0);
+    expect(s.totalKills).toBe(10);
+    expect(s.avgKDA).toBeCloseTo(3); // (10+5)/5, the remake not averaged in
+  });
+
+  it("returns zero stats when the window contains only remakes", () => {
+    const s = windowStats(
+      [match({ result: "remake", gameCreation: NOW - 1 * DAY })],
+      { days: 7, now: NOW }
+    );
+    expect(s).toEqual({
+      totalGames: 0,
+      wins: 0,
+      losses: 0,
+      avgKDA: 0,
+      totalKills: 0,
+      totalDeaths: 0,
+      totalAssists: 0,
+    });
   });
 
   it("ignores matches outside the day window", () => {

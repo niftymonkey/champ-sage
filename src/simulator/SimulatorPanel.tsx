@@ -10,6 +10,7 @@
 import { useState, useRef } from "react";
 import type { LoadedGameData } from "../lib/data-ingest";
 import type { LiveGameState } from "../lib/reactive/types";
+import type { GameResult } from "../lib/game-result";
 import { liveGameState$ } from "../lib/reactive/streams";
 import { augmentOffer$, augmentPicked$ } from "../lib/reactive/gep-bridge";
 import { playerIntent$ } from "../lib/reactive/streams";
@@ -89,11 +90,11 @@ export function SimulatorPanel({ gameData }: SimulatorPanelProps) {
     liveGameState$.next(updated);
   }
 
-  function endGame(win: boolean) {
+  function endGame(result: GameResult) {
     if (!currentStateRef.current) return;
 
     const eog = createMockEogStats({
-      isWin: win,
+      result,
       championName: champion,
       gameLength: gameTime,
       gameMode,
@@ -266,15 +267,18 @@ export function SimulatorPanel({ gameData }: SimulatorPanelProps) {
               </button>
               <button
                 className={styles.btnPrimary}
-                onClick={() => endGame(true)}
+                onClick={() => endGame("win")}
               >
                 Win
               </button>
               <button
                 className={styles.btnDanger}
-                onClick={() => endGame(false)}
+                onClick={() => endGame("loss")}
               >
                 Defeat
+              </button>
+              <button className={styles.btn} onClick={() => endGame("remake")}>
+                Remake
               </button>
             </>
           )}

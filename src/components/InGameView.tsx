@@ -5,6 +5,7 @@ import { EnemyStrip } from "./EnemyStrip";
 import { useCoachingFeed } from "../hooks/useCoachingFeed";
 import { useGamePlan } from "../hooks/useGamePlan";
 import { useLastGameMeta } from "../hooks/useLastGameMeta";
+import { resultLabel } from "../lib/game-result";
 import styles from "./InGameView.module.css";
 
 interface InGameViewProps {
@@ -62,8 +63,8 @@ export function InGameView({ state, gameData }: InGameViewProps) {
           {lastGame.championName ? (
             <span className={styles.endedMeta}>
               {lastGame.championName}
-              {lastGame.isWin !== null
-                ? ` · ${lastGame.isWin ? "win" : "loss"}`
+              {lastGame.result !== null
+                ? ` · ${resultLabel(lastGame.result).toLowerCase()}`
                 : ""}
             </span>
           ) : null}

@@ -8,6 +8,7 @@
  */
 
 import type { BuildPathItem, FitRating } from "../ai/types";
+import type { GameResult } from "../game-result";
 
 /** Base fields shared by all feed entries */
 export interface FeedEntry {
@@ -71,7 +72,7 @@ export interface LastGameSnapshot {
    */
   gameId: string | null;
   championName: string;
-  isWin: boolean;
+  result: GameResult;
   kills: number;
   deaths: number;
   assists: number;

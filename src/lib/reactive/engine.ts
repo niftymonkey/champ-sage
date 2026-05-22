@@ -28,6 +28,7 @@ import {
   gameEnded$,
 } from "./streams";
 import { normalizeGameState, extractMapNumber } from "../game-state/normalize";
+import { deriveGameResult } from "../game-result";
 import { resetForNewGame } from "./coaching-feed";
 import type { PlatformBridge, LcuEventPayload } from "./platform-bridge";
 import type {
@@ -90,6 +91,10 @@ function parseEogStats(raw: Record<string, unknown>): EogStats {
   // ordering in the LCU payload does not match the player's team.
   const playerTeam = teams?.find((t) => t.isPlayerTeam);
   const isWin = playerTeam?.isWinningTeam ?? false;
+  // A remade game (early surrender near the 3-minute mark) has no
+  // winning team, so `isWinningTeam` is false for everyone. The LCU
+  // flags it separately at the top level of the eog-stats-block.
+  const gameEndedInEarlySurrender = raw.gameEndedInEarlySurrender === true;
 
   // Extract item IDs from stats (ITEM0..ITEM6), filtering out 0s
   const items: number[] = [];
@@ -106,7 +111,7 @@ function parseEogStats(raw: Record<string, unknown>): EogStats {
     gameId: String(raw.gameId ?? ""),
     gameLength: Number(raw.gameLength ?? 0),
     gameMode: String(raw.gameMode ?? ""),
-    isWin,
+    result: deriveGameResult(isWin, gameEndedInEarlySurrender),
     championId: localPlayer?.championId ?? 0,
     items,
   };
@@ -331,11 +336,16 @@ export class ReactiveEngine {
           )
         )
         .subscribe((evt) => {
+          // The eog-stats-block serializes its fields alphabetically, so
+          // the result-bearing top-level keys (gameEndedInEarlySurrender,
+          // gameId, gameMode) sit well past 200 chars. Keep enough to log
+          // every top-level scalar without dumping the huge team/player
+          // arrays that come later.
           engineLog.info(`Post-game event: ${evt.uri}`, {
             data:
               typeof evt.data === "string"
                 ? evt.data
-                : JSON.stringify(evt.data)?.slice(0, 200),
+                : JSON.stringify(evt.data)?.slice(0, 2000),
           });
         })
     );

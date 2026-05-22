@@ -179,7 +179,7 @@ function summarizeChampSelect(champSelect: unknown): string {
 /** Summarize end-of-game stats with useful detail. */
 function summarizeEog(state: LiveGameState): string {
   const eog = state.eogStats!;
-  const parts = [eog.isWin ? "WIN" : "LOSS"];
+  const parts = [eog.result.toUpperCase()];
 
   if (eog.gameMode) parts.push(eog.gameMode);
   if (eog.gameLength > 0) parts.push(formatGameTime(eog.gameLength));
