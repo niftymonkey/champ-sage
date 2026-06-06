@@ -22,6 +22,7 @@
     "fetch-meta": "tsx scripts/fetch-meta-builds.ts",
     "inspect-evals": "tsx scripts/inspect-evals.ts",
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
+    "ow-guard": "tsx scripts/ow-package-guard.ts",
     "prepare": "husky",
     "preview": "vite preview",
     "start:electron": "ow-electron .",
@@ -56,8 +57,8 @@
   },
   "devDependencies": {
     "@overwolf/ow-electron": "^39.6.1",
-    "@overwolf/ow-electron-builder": "^26.8.3",
-    "@overwolf/ow-electron-packages-types": "^1.0.3",
+    "@overwolf/ow-electron-builder": "^26.8.5",
+    "@overwolf/ow-electron-packages-types": "^1.1.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/better-sqlite3": "^7.6.13",

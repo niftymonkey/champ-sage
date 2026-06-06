@@ -1171,9 +1171,11 @@ function initGep(): void {
       gepApi
         .setRequiredFeatures(gameId, requiredFeatures)
         .then(() => {
-          gepLog.debug(
-            `Required features set (${requiredFeatures.join(", ")})`
-          );
+          // info, not debug: this once-per-game line is the definitive
+          // confirmation that GEP's in-game handler started and accepted the
+          // augments subscription (the exact step that fails when the cached
+          // GEP build is below League's minimum-version floor).
+          gepLog.info(`Required features set (${requiredFeatures.join(", ")})`);
         })
         .catch((err: Error) => {
           gepLog.warn("Failed to set required features:", err.message);

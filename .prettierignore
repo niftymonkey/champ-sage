@@ -1,0 +1,4 @@
+# pnpm owns this file and writes it in its own canonical format. Letting
+# prettier reflow it produces a much larger, non-canonical diff that pnpm just
+# rewrites on the next install.
+pnpm-lock.yaml

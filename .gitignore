@@ -47,3 +47,6 @@ data/meta-builds/.cache.bak/
 *.pdf
 status.md
 CONTINUE.md
+
+# ow-package-guard run log (persisted per-launch for after-the-fact diagnosis)
+.ow-guard.log

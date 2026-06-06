@@ -5,8 +5,8 @@
 #   npm install -g @overwolf/ow-electron
 #
 # Modes:
-#   (default)  dev   — wait for Vite dev server, set VITE_DEV_SERVER_URL
-#   --prod           — load bundled HTML files from dist/, no dev server
+#   (default)  dev   wait for Vite dev server, set VITE_DEV_SERVER_URL
+#   --prod           load bundled HTML files from dist/, no dev server
 #
 # Derives the Windows path from the repo root automatically via wslpath,
 # so this works regardless of where the repo is cloned.
@@ -24,7 +24,7 @@ UTF8='[Console]::OutputEncoding = [System.Text.Encoding]::UTF8'
 # runs against THIS repo. concurrently sometimes can't reap ow-electron
 # cleanly on Ctrl-C (GEP / overlay packages keep it alive), and a leftover
 # instance holds exclusive locks on Chromium's Cache / Code Cache / GPUCache
-# under userData — the next launch then prints "Unable to move the cache:
+# under userData, so the next launch prints "Unable to move the cache:
 # Access is denied" repeatedly. Filtering on command-line containing the
 # repo's Windows path means unrelated ow-electron apps are not touched.
 sweep_orphans() {
@@ -38,14 +38,54 @@ sweep_orphans() {
 
 sweep_orphans
 
+# ow-electron package guard.
+# Overwolf's package manifest API intermittently regresses to serving 0.0.0
+# version stubs for GEP/overlay (see scripts/ow-package-guard.ts for the full
+# story). ow-electron then loads a non-functional GEP, in-game augment events
+# stop firing, and augment coaching silently dies while item/voice keep working.
+# Detect that specific outage and, only then, serve a corrected manifest on
+# localhost and point ow-electron at it via --owepm-packages-url. When Overwolf
+# is healthy this is a no-op and packages resolve the normal way.
+OWEPM_OVERRIDE_PORT="${OWEPM_OVERRIDE_PORT:-17865}"
+OWEPM_FLAG=""
+GUARD_PID=""
+
+cleanup_guard() {
+  if [ -n "${GUARD_PID}" ]; then
+    kill "${GUARD_PID}" 2>/dev/null
+    pkill -f "scripts/ow-package-guard.ts --serve" 2>/dev/null
+  fi
+}
+trap cleanup_guard EXIT
+
+( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --check )
+if [ $? -eq 3 ]; then
+  echo "[launch-electron] Overwolf package outage detected; serving local override manifest on port ${OWEPM_OVERRIDE_PORT}"
+  ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --serve --port "${OWEPM_OVERRIDE_PORT}" ) &
+  GUARD_PID=$!
+  echo "[launch-electron] Waiting for override manifest server..."
+  tries=0
+  until curl -s "http://localhost:${OWEPM_OVERRIDE_PORT}/packages" > /dev/null; do
+    tries=$((tries + 1))
+    if [ "${tries}" -ge 50 ]; then
+      echo "[launch-electron] WARNING: override server did not start; launching without override"
+      break
+    fi
+    sleep 0.2
+  done
+  if [ "${tries}" -lt 50 ]; then
+    OWEPM_FLAG="'--owepm-packages-url=http://localhost:${OWEPM_OVERRIDE_PORT}/packages'"
+  fi
+fi
+
 if [ "$1" = "--prod" ]; then
-  echo "[launch-electron] Production mode — loading bundled HTML from dist/"
-  powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ow-electron \"${PROJECT_WIN}\""
+  echo "[launch-electron] Production mode: loading bundled HTML from dist/"
+  powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\""
 else
   echo "[launch-electron] Waiting for Vite dev server on localhost:1420..."
   while ! curl -s http://localhost:1420 > /dev/null 2>&1; do
     sleep 0.5
   done
   echo "[launch-electron] Vite is ready. Launching Electron..."
-  powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; \$env:VITE_DEV_SERVER_URL='http://localhost:1420'; ow-electron \"${PROJECT_WIN}\""
+  powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; \$env:VITE_DEV_SERVER_URL='http://localhost:1420'; ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\""
 fi
