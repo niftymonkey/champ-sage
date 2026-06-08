@@ -23,6 +23,7 @@
     "fetch-meta": "tsx scripts/fetch-meta-builds.ts",
     "inspect-evals": "tsx scripts/inspect-evals.ts",
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
+    "which-client": "tsx scripts/which-client.ts",
     "ow-guard": "tsx scripts/ow-package-guard.ts",
     "prepare": "husky",
     "preview": "vite preview",

@@ -26,3 +26,12 @@ export function cdragonBranch(patchline: Patchline): string {
 export function patchlineCacheKey(patchline: Patchline): string {
   return `game-data:${patchline}`;
 }
+
+/**
+ * Map an LCU region (from `/riotclient/region-locale`) to a patchline. The PBE
+ * client reports region "PBE"; every live shard (NA, EUW, KR, ...) is live.
+ * Case- and whitespace-insensitive.
+ */
+export function patchlineFromRegion(region: string): Patchline {
+  return region.trim().toUpperCase() === "PBE" ? "pbe" : "live";
+}

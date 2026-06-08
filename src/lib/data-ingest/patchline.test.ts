@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { cdragonBranch, patchlineCacheKey } from "./patchline";
+import {
+  cdragonBranch,
+  patchlineCacheKey,
+  patchlineFromRegion,
+} from "./patchline";
 
 describe("cdragonBranch", () => {
   it("maps live to the latest CDragon branch", () => {
@@ -19,5 +23,21 @@ describe("patchlineCacheKey", () => {
 
   it("produces distinct keys so live and pbe data coexist", () => {
     expect(patchlineCacheKey("live")).not.toBe(patchlineCacheKey("pbe"));
+  });
+});
+
+describe("patchlineFromRegion", () => {
+  it("maps the PBE region to the pbe patchline", () => {
+    expect(patchlineFromRegion("PBE")).toBe("pbe");
+  });
+
+  it("is case- and whitespace-insensitive", () => {
+    expect(patchlineFromRegion(" pbe ")).toBe("pbe");
+  });
+
+  it("maps any live shard to the live patchline", () => {
+    expect(patchlineFromRegion("NA")).toBe("live");
+    expect(patchlineFromRegion("EUW")).toBe("live");
+    expect(patchlineFromRegion("")).toBe("live");
   });
 });
