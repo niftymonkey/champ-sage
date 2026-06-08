@@ -501,7 +501,7 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 
 **Multi-set augments:** Some Mayhem augments belong to two sets (e.g., Self Destruct → Dive Bomb + Fully Automated). The `set` field in the wiki data uses `<br>` to separate multiple sets, each with the full `[[File:...]] [[Page|SetName]]` markup. Split on `<br>` before stripping markup.
 
-**Augment set bonuses:** No Lua data module exists. The 9 set bonus definitions are only on the wiki article page `ARAM: Mayhem/Augment Sets`. Hardcoded as structured data since there are only 9 and they rarely change.
+**Augment set bonuses:** No Lua data module exists. The 9 set bonus definitions are only on the wiki article page `ARAM: Mayhem/Augment Sets`. Hardcoded as structured data since there are only 9 and they rarely change. On PBE these set groupings are being removed (some former set names are now standalone augments); because the definitions live in code, not data, no refresh will reflect this. See [PBE patchline](#pbe-patchline-live-vs-pbe-data) below.
 
 **Cross-mode augment overlap:** Many augments exist in both Mayhem and Arena with the same name. Mayhem data is richer (has set info). Stored as separate entries with `arena:`-prefixed keys for duplicates to avoid data loss.
 
@@ -516,8 +516,8 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 
 ### Community Dragon (augment IDs/icons)
 
-- **Cherry augments:** `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/cherry-augments.json`
-- Contains augments from ALL modes mixed together (532 total). Only 4 fields per entry: `id`, `nameTRA`, `augmentSmallIconPath`, `rarity`. No enabled/disabled flag — cannot distinguish real augments from test/internal entries by metadata alone.
+- **Cherry augments:** `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/cherry-augments.json`. The `latest` segment is the live branch; see [PBE patchline](#pbe-patchline-live-vs-pbe-data) for the parallel `pbe` branch.
+- Contains augments from ALL modes mixed together (count grows each patch: 575 on live, 637 on PBE as of 2026-06-07). Only 4 fields per entry: `id`, `nameTRA`, `augmentSmallIconPath`, `rarity`. No enabled/disabled flag, so real augments cannot be distinguished from test/internal entries by metadata alone.
 - CDragon-only augments (not matched to any wiki source) are **skipped** during merge. They have no descriptions and include junk entries like "404 Augment Not Found" (which IS real in Arena, but sourced from the wiki instead).
 
 **Icon paths encode game mode:**
@@ -531,6 +531,22 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 **Duplicate entries:** Same augment name can appear with different IDs (e.g., ADAPt as both 205 and 1205). The 1000+ range appears to be Mayhem-specific IDs, lower range is Arena. When merging, prefer the entry whose mode matches the wiki source.
 
 **Name matching quirks:** CDragon names can differ slightly from wiki names — e.g., "Get Excited!" vs "Get Excited" (punctuation), "Sneakerhead" vs "Quest: Sneakerhead" (prefix). We normalize by stripping punctuation for matching.
+
+### PBE patchline (live vs PBE data)
+
+"Patchline" is Riot's term (the `patchlines` key in `RiotClientInstalls.json`) for the live/PBE choice in the launcher. CommunityDragon serves a parallel `pbe` branch alongside `latest`: swap the branch segment in any cdragon URL (e.g. `.../pbe/plugins/...`). The data-ingest layer threads a `patchline` parameter (default `"live"`); the mapping from patchline to cdragon branch and to cache namespace lives in `src/lib/data-ingest/patchline.ts`.
+
+**The wiki is the description bottleneck.** `cherry-augments.json` carries no descriptions (only `id`, `nameTRA`, icon, `rarity`); readable text comes from the wiki Lua module, which tracks live and is NOT PBE-versioned. So PBE-only augments arrive from cdragon with IDs/icons but no wiki match. `mergeAugmentIds` now keeps the Mayhem (Kiwi-coded) ones with a `MISSING_DESCRIPTION_PLACEHOLDER` so they stay visible to the player and the coaching LLM instead of vanishing until the wiki catches up; the real description flows in unchanged once the wiki adds it. The augment-fit prompt special-cases that placeholder text (rate cautiously from name and tier, do not invent mechanics). Before this, unknown augments were dropped from the data AND `augment-fit/index.ts` silently filtered any unresolved offer name out of the rating list, so a new augment was invisible to coaching. This degrades gracefully, it does not crash. Full readiness still tracks wiki coverage, which we do not control: re-check as the wiki catches up.
+
+**Mayhem keep is junk-free and maps cleanly.** CDragon's test/internal entries (`404 Augment Not Found`, `Augment 405`) are Cherry/Arena-coded, so scoping the keep to Mayhem excludes them for free. CDragon rarity tokens are `kBronze/kEventChoice/kGold/kPrismatic/kSilver`, but Mayhem augments use only `kSilver/kGold/kPrismatic`, which map directly to our `Silver/Gold/Prismatic` tier enum (`rarityToTier` falls back to Silver for anything else). Arena and Swarm carry the other two tokens and stay dropped: Arena's own wiki source is authoritative, Swarm is unsupported.
+
+**No alternate Mayhem description source.** CDragon's resolved aggregate `cdragon/arena/en_us.json` (per branch) has `desc`/`tooltip`/`dataValues` but is Arena-only (zero Kiwi/Mayhem entries, 228 cherry augments). It is not a fallback for Mayhem text.
+
+**Grouping (set) mechanic removed on PBE.** Augment set groupings are being dismantled; several former set names are now standalone augments (observed 2026-06-07: Archmage, High Roller, Snowday, Wee Woo Wee Woo, none of which were augments on live). `getMayhemAugmentSets()` is hardcoded code, so no data refresh reflects this. Set coaching is already presence-driven, so this is safe: it fires only when an augment carries set membership in its own `sets[]` data (`augment-offer-formatter` guards on `opt.sets.length > 0`; `state-formatter`'s `computeSetProgress` returns empty when no chosen augment carries a set). When groupings vanish, augments arrive with `sets: []`, the annotations and the Set Progress section self-disable, and the hardcoded `getMayhemAugmentSets()` becomes inert dead data (no augment references those set names). A standalone augment that reuses a former set name is not mis-attributed, because the annotation requires the augment to list that name in its own data, which a standalone augment does not. No code change was needed for this tolerance.
+
+**Offline eval harness.** `pnpm eval-pbe` (`scripts/eval-pbe-augments.ts`) diffs the live vs PBE Mayhem roster using the real ingest sources and reports added/removed/rarity-changed augments, the PBE-introduced description gap (new augments lacking wiki text), the full would-be-dropped set, and grouping signals. The diff logic is a pure, tested module: `src/lib/data-ingest/augment-patchline-report.ts`. The harness imports neither the cache layer nor localStorage, so it shares no state with the running app and is safe to run while playing. Snapshot 2026-06-07: live Mayhem 82, PBE 138; 57 new by name, 54 with no wiki description yet.
+
+**Which patchline am I connected to?** The app currently hardcodes the live LCU lockfile path and has no patchline awareness. The connected client's patchline is readable from the LCU: `GET /riotclient/region-locale` returns `{"region":"NA",...}` on live and `"PBE"` on PBE (reachable from WSL2 when the client is running). `RiotClientInstalls.json` (`associated_client` keys) enumerates installed League products and their install dirs for multi-patchline lockfile discovery. The in-app per-patchline cache is built: `loadGameData`/`loadCachedGameData`/`fetchAndCache` take a `patchline` param (default `"live"`) and read/write under `patchlineCacheKey(patchline)` (`game-data:live` / `game-data:pbe`), so live and PBE data coexist without clobbering. Region-driven selection (detecting the connected client's patchline and passing it in) is designed (see `docs/architecture/patchline.md`) but not yet wired.
 
 ## ARAM Balance Overrides
 
