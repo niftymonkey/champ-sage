@@ -324,6 +324,74 @@ describe("loadGameData ingest-failure fallback", () => {
   });
 });
 
+describe("patchline-aware loading", () => {
+  it("writes pbe data under the pbe-namespaced cache key", async () => {
+    await loadGameData("pbe");
+
+    expect(cache.writeCache).toHaveBeenCalledWith(
+      "game-data:pbe",
+      expect.anything()
+    );
+  });
+
+  it("defaults to the live-namespaced cache key", async () => {
+    await loadGameData();
+
+    expect(cache.writeCache).toHaveBeenCalledWith(
+      "game-data:live",
+      expect.anything()
+    );
+  });
+
+  it("passes the patchline through to mergeAugmentIds", async () => {
+    await loadGameData("pbe");
+
+    expect(communityDragon.mergeAugmentIds).toHaveBeenCalledWith(
+      expect.any(Map),
+      "pbe"
+    );
+  });
+
+  it("reads the pbe-namespaced cache key in production mode", async () => {
+    const origDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
+    vi.mocked(cache.readCache).mockResolvedValue(null);
+
+    await loadGameData("pbe");
+
+    expect(cache.readCache).toHaveBeenCalledWith("game-data:pbe");
+
+    import.meta.env.DEV = origDev;
+  });
+
+  it("fetches under the patchline namespace on a production cache miss", async () => {
+    // Production mode + cold cache falls through to fetchAndCacheWithFallback;
+    // the patchline must survive that hop, not silently revert to "live".
+    const origDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
+    vi.mocked(cache.readCache).mockResolvedValue(null);
+
+    await loadGameData("pbe");
+
+    expect(communityDragon.mergeAugmentIds).toHaveBeenCalledWith(
+      expect.any(Map),
+      "pbe"
+    );
+    expect(cache.writeCache).toHaveBeenCalledWith(
+      "game-data:pbe",
+      expect.anything()
+    );
+
+    import.meta.env.DEV = origDev;
+  });
+
+  it("reads the pbe-namespaced cache key in loadCachedGameData", async () => {
+    await loadCachedGameData("pbe");
+
+    expect(cache.readCache).toHaveBeenCalledWith("game-data:pbe");
+  });
+});
+
 describe("checkForNewVersion", () => {
   it("returns false when versions match", async () => {
     vi.mocked(dataDragon.fetchLatestVersion).mockResolvedValue("15.6.1");
