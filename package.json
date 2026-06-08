@@ -16,6 +16,7 @@
     "prod:electron": "pnpm build:electron && scripts/launch-electron.sh --prod",
     "discover-candidates": "tsx scripts/discover-candidates.ts",
     "eval": "evalite src/lib/ai/coaching.eval.ts",
+    "eval-pbe": "tsx scripts/eval-pbe-augments.ts",
     "eval:serve": "evalite serve",
     "eval:watch": "evalite watch src/lib/ai/coaching.eval.ts",
     "extract-fixtures": "tsx scripts/extract-fixtures.ts",

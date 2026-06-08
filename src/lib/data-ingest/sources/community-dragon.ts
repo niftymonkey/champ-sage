@@ -1,9 +1,13 @@
 import type { Augment, AugmentMode } from "../types";
+import { cdragonBranch, type Patchline } from "../patchline";
 
-const CDRAGON_URL =
-  "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/cherry-augments.json";
+function cdragonAugmentsUrl(patchline: Patchline): string {
+  return `https://raw.communitydragon.org/${cdragonBranch(
+    patchline
+  )}/plugins/rcp-be-lol-game-data/global/default/v1/cherry-augments.json`;
+}
 
-interface RawCDragonAugment {
+export interface RawCDragonAugment {
   id: number;
   nameTRA: string;
   augmentSmallIconPath: string;
@@ -32,16 +36,18 @@ export function classifyAugmentMode(iconPath: string): AugmentMode {
  * Handles cases like "Get Excited" vs "Get Excited!" and
  * "Quest: Sneakerhead" vs "Sneakerhead".
  */
-function normalizeForMatch(name: string): string {
+export function normalizeForMatch(name: string): string {
   return name
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
     .trim();
 }
 
-function normalizePath(path: string): string {
+function normalizePath(path: string, patchline: Patchline): string {
   const cleaned = path.replace("/lol-game-data/assets/", "").toLowerCase();
-  return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/${cleaned}`;
+  return `https://raw.communitydragon.org/${cdragonBranch(
+    patchline
+  )}/plugins/rcp-be-lol-game-data/global/default/${cleaned}`;
 }
 
 /**
@@ -53,13 +59,20 @@ function normalizePath(path: string): string {
  * When duplicates exist (same name, different IDs), prefer the entry
  * whose mode matches the existing augment's mode.
  */
-export async function mergeAugmentIds(
-  augments: Map<string, Augment>
-): Promise<void> {
-  const res = await fetch(CDRAGON_URL);
+export async function fetchCDragonAugments(
+  patchline: Patchline = "live"
+): Promise<RawCDragonAugment[]> {
+  const res = await fetch(cdragonAugmentsUrl(patchline));
   if (!res.ok)
     throw new Error(`Failed to fetch CDragon augments: ${res.status}`);
-  const raw: RawCDragonAugment[] = await res.json();
+  return (await res.json()) as RawCDragonAugment[];
+}
+
+export async function mergeAugmentIds(
+  augments: Map<string, Augment>,
+  patchline: Patchline = "live"
+): Promise<void> {
+  const raw = await fetchCDragonAugments(patchline);
 
   // Build a normalized-name lookup for wiki augments
   const normalizedLookup = new Map<string, string>();
@@ -86,7 +99,7 @@ export async function mergeAugmentIds(
     if (existing) {
       // Merge ID and icon but DO NOT overwrite mode
       existing.id = best.id;
-      existing.iconPath = normalizePath(best.augmentSmallIconPath);
+      existing.iconPath = normalizePath(best.augmentSmallIconPath, patchline);
     }
     // CDragon-only augments (not in any wiki source) are skipped.
     // They have no description and are often test/internal entries
