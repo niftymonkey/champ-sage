@@ -1,6 +1,16 @@
 import type { Augment, AugmentMode } from "../types";
 import { cdragonBranch, type Patchline } from "../patchline";
 
+/**
+ * Description carried by an augment that exists in Community Dragon but has no
+ * wiki entry yet. New Mayhem augments land in CDragon (id/icon/rarity) a patch
+ * or more before the wiki documents them; this lets them stay visible to the
+ * player and the coaching LLM instead of vanishing until the wiki catches up.
+ * The augment-fit prompt special-cases this text so the model rates cautiously
+ * from name and tier rather than inventing an effect.
+ */
+export const MISSING_DESCRIPTION_PLACEHOLDER = "No description available yet.";
+
 function cdragonAugmentsUrl(patchline: Patchline): string {
   return `https://raw.communitydragon.org/${cdragonBranch(
     patchline
@@ -100,11 +110,44 @@ export async function mergeAugmentIds(
       // Merge ID and icon but DO NOT overwrite mode
       existing.id = best.id;
       existing.iconPath = normalizePath(best.augmentSmallIconPath, patchline);
+      continue;
     }
-    // CDragon-only augments (not in any wiki source) are skipped.
-    // They have no description and are often test/internal entries
-    // (e.g., "404 Augment Not Found", "Augment 405") or from
-    // unsupported modes. Wiki sources are authoritative for augment data.
+
+    // CDragon-only augment (no wiki entry). Keep Mayhem ones with a placeholder
+    // description so augments new this patch stay visible to the player and the
+    // coaching LLM before the wiki documents them. Other modes stay dropped:
+    // Arena is fully covered by its own wiki source, CDragon's test/internal
+    // entries ("404 Augment Not Found", "Augment 405") are Arena-coded, and
+    // Swarm is unsupported.
+    if (classifyAugmentMode(best.augmentSmallIconPath) !== "mayhem") continue;
+
+    const key = best.nameTRA.toLowerCase();
+    if (augments.has(key)) continue;
+    augments.set(key, {
+      name: best.nameTRA,
+      description: MISSING_DESCRIPTION_PLACEHOLDER,
+      tier: rarityToTier(best.rarity),
+      sets: [],
+      mode: "mayhem",
+      id: best.id,
+      iconPath: normalizePath(best.augmentSmallIconPath, patchline),
+    });
+  }
+}
+
+/**
+ * Map a Community Dragon rarity token (e.g. "kPrismatic") to our tier enum.
+ * Mayhem augments only use kSilver/kGold/kPrismatic; anything else falls back
+ * to Silver so a kept augment always has a valid tier.
+ */
+function rarityToTier(rarity: string): Augment["tier"] {
+  switch (rarity) {
+    case "kPrismatic":
+      return "Prismatic";
+    case "kGold":
+      return "Gold";
+    default:
+      return "Silver";
   }
 }
 

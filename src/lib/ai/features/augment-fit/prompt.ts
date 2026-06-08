@@ -1,3 +1,5 @@
+import { MISSING_DESCRIPTION_PLACEHOLDER } from "../../../data-ingest/sources/community-dragon";
+
 /**
  * Task prompt for augment-fit feature.
  *
@@ -22,6 +24,7 @@ export const AUGMENT_FIT_TASK_PROMPT = [
   "- If an augment upgrades a specific item, only rate it strong/exceptional if the player already owns that item.",
   "- Consider augment set progression when rating. Each offered augment's annotation (e.g., `Wired 2/4 — UNLOCKS: +10% attack speed`) tells you whether picking it would advance or complete a set bonus. A bonus the player would actually unlock adds to the augment's value — mention it in the reasoning and let it nudge the rating upward when the bonus is impactful. Standalone value still matters most; set math amplifies a good fit, it doesn't rescue a fundamental mismatch (an AP-scaling augment on a pure-AD champion stays situational or weak regardless of set progress).",
   "- Use the augment descriptions and set annotations provided, not your general knowledge.",
+  `- An augment whose description reads "${MISSING_DESCRIPTION_PLACEHOLDER}" is new this patch and not yet documented. Rate it conservatively (situational by default) from its name and tier alone, state in the reasoning that its exact effect is not yet confirmed, and suggest the player check the in-game tooltip. Do NOT invent specific numbers or mechanics for it.`,
   "",
   "SYNERGY COACHING:",
   "- Look for synergies the offer opens up — augment-item combos, augment-ability combos, set-bonus completions, and stat anvil pairings. An AD champion with a tank augment like Goliath might pivot into a Heartsteel build. A mage with attack speed augments might go on-hit. A near-complete augment set can justify a different build direction than the standalone augment alone would suggest.",

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mergeAugmentIds, classifyAugmentMode } from "./community-dragon";
+import {
+  mergeAugmentIds,
+  classifyAugmentMode,
+  MISSING_DESCRIPTION_PLACEHOLDER,
+} from "./community-dragon";
 import type { Augment } from "../types";
 
 const mockFetch = vi.fn();
@@ -121,7 +125,7 @@ describe("mergeAugmentIds", () => {
     expect(augments.get("get excited")!.id).toBe(999);
   });
 
-  it("skips unmatched CDragon augments (no wiki source = no description)", async () => {
+  it("skips unmatched Arena-mode CDragon augments (arena wiki is authoritative; junk is arena-coded)", async () => {
     const augments = new Map<string, Augment>();
 
     mockFetch.mockResolvedValue({
@@ -147,6 +151,118 @@ describe("mergeAugmentIds", () => {
 
     await mergeAugmentIds(augments);
     expect(augments.size).toBe(0);
+  });
+
+  it("skips unmatched Swarm-mode CDragon augments (unsupported mode)", async () => {
+    const augments = new Map<string, Augment>();
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([
+          {
+            id: 700,
+            nameTRA: "Battle Bunny Support",
+            augmentSmallIconPath:
+              "/lol-game-data/assets/ASSETS/UX/Swarm/Augments/Icons/BattleBunny_small.png",
+            rarity: "kSilver",
+          },
+        ]),
+    });
+
+    await mergeAugmentIds(augments);
+    expect(augments.size).toBe(0);
+  });
+
+  it("keeps unmatched Mayhem CDragon augments with a placeholder description", async () => {
+    const augments = new Map<string, Augment>();
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([
+          {
+            id: 850,
+            nameTRA: "Spirit Bomb",
+            augmentSmallIconPath:
+              "/lol-game-data/assets/ASSETS/UX/Kiwi/Augments/Icons/SpiritBomb_small.png",
+            rarity: "kPrismatic",
+          },
+        ]),
+    });
+
+    await mergeAugmentIds(augments, "pbe");
+
+    const aug = augments.get("spirit bomb");
+    expect(aug).toBeDefined();
+    expect(aug?.name).toBe("Spirit Bomb");
+    expect(aug?.description).toBe(MISSING_DESCRIPTION_PLACEHOLDER);
+    expect(aug?.tier).toBe("Prismatic");
+    expect(aug?.mode).toBe("mayhem");
+    expect(aug?.sets).toEqual([]);
+    expect(aug?.id).toBe(850);
+    expect(aug?.iconPath).toContain("/pbe/");
+    expect(aug?.iconPath).toContain("spiritbomb_small.png");
+  });
+
+  it("maps CDragon rarity to tier for kept Mayhem augments", async () => {
+    const augments = new Map<string, Augment>();
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([
+          {
+            id: 1,
+            nameTRA: "Silver One",
+            augmentSmallIconPath:
+              "/lol-game-data/assets/ASSETS/UX/Kiwi/Augments/Icons/A_small.png",
+            rarity: "kSilver",
+          },
+          {
+            id: 2,
+            nameTRA: "Gold One",
+            augmentSmallIconPath:
+              "/lol-game-data/assets/ASSETS/UX/Kiwi/Augments/Icons/B_small.png",
+            rarity: "kGold",
+          },
+          {
+            id: 3,
+            nameTRA: "Prismatic One",
+            augmentSmallIconPath:
+              "/lol-game-data/assets/ASSETS/UX/Kiwi/Augments/Icons/C_small.png",
+            rarity: "kPrismatic",
+          },
+        ]),
+    });
+
+    await mergeAugmentIds(augments);
+
+    expect(augments.get("silver one")?.tier).toBe("Silver");
+    expect(augments.get("gold one")?.tier).toBe("Gold");
+    expect(augments.get("prismatic one")?.tier).toBe("Prismatic");
+  });
+
+  it("falls back to Silver tier for an unrecognized Mayhem rarity", async () => {
+    const augments = new Map<string, Augment>();
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([
+          {
+            id: 9,
+            nameTRA: "Mystery Rarity",
+            augmentSmallIconPath:
+              "/lol-game-data/assets/ASSETS/UX/Kiwi/Augments/Icons/M_small.png",
+            rarity: "kBronze",
+          },
+        ]),
+    });
+
+    await mergeAugmentIds(augments);
+
+    expect(augments.get("mystery rarity")?.tier).toBe("Silver");
   });
 
   it("prefers Mayhem-mode CDragon entries over Arena duplicates for wiki augments", async () => {
