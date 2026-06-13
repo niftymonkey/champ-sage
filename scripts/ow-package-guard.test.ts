@@ -4,6 +4,7 @@ import {
   discoverLatestVersion,
   buildOverrideManifest,
   planCacheReconciliation,
+  decideGuardAction,
   GEP_UID,
   UTILITY_UID,
   OVERLAY_UID,
@@ -141,6 +142,20 @@ describe("buildOverrideManifest", () => {
   it("returns null when gep cannot be resolved (override would be useless)", async () => {
     const manifest = await buildOverrideManifest(() => liveProbe([]));
     expect(manifest).toBeNull();
+  });
+});
+
+describe("decideGuardAction", () => {
+  it("serves the override whenever a live build is resolvable", () => {
+    // Even when the cache already holds that build: OWEPM re-stubs a good
+    // cache on every launch the override is not active, so we always override.
+    expect(decideGuardAction({ latestServed: "306.0.10" })).toBe(
+      "override-needed"
+    );
+  });
+
+  it("cannot resolve (no override) when no live build is found", () => {
+    expect(decideGuardAction({ latestServed: null })).toBe("cannot-resolve");
   });
 });
 

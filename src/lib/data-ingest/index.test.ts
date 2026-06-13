@@ -131,7 +131,7 @@ describe("loadGameData", () => {
     expect(data.items.size).toBe(1);
     expect(data.runes).toHaveLength(1);
     expect(data.augments.size).toBe(3); // 1 mayhem + 1 arena unique + 1 arena collision
-    expect(data.augmentSets).toHaveLength(9);
+    expect(data.augmentSets).toHaveLength(0); // Traits removed in 26.12 Mayhem rework
   });
 
   it("calls all data sources", async () => {

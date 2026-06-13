@@ -39,13 +39,13 @@ sweep_orphans() {
 sweep_orphans
 
 # ow-electron package guard.
-# Overwolf's package manifest API intermittently regresses to serving 0.0.0
-# version stubs for GEP/overlay (see scripts/ow-package-guard.ts for the full
-# story). ow-electron then loads a non-functional GEP, in-game augment events
-# stop firing, and augment coaching silently dies while item/voice keep working.
-# Detect that specific outage and, only then, serve a corrected manifest on
-# localhost and point ow-electron at it via --owepm-packages-url. When Overwolf
-# is healthy this is a no-op and packages resolve the normal way.
+# Overwolf's package manifest API intermittently ships a ~21 KB GEP stub (see
+# scripts/ow-package-guard.ts for the full story). ow-electron then loads a
+# non-functional GEP, in-game augment events stop firing, and augment coaching
+# silently dies while item/voice keep working. OWEPM re-downloads the stub over
+# a known-good cache on every launch the override is not active, so the guard
+# serves a corrected manifest on localhost (--owepm-packages-url) on every
+# launch a real build is resolvable, standing down only when none is found.
 OWEPM_OVERRIDE_PORT="${OWEPM_OVERRIDE_PORT:-17865}"
 OWEPM_FLAG=""
 GUARD_PID=""
@@ -60,7 +60,7 @@ trap cleanup_guard EXIT
 
 ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --check )
 if [ $? -eq 3 ]; then
-  echo "[launch-electron] Overwolf package outage detected; serving local override manifest on port ${OWEPM_OVERRIDE_PORT}"
+  echo "[launch-electron] GEP cache is stale/stub vs the newest served build; serving local override manifest on port ${OWEPM_OVERRIDE_PORT}"
   ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --serve --port "${OWEPM_OVERRIDE_PORT}" ) &
   GUARD_PID=$!
   echo "[launch-electron] Waiting for override manifest server..."

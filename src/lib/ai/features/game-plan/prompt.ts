@@ -12,7 +12,7 @@
  */
 export const GAME_PLAN_TASK_PROMPT = [
   "GAME PLAN BUILD PATH:",
-  "- Every `name` in `buildPath` MUST be an exact item name from the Item Catalog above. Do not use augment names, set names, rune names, or any string that does not appear in the Item Catalog.",
-  "- Augments and set bonuses provide passive effects the build should account for, but they are NEVER listed in `buildPath`. Build-path entries are purchasable items only.",
+  "- Every `name` in `buildPath` MUST be an exact item name from the Item Catalog above. Do not use augment names, rune names, or any string that does not appear in the Item Catalog.",
+  "- Augments provide passive effects the build should account for, but they are NEVER listed in `buildPath`. Build-path entries are purchasable items only.",
   "- `buildPath` must contain at most one Boots item — the player can only equip one pair at a time. Pick the single boots upgrade that best fits the matchup and use the remaining slots for non-boots items.",
 ].join("\n");

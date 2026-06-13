@@ -14,31 +14,23 @@ export async function fetchWikiAugments(): Promise<Map<string, Augment>> {
 
   for (const [name, fields] of Object.entries(parsed)) {
     const tier = normalizeTier(String(fields.tier ?? "Silver"));
-    const rawSet = String(fields.set ?? "-");
     const description = stripWikiMarkup(String(fields.description ?? ""));
 
+    // The 26.12 Mayhem rework removed Traits (sets). The wiki module still
+    // carries stale `set` tags on legacy augments, but the live game has no
+    // set bonuses, so we deliberately do not read that field: surfacing it
+    // would feed the coaching LLM synergies that no longer exist. See
+    // getMayhemAugmentSets() for the matching empty set-bonus source.
     augments.set(name.toLowerCase(), {
       name,
       description,
       tier,
-      sets: parseSets(rawSet),
+      sets: [],
       mode: "mayhem",
     });
   }
 
   return augments;
-}
-
-/**
- * Parse the set field, which may contain multiple sets separated by <br>.
- * Each set is wrapped in wiki markup like [[File:...]] [[Page|SetName]].
- */
-function parseSets(raw: string): string[] {
-  if (raw === "-" || !raw.trim()) return [];
-  return raw
-    .split(/<br\s*\/?>/i)
-    .map((part) => stripWikiMarkup(part))
-    .filter((s) => s.length > 0);
 }
 
 function normalizeTier(tier: string): Augment["tier"] {
