@@ -23,11 +23,10 @@ import { enrichQuestAugments } from "./sources/quest-augment-rewards";
 import { readCache, writeCache, mapToObject, objectToMap } from "./cache";
 import { buildEntityDictionary } from "./entity-dictionary";
 import { loadMetaBuilds, type MetaBuildIndex } from "./meta-builds";
+import { patchlineCacheKey, type Patchline } from "./patchline";
 import { getLogger } from "../logger";
 
 const log = getLogger("data-ingest");
-
-const CACHE_KEY = "game-data";
 
 interface CachedGameData {
   version: string;
@@ -49,8 +48,10 @@ export interface LoadedGameData extends GameData {
   metaBuilds?: MetaBuildIndex;
 }
 
-export async function loadCachedGameData(): Promise<LoadedGameData | null> {
-  const cached = await readCache<CachedGameData>(CACHE_KEY);
+export async function loadCachedGameData(
+  patchline: Patchline = "live"
+): Promise<LoadedGameData | null> {
+  const cached = await readCache<CachedGameData>(patchlineCacheKey(patchline));
   if (!cached) return null;
   const data = fromCached(cached);
   data.metaBuilds = await loadMetaBuilds();
@@ -71,20 +72,22 @@ export async function checkForNewVersion(
   }
 }
 
-export async function loadGameData(): Promise<LoadedGameData> {
+export async function loadGameData(
+  patchline: Patchline = "live"
+): Promise<LoadedGameData> {
   // Skip cache in dev mode so hot reload always shows fresh data
   if (import.meta.env.DEV) {
-    return fetchAndCacheWithFallback();
+    return fetchAndCacheWithFallback(patchline);
   }
 
-  const cached = await readCache<CachedGameData>(CACHE_KEY);
+  const cached = await readCache<CachedGameData>(patchlineCacheKey(patchline));
   if (cached) {
     const data = fromCached(cached);
     data.metaBuilds = await loadMetaBuilds();
     return data;
   }
 
-  return fetchAndCacheWithFallback();
+  return fetchAndCacheWithFallback(patchline);
 }
 
 /**
@@ -96,11 +99,15 @@ export async function loadGameData(): Promise<LoadedGameData> {
  * If no cache exists, the original error propagates - there is nothing to
  * fall back to and the caller deserves to know ingest failed.
  */
-async function fetchAndCacheWithFallback(): Promise<LoadedGameData> {
+async function fetchAndCacheWithFallback(
+  patchline: Patchline = "live"
+): Promise<LoadedGameData> {
   try {
-    return await fetchAndCache();
+    return await fetchAndCache(patchline);
   } catch (err) {
-    const cached = await readCache<CachedGameData>(CACHE_KEY);
+    const cached = await readCache<CachedGameData>(
+      patchlineCacheKey(patchline)
+    );
     if (!cached) {
       log.error(
         "Data ingest failed and no cached payload is available",
@@ -121,7 +128,9 @@ async function fetchAndCacheWithFallback(): Promise<LoadedGameData> {
   }
 }
 
-export async function fetchAndCache(): Promise<LoadedGameData> {
+export async function fetchAndCache(
+  patchline: Patchline = "live"
+): Promise<LoadedGameData> {
   const version = await fetchLatestVersion();
   const [
     champions,
@@ -156,7 +165,7 @@ export async function fetchAndCache(): Promise<LoadedGameData> {
     }
   }
 
-  await mergeAugmentIds(augments);
+  await mergeAugmentIds(augments, patchline);
   enrichQuestAugments(augments, items);
   mergeAramOverrides(champions, aramOverrideMap);
 
@@ -172,7 +181,7 @@ export async function fetchAndCache(): Promise<LoadedGameData> {
     lastRefreshedAt: Date.now(),
   };
 
-  await writeCache(CACHE_KEY, data);
+  await writeCache(patchlineCacheKey(patchline), data);
 
   const loaded = fromCached(data);
   loaded.metaBuilds = await loadMetaBuilds();

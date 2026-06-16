@@ -1,9 +1,23 @@
 import type { Augment, AugmentMode } from "../types";
+import { cdragonBranch, type Patchline } from "../patchline";
 
-const CDRAGON_URL =
-  "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/cherry-augments.json";
+/**
+ * Description carried by an augment that exists in Community Dragon but has no
+ * wiki entry yet. New Mayhem augments land in CDragon (id/icon/rarity) a patch
+ * or more before the wiki documents them; this lets them stay visible to the
+ * player and the coaching LLM instead of vanishing until the wiki catches up.
+ * The augment-fit prompt special-cases this text so the model rates cautiously
+ * from name and tier rather than inventing an effect.
+ */
+export const MISSING_DESCRIPTION_PLACEHOLDER = "No description available yet.";
 
-interface RawCDragonAugment {
+function cdragonAugmentsUrl(patchline: Patchline): string {
+  return `https://raw.communitydragon.org/${cdragonBranch(
+    patchline
+  )}/plugins/rcp-be-lol-game-data/global/default/v1/cherry-augments.json`;
+}
+
+export interface RawCDragonAugment {
   id: number;
   nameTRA: string;
   augmentSmallIconPath: string;
@@ -28,20 +42,27 @@ export function classifyAugmentMode(iconPath: string): AugmentMode {
 }
 
 /**
- * Normalize a name for matching: lowercase, strip punctuation.
- * Handles cases like "Get Excited" vs "Get Excited!" and
- * "Quest: Sneakerhead" vs "Sneakerhead".
+ * Normalize a name for matching: lowercase, turn punctuation into spaces,
+ * collapse runs of whitespace, and drop a leading "quest" marker. Handles
+ * cases like "Get Excited" vs "Get Excited!" and "Quest: Sneakerhead" vs
+ * "Sneakerhead" (the wiki and CDragon disagree on the prefix for quest
+ * augments). Punctuation becomes a space rather than nothing so a hyphenated
+ * name still matches its spaced counterpart.
  */
-function normalizeForMatch(name: string): string {
+export function normalizeForMatch(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^quest\s+/, "")
     .trim();
 }
 
-function normalizePath(path: string): string {
+function normalizePath(path: string, patchline: Patchline): string {
   const cleaned = path.replace("/lol-game-data/assets/", "").toLowerCase();
-  return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/${cleaned}`;
+  return `https://raw.communitydragon.org/${cdragonBranch(
+    patchline
+  )}/plugins/rcp-be-lol-game-data/global/default/${cleaned}`;
 }
 
 /**
@@ -53,13 +74,20 @@ function normalizePath(path: string): string {
  * When duplicates exist (same name, different IDs), prefer the entry
  * whose mode matches the existing augment's mode.
  */
-export async function mergeAugmentIds(
-  augments: Map<string, Augment>
-): Promise<void> {
-  const res = await fetch(CDRAGON_URL);
+export async function fetchCDragonAugments(
+  patchline: Patchline = "live"
+): Promise<RawCDragonAugment[]> {
+  const res = await fetch(cdragonAugmentsUrl(patchline));
   if (!res.ok)
     throw new Error(`Failed to fetch CDragon augments: ${res.status}`);
-  const raw: RawCDragonAugment[] = await res.json();
+  return (await res.json()) as RawCDragonAugment[];
+}
+
+export async function mergeAugmentIds(
+  augments: Map<string, Augment>,
+  patchline: Patchline = "live"
+): Promise<void> {
+  const raw = await fetchCDragonAugments(patchline);
 
   // Build a normalized-name lookup for wiki augments
   const normalizedLookup = new Map<string, string>();
@@ -86,12 +114,45 @@ export async function mergeAugmentIds(
     if (existing) {
       // Merge ID and icon but DO NOT overwrite mode
       existing.id = best.id;
-      existing.iconPath = normalizePath(best.augmentSmallIconPath);
+      existing.iconPath = normalizePath(best.augmentSmallIconPath, patchline);
+      continue;
     }
-    // CDragon-only augments (not in any wiki source) are skipped.
-    // They have no description and are often test/internal entries
-    // (e.g., "404 Augment Not Found", "Augment 405") or from
-    // unsupported modes. Wiki sources are authoritative for augment data.
+
+    // CDragon-only augment (no wiki entry). Keep Mayhem ones with a placeholder
+    // description so augments new this patch stay visible to the player and the
+    // coaching LLM before the wiki documents them. Other modes stay dropped:
+    // Arena is fully covered by its own wiki source, CDragon's test/internal
+    // entries ("404 Augment Not Found", "Augment 405") are Arena-coded, and
+    // Swarm is unsupported.
+    if (classifyAugmentMode(best.augmentSmallIconPath) !== "mayhem") continue;
+
+    const key = best.nameTRA.toLowerCase();
+    if (augments.has(key)) continue;
+    augments.set(key, {
+      name: best.nameTRA,
+      description: MISSING_DESCRIPTION_PLACEHOLDER,
+      tier: rarityToTier(best.rarity),
+      sets: [],
+      mode: "mayhem",
+      id: best.id,
+      iconPath: normalizePath(best.augmentSmallIconPath, patchline),
+    });
+  }
+}
+
+/**
+ * Map a Community Dragon rarity token (e.g. "kPrismatic") to our tier enum.
+ * Mayhem augments only use kSilver/kGold/kPrismatic; anything else falls back
+ * to Silver so a kept augment always has a valid tier.
+ */
+function rarityToTier(rarity: string): Augment["tier"] {
+  switch (rarity) {
+    case "kPrismatic":
+      return "Prismatic";
+    case "kGold":
+      return "Gold";
+    default:
+      return "Silver";
   }
 }
 

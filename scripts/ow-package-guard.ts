@@ -9,11 +9,17 @@
  * augment events stop flowing and augment coaching silently dies, even though
  * the real package binaries remain hosted on Overwolf's CDN.
  *
- * This guard detects that specific outage and, only when it is happening,
- * serves a corrected manifest on localhost that points OWEPM straight at the
- * real, still-hosted binaries. `launch-electron.sh` hands that manifest to
- * ow-electron via `--owepm-packages-url`. When Overwolf's API is healthy the
- * guard does nothing and ow-electron resolves packages the normal way.
+ * This guard forces ow-electron onto the newest real GEP build being served.
+ * On every launch where a live build can be resolved it serves a corrected
+ * manifest on localhost pointing OWEPM straight at the real, still-hosted
+ * binaries; `launch-electron.sh` hands that manifest to ow-electron via
+ * `--owepm-packages-url`. It overrides unconditionally, not just on the
+ * manifest's 0.0.0 outage signature: even after the manifest "recovers" to a
+ * healthy version number, OWEPM's normal resolution re-downloads a ~21 KB stub
+ * over a known-good cached binary on every launch (observed 2026-06-13, a
+ * second app instance clobbered a real 306.0.10 cache back to a stub), so the
+ * override has to be active each time to keep OWEPM on the real binary. The
+ * guard stands down only when no live build can be found.
  *
  * The corrected manifest is built at serve time, not hard-coded: GEP's version
  * is auto-discovered against the CDN so the override always points at the
@@ -22,10 +28,11 @@
  * handler. See {@link discoverLatestVersion}.
  *
  * Modes:
- *   --check [--url U]   Probe Overwolf's manifest (U defaults to production).
- *                       Exit 3 when the 0.0.0 outage is detected (override
- *                       needed), 0 when healthy, 1 on any error (treated by the
- *                       launcher as "do not override").
+ *   --check [--url U]   Resolve the newest served GEP (Overwolf manifest when
+ *                       healthy, else CDN discovery). Exit 3 when a live build
+ *                       is found (always override; OWEPM re-stubs without it),
+ *                       1 when none can be resolved (treated by the launcher as
+ *                       "do not override").
  *   --serve [--port N]  Discover live package versions, reconcile any stale
  *                       local GEP cache, then serve the override manifest on
  *                       127.0.0.1:N until killed.
@@ -33,7 +40,13 @@
 
 import { createServer } from "node:http";
 import { fileURLToPath } from "node:url";
-import { appendFileSync, existsSync, readdirSync, rmSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  readdirSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
@@ -42,9 +55,13 @@ const DEFAULT_OVERWOLF_MANIFEST_URL =
 const DEFAULT_PORT = 17865;
 const CDN_BASE = "https://electrondl.overwolf.com";
 
-const EXIT_HEALTHY = 0;
 const EXIT_ERROR = 1;
 const EXIT_OVERRIDE_NEEDED = 3;
+
+// A real GEP `.owepk` is ~19 MB; the broken Overwolf builds ship a ~21 KB stub
+// that carries no in-game handler. Any cached package under this size is a stub
+// and must be re-downloaded, even when its version string looks healthy.
+const STUB_OWEPK_MAX_BYTES = 1_000_000;
 
 // Key decisions are mirrored to a repo-local log file (resolved in the CLI
 // entry) so a run can be double-checked after the fact, not just from the live
@@ -285,6 +302,32 @@ async function resolvePackageVersion(
   return discoverLatestVersion({ baseline: spec.baseline, probe });
 }
 
+/** Local cache state for GEP: the extracted version plus whether the
+ * downloaded `.owepk` is a stub (sub-megabyte placeholder). */
+export interface GepCacheState {
+  version: string;
+  isStub: boolean;
+}
+
+export type GuardAction = "override-needed" | "cannot-resolve";
+
+/**
+ * Decides whether the launcher serves the override. While Overwolf's package
+ * API is broken the override is served on EVERY launch a real build can be
+ * resolved, not only when the local cache looks stale. OWEPM re-resolves GEP
+ * against Overwolf's manifest each launch and currently re-downloads a ~21 KB
+ * stub even over a known-good cached binary (observed 2026-06-13: a second
+ * app instance clobbered a real 306.0.10 cache back to a stub the moment the
+ * guard stepped aside). The only way to keep OWEPM on the real binary is to
+ * point it at our override every time. `cannot-resolve` (no live build found)
+ * is the sole no-override outcome, so the launcher never serves a dead override.
+ */
+export function decideGuardAction(args: {
+  latestServed: string | null;
+}): GuardAction {
+  return args.latestServed ? "override-needed" : "cannot-resolve";
+}
+
 /**
  * Returns the uids of cached packages whose on-disk version differs from the
  * version the override will serve. Packages not part of the override are left
@@ -383,10 +426,34 @@ function readInstalledPackages(packagesDir: string): InstalledPackage[] {
   return installed;
 }
 
+/** A cached `.owepk` smaller than the stub ceiling is the broken placeholder. */
+function isStubOwepk(owepkPath: string): boolean {
+  try {
+    return statSync(owepkPath).size < STUB_OWEPK_MAX_BYTES;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Reads the cached GEP version (its extracted version subdir) and whether the
+ * downloaded `.owepk` is a stub. Returns null when GEP is not cached or the
+ * cache dir cannot be located, which the decision treats as "fetch it".
+ */
+function readCachedGep(packagesDir: string | null): GepCacheState | null {
+  if (!packagesDir) return null;
+  const owepk = join(packagesDir, `${GEP_UID}.owepk`);
+  if (!existsSync(owepk)) return null;
+  const versions = safeReaddir(join(packagesDir, GEP_UID));
+  return { version: versions[0] ?? "", isStub: isStubOwepk(owepk) };
+}
+
 /**
  * Deletes any cached package whose on-disk version differs from the version the
  * override manifest will serve, so OWEPM re-downloads it instead of loading the
- * stale copy. No-op when the cache already matches.
+ * stale copy. Also force-purges GEP when its `.owepk` is a stub even if the
+ * version matches, since a 0.0.0-era stub can sit under a real version dir.
+ * No-op when the cache already matches and GEP is a real build.
  */
 function reconcilePackageCache(
   packagesDir: string,
@@ -394,6 +461,14 @@ function reconcilePackageCache(
 ): void {
   const installed = readInstalledPackages(packagesDir);
   const purge = planCacheReconciliation(installed, desired);
+  const gepOwepk = join(packagesDir, `${GEP_UID}.owepk`);
+  if (
+    !purge.includes(GEP_UID) &&
+    existsSync(gepOwepk) &&
+    isStubOwepk(gepOwepk)
+  ) {
+    purge.push(GEP_UID);
+  }
   if (purge.length === 0) {
     log("local package cache already matches the override; nothing to purge");
     return;
@@ -478,19 +553,57 @@ async function serveOverrideManifest(port: number): Promise<void> {
   process.on("SIGTERM", shutdown);
 }
 
-async function runCheck(url: string): Promise<number> {
+/**
+ * The newest real GEP build being served, used as the target the local cache
+ * must match. Trusts the Overwolf manifest's version when it is healthy (a fast
+ * single fetch), and falls back to probing the CDN directly when the manifest
+ * is in its 0.0.0 outage or is unreachable, so a manifest regression never
+ * blinds the guard. Returns null only when neither source yields a version.
+ */
+async function resolveLatestServedGep(url: string): Promise<string | null> {
+  const gep = PACKAGE_SPECS.find((s) => s.name === "gep");
+  if (!gep) return null;
   try {
     const manifest = await fetchOverwolfManifest(url);
-    if (manifestIndicatesOutage(manifest)) {
-      log("Overwolf manifest is serving 0.0.0 stubs: override needed");
-      return EXIT_OVERRIDE_NEEDED;
+    if (!manifestIndicatesOutage(manifest)) {
+      const served = manifest.packages?.find((p) => p.name === "gep")?.version;
+      if (served) return served;
+    } else {
+      log("Overwolf manifest is serving 0.0.0 stubs; discovering GEP via CDN");
     }
-    log("Overwolf manifest healthy: no override");
-    return EXIT_HEALTHY;
   } catch (err) {
-    log(`check failed, skipping override: ${String(err)}`);
+    log(`manifest fetch failed, discovering GEP via CDN: ${String(err)}`);
+  }
+  return discoverLatestVersion({
+    baseline: gep.baseline,
+    probe: makeCdnProbeFactory()(gep.channel),
+  });
+}
+
+/**
+ * Decides whether the launcher serves the override. The trigger is simply
+ * whether the latest served GEP build is resolvable: when it is, we override on
+ * every launch (OWEPM re-stubs even a known-good cache otherwise, see
+ * `decideGuardAction`). The local cache state is read only to log for
+ * diagnostics, never to gate the decision.
+ */
+async function runCheck(url: string): Promise<number> {
+  const latestServed = await resolveLatestServedGep(url);
+  const cached = readCachedGep(resolvePackagesDir());
+  const cacheDesc = cached
+    ? cached.isStub
+      ? `stub (${cached.version || "unextracted"})`
+      : cached.version
+    : "absent";
+
+  if (decideGuardAction({ latestServed }) === "cannot-resolve") {
+    log("could not determine the latest served GEP build; skipping override");
     return EXIT_ERROR;
   }
+  log(
+    `serving override to the newest real GEP build [${latestServed}] (cache: ${cacheDesc}); OWEPM re-stubs without it`
+  );
+  return EXIT_OVERRIDE_NEEDED;
 }
 
 function parsePort(args: string[]): number {

@@ -131,7 +131,7 @@ describe("loadGameData", () => {
     expect(data.items.size).toBe(1);
     expect(data.runes).toHaveLength(1);
     expect(data.augments.size).toBe(3); // 1 mayhem + 1 arena unique + 1 arena collision
-    expect(data.augmentSets).toHaveLength(9);
+    expect(data.augmentSets).toHaveLength(0); // Traits removed in 26.12 Mayhem rework
   });
 
   it("calls all data sources", async () => {
@@ -321,6 +321,74 @@ describe("loadGameData ingest-failure fallback", () => {
     await expect(loadGameData()).rejects.toThrow(
       /code unit U\+2013 is not allowed/
     );
+  });
+});
+
+describe("patchline-aware loading", () => {
+  it("writes pbe data under the pbe-namespaced cache key", async () => {
+    await loadGameData("pbe");
+
+    expect(cache.writeCache).toHaveBeenCalledWith(
+      "game-data:pbe",
+      expect.anything()
+    );
+  });
+
+  it("defaults to the live-namespaced cache key", async () => {
+    await loadGameData();
+
+    expect(cache.writeCache).toHaveBeenCalledWith(
+      "game-data:live",
+      expect.anything()
+    );
+  });
+
+  it("passes the patchline through to mergeAugmentIds", async () => {
+    await loadGameData("pbe");
+
+    expect(communityDragon.mergeAugmentIds).toHaveBeenCalledWith(
+      expect.any(Map),
+      "pbe"
+    );
+  });
+
+  it("reads the pbe-namespaced cache key in production mode", async () => {
+    const origDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
+    vi.mocked(cache.readCache).mockResolvedValue(null);
+
+    await loadGameData("pbe");
+
+    expect(cache.readCache).toHaveBeenCalledWith("game-data:pbe");
+
+    import.meta.env.DEV = origDev;
+  });
+
+  it("fetches under the patchline namespace on a production cache miss", async () => {
+    // Production mode + cold cache falls through to fetchAndCacheWithFallback;
+    // the patchline must survive that hop, not silently revert to "live".
+    const origDev = import.meta.env.DEV;
+    import.meta.env.DEV = false;
+    vi.mocked(cache.readCache).mockResolvedValue(null);
+
+    await loadGameData("pbe");
+
+    expect(communityDragon.mergeAugmentIds).toHaveBeenCalledWith(
+      expect.any(Map),
+      "pbe"
+    );
+    expect(cache.writeCache).toHaveBeenCalledWith(
+      "game-data:pbe",
+      expect.anything()
+    );
+
+    import.meta.env.DEV = origDev;
+  });
+
+  it("reads the pbe-namespaced cache key in loadCachedGameData", async () => {
+    await loadCachedGameData("pbe");
+
+    expect(cache.readCache).toHaveBeenCalledWith("game-data:pbe");
   });
 });
 

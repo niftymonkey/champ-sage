@@ -3,8 +3,11 @@
  * and falls back gracefully if unavailable.
  */
 
-// Bump this version when the cache schema changes to invalidate stale data
-const CACHE_VERSION = 3;
+// Bump this version when the cache schema changes to invalidate stale data.
+// v4: the 26.12 Mayhem rework removed augment sets/traits; a v3 payload still
+// holds set data (populated augmentSets + per-augment sets), so invalidate it
+// to force one refetch that drops sets from the coaching context.
+const CACHE_VERSION = 4;
 const CACHE_PREFIX = `champ-sage:v${CACHE_VERSION}:`;
 
 export async function readCache<T>(key: string): Promise<T | null> {
