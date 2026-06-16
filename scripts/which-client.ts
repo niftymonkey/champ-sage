@@ -97,7 +97,19 @@ async function main() {
       console.log(`  ${dir}\n    installed, not running (no lockfile)`);
       continue;
     }
-    const lock = parseLockfile(readFileSync(lockPath, "utf8"));
+    let lock: Lockfile | null = null;
+    try {
+      lock = parseLockfile(readFileSync(lockPath, "utf8"));
+    } catch (err) {
+      // The client can exit between the existsSync check and the read; treat a
+      // vanished lockfile like an absent one so one install never aborts the scan.
+      console.log(
+        `  ${dir}\n    lockfile present but unreadable: ${
+          (err as Error).message
+        }`
+      );
+      continue;
+    }
     if (!lock) {
       console.log(`  ${dir}\n    lockfile present but unreadable`);
       continue;

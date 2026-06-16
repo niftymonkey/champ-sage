@@ -71,7 +71,7 @@ async function main() {
     )})`
   );
   console.log(
-    `  total would-be-dropped, incl. pre-existing quest augments: ${report.droppedForMissingDescription.length}`
+    `  total lacking a wiki description, incl. pre-existing gaps: ${report.droppedForMissingDescription.length}`
   );
 
   console.log(`\n=== Grouping mechanic ===`);

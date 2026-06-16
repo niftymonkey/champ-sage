@@ -125,6 +125,38 @@ describe("mergeAugmentIds", () => {
     expect(augments.get("get excited")!.id).toBe(999);
   });
 
+  it("matches Quest-prefixed CDragon names to non-prefixed wiki names", async () => {
+    const augments = new Map<string, Augment>([
+      [
+        "sneakerhead",
+        {
+          name: "Sneakerhead",
+          description: "test",
+          tier: "Gold",
+          sets: [],
+          mode: "mayhem",
+        },
+      ],
+    ]);
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([
+          {
+            id: 1001,
+            nameTRA: "Quest: Sneakerhead",
+            augmentSmallIconPath:
+              "/lol-game-data/assets/ASSETS/UX/Kiwi/Augments/Icons/Sneakerhead_small.png",
+            rarity: "kGold",
+          },
+        ]),
+    });
+
+    await mergeAugmentIds(augments);
+    expect(augments.get("sneakerhead")!.id).toBe(1001);
+  });
+
   it("skips unmatched Arena-mode CDragon augments (arena wiki is authoritative; junk is arena-coded)", async () => {
     const augments = new Map<string, Augment>();
 

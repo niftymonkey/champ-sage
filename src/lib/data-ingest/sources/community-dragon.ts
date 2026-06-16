@@ -42,14 +42,19 @@ export function classifyAugmentMode(iconPath: string): AugmentMode {
 }
 
 /**
- * Normalize a name for matching: lowercase, strip punctuation.
- * Handles cases like "Get Excited" vs "Get Excited!" and
- * "Quest: Sneakerhead" vs "Sneakerhead".
+ * Normalize a name for matching: lowercase, turn punctuation into spaces,
+ * collapse runs of whitespace, and drop a leading "quest" marker. Handles
+ * cases like "Get Excited" vs "Get Excited!" and "Quest: Sneakerhead" vs
+ * "Sneakerhead" (the wiki and CDragon disagree on the prefix for quest
+ * augments). Punctuation becomes a space rather than nothing so a hyphenated
+ * name still matches its spaced counterpart.
  */
 export function normalizeForMatch(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^quest\s+/, "")
     .trim();
 }
 

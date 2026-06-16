@@ -60,7 +60,7 @@ trap cleanup_guard EXIT
 
 ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --check )
 if [ $? -eq 3 ]; then
-  echo "[launch-electron] GEP cache is stale/stub vs the newest served build; serving local override manifest on port ${OWEPM_OVERRIDE_PORT}"
+  echo "[launch-electron] latest live GEP build is resolvable; serving local override manifest on port ${OWEPM_OVERRIDE_PORT}"
   ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --serve --port "${OWEPM_OVERRIDE_PORT}" ) &
   GUARD_PID=$!
   echo "[launch-electron] Waiting for override manifest server..."

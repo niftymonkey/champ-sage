@@ -53,7 +53,7 @@ When PBE data is used inside the app:
 - `loadGameData(patchline)` caches under `patchlineCacheKey(patchline)`, so live and pbe occupy separate localStorage slots that coexist.
 - Selection is driven by **`detectPatchline()`** (region `PBE` to pbe, else live), never a manual mode flag. Playing a live game means the app connects to the live client, detects live, loads the live slot, and the pbe slot sits untouched. The thing that would break that scenario, a global toggle you forget to flip, is designed out: the connected client decides.
 - `detectPatchline` is the one **true-external** dependency (the LCU). It gets a port with a real LCU adapter and an in-memory test adapter. Two adapters, a real seam. Design-it-twice when it is built.
-- Bump `CACHE_VERSION` (currently 3) to give symmetric keys and one harmless refetch on upgrade.
+- Bump `CACHE_VERSION` (currently 4) to give symmetric keys and one harmless refetch on upgrade.
 
 ## Scope limits of the diff
 

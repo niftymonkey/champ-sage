@@ -7,10 +7,12 @@
  * already-fetched data in. That keeps this module deterministic and trivially
  * testable, and lets the same report later back an in-app readiness view.
  *
- * The "dropped" and "coverage" fields mirror the merge in `community-dragon.ts`:
- * a CDragon augment with no matching wiki entry is silently discarded by the
- * real ingest (no description to coach on), so this report surfaces exactly
- * those augments rather than letting them vanish unnoticed.
+ * The "dropped" and "coverage" fields track CDragon augments with no matching
+ * wiki entry. Production no longer discards those: Mayhem keeps them with a
+ * placeholder description (see `community-dragon.ts`) so they stay visible to
+ * the player and coaching LLM before the wiki catches up. This report still
+ * surfaces them as the description-gap signal that drives readiness, not as
+ * augments that vanish from ingest.
  */
 import type { Augment, AugmentMode } from "./types";
 import {
@@ -45,10 +47,11 @@ export interface AugmentPatchlineReport {
   /** Augments present (by name) in both rosters whose rarity differs. */
   rarityChanged: RarityChange[];
   /**
-   * Candidate augments the production ingest would discard (no wiki match),
-   * deduped by name. Includes augments already unmatched on the base patchline
-   * (e.g. quest augments the wiki stores under a "Quest:" prefix), so this is
-   * the full picture, not the PBE-introduced regression.
+   * Candidate augments with no wiki match, deduped by name. Production now keeps
+   * Mayhem ones with a placeholder rather than dropping them; the field name
+   * reflects this report's readiness framing (wiki text still missing), not the
+   * live-ingest outcome. Includes gaps that already exist on the base patchline,
+   * so this is the full picture, not just the PBE-introduced regression.
    */
   droppedForMissingDescription: AugmentChange[];
   /**

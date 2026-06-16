@@ -302,11 +302,6 @@ async function resolvePackageVersion(
   return discoverLatestVersion({ baseline: spec.baseline, probe });
 }
 
-/**
- * Returns the uids of cached packages whose on-disk version differs from the
- * version the override will serve. Packages not part of the override are left
- * untouched.
- */
 /** Local cache state for GEP: the extracted version plus whether the
  * downloaded `.owepk` is a stub (sub-megabyte placeholder). */
 export interface GepCacheState {
@@ -333,6 +328,11 @@ export function decideGuardAction(args: {
   return args.latestServed ? "override-needed" : "cannot-resolve";
 }
 
+/**
+ * Returns the uids of cached packages whose on-disk version differs from the
+ * version the override will serve. Packages not part of the override are left
+ * untouched.
+ */
 export function planCacheReconciliation(
   installed: InstalledPackage[],
   desired: InstalledPackage[]
@@ -581,9 +581,11 @@ async function resolveLatestServedGep(url: string): Promise<string | null> {
 }
 
 /**
- * Decides whether the launcher serves the override. The trigger is "is our
- * cached GEP the newest real served build?", not the Overwolf 0.0.0 signature:
- * a healthy manifest no longer lets a stale or stub cache slip through.
+ * Decides whether the launcher serves the override. The trigger is simply
+ * whether the latest served GEP build is resolvable: when it is, we override on
+ * every launch (OWEPM re-stubs even a known-good cache otherwise, see
+ * `decideGuardAction`). The local cache state is read only to log for
+ * diagnostics, never to gate the decision.
  */
 async function runCheck(url: string): Promise<number> {
   const latestServed = await resolveLatestServedGep(url);
