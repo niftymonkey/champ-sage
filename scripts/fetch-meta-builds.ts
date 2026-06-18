@@ -26,6 +26,25 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createInterface } from "node:readline";
+import {
+  aggregateBuilds,
+  countMatchesInWindow,
+  selectRecentInWindowMatchIds,
+  extractMatchData,
+  type MatchData,
+} from "../src/lib/meta-builds/aggregation";
+import {
+  fmtN,
+  snowballProgressLines,
+  barProgressLines,
+} from "../src/lib/meta-builds/progress-format";
+import {
+  keyFingerprint,
+  shouldPurgePuuidCaches,
+  isDecryptError,
+} from "../src/lib/meta-builds/key-cache";
+import { parseModesArg } from "../src/lib/meta-builds/collection-args";
+import { DiscoveryQueue } from "../src/lib/meta-builds/discovery-queue";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(__dirname, "..");
@@ -72,19 +91,50 @@ type QueueKey = keyof typeof QUEUES;
 const TEST_MODE = process.argv.includes("--test");
 
 /**
- * When --reset-queries is passed, delete the queried-puuids and
- * discovered-puuids caches so the snowball re-queries everyone with the
- * current time window. Use this after changing MATCH_WINDOW_DAYS or when
- * you want fresh data from the existing seed pool. Match data and fetched
- * match IDs are preserved — we never throw away paid API work.
+ * When --reset-queries is passed, move queried PUUIDs back into the discovered
+ * pool so the snowball re-queries everyone under the current window. Useful
+ * after the window widens or a long gap, when previously-queried players may
+ * now have fresh matches worth re-listing. Match data and fetched match IDs are
+ * preserved: we never throw away paid API work.
  */
 const RESET_QUERIES = process.argv.includes("--reset-queries");
 
 /** How many match IDs to request per player (max 100) */
 const MATCHES_PER_PLAYER = TEST_MODE ? 20 : 100;
 
-/** Target unique matches per queue type before stopping collection */
-const TARGET_MATCHES = TEST_MODE ? 50 : 50_000;
+/**
+ * The single wide collection window (in days), drained every run. Match-v5 has
+ * no patch filter, so freshness is by DATE: a pass lists every reachable player
+ * under `startTime = now - COLLECTION_WINDOW_DAYS` and fetches their in-window
+ * matches, draining until the player queue is exhausted. 30 days captures the
+ * recent multi-patch cushion (e.g. the current patch plus the prior one or two)
+ * so a thin champion at selection time can backfill against recent data rather
+ * than skipping past never-collected matches straight to an ancient cache. The
+ * per-champion freshness ladder (FRESHNESS_LADDER_DAYS) still picks how far back
+ * to build each champion from, but only at SELECTION time inside aggregateBuilds.
+ */
+const COLLECTION_WINDOW_DAYS = 30;
+
+/**
+ * After an API-key change, how many recent in-window cached matches to re-fetch
+ * to recover new-key participant PUUIDs and rebuild the snowball frontier the
+ * purge wiped. ~10 unique players each, so a few hundred reseeds a few thousand
+ * frontier players, enough to restart the cascade in ~10 minutes.
+ */
+const KEY_CHANGE_BOOTSTRAP_MATCHES = 300;
+
+/**
+ * Saturation terminator: advance to the next mode once this many consecutive
+ * queries add ZERO new matches. This is NOT a fixed cap, the mode collects
+ * everything currently reachable, then stops only when there is genuinely
+ * nothing new. That is what makes re-runs idempotent: they grab the day's new
+ * games, saturate, and fall through cheaply instead of re-draining the whole
+ * population. The longest dry streak observed during a healthy cascade was ~60,
+ * so 500 will not cut an active collection short. Its one failure mode, a key
+ * swap purging the frontier and looking like saturation, is handled upstream by
+ * the frontier-rebuild bootstrap, which refills the frontier before this runs.
+ */
+const SATURATION_THRESHOLD = 500;
 
 /**
  * Dev key rate limits:
@@ -102,37 +152,31 @@ const TARGET_MATCHES = TEST_MODE ? 50 : 50_000;
 const REQUEST_DELAY_MS = 2000;
 
 /**
- * How far back in time to include matches. Matches older than this window are
- * excluded via the Match-v5 API's `startTime` filter, so we never even fetch
- * their details — this is what keeps the dataset scoped to the current patch.
- *
- * 60 days gives enough headroom for small/mid patches while still filtering
- * out genuinely stale data from months ago. Large patch cycles with big item
- * reworks may want a shorter window.
+ * Convert a freshness window (in days) to the Match-v5 `startTime` value,
+ * which is epoch SECONDS. (Riot's match `info.gameEndTimestamp`, by contrast,
+ * is MILLISECONDS. Keep the units straight.) Computed against `Date.now()` at
+ * the boundary so the pure layer never reads the clock.
  */
-const MATCH_WINDOW_DAYS = 60;
-const MATCH_WINDOW_SECONDS = MATCH_WINDOW_DAYS * 24 * 60 * 60;
+function startTimeSecondsForWindow(windowDays: number): number {
+  return Math.floor(Date.now() / 1000) - windowDays * 24 * 60 * 60;
+}
+
+/** Epoch MILLISECONDS cutoff for a freshness window, for in-window counting. */
+function windowCutoffMs(windowDays: number): number {
+  return Date.now() - windowDays * 24 * 60 * 60 * 1000;
+}
 
 /**
- * Epoch timestamp (seconds) marking the start of the collection window.
- * Passed as the `startTime` parameter to `matches/by-puuid/{puuid}/ids` so
- * we only get match IDs from the last MATCH_WINDOW_DAYS days. Computed once
- * at script start so all queries use the same window.
- */
-const startTimeEpoch = Math.floor(Date.now() / 1000) - MATCH_WINDOW_SECONDS;
-
-/**
- * How many recent minor patches to include in aggregation. With a 60-day
- * match window, a value of 2 typically covers the current and previous
- * patch, giving us a meaningful dataset even right after a patch drops.
+ * How many recent minor patches to surface from Data Dragon. The newest
+ * (element 0) is the target patch reported in the output; the others give
+ * context. Selection itself is by date window, not by this list.
  */
 const RECENT_PATCH_COUNT = 2;
 
 /**
  * Fetch the most recent N unique major.minor patches from Data Dragon
- * (e.g. ["16.7", "16.6"]). Matches whose gameVersion starts with any of
- * these are included at aggregation time; older matches are excluded.
- * Cached after first fetch.
+ * (e.g. ["16.7", "16.6"]). Element 0 is the target patch used for the output's
+ * freshness metrics. Cached after first fetch.
  */
 let recentPatchesCache: string[] | null = null;
 async function getRecentPatches(): Promise<string[]> {
@@ -162,6 +206,15 @@ async function getRecentPatches(): Promise<string[]> {
 // ---------------------------------------------------------------------------
 
 let lastRequestTime = 0;
+
+/**
+ * Count of "Exception decrypting" 400s seen this run. Riot rejects PUUIDs
+ * encrypted for a different API key this way; more than a handful means the
+ * PUUID caches are poisoned for the current key. The fingerprint purge in
+ * ensureKeyFingerprint() normally prevents this; this guard is the backstop.
+ */
+let decryptErrorCount = 0;
+const DECRYPT_ERROR_LIMIT = 10;
 
 /**
  * Unified result type from `rateLimitedFetch`. The body is read inside the
@@ -255,7 +308,38 @@ async function rateLimitedFetch(
     return { ok: false, status: res.status, data: null };
   }
 
-  // Non-retryable HTTP error (404 etc.) — return without a body read
+  // Poisoned-PUUID guard: Riot rejects a PUUID encrypted for a different API
+  // key with a 400 "Exception decrypting". The fingerprint purge in
+  // ensureKeyFingerprint() normally prevents this; if a wall of them slips
+  // through, abort loudly rather than silently treating each as "no matches"
+  // and grinding the rate limit against a dead pool.
+  if (res.status === 400) {
+    let message: string | undefined;
+    try {
+      const body = (await res.json()) as { status?: { message?: string } };
+      message = body?.status?.message;
+    } catch {
+      // Non-JSON 400 body: leave the message undefined.
+    }
+    if (isDecryptError(400, message)) {
+      decryptErrorCount++;
+      if (decryptErrorCount >= DECRYPT_ERROR_LIMIT) {
+        console.error(
+          `\n\nFATAL: ${decryptErrorCount} "Exception decrypting" 400s. Your cached PUUIDs were encrypted for a different API key.`
+        );
+        console.error(
+          `  The key-fingerprint purge should prevent this. If you see it, delete the puuid caches`
+        );
+        console.error(
+          `  (puuids-high-elo.json, discovered-puuids-*.json, queried-puuids-*.json) and re-run.\n`
+        );
+        process.exit(1);
+      }
+    }
+    return { ok: false, status: 400, data: null };
+  }
+
+  // Non-retryable HTTP error (404 etc.): return without a body read
   if (!res.ok) {
     return { ok: false, status: res.status, data: null };
   }
@@ -279,12 +363,51 @@ function sleep(ms: number): Promise<void> {
 // Status line helpers
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Live progress region
+//
+// A block of one or more lines redrawn in place via `\r` and ANSI cursor moves.
+// Any permanent log line must call clearLiveRegion() first so the in-place block
+// does not corrupt it; the next renderLiveRegion() redraws the block below
+// whatever was printed. This is what lets a multi-line progress display coexist
+// with periodic summary/aggregation lines in a single terminal.
+// ---------------------------------------------------------------------------
+
+// In-place rendering only makes sense on a TTY. When stdout is piped or
+// redirected (e.g. into a log file), ANSI cursor moves would be written
+// literally, so the live region is suppressed and only the permanent lines and
+// periodic summaries appear.
+const INTERACTIVE = process.stdout.isTTY === true;
+
+let liveRegionLines = 0;
+
 /**
- * Clear the current line (progress counter) before printing a full line so
- * the progress counter's `\r`-overwrite doesn't corrupt the output.
+ * Erase the in-place live progress block (if any) and leave the cursor at the
+ * column-0 start of where the block began, ready for a permanent print or a
+ * redraw. Safe to call when nothing is rendered.
  */
-function clearLine(): void {
+function clearLiveRegion(): void {
+  if (!INTERACTIVE) return;
+  if (liveRegionLines === 0) {
+    process.stdout.write("\r\x1b[K");
+    return;
+  }
   process.stdout.write("\r\x1b[K");
+  for (let i = 1; i < liveRegionLines; i++) {
+    process.stdout.write("\x1b[1A\x1b[K");
+  }
+  liveRegionLines = 0;
+}
+
+/**
+ * Draw a multi-line live block in place (no trailing newline) and remember how
+ * many lines it spans so the next clear knows what to erase. A no-op off-TTY.
+ */
+function renderLiveRegion(lines: string[]): void {
+  if (!INTERACTIVE) return;
+  clearLiveRegion();
+  process.stdout.write(lines.join("\n"));
+  liveRegionLines = lines.length;
 }
 
 /**
@@ -306,7 +429,7 @@ interface SummaryEvent {
 }
 
 function printSummary(e: SummaryEvent): void {
-  clearLine();
+  clearLiveRegion();
   const bySource = Object.entries(e.last100.bySource)
     .filter(([, v]) => v.queries > 0)
     .map(([k, v]) => `${k}:${v.queries}q/${v.matchesAdded}m`)
@@ -331,83 +454,16 @@ function printPeriodicAggregation(
   patch: string,
   outputPath: string
 ): void {
-  clearLine();
+  clearLiveRegion();
   console.log(
     `  📊 ${totalMatches} matches → ${championsCovered} champions covered (patch ${patch}) → ${outputPath}`
   );
 }
 
-// ---------------------------------------------------------------------------
-// Types (used across collection and aggregation)
-// ---------------------------------------------------------------------------
-
-/** The subset of match data we persist per participant */
-interface ParticipantData {
-  puuid: string;
-  championId: number;
-  championName: string;
-  win: boolean;
-  items: number[]; // item0-item6
-  perks: {
-    statPerks: { defense: number; flex: number; offense: number };
-    styles: Array<{
-      description: string;
-      style: number;
-      selections: Array<{ perk: number }>;
-    }>;
-  };
-  teamPosition: string;
-  augments: number[]; // playerAugment1-4
-}
-
-interface MatchData {
-  matchId: string;
-  queueId: number;
-  gameVersion: string;
-  gameDuration: number;
-  participants: ParticipantData[];
-}
-
-function extractMatchData(
-  matchId: string,
-  raw: Record<string, unknown>
-): MatchData | null {
-  const info = raw.info as Record<string, unknown> | undefined;
-  if (!info) return null;
-
-  const participants =
-    (info.participants as Array<Record<string, unknown>>) ?? [];
-
-  return {
-    matchId,
-    queueId: info.queueId as number,
-    gameVersion: info.gameVersion as string,
-    gameDuration: info.gameDuration as number,
-    participants: participants.map((p) => ({
-      puuid: p.puuid as string,
-      championId: p.championId as number,
-      championName: p.championName as string,
-      win: p.win as boolean,
-      items: [
-        p.item0 as number,
-        p.item1 as number,
-        p.item2 as number,
-        p.item3 as number,
-        p.item4 as number,
-        p.item5 as number,
-        p.item6 as number,
-      ],
-      perks: p.perks as ParticipantData["perks"],
-      teamPosition: (p.teamPosition as string) ?? "",
-      augments: [
-        p.playerAugment1 as number,
-        p.playerAugment2 as number,
-        p.playerAugment3 as number,
-        p.playerAugment4 as number,
-      ].filter((a) => a != null && a > 0),
-    })),
-  };
-}
+// Data interfaces (ParticipantData, MatchData, BuildEntry, ChampionBuilds,
+// MetaBuildOutput) and the pure helpers extractMatchData / aggregateBuilds /
+// countMatchesInWindow now live in src/lib/meta-builds/aggregation.ts. This
+// script owns the I/O loops and passes Date.now() at the boundary.
 
 // ---------------------------------------------------------------------------
 // Cache helpers
@@ -582,19 +638,20 @@ async function discoverHighEloPuuids(): Promise<string[]> {
 
 async function collectMatchIds(
   puuids: string[],
-  queueKey: QueueKey
+  queueKey: QueueKey,
+  startTimeSeconds: number
 ): Promise<string[]> {
   const queueId = QUEUES[queueKey].id;
   const cachePath = resolve(CACHE_DIR, `match-ids-${queueKey}.json`);
   const matchIds = new Set<string>(loadJsonCache<string[]>(cachePath, []));
 
-  if (matchIds.size >= TARGET_MATCHES) {
-    console.log(`  Already have ${matchIds.size} match IDs for ${queueKey}`);
-    return [...matchIds];
-  }
-
+  // List IDs for every not-yet-queried player in the (bounded) ranked pool
+  // under this window's startTime. No total-ID cap: the in-window stop lives
+  // in fetchMatchDetails, which is the only place a match's gameEndTimestamp
+  // is known. Between ladder rungs the queried set is reset, so a wider window
+  // re-lists the same players and surfaces their older match IDs.
   console.log(
-    `  Collecting match IDs for ${queueKey} (have ${matchIds.size}, target ${TARGET_MATCHES})...`
+    `  Collecting match IDs for ${queueKey} (have ${matchIds.size})...`
   );
 
   // Track which PUUIDs we've already queried for this queue
@@ -604,14 +661,14 @@ async function collectMatchIds(
   );
 
   let saveCounter = 0;
+  let consecutiveZeroNew = 0;
 
   for (const puuid of puuids) {
-    if (matchIds.size >= TARGET_MATCHES) break;
     if (queriedPuuids.has(puuid)) continue;
 
     const url =
       `${CONTINENTAL_HOST}/lol/match/v5/matches/by-puuid/${puuid}/ids` +
-      `?queue=${queueId}&count=${MATCHES_PER_PLAYER}&startTime=${startTimeEpoch}`;
+      `?queue=${queueId}&count=${MATCHES_PER_PLAYER}&startTime=${startTimeSeconds}`;
 
     const res = await rateLimitedFetch(url);
     queriedPuuids.add(puuid);
@@ -623,15 +680,35 @@ async function collectMatchIds(
     }
 
     const ids = res.data as string[];
+    const before = matchIds.size;
     for (const id of ids) matchIds.add(id);
+
+    // Saturation terminator (mirrors the snowball): advance once the bounded
+    // ranked pool stops yielding new match IDs, so re-runs fall through fast.
+    consecutiveZeroNew = matchIds.size > before ? 0 : consecutiveZeroNew + 1;
+    if (consecutiveZeroNew >= SATURATION_THRESHOLD) {
+      saveJsonCache(cachePath, [...matchIds]);
+      saveJsonCache(queriedPath, [...queriedPuuids]);
+      console.log(
+        `\n  ${queueKey} match-id collection saturated: ${SATURATION_THRESHOLD} queries with no new IDs. Have ${fmtN(
+          matchIds.size
+        )}. Advancing.`
+      );
+      break;
+    }
 
     // Persist incrementally every 50 players
     saveCounter++;
     if (saveCounter % 50 === 0) {
       saveJsonCache(cachePath, [...matchIds]);
       saveJsonCache(queriedPath, [...queriedPuuids]);
-      process.stdout.write(
-        `\r  ${matchIds.size} match IDs from ${queriedPuuids.size} players...`
+      renderLiveRegion(
+        barProgressLines({
+          done: queriedPuuids.size,
+          total: puuids.length,
+          label: "players listed",
+          subtitle: `${fmtN(matchIds.size)} match IDs gathered so far`,
+        })
       );
     }
   }
@@ -639,7 +716,8 @@ async function collectMatchIds(
   // Final save
   saveJsonCache(cachePath, [...matchIds]);
   saveJsonCache(queriedPath, [...queriedPuuids]);
-  console.log(`\n  Total match IDs for ${queueKey}: ${matchIds.size}`);
+  clearLiveRegion();
+  console.log(`  Total match IDs for ${queueKey}: ${fmtN(matchIds.size)}`);
   return [...matchIds];
 }
 
@@ -674,7 +752,10 @@ async function collectMatchesSnowball(
   prioritySeeds: string[],
   fallbackSeeds: string[],
   queueKey: QueueKey,
-  recentPatches: string[]
+  recentPatches: string[],
+  startTimeSeconds: number,
+  cutoffMs: number,
+  keyChanged: boolean
 ): Promise<MatchData[]> {
   const queueId = QUEUES[queueKey].id;
 
@@ -708,36 +789,112 @@ async function collectMatchesSnowball(
     loadJsonCache<string[]>(discoveredPath, [])
   );
 
-  if (matches.length >= TARGET_MATCHES) {
-    console.log(
-      `  Already have ${matches.length} matches for ${queueKey} (target: ${TARGET_MATCHES})`
-    );
-    return matches;
-  }
+  // In-window match count, maintained incrementally for diagnostics and the
+  // end-of-pass log only. This is NOT a collection cap: the pass drains its
+  // window until the player queue is exhausted, so the fresh bucket grows
+  // without a ceiling and keeps climbing across runs.
+  let inWindowCount = countMatchesInWindow(matches, cutoffMs);
 
   // Track which source each PUUID came from so we can understand snowball
   // dynamics in the log output.
   type PuuidSource = "priority" | "discovered" | "fallback" | "new";
   const puuidSource = new Map<string, PuuidSource>();
 
-  // Build initial queue: priority seeds first, then discovered, then fallback
-  const puuidQueue: string[] = [];
-  const queueSet = new Set<string>();
-  const enqueue = (puuid: string, source: PuuidSource) => {
+  // Three-tier discovery queue, drained frontier -> seed -> stale. The FRONTIER
+  // holds priority seeds (e.g. the user's own mode account) plus every player
+  // discovered inside the freshness window this run, so the snowball chases the
+  // mode-playing population immediately. The SEED tier holds the high-elo
+  // fallback seeds: reliable accounts but mostly ranked players who rarely ARAM,
+  // so they are entry points used to discover frontier players, not the main
+  // source. The STALE tier holds the prior-run discovered pool, a backstop. This
+  // ordering stops the run from grinding ~11k mostly-non-ARAM high-elo seeds
+  // before reaching the discovered ARAM players. The queue owns dedup across all
+  // tiers, replacing the old queueSet.
+  const queue = new DiscoveryQueue();
+  const enqueueFrontier = (puuid: string, source: PuuidSource) => {
     if (queriedPuuids.has(puuid)) return;
-    if (queueSet.has(puuid)) return;
-    puuidQueue.push(puuid);
-    queueSet.add(puuid);
+    if (queue.has(puuid)) return;
+    queue.enqueueFrontier(puuid);
+    puuidSource.set(puuid, source);
+  };
+  const enqueueSeed = (puuid: string, source: PuuidSource) => {
+    if (queriedPuuids.has(puuid)) return;
+    if (queue.has(puuid)) return;
+    queue.enqueueSeed(puuid);
+    puuidSource.set(puuid, source);
+  };
+  const enqueueStale = (puuid: string, source: PuuidSource) => {
+    if (queriedPuuids.has(puuid)) return;
+    if (queue.has(puuid)) return;
+    queue.enqueueStale(puuid);
     puuidSource.set(puuid, source);
   };
 
-  for (const p of prioritySeeds) enqueue(p, "priority");
-  for (const p of discoveredPuuids) enqueue(p, "discovered");
-  for (const p of fallbackSeeds) enqueue(p, "fallback");
+  // Frontier: priority seeds. Seed: high-elo fallback. Stale: discovered pool.
+  for (const p of prioritySeeds) enqueueFrontier(p, "priority");
+  for (const p of fallbackSeeds) enqueueSeed(p, "fallback");
+  for (const p of discoveredPuuids) enqueueStale(p, "discovered");
 
   console.log(
-    `  Snowball collecting for ${queueKey} (have ${matches.length} matches, ${puuidQueue.length} PUUIDs to query)...`
+    `  Starting with ${fmtN(matches.length)} matches cached, ${fmtN(
+      queue.size
+    )} players queued to check for new ones.`
   );
+
+  // Key-change frontier rebuild. A key swap purges the discovered-player pool
+  // (those PUUIDs are encrypted to the old key) and the cached matches' own
+  // participant PUUIDs are likewise old-key, so re-querying known players only
+  // returns already-cached matches and the cascade cannot restart. Re-fetch the
+  // most recent in-window cached matches PURELY to recover their participants
+  // under the new key (a match ID is global, so the fetch returns new-key
+  // PUUIDs) and seed them into the frontier. Most are unqueried "edge" players
+  // with uncached matches, so the cascade restarts in minutes instead of
+  // limping off the few games played since the cache was built.
+  if (keyChanged && matches.length > 0) {
+    const bootstrapIds = selectRecentInWindowMatchIds(
+      matches,
+      cutoffMs,
+      KEY_CHANGE_BOOTSTRAP_MATCHES
+    );
+    if (bootstrapIds.length > 0) {
+      console.log(
+        `  Key changed: rebuilding frontier from ${fmtN(
+          bootstrapIds.length
+        )} recent cached matches (recovers new-key PUUIDs)...`
+      );
+      const frontierBefore = queue.frontierSize;
+      let refetched = 0;
+      for (const matchId of bootstrapIds) {
+        const res = await rateLimitedFetch(
+          `${CONTINENTAL_HOST}/lol/match/v5/matches/${matchId}`
+        );
+        refetched++;
+        if (res.ok) {
+          const match = extractMatchData(
+            matchId,
+            res.data as Record<string, unknown>
+          );
+          if (match) {
+            for (const p of match.participants) enqueueFrontier(p.puuid, "new");
+          }
+        }
+        // Live counter so the ~10-minute rate-limited rebuild does not look hung.
+        renderLiveRegion([
+          `  Rebuilding frontier: ${fmtN(refetched)}/${fmtN(
+            bootstrapIds.length
+          )} matches re-fetched, ${fmtN(
+            queue.frontierSize - frontierBefore
+          )} new-key players recovered...`,
+        ]);
+      }
+      clearLiveRegion();
+      console.log(
+        `  Recovered ${fmtN(
+          queue.frontierSize - frontierBefore
+        )} new-key players into the frontier.`
+      );
+    }
+  }
 
   // --- Per-query diagnostic logging ---
   //
@@ -752,10 +909,10 @@ async function collectMatchesSnowball(
       t: new Date().toISOString(),
       event: "start",
       queueKey,
-      targetMatches: TARGET_MATCHES,
       resumedMatches: matches.length,
+      resumedInWindow: inWindowCount,
       resumedPlayersQueried: queriedPuuids.size,
-      seedsPending: puuidQueue.length,
+      seedsPending: queue.size,
       sources: {
         priority: prioritySeeds.length,
         discovered: discoveredPuuids.size,
@@ -795,7 +952,12 @@ async function collectMatchesSnowball(
     if (currentThousand <= lastAggregatedAtCount) return;
     lastAggregatedAtCount = currentThousand;
 
-    const output = aggregateBuilds(matches, queueKey, recentPatches);
+    const output = aggregateBuilds(
+      matches,
+      QUEUES[queueKey],
+      recentPatches,
+      Date.now()
+    );
     const outputPath = resolve(OUTPUT_DIR, `${queueKey}.new.json`);
     saveJsonCache(outputPath, output);
 
@@ -833,21 +995,36 @@ async function collectMatchesSnowball(
   };
 
   const updateProgress = () => {
-    process.stdout.write(
-      `\r  ${matches.length} matches / ${queriedPuuids.size} players queried / ${puuidQueue.length} pending...   `
+    const recentAvg = rollingWindow.length
+      ? rollingWindow.reduce((sum, e) => sum + e.matchesAdded, 0) /
+        rollingWindow.length
+      : 0;
+    renderLiveRegion(
+      snowballProgressLines({
+        inWindowCount,
+        totalMatches: matches.length,
+        playersChecked: queriedPuuids.size,
+        queueSize: queue.size,
+        recentMatchesPerQuery: recentAvg,
+      })
     );
   };
 
-  while (puuidQueue.length > 0 && matches.length < TARGET_MATCHES) {
-    const puuid = puuidQueue.shift()!;
-    queueSet.delete(puuid);
+  // Drain the window: advance when no players remain (queue exhaustion) OR the
+  // mode saturates (SATURATION_THRESHOLD consecutive queries add no new matches,
+  // i.e. everything reachable is already cached). Neither is a fixed cap; both
+  // mean "nothing left to collect". FRONTIER drains before SEED before STALE, so
+  // the live frontier is chased first. A for-loop (not while) is used so every
+  // `continue` advances the queue via the update expression before re-testing.
+  let consecutiveZeroNew = 0;
+  for (let puuid = queue.next(); puuid !== undefined; puuid = queue.next()) {
     if (queriedPuuids.has(puuid)) continue;
     const source = puuidSource.get(puuid) ?? "new";
 
     // Step 1: Fetch this player's match IDs for the queue
     const listUrl =
       `${CONTINENTAL_HOST}/lol/match/v5/matches/by-puuid/${puuid}/ids` +
-      `?queue=${queueId}&count=${MATCHES_PER_PLAYER}&startTime=${startTimeEpoch}`;
+      `?queue=${queueId}&count=${MATCHES_PER_PLAYER}&startTime=${startTimeSeconds}`;
     const listRes = await rateLimitedFetch(listUrl);
     queriedPuuids.add(puuid);
     discoveredPuuids.delete(puuid);
@@ -868,7 +1045,7 @@ async function collectMatchesSnowball(
         newIds: 0,
         detailsFetched: 0,
         matchesAfter: matches.length,
-        queueSizeAfter: puuidQueue.length,
+        queueSizeAfter: queue.size,
       });
       pushRolling({
         source,
@@ -893,7 +1070,6 @@ async function collectMatchesSnowball(
     // new PUUIDs come from — participants of each match get added to the
     // queue, which is how the snowball actually accelerates.
     for (const matchId of newIds) {
-      if (matches.length >= TARGET_MATCHES) break;
       if (fetchedMatchIds.has(matchId)) continue;
 
       const detailUrl = `${CONTINENTAL_HOST}/lol/match/v5/matches/${matchId}`;
@@ -912,12 +1088,20 @@ async function collectMatchesSnowball(
       if (match) {
         matches.push(match);
         appendMatchJsonl(matchesJsonlPath, match);
+        // Incrementally track the in-window count that gates this pass. The
+        // API's startTime already scopes fetched IDs to the window, but we
+        // count against gameEndTimestamp directly so cross-window cache reuse
+        // stays correct.
+        if (match.gameEndTimestamp >= cutoffMs) inWindowCount++;
 
-        // Add all participants to the queue (they've played this mode)
+        // Add all participants to the FRONTIER tier: they played this mode
+        // inside the window, so they are the highest-yield players to query next
+        // and jump ahead of the unprocessed high-elo seeds. discoveredPuuids is
+        // still seeded for the NEXT run's stale pool; that cross-run memory is
+        // unchanged.
         for (const p of match.participants) {
-          if (!queriedPuuids.has(p.puuid) && !queueSet.has(p.puuid)) {
-            puuidQueue.push(p.puuid);
-            queueSet.add(p.puuid);
+          if (!queriedPuuids.has(p.puuid) && !queue.has(p.puuid)) {
+            queue.enqueueFrontier(p.puuid);
             puuidSource.set(p.puuid, "new");
             discoveredPuuids.add(p.puuid);
           }
@@ -941,6 +1125,21 @@ async function collectMatchesSnowball(
       detailsFailed: detailsFailedThisQuery,
     });
 
+    // Saturation terminator (see SATURATION_THRESHOLD). A productive query resets
+    // the counter; a long dry run means the window is fully collected, so stop
+    // and let the next mode run. The key-change bootstrap above keeps a purged
+    // frontier from masquerading as saturation here.
+    consecutiveZeroNew = matchesAddedThisQuery > 0 ? 0 : consecutiveZeroNew + 1;
+    if (consecutiveZeroNew >= SATURATION_THRESHOLD) {
+      clearLiveRegion();
+      console.log(
+        `  ${queueKey} saturated: ${SATURATION_THRESHOLD} queries with no new matches. ${fmtN(
+          matches.length
+        )} cached (${fmtN(inWindowCount)} in-window). Advancing.`
+      );
+      break;
+    }
+
     logQuery({
       event: "query",
       puuid,
@@ -952,7 +1151,7 @@ async function collectMatchesSnowball(
       detailsFailed: detailsFailedThisQuery,
       matchesAdded: matchesAddedThisQuery,
       matchesAfter: matches.length,
-      queueSizeAfter: puuidQueue.length,
+      queueSizeAfter: queue.size,
     });
 
     // Every 100 queries, write a rich summary showing rolling efficiency
@@ -994,21 +1193,23 @@ async function collectMatchesSnowball(
         else idBuckets["100"]++;
       }
 
-      // Count remaining queue by source so we know what's left to process
+      // Count remaining queue by source so we know what's left to process.
+      // pending() walks both tiers (live first, then stale), so the breakdown
+      // and the queueSize summary reflect the full queue, not one tier.
       const queueBySource: Record<PuuidSource, number> = {
         priority: 0,
         discovered: 0,
         fallback: 0,
         new: 0,
       };
-      for (const p of puuidQueue) {
+      for (const p of queue.pending()) {
         queueBySource[puuidSource.get(p) ?? "new"]++;
       }
 
       const summaryEvent: SummaryEvent = {
         playersQueried: queriedPuuids.size,
         totalMatches: matches.length,
-        queueSize: puuidQueue.length,
+        queueSize: queue.size,
         last100: {
           matchesAdded: totalMatchesAdded,
           avgMatchesPerQuery:
@@ -1043,12 +1244,17 @@ async function collectMatchesSnowball(
   logQuery({
     event: "end",
     totalMatches: matches.length,
+    inWindowMatches: inWindowCount,
     totalPlayersQueried: queriedPuuids.size,
-    queueSize: puuidQueue.length,
-    reason:
-      matches.length >= TARGET_MATCHES ? "target-reached" : "queue-exhausted",
+    queueSize: queue.size,
+    reason: "queue-exhausted",
   });
-  console.log(`\n  Total matches for ${queueKey}: ${matches.length}`);
+  clearLiveRegion();
+  console.log(
+    `  Total matches for ${queueKey}: ${fmtN(matches.length)} (${fmtN(
+      inWindowCount
+    )} in-window)`
+  );
   return matches;
 }
 
@@ -1059,7 +1265,8 @@ async function collectMatchesSnowball(
 
 async function fetchMatchDetails(
   matchIds: string[],
-  queueKey: QueueKey
+  queueKey: QueueKey,
+  cutoffMs: number
 ): Promise<MatchData[]> {
   const cacheDir = resolve(CACHE_DIR, `matches-${queueKey}`);
   ensureDir(cacheDir);
@@ -1073,6 +1280,11 @@ async function fetchMatchDetails(
   const jsonlDataPath = resolve(cacheDir, "_data.jsonl");
   await migrateLegacyMatchCache(legacyDataPath, jsonlDataPath);
   const matches: MatchData[] = await loadMatchesJsonl(jsonlDataPath);
+
+  // In-window match count, tracked incrementally for the end-of-pass log only.
+  // Not a collection cap: every collected match ID is fetched (deduped via the
+  // index), so the fresh bucket grows without a ceiling.
+  let inWindowCount = countMatchesInWindow(matches, cutoffMs);
 
   const toFetch = matchIds.filter((id) => !fetchedIds.has(id));
 
@@ -1111,6 +1323,7 @@ async function fetchMatchDetails(
     if (match) {
       matches.push(match);
       appendMatchJsonl(jsonlDataPath, match);
+      if (match.gameEndTimestamp >= cutoffMs) inWindowCount++;
 
       // Discover new PUUIDs for snowball (save them for the snowball step)
       const discoveredPath = resolve(
@@ -1132,241 +1345,109 @@ async function fetchMatchDetails(
     saveCounter++;
     if (saveCounter % 100 === 0) {
       saveJsonCache(indexPath, [...fetchedIds]);
-      process.stdout.write(
-        `\r  ${matches.length} matches fetched (${saveCounter}/${toFetch.length})...`
+      renderLiveRegion(
+        barProgressLines({
+          done: saveCounter,
+          total: toFetch.length,
+          label: "match details fetched",
+          subtitle: `${fmtN(matches.length)} total cached · ${fmtN(
+            inWindowCount
+          )} in-window`,
+        })
       );
     }
   }
 
   // Final save (matches already persisted line-by-line via appendMatchJsonl)
   saveJsonCache(indexPath, [...fetchedIds]);
-  console.log(`\n  Total matches for ${queueKey}: ${matches.length}`);
+  clearLiveRegion();
+  console.log(
+    `  Total matches for ${queueKey}: ${fmtN(matches.length)} (${fmtN(
+      inWindowCount
+    )} in-window)`
+  );
   return matches;
-}
-
-// ---------------------------------------------------------------------------
-// Step 4: Aggregate builds
-// ---------------------------------------------------------------------------
-
-interface BuildEntry {
-  items: number[];
-  runes: ParticipantData["perks"];
-  wins: number;
-  games: number;
-}
-
-interface ChampionBuilds {
-  championName: string;
-  sampleSize: number;
-  builds: Array<{
-    items: number[];
-    perks: ParticipantData["perks"];
-    winRate: number;
-    pickRate: number;
-    games: number;
-  }>;
-  /**
-   * Per-champion augment stats (for Mayhem/Arena). Not used by the
-   * item-catalog prompt work, but collected now so it's ready when we add
-   * augment coaching later. Entries sorted by pick count descending.
-   * Contains both popularity and win rate so the consumer can sort by
-   * whichever dimension they need.
-   */
-  popularAugments?: Array<{
-    augmentId: number;
-    picks: number;
-    wins: number;
-    pickRate: number;
-    winRate: number;
-  }>;
-}
-
-interface MetaBuildOutput {
-  patch: string;
-  region: string;
-  queueId: number;
-  queueName: string;
-  collectedAt: string;
-  champions: Record<string, ChampionBuilds>;
-}
-
-/**
- * Create a normalized key for an item build (sorted item IDs, excluding 0s and trinket slot).
- * Items are in slots 0-5 (real items) and slot 6 (trinket).
- */
-function buildKey(items: number[]): string {
-  // Slots 0-5 are real items, slot 6 is trinket — exclude trinket and zeros
-  return items
-    .slice(0, 6)
-    .filter((id) => id > 0)
-    .sort((a, b) => a - b)
-    .join(",");
-}
-
-/** Create a normalized key for a rune page */
-function runeKey(perks: ParticipantData["perks"]): string {
-  const perkIds: number[] = [];
-  for (const style of perks.styles ?? []) {
-    perkIds.push(style.style);
-    for (const sel of style.selections ?? []) {
-      perkIds.push(sel.perk);
-    }
-  }
-  perkIds.push(perks.statPerks?.offense ?? 0);
-  perkIds.push(perks.statPerks?.flex ?? 0);
-  perkIds.push(perks.statPerks?.defense ?? 0);
-  return perkIds.join(",");
-}
-
-/**
- * Cluster key for grouping "same build" participants. Items only — runes
- * intentionally excluded because including them makes clusters too granular
- * (a single stat shard difference produces a different cluster, so 134
- * samples can spread across 130 distinct clusters and no cluster hits the
- * minimum threshold). Rune data still collected and stored for future rune
- * coaching work; we just don't cluster on it.
- */
-function fullBuildKey(p: ParticipantData): string {
-  return buildKey(p.items);
-}
-
-// Keep runeKey for potential future use (rune coaching) — not called here.
-void runeKey;
-
-function aggregateBuilds(
-  matches: MatchData[],
-  queueKey: QueueKey,
-  recentPatches: string[]
-): MetaBuildOutput {
-  const queue = QUEUES[queueKey];
-  const patchSet = new Set(recentPatches);
-
-  // Filter to only matches from recent patches. Matches in the cache from
-  // older patches are preserved (don't want to waste that data) but excluded
-  // from the output so the meta reflects what's actually current.
-  //
-  // gameVersion is like "16.7.123.456"; we match on the first two parts.
-  const filteredMatches = matches.filter((m) => {
-    const p = m.gameVersion.split(".").slice(0, 2).join(".");
-    return patchSet.has(p);
-  });
-
-  // Group participant data by champion
-  const byChampion = new Map<number, ParticipantData[]>();
-  for (const match of filteredMatches) {
-    for (const p of match.participants) {
-      // Skip participants with fewer than 3 completed items (remakes, early surrenders)
-      const completedItems = p.items.slice(0, 6).filter((id) => id > 0).length;
-      if (completedItems < 3) continue;
-
-      const existing = byChampion.get(p.championId) ?? [];
-      existing.push(p);
-      byChampion.set(p.championId, existing);
-    }
-  }
-
-  // The output patch label is the most recent patch (first in the list).
-  // The aggregation itself may include matches from a few recent patches.
-  const patch = recentPatches[0] ?? "unknown";
-
-  const champions: Record<string, ChampionBuilds> = {};
-
-  for (const [championId, participants] of byChampion) {
-    // Cluster by full build (items + runes)
-    const clusters = new Map<string, BuildEntry>();
-    for (const p of participants) {
-      const key = fullBuildKey(p);
-      const existing = clusters.get(key);
-      if (existing) {
-        existing.wins += p.win ? 1 : 0;
-        existing.games += 1;
-      } else {
-        clusters.set(key, {
-          items: p.items
-            .slice(0, 6)
-            .filter((id) => id > 0)
-            .sort((a, b) => a - b),
-          runes: p.perks,
-          wins: p.win ? 1 : 0,
-          games: 1,
-        });
-      }
-    }
-
-    // Filter out losing builds, then sort by popularity. Win rate is used
-    // as a quality filter, not a sort key — win rate sorting on small samples
-    // is mostly noise (n=5 has a 95% CI of ±44%). Popularity sorting gives
-    // a broader item pool, which is what we want for the LLM's tier 1 pool.
-    //
-    // Threshold of 2 games keeps noise low. 0.45 win rate excludes genuinely
-    // losing builds while giving small-sample builds some benefit of the doubt.
-    const sorted = [...clusters.values()]
-      .filter((c) => {
-        if (c.games < 2) return false;
-        const winRate = c.wins / c.games;
-        return winRate >= 0.45;
-      })
-      .sort((a, b) => b.games - a.games)
-      .slice(0, 10);
-
-    if (sorted.length === 0) continue;
-
-    const champName = participants[0].championName;
-    const totalGames = participants.length;
-
-    // Aggregate augment stats across all participants for this champion.
-    // Each participant can have up to 4 augments; track picks and wins per augment
-    // so consumers can rank by popularity OR win rate.
-    const augmentStats = new Map<number, { picks: number; wins: number }>();
-    for (const p of participants) {
-      for (const augId of p.augments) {
-        const existing = augmentStats.get(augId) ?? { picks: 0, wins: 0 };
-        existing.picks += 1;
-        if (p.win) existing.wins += 1;
-        augmentStats.set(augId, existing);
-      }
-    }
-    const popularAugments = [...augmentStats.entries()]
-      .sort((a, b) => b[1].picks - a[1].picks)
-      .map(([augmentId, stats]) => ({
-        augmentId,
-        picks: stats.picks,
-        wins: stats.wins,
-        pickRate: totalGames > 0 ? stats.picks / totalGames : 0,
-        winRate: stats.picks > 0 ? stats.wins / stats.picks : 0,
-      }));
-
-    champions[String(championId)] = {
-      championName: champName,
-      sampleSize: totalGames,
-      builds: sorted.map((b) => ({
-        items: b.items,
-        perks: b.runes,
-        winRate: b.games > 0 ? b.wins / b.games : 0,
-        pickRate: totalGames > 0 ? b.games / totalGames : 0,
-        games: b.games,
-      })),
-      ...(popularAugments.length > 0 ? { popularAugments } : {}),
-    };
-  }
-
-  return {
-    patch,
-    region: "na1",
-    queueId: queue.id,
-    queueName: queue.name,
-    collectedAt: new Date().toISOString(),
-    champions,
-  };
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
+/**
+ * Move every queried PUUID for a queue back into the discovered pool and clear
+ * the queried list, so the next pass re-lists them under the current window.
+ * Nothing is deleted: match data and fetched-match IDs are preserved. This is
+ * what --reset-queries triggers at startup, to re-surface players' fresh
+ * matches after a window change or a long gap.
+ */
+function resetQueriesForQueue(queueKey: QueueKey): void {
+  const queriedPath = resolve(CACHE_DIR, `queried-puuids-${queueKey}.json`);
+  const discoveredPath = resolve(
+    CACHE_DIR,
+    `discovered-puuids-${queueKey}.json`
+  );
+
+  const queried = loadJsonCache<string[]>(queriedPath, []);
+  const discovered = new Set(loadJsonCache<string[]>(discoveredPath, []));
+
+  for (const p of queried) discovered.add(p);
+  saveJsonCache(discoveredPath, [...discovered]);
+
+  if (existsSync(queriedPath)) unlinkSync(queriedPath);
+
+  console.log(
+    `    ${queueKey}: migrated ${queried.length} queried -> discovered now has ${discovered.size}`
+  );
+}
+
+/**
+ * The cache files whose contents are PUUIDs encrypted to a specific API key:
+ * the high-elo seed list, the snowball discovered pool, and the queried set.
+ * Match data (match IDs, details, logs) is keyed by global match IDs and is NOT
+ * key-scoped, so it is deliberately excluded and survives a key change.
+ */
+function puuidCachePaths(): string[] {
+  const files = ["puuids-high-elo.json"];
+  for (const qk of ["aram", "ranked-solo", "arena"]) {
+    files.push(`discovered-puuids-${qk}.json`, `queried-puuids-${qk}.json`);
+  }
+  return files.map((f) => resolve(CACHE_DIR, f));
+}
+
+/**
+ * Purge the key-scoped PUUID caches when the API key changed since the last run.
+ * Riot encrypts PUUIDs to the key that fetched them, and dev keys rotate every
+ * 24 hours, so a PUUID cached under the old key returns 400 "Exception
+ * decrypting" under the new one. Match data is preserved; only the PUUID caches
+ * are dropped, and the current key's fingerprint is recorded for next time.
+ * Returns true when a purge happened (key changed), so the snowball can rebuild
+ * its frontier from cached matches instead of limping off sparse new games.
+ */
+function ensureKeyFingerprint(): boolean {
+  const fpPath = resolve(CACHE_DIR, ".key-fingerprint");
+  const currentFp = keyFingerprint(API_KEY!);
+  const storedFp = existsSync(fpPath)
+    ? readFileSync(fpPath, "utf-8").trim()
+    : null;
+
+  if (!shouldPurgePuuidCaches(storedFp, currentFp)) return false;
+
+  console.log(
+    storedFp !== null
+      ? "  API key changed since last run: purging PUUID caches (encrypted for the previous key). Match data is preserved."
+      : "  No key fingerprint on record: purging PUUID caches to be safe. Match data is preserved."
+  );
+  for (const p of puuidCachePaths()) {
+    if (existsSync(p)) unlinkSync(p);
+  }
+  writeFileSync(fpPath, currentFp);
+  return true;
+}
+
 async function main() {
   ensureDir(CACHE_DIR);
   ensureDir(OUTPUT_DIR);
+  const keyChanged = ensureKeyFingerprint();
 
   console.log(
     `=== Meta Build Data Collection${TEST_MODE ? " (TEST MODE)" : ""} ===\n`
@@ -1378,30 +1459,12 @@ async function main() {
     );
   }
 
-  // --reset-queries: move every PUUID we've ever queried back into the
-  // "discovered" pool so the snowball re-queries them with the current time
-  // window. We do NOT delete anything — we migrate. This preserves every
-  // PUUID we've discovered (including snowball expansions from prior runs)
-  // while marking them all as "not yet queried under the new filter."
+  // --reset-queries at startup re-queries everyone under the current window,
+  // re-surfacing fresh matches for players queried before the window moved.
   if (RESET_QUERIES) {
     console.log("  --reset-queries: moving queried PUUIDs back into discovery");
     for (const qk of ["aram", "ranked-solo", "arena"] as const) {
-      const queriedPath = resolve(CACHE_DIR, `queried-puuids-${qk}.json`);
-      const discoveredPath = resolve(CACHE_DIR, `discovered-puuids-${qk}.json`);
-
-      const queried = loadJsonCache<string[]>(queriedPath, []);
-      const discovered = new Set(loadJsonCache<string[]>(discoveredPath, []));
-
-      // Migrate queried PUUIDs into discovered
-      for (const p of queried) discovered.add(p);
-      saveJsonCache(discoveredPath, [...discovered]);
-
-      // Clear the queried list so everyone gets re-queried
-      if (existsSync(queriedPath)) unlinkSync(queriedPath);
-
-      console.log(
-        `    ${qk}: migrated ${queried.length} queried → discovered now has ${discovered.size}`
-      );
+      resetQueriesForQueue(qk);
     }
     console.log();
   }
@@ -1431,50 +1494,82 @@ async function main() {
     highEloPuuids = highEloPuuids.slice(0, 10);
   }
 
-  // Fetch recent patches once — used for filtering matches during aggregation
-  // so the output only includes games on current + previous patches (item
-  // meta rarely shifts dramatically between minor patches in the same season).
+  // Fetch recent patches once. Element 0 is the target patch surfaced in the
+  // output's freshness metrics; selection itself is by date window.
   const recentPatches = await getRecentPatches();
   console.log(
-    `\nRecent patches (included in output): ${recentPatches.join(", ")}`
+    `\nRecent patches (target = ${recentPatches[0] ?? "unknown"}): ${recentPatches.join(", ")}`
   );
   console.log(
-    `Match window: last ${MATCH_WINDOW_DAYS} days (startTime=${startTimeEpoch})\n`
+    `Collection window: last ${COLLECTION_WINDOW_DAYS} days (drained every run) | selection ladder owned by aggregation\n`
   );
 
-  // Process each queue type sequentially — each completes fully (collection,
-  // fetching, aggregation, output file) before moving to the next.
-  const queueKeys: QueueKey[] = TEST_MODE
+  // One wide collection window, drained, every run. There is no per-window
+  // target and no widen-or-stop ladder at collection time: a single pass at
+  // COLLECTION_WINDOW_DAYS captures the recent multi-patch cushion, and the
+  // per-champion freshness ladder inside aggregateBuilds picks how far back to
+  // build each champion from at selection time.
+  const startTimeSeconds = startTimeSecondsForWindow(COLLECTION_WINDOW_DAYS);
+  const cutoffMs = windowCutoffMs(COLLECTION_WINDOW_DAYS);
+
+  // Process each queue type sequentially. `--modes aram,arena` restricts the
+  // run to specific modes so a finished one (e.g. ARAM already collected) can be
+  // skipped without waiting for its huge snowball to drain.
+  const allModes: QueueKey[] = TEST_MODE
     ? ["ranked-solo"]
     : ["aram", "ranked-solo", "arena"];
+  const requestedModes = parseModesArg(process.argv, allModes);
+  const queueKeys: QueueKey[] = requestedModes ?? allModes;
+  if (requestedModes) {
+    console.log(`Modes (from --modes): ${queueKeys.join(", ")}\n`);
+  }
 
   for (const queueKey of queueKeys) {
     const queue = QUEUES[queueKey];
+    const modeNum = queueKeys.indexOf(queueKey) + 1;
     console.log(
-      `\n[${queueKey}] Processing ${queue.name} (queue ${queue.id})...`
+      `\n━━━ ${queue.name} ━━━  (mode ${modeNum} of ${queueKeys.length})`
+    );
+    if (queueKey === "aram") {
+      console.log(
+        "Recent ARAM matches (also the baseline for ARAM Mayhem coaching)."
+      );
+    }
+    console.log(
+      `Collecting every reachable match from the last ${COLLECTION_WINDOW_DAYS} days.`
     );
 
-    let matches: MatchData[];
+    let matches: MatchData[] = [];
 
     if (queueKey === "ranked-solo") {
-      // Ranked: use the known-good high-elo player list, then fetch details.
-      const matchIds = await collectMatchIds(highEloPuuids, queueKey);
+      const matchIds = await collectMatchIds(
+        highEloPuuids,
+        queueKey,
+        startTimeSeconds
+      );
       if (matchIds.length === 0) {
-        console.log(`  No matches found for ${queueKey}. Skipping.`);
-        continue;
+        console.log(`  No match IDs yet for ${queueKey}.`);
+      } else {
+        matches = await fetchMatchDetails(matchIds, queueKey, cutoffMs);
       }
-      matches = await fetchMatchDetails(matchIds, queueKey);
     } else {
-      // Non-ranked (ARAM, Arena): interleaved snowball using high-elo players
-      // as seeds. High-elo players do play these modes, and the snowball
-      // expands from there via match participants.
       matches = await collectMatchesSnowball(
         prioritySeeds,
         highEloPuuids,
         queueKey,
-        recentPatches
+        recentPatches,
+        startTimeSeconds,
+        cutoffMs,
+        keyChanged
       );
     }
+
+    const inWindowCount = countMatchesInWindow(matches, cutoffMs);
+    console.log(
+      `  After ${COLLECTION_WINDOW_DAYS}d window: ${fmtN(
+        inWindowCount
+      )} fresh / ${fmtN(matches.length)} cached`
+    );
 
     if (matches.length === 0) {
       console.log(`  No match data for ${queueKey}. Skipping aggregation.`);
@@ -1485,12 +1580,17 @@ async function main() {
     // rather than clobbering the live file. After the run finishes, promote
     // manually: delete the old file and rename the .new file in its place.
     console.log(`  Aggregating builds for ${queueKey}...`);
-    const output = aggregateBuilds(matches, queueKey, recentPatches);
+    const output = aggregateBuilds(
+      matches,
+      QUEUES[queueKey],
+      recentPatches,
+      Date.now()
+    );
     const champCount = Object.keys(output.champions).length;
     const outputPath = resolve(OUTPUT_DIR, `${queueKey}.new.json`);
     saveJsonCache(outputPath, output);
     console.log(
-      `  Wrote ${outputPath} (${champCount} champions, patch ${output.patch})`
+      `  Wrote ${outputPath} (${champCount} champions, target patch ${output.targetPatch}, fresh share ${(output.freshPatchShare * 100).toFixed(1)}%)`
     );
   }
 
