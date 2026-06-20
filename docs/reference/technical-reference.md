@@ -532,6 +532,37 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 
 **Name matching quirks:** CDragon names can differ slightly from wiki names, e.g. "Get Excited!" vs "Get Excited" (punctuation) or "Sneakerhead" vs "Quest: Sneakerhead" (prefix). `normalizeForMatch` lowercases, turns punctuation into spaces (so hyphenated and spaced forms agree), collapses whitespace, and drops a leading "quest" marker so quest augments match their non-prefixed counterpart.
 
+### Augment descriptions: where each mode's text comes from (CHERRY / KIWI / STRAWBERRY)
+
+Augments are a per-mode mechanic with THREE distinct pools that share one catalog file. Riot's internal mode codenames (the source of the `cherry`/`kiwi`/`strawberry` strings in icon paths and bin folders):
+
+| Codename   | Mode        | Catalog icon path | Catalog `augmentNameId` prefix | Distinct pool (wiki, 2026-06-20) |
+| ---------- | ----------- | ----------------- | ------------------------------ | -------------------------------- |
+| CHERRY     | Arena       | `UX/Cherry/`      | (none)                         | 256                              |
+| KIWI       | ARAM Mayhem | `UX/Kiwi/`        | `ARAM_`                        | 164                              |
+| STRAWBERRY | Swarm (PvE) | `UX/Strawberry/`  | `Strawberry_`/`Weapon_`/...    | unsupported                      |
+
+These are SEPARATE pools, not the same augments. Mayhem and Arena share only 126 names; 38 are Mayhem-only (Droppybara, Hand of Baron, Holy Snowball, Final City Transit, King Me...) and 130 are Arena-only. Even shared-name augments are distinct, independently tuned instances: ADAPt is id 205 (Arena) AND id 1205 `ARAM_ADAPt` (Mayhem). `cherry-augments.json` is a legacy all-modes bundle, not Arena-only; classify by icon path (`classifyAugmentMode`).
+
+**Catalog vs description split (the root of Mayhem staleness).** `cherry-augments.json` is the only place carrying id/name/icon/rarity/mode, but it has NO description text. Where the readable text comes from differs by mode:
+
+| Mode   | Catalog (id/name/icon/rarity) | Description source we use today | Fresher machine source (exists, currently unused)                                  |
+| ------ | ----------------------------- | ------------------------------- | ---------------------------------------------------------------------------------- |
+| Arena  | cherry-augments.json          | wiki `Module:ArenaAugmentData`  | `cdragon/arena/en_us.json` (desc + dataValues, patch-day, PBE-ahead)               |
+| Mayhem | cherry-augments.json          | wiki `Module:MayhemAugmentData` | raw per-mode bin `game/maps/modespecificdata/kiwi.bin.json` + string table (below) |
+
+**Mayhem descriptions from raw game data (the recipe).** Mirrors CDTB's `arenadata.py`, pointed at the KIWI mode bin instead of the hardcoded Arena `map30.bin`. Three endpoints (`{branch}` = `latest` or `pbe`):
+
+- Catalog (id to apiName): `.../{branch}/plugins/rcp-be-lol-game-data/global/default/v1/cherry-augments.json`
+- KIWI augment DB (apiName to desc/tooltip string keys + `RootSpell`): `.../{branch}/game/maps/modespecificdata/kiwi.bin.json` (220 `AugmentData` records on live 16.12)
+- String table (key to English text): `.../{branch}/game/en_us/data/menu/en_us/lol.stringtable.json` (~28 MB)
+
+Resolution: collect records where `__type === "AugmentData"` from the KIWI bin, keyed by `AugmentNameId`; resolve `DescriptionTra`/`AugmentTooltipTra`/`NameTra` against the string table by LOWERCASED key; follow `RootSpell` to `mSpell.DataValues` (index 0, Mayhem has no per-level scaling) to substitute `@token@` and `@token*N@` placeholders. The short `desc` resolves 220/220 with ~79% of tokens substituted; the unresolved ~21% are computed/quest tokens (`@f1@`, `@QuestRequirement@`) that CDTB itself leaves raw and that cluster in the long `tooltip`, not `desc`, so `desc` is production-quality as-is. Verified live (no wiki): `ARAM_ADAPt` (1205) "Convert Bonus Attack Damage to Ability Power. Gain 15% Ability Power."; Droppybara (1414) "Gain Droppybara as a Summoner Spell. After a delay, call down a capybara that deals 30% max Health true damage."; Hand of Baron (1389) "Gain 25% Adaptive Force. Nearby allied minions are greatly empowered." Proof script: `scripts/spike-kiwi-augment-descriptions.ts` (`pnpm spike-kiwi`, `-- --pbe`, `-- <ids>`).
+
+**Why CommunityDragon ships no curated KIWI file.** Arena augments live in the Arena map bin (`map30.bin`); the per-mode modes (cherry/kiwi/brawl/...) each have their own `game/maps/modespecificdata/<mode>.bin`. CDTB's Arena exporter hardcodes the old map30 path, so it never resolves the per-mode bins. The data was always present; nobody resolves it for KIWI. Options: self-extract (proven), or file a CDTB feature request for a `kiwi` exporter.
+
+**Freshness ranking (augments, any mode).** Raw per-mode bin / `cherry-augments.json` on `pbe` (next patch, ~2 days early) is freshest, then the same on `latest` (hours after a live patch), then curated `cdragon/arena/en_us.json` (Arena only, patch-day), then the wiki Lua modules (human transcription, days to weeks, gutted and rebuilt on Mayhem reworks), and DDragon NEVER has augments (403 on every augment path). Avoid Meraki/lolstaticdata (abandoned, ~6 months stale) and stat sites (win-rate only, compliance-banned).
+
 ### PBE patchline (live vs PBE data)
 
 "Patchline" is Riot's term (the `patchlines` key in `RiotClientInstalls.json`) for the live/PBE choice in the launcher. CommunityDragon serves a parallel `pbe` branch alongside `latest`: swap the branch segment in any cdragon URL (e.g. `.../pbe/plugins/...`). The data-ingest layer threads a `patchline` parameter (default `"live"`); the mapping from patchline to cdragon branch and to cache namespace lives in `src/lib/data-ingest/patchline.ts`.
@@ -540,7 +571,7 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 
 **Mayhem keep is junk-free and maps cleanly.** CDragon's test/internal entries (`404 Augment Not Found`, `Augment 405`) are Cherry/Arena-coded, so scoping the keep to Mayhem excludes them for free. CDragon rarity tokens are `kBronze/kEventChoice/kGold/kPrismatic/kSilver`, but Mayhem augments use only `kSilver/kGold/kPrismatic`, which map directly to our `Silver/Gold/Prismatic` tier enum (`rarityToTier` falls back to Silver for anything else). Arena and Swarm carry the other two tokens and stay dropped: Arena's own wiki source is authoritative, Swarm is unsupported.
 
-**No alternate Mayhem description source.** CDragon's resolved aggregate `cdragon/arena/en_us.json` (per branch) has `desc`/`tooltip`/`dataValues` but is Arena-only (zero Kiwi/Mayhem entries, 228 cherry augments). It is not a fallback for Mayhem text.
+**Mayhem text HAS a machine-readable source (corrects a prior wrong conclusion).** The curated aggregate `cdragon/arena/en_us.json` is Arena-only (zero Kiwi/Mayhem entries, 228 cherry augments) so it is not a Mayhem fallback, and that is why earlier investigation concluded no machine source existed. It does: the RAW per-mode bin `game/maps/modespecificdata/kiwi.bin.json` plus the game string table resolve all 220 Mayhem descriptions. The wiki dependency described above is the CURRENT behavior; the raw-bin source supersedes it once the plan lands. Full recipe, proof, and the freshness map: see [Augment descriptions: where each mode's text comes from](#augment-descriptions-where-each-modes-text-comes-from-cherry--kiwi--strawberry) below, `docs/research/kiwi-augment-extraction-spike.md`, and `docs/plans/2026-06-20-kiwi-augment-descriptions-design.md`.
 
 **Grouping (set) mechanic: REMOVED on live in 26.12.** What looked on PBE like sets being partially dismantled (former set names appearing as standalone augments) was the full removal of Traits, confirmed by Riot's dev post and the live data. As of patch 26.12 (DDragon data version 16.12.1) the live ingest carries zero set membership (verified via `pnpm eval-pbe`: 0 wiki augments with sets, 0 hardcoded sets). We no longer rely on the presence-driven tolerance with live set data: `fetchWikiAugments` strips the stale wiki `set` field at the source (`sets: []`) and `getMayhemAugmentSets()` returns `[]`, so every Mayhem augment is setless and all set-coaching paths self-disable. The augment-fit, voice-query, and game-plan prompts were updated to drop set/trait reasoning. A standalone augment reusing a former set name (e.g. an `Archmage` augment) is just an ordinary augment with no set data; if its wiki entry lags, it shows the `MISSING_DESCRIPTION_PLACEHOLDER` like any other new augment.
 

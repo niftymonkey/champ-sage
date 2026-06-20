@@ -25,6 +25,7 @@
     "lcu-monitor": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx scripts/lcu-monitor.ts",
     "which-client": "tsx scripts/which-client.ts",
     "ow-guard": "tsx scripts/ow-package-guard.ts",
+    "spike-kiwi": "tsx scripts/spike-kiwi-augment-descriptions.ts",
     "prepare": "husky",
     "preview": "vite preview",
     "start:electron": "ow-electron .",
