@@ -83,7 +83,12 @@ const OUTPUT_DIR = resolve(PROJECT_ROOT, "src/data/meta-builds");
 const QUEUES = {
   "ranked-solo": { id: 420, name: "Ranked Solo/Duo" },
   aram: { id: 450, name: "ARAM" },
-  arena: { id: 1700, name: "Arena" },
+  // Arena is queue 1750, NOT the 1700 in Riot's static queues.json. Riot reworked
+  // Arena from 2v2v2v2 to a six-team format in patch 26.10 (16.10) and moved it to
+  // a new queue ID without updating queues.json (which still lists only the dead
+  // 1700 and 1710). Confirmed empirically: live Arena matches return gameMode
+  // "CHERRY" under queueId 1750. The old 1700 has had no games since the rework.
+  arena: { id: 1750, name: "Arena" },
 } as const;
 
 type QueueKey = keyof typeof QUEUES;
@@ -114,6 +119,15 @@ const MATCHES_PER_PLAYER = TEST_MODE ? 20 : 100;
  * to build each champion from, but only at SELECTION time inside aggregateBuilds.
  */
 const COLLECTION_WINDOW_DAYS = 30;
+
+/**
+ * Per-mode override of COLLECTION_WINDOW_DAYS. Arena uses a wider window: its
+ * current 3v3 format only began in patch 16.10 (mid-May 2026), so the entire
+ * format history is barely a month, it is a sparse mode, and a 30-day window can
+ * miss the priority seed's recent Arena games (which is what blocks the cascade
+ * from ever starting). Modes not listed use COLLECTION_WINDOW_DAYS.
+ */
+const MODE_WINDOW_DAYS: Partial<Record<QueueKey, number>> = { arena: 60 };
 
 /**
  * After an API-key change, how many recent in-window cached matches to re-fetch
@@ -1504,14 +1518,6 @@ async function main() {
     `Collection window: last ${COLLECTION_WINDOW_DAYS} days (drained every run) | selection ladder owned by aggregation\n`
   );
 
-  // One wide collection window, drained, every run. There is no per-window
-  // target and no widen-or-stop ladder at collection time: a single pass at
-  // COLLECTION_WINDOW_DAYS captures the recent multi-patch cushion, and the
-  // per-champion freshness ladder inside aggregateBuilds picks how far back to
-  // build each champion from at selection time.
-  const startTimeSeconds = startTimeSecondsForWindow(COLLECTION_WINDOW_DAYS);
-  const cutoffMs = windowCutoffMs(COLLECTION_WINDOW_DAYS);
-
   // Process each queue type sequentially. `--modes aram,arena` restricts the
   // run to specific modes so a finished one (e.g. ARAM already collected) can be
   // skipped without waiting for its huge snowball to drain.
@@ -1527,6 +1533,15 @@ async function main() {
   for (const queueKey of queueKeys) {
     const queue = QUEUES[queueKey];
     const modeNum = queueKeys.indexOf(queueKey) + 1;
+
+    // One wide collection window per mode, drained every run (no per-window
+    // target or widen-or-stop ladder). MODE_WINDOW_DAYS lets a mode override the
+    // default; the per-champion freshness ladder in aggregateBuilds still picks
+    // how far back to build each champion from at selection time.
+    const windowDays = MODE_WINDOW_DAYS[queueKey] ?? COLLECTION_WINDOW_DAYS;
+    const startTimeSeconds = startTimeSecondsForWindow(windowDays);
+    const cutoffMs = windowCutoffMs(windowDays);
+
     console.log(
       `\n━━━ ${queue.name} ━━━  (mode ${modeNum} of ${queueKeys.length})`
     );
@@ -1536,7 +1551,7 @@ async function main() {
       );
     }
     console.log(
-      `Collecting every reachable match from the last ${COLLECTION_WINDOW_DAYS} days.`
+      `Collecting every reachable match from the last ${windowDays} days.`
     );
 
     let matches: MatchData[] = [];
@@ -1566,7 +1581,7 @@ async function main() {
 
     const inWindowCount = countMatchesInWindow(matches, cutoffMs);
     console.log(
-      `  After ${COLLECTION_WINDOW_DAYS}d window: ${fmtN(
+      `  After ${windowDays}d window: ${fmtN(
         inWindowCount
       )} fresh / ${fmtN(matches.length)} cached`
     );
