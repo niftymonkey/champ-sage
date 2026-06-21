@@ -74,10 +74,21 @@ export function isUpdatePlanCommand(text: string): boolean {
 }
 
 /**
- * Factory for the game-plan feature. Binds the output schema to the
- * player's current item catalog so `buildPath[].name` is restricted by
- * OpenAI's strict-mode validator to valid item names only — the structural
- * fix for #109 augment-name-into-buildPath leakage.
+ * Factory for the game-plan feature. Binds the output schema to the item
+ * catalog so `buildPath[].name` can be enum-restricted to valid item names
+ * (the structural intent of #109 augment-name-into-buildPath leakage).
+ *
+ * DO NOT "mode-filter" this list via `filterItemsByMode` / `selectItemMode`.
+ * Item modes are ID-range partitions (`selectItemMode(ARAM)` is `"aram"`, which
+ * matches only the 320000+ ARAM-exclusive variants), NOT "items usable in this
+ * mode". ARAM is played with standard Summoner's Rift items, so filtering to
+ * `"aram"` collapses the enum to a tiny mana/enchanter subset and forces
+ * nonsense build paths (observed: Kog'Maw cornered into Winter's Approach x6).
+ *
+ * The full catalog currently exceeds the schema's 500-value enum cap, so the
+ * enum degrades to free strings (validation off) for now. That is preferable to
+ * a wrong, over-narrow enum. Restoring validation requires a correct
+ * "purchasable in this mode" item set (tracked separately), not this filter.
  */
 export function createGamePlanFeature(
   gameData: LoadedGameData

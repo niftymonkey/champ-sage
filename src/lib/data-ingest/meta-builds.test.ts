@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   deriveMetaItemPool,
   getChampionMeta,
+  loadMetaBuilds,
   type MetaBuildFile,
   type MetaBuildChampion,
 } from "./meta-builds";
@@ -78,5 +79,62 @@ describe("deriveMetaItemPool", () => {
     expect(result[0]).toBe(1001);
     expect(result[1]).toBe(1002);
     expect(result[2]).toBe(1003);
+  });
+});
+
+describe("loadMetaBuilds", () => {
+  function fakeFile(queueName: string): MetaBuildFile {
+    return {
+      patch: "16.99",
+      region: "na1",
+      queueId: 450,
+      queueName,
+      collectedAt: "2026-06-21T00:00:00Z",
+      champions: { "222": createChampion([{ items: [3031, 6672] }]) },
+    };
+  }
+
+  // Module map shaped like Vite's import.meta.glob output: relative path to a
+  // lazy importer whose resolved module has the file under `default`.
+  function fakeModules(
+    files: Record<string, MetaBuildFile>
+  ): Record<string, () => Promise<unknown>> {
+    return Object.fromEntries(
+      Object.entries(files).map(([path, file]) => [
+        path,
+        async () => ({ default: file }),
+      ])
+    );
+  }
+
+  it("loads each queue from its promoted file and leaves missing queues null", async () => {
+    const index = await loadMetaBuilds(
+      fakeModules({
+        "../../data/meta-builds/aram.json": fakeFile("ARAM"),
+      })
+    );
+    expect(index.aram?.queueName).toBe("ARAM");
+    expect(index.rankedSolo).toBeNull();
+    expect(index.arena).toBeNull();
+  });
+
+  it("does not load a staging .new.json as the live queue file", async () => {
+    // arena.new.json is an un-promoted staging file; the live loader must
+    // ignore it so the app never serves un-reviewed data.
+    const index = await loadMetaBuilds(
+      fakeModules({
+        "../../data/meta-builds/arena.new.json": fakeFile("Arena"),
+      })
+    );
+    expect(index.arena).toBeNull();
+  });
+
+  it("degrades to an all-null index when no module map is available", async () => {
+    // Mirrors the offline tsx harnesses (audit-augments / dump-data) where the
+    // Vite glob transform is absent. The previous `typeof import.meta.glob`
+    // guard handled this but also fired in the production renderer, silently
+    // stripping the meta item pool from coaching prompts.
+    const index = await loadMetaBuilds({});
+    expect(index).toEqual({ aram: null, rankedSolo: null, arena: null });
   });
 });
