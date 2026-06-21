@@ -10,6 +10,7 @@ function mayhemAug(
 ): RawCDragonAugment {
   return {
     id,
+    augmentNameId: `ARAM_${name.replace(/\s/g, "")}`,
     nameTRA: name,
     rarity,
     augmentSmallIconPath: `/lol-game-data/assets/ASSETS/UX/Kiwi/Augments/Icons/${name.replace(
@@ -116,6 +117,7 @@ describe("buildAugmentPatchlineReport", () => {
     const input = makeInput();
     input.candidate.push({
       id: 99,
+      augmentNameId: "ArenaThing",
       nameTRA: "Arena Thing",
       rarity: "kGold",
       augmentSmallIconPath:

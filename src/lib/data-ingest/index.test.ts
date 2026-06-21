@@ -1,8 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { loadGameData, loadCachedGameData, checkForNewVersion } from "./index";
+import {
+  loadGameData,
+  loadCachedGameData,
+  checkForNewVersion,
+  mergeMayhemAugments,
+  kiwiResolutionStats,
+  KIWI_MIN_RESOLUTION_RATE,
+} from "./index";
 import * as dataDragon from "./sources/data-dragon";
 import * as wikiAugments from "./sources/wiki-augments";
 import * as arenaAugments from "./sources/wiki-arena-augments";
+import * as kiwiAugments from "./sources/cdragon-kiwi-augments";
 import * as communityDragon from "./sources/community-dragon";
 import * as aramOverrides from "./sources/wiki-aram-overrides";
 import * as cache from "./cache";
@@ -11,7 +19,17 @@ import type { AramOverrides, Champion, Item, Augment, RuneTree } from "./types";
 vi.mock("./sources/data-dragon");
 vi.mock("./sources/wiki-augments");
 vi.mock("./sources/wiki-arena-augments");
-vi.mock("./sources/community-dragon");
+vi.mock("./sources/cdragon-kiwi-augments");
+// Partial mock: only the network call (mergeAugmentIds) is stubbed. The pure
+// helpers normalizeForMatch / MISSING_DESCRIPTION_PLACEHOLDER stay real because
+// mergeMayhemAugments (under test here) depends on them.
+vi.mock("./sources/community-dragon", async (importOriginal) => {
+  const actual = await importOriginal<typeof communityDragon>();
+  return {
+    ...actual,
+    mergeAugmentIds: vi.fn(),
+  };
+});
 vi.mock("./sources/wiki-aram-overrides");
 vi.mock("./cache", async (importOriginal) => {
   const actual = await importOriginal<typeof cache>();
@@ -112,9 +130,12 @@ beforeEach(() => {
   vi.mocked(dataDragon.fetchChampions).mockResolvedValue(createMockChampions());
   vi.mocked(dataDragon.fetchItems).mockResolvedValue(mockItems);
   vi.mocked(dataDragon.fetchRunes).mockResolvedValue(mockRunes);
-  vi.mocked(wikiAugments.fetchWikiAugments).mockResolvedValue(
+  // KIWI (CDragon raw) is the primary Mayhem source; the wiki is the fallback
+  // (empty by default so each test opts into the fallback scenario it needs).
+  vi.mocked(kiwiAugments.fetchKiwiAugments).mockResolvedValue(
     mockMayhemAugments
   );
+  vi.mocked(wikiAugments.fetchWikiAugments).mockResolvedValue(new Map());
   vi.mocked(arenaAugments.fetchArenaAugments).mockResolvedValue(
     mockArenaAugments
   );
@@ -141,6 +162,7 @@ describe("loadGameData", () => {
     expect(dataDragon.fetchChampions).toHaveBeenCalledWith("15.6.1");
     expect(dataDragon.fetchItems).toHaveBeenCalledWith("15.6.1");
     expect(dataDragon.fetchRunes).toHaveBeenCalledWith("15.6.1");
+    expect(kiwiAugments.fetchKiwiAugments).toHaveBeenCalled();
     expect(wikiAugments.fetchWikiAugments).toHaveBeenCalled();
     expect(arenaAugments.fetchArenaAugments).toHaveBeenCalled();
     // mergeAugmentIds receives the combined mayhem + arena map
@@ -289,12 +311,12 @@ describe("loadCachedGameData", () => {
 });
 
 describe("loadGameData ingest-failure fallback", () => {
-  it("returns the last cached payload when an ingest source throws", async () => {
-    // Wiki-side breakage (e.g. a new unicode char that crashes the Lua parser)
-    // must not blank the app. If a prior fetch succeeded and is still cached,
-    // loadGameData has to surface that data instead of propagating the error.
-    vi.mocked(wikiAugments.fetchWikiAugments).mockRejectedValue(
-      new SyntaxError("[1198:426] code unit U+2013 is not allowed")
+  it("returns the last cached payload when a hard source throws", async () => {
+    // A hard dependency failing (here Data Dragon) must not blank the app. If a
+    // prior fetch succeeded and is still cached, loadGameData has to surface
+    // that data instead of propagating the error.
+    vi.mocked(dataDragon.fetchChampions).mockRejectedValue(
+      new Error("data dragon outage")
     );
     vi.mocked(cache.readCache).mockResolvedValue({
       version: "15.6.1",
@@ -313,14 +335,42 @@ describe("loadGameData ingest-failure fallback", () => {
   });
 
   it("propagates the ingest error when no cached payload exists", async () => {
-    vi.mocked(wikiAugments.fetchWikiAugments).mockRejectedValue(
-      new SyntaxError("[1198:426] code unit U+2013 is not allowed")
+    vi.mocked(dataDragon.fetchChampions).mockRejectedValue(
+      new Error("data dragon outage")
     );
     vi.mocked(cache.readCache).mockResolvedValue(null);
 
-    await expect(loadGameData()).rejects.toThrow(
-      /code unit U\+2013 is not allowed/
+    await expect(loadGameData()).rejects.toThrow(/data dragon outage/);
+  });
+
+  it("tolerates a wiki outage by serving CDragon-raw Mayhem descriptions", async () => {
+    // The wiki is now only the fallback. With it down, the raw KIWI source up,
+    // and a cold cache, ingest must still produce real Mayhem text rather than
+    // failing through to the cache.
+    vi.mocked(wikiAugments.fetchWikiAugments).mockRejectedValue(
+      new Error("wiki 503")
     );
+    vi.mocked(kiwiAugments.fetchKiwiAugments).mockResolvedValue(
+      new Map<string, Augment>([
+        [
+          "typhoon",
+          {
+            name: "Typhoon",
+            description: "Raw storm damage",
+            tier: "Gold",
+            sets: [],
+            mode: "mayhem",
+          },
+        ],
+      ])
+    );
+    vi.mocked(cache.readCache).mockResolvedValue(null);
+
+    const data = await loadGameData();
+
+    const typhoon = data.augments.get("typhoon");
+    expect(typhoon?.mode).toBe("mayhem");
+    expect(typhoon?.description).toBe("Raw storm damage");
   });
 });
 
@@ -350,6 +400,12 @@ describe("patchline-aware loading", () => {
       expect.any(Map),
       "pbe"
     );
+  });
+
+  it("passes the patchline through to fetchKiwiAugments", async () => {
+    await loadGameData("pbe");
+
+    expect(kiwiAugments.fetchKiwiAugments).toHaveBeenCalledWith("pbe");
   });
 
   it("reads the pbe-namespaced cache key in production mode", async () => {
@@ -389,6 +445,133 @@ describe("patchline-aware loading", () => {
     await loadCachedGameData("pbe");
 
     expect(cache.readCache).toHaveBeenCalledWith("game-data:pbe");
+  });
+});
+
+describe("mergeMayhemAugments", () => {
+  const aug = (over: Partial<Augment> & { name: string }): Augment => ({
+    description: "",
+    tier: "Silver",
+    sets: [],
+    mode: "mayhem",
+    ...over,
+  });
+
+  it("keeps the raw KIWI description over the wiki's", () => {
+    const kiwi = new Map([
+      ["typhoon", aug({ name: "Typhoon", description: "Raw storm" })],
+    ]);
+    const wiki = new Map([
+      ["typhoon", aug({ name: "Typhoon", description: "Wiki storm" })],
+    ]);
+
+    expect(mergeMayhemAugments(kiwi, wiki).get("typhoon")?.description).toBe(
+      "Raw storm"
+    );
+  });
+
+  it("fills an empty raw description from the wiki", () => {
+    const kiwi = new Map([
+      ["typhoon", aug({ name: "Typhoon", description: "" })],
+    ]);
+    const wiki = new Map([
+      ["typhoon", aug({ name: "Typhoon", description: "Wiki storm" })],
+    ]);
+
+    expect(mergeMayhemAugments(kiwi, wiki).get("typhoon")?.description).toBe(
+      "Wiki storm"
+    );
+  });
+
+  it("adds a wiki Mayhem augment the raw source did not supply", () => {
+    const kiwi = new Map([
+      ["typhoon", aug({ name: "Typhoon", description: "Raw storm" })],
+    ]);
+    const wiki = new Map([
+      ["flux", aug({ name: "Flux", description: "Wiki flux" })],
+    ]);
+
+    const merged = mergeMayhemAugments(kiwi, wiki);
+    expect(merged.size).toBe(2);
+    expect(merged.get("flux")?.description).toBe("Wiki flux");
+  });
+
+  it("falls back to the placeholder when neither source has a description", () => {
+    const kiwi = new Map([
+      ["typhoon", aug({ name: "Typhoon", description: "" })],
+    ]);
+
+    expect(
+      mergeMayhemAugments(kiwi, new Map()).get("typhoon")?.description
+    ).toBe(communityDragon.MISSING_DESCRIPTION_PLACEHOLDER);
+  });
+
+  it("matches across punctuation differences when filling descriptions", () => {
+    const kiwi = new Map([
+      ["get excited", aug({ name: "Get Excited", description: "" })],
+    ]);
+    const wiki = new Map([
+      [
+        "get excited!",
+        aug({ name: "Get Excited!", description: "Wiki excite" }),
+      ],
+    ]);
+
+    expect(
+      mergeMayhemAugments(kiwi, wiki).get("get excited")?.description
+    ).toBe("Wiki excite");
+  });
+
+  it("does not mutate the input KIWI augment objects when filling", () => {
+    const kiwiAug = aug({ name: "Typhoon", description: "" });
+    const kiwi = new Map([["typhoon", kiwiAug]]);
+    const wiki = new Map([
+      ["typhoon", aug({ name: "Typhoon", description: "Wiki storm" })],
+    ]);
+
+    mergeMayhemAugments(kiwi, wiki);
+    expect(kiwiAug.description).toBe("");
+  });
+});
+
+describe("kiwiResolutionStats", () => {
+  const aug = (description: string): Augment => ({
+    name: "x",
+    description,
+    tier: "Silver",
+    sets: [],
+    mode: "mayhem",
+  });
+
+  it("counts non-empty descriptions and computes the rate", () => {
+    const kiwi = new Map([
+      ["a", aug("real")],
+      ["b", aug("")],
+      ["c", aug("real")],
+      ["d", aug("real")],
+    ]);
+
+    const stats = kiwiResolutionStats(kiwi);
+    expect(stats.total).toBe(4);
+    expect(stats.nonEmpty).toBe(3);
+    expect(stats.rate).toBeCloseTo(0.75);
+  });
+
+  it("reports a zero rate for an empty map (raw source yielded nothing)", () => {
+    const stats = kiwiResolutionStats(new Map());
+    expect(stats).toEqual({ total: 0, nonEmpty: 0, rate: 0 });
+    expect(stats.rate).toBeLessThan(KIWI_MIN_RESOLUTION_RATE);
+  });
+
+  it("treats a fully-resolved set as at or above the trust threshold", () => {
+    const kiwi = new Map([
+      ["a", aug("real")],
+      ["b", aug("real")],
+    ]);
+
+    expect(kiwiResolutionStats(kiwi).rate).toBeGreaterThanOrEqual(
+      KIWI_MIN_RESOLUTION_RATE
+    );
   });
 });
 

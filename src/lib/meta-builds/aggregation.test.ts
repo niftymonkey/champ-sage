@@ -1,0 +1,515 @@
+import { describe, it, expect } from "vitest";
+import {
+  extractMatchData,
+  countMatchesInWindow,
+  selectRecentInWindowMatchIds,
+  selectChampionParticipants,
+  computeFreshShare,
+  aggregateBuilds,
+  CHAMPION_PARTICIPANT_TARGET,
+  type MatchData,
+  type ParticipantData,
+  type WindowedParticipant,
+  type QueueMeta,
+} from "./aggregation";
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// Fixed reference time so window math is deterministic across the suite.
+const NOW_MS = Date.UTC(2026, 5, 16); // 2026-06-16
+
+function daysAgoMs(days: number): number {
+  return NOW_MS - days * MS_PER_DAY;
+}
+
+const ARAM_QUEUE: QueueMeta = { id: 450, name: "ARAM" };
+
+function createPerks(): ParticipantData["perks"] {
+  return {
+    statPerks: { defense: 5002, flex: 5008, offense: 5005 },
+    styles: [
+      {
+        description: "primaryStyle",
+        style: 8000,
+        selections: [{ perk: 8005 }, { perk: 9111 }],
+      },
+    ],
+  };
+}
+
+function createParticipant(
+  overrides: Partial<ParticipantData> = {}
+): ParticipantData {
+  return {
+    puuid: "puuid-default",
+    championId: 222,
+    championName: "Jinx",
+    win: true,
+    items: [3031, 6672, 3094, 3036, 3072, 3026, 3340],
+    perks: createPerks(),
+    teamPosition: "BOTTOM",
+    augments: [],
+    ...overrides,
+  };
+}
+
+function createMatch(overrides: Partial<MatchData> = {}): MatchData {
+  return {
+    matchId: "NA1_000",
+    queueId: 450,
+    gameVersion: "16.12.123.456",
+    gameDuration: 1800,
+    gameEndTimestamp: NOW_MS,
+    participants: [createParticipant()],
+    ...overrides,
+  };
+}
+
+function createWindowedParticipant(
+  overrides: {
+    participant?: Partial<ParticipantData>;
+    gameEndTimestamp?: number;
+    gameVersion?: string;
+  } = {}
+): WindowedParticipant {
+  return {
+    participant: createParticipant(overrides.participant),
+    gameEndTimestamp: overrides.gameEndTimestamp ?? NOW_MS,
+    gameVersion: overrides.gameVersion ?? "16.12.123.456",
+  };
+}
+
+describe("extractMatchData", () => {
+  it("captures gameEndTimestamp from info.gameEndTimestamp (milliseconds)", () => {
+    const endMs = daysAgoMs(3);
+    const raw = {
+      info: {
+        queueId: 450,
+        gameVersion: "16.12.1.1",
+        gameDuration: 1500,
+        gameEndTimestamp: endMs,
+        participants: [
+          {
+            puuid: "p1",
+            championId: 222,
+            championName: "Jinx",
+            win: true,
+            item0: 3031,
+            item1: 6672,
+            item2: 3094,
+            item3: 0,
+            item4: 0,
+            item5: 0,
+            item6: 3340,
+            perks: createPerks(),
+            teamPosition: "BOTTOM",
+          },
+        ],
+      },
+    };
+
+    const match = extractMatchData("NA1_42", raw);
+    expect(match).not.toBeNull();
+    expect(match?.gameEndTimestamp).toBe(endMs);
+    expect(match?.matchId).toBe("NA1_42");
+    expect(match?.gameVersion).toBe("16.12.1.1");
+    expect(match?.participants[0].championId).toBe(222);
+  });
+
+  it("returns null when info is missing", () => {
+    expect(extractMatchData("NA1_0", {})).toBeNull();
+  });
+});
+
+describe("countMatchesInWindow", () => {
+  it("counts only matches at or after the cutoff", () => {
+    const matches = [
+      createMatch({ matchId: "a", gameEndTimestamp: daysAgoMs(2) }),
+      createMatch({ matchId: "b", gameEndTimestamp: daysAgoMs(5) }),
+      createMatch({ matchId: "c", gameEndTimestamp: daysAgoMs(20) }),
+    ];
+    // 7-day cutoff includes a (2d) and b (5d), excludes c (20d).
+    const cutoff = daysAgoMs(7);
+    expect(countMatchesInWindow(matches, cutoff)).toBe(2);
+  });
+
+  it("treats a missing/zero timestamp as 0 (excluded from every window)", () => {
+    const matches = [
+      createMatch({ matchId: "fresh", gameEndTimestamp: daysAgoMs(1) }),
+      createMatch({ matchId: "legacy", gameEndTimestamp: 0 }),
+    ];
+    const cutoff = daysAgoMs(60);
+    expect(countMatchesInWindow(matches, cutoff)).toBe(1);
+  });
+});
+
+describe("selectRecentInWindowMatchIds", () => {
+  it("returns the n most recent in-window match ids, newest first", () => {
+    const matches = [
+      createMatch({ matchId: "old", gameEndTimestamp: daysAgoMs(10) }),
+      createMatch({ matchId: "newest", gameEndTimestamp: daysAgoMs(1) }),
+      createMatch({ matchId: "mid", gameEndTimestamp: daysAgoMs(4) }),
+    ];
+    expect(selectRecentInWindowMatchIds(matches, daysAgoMs(30), 2)).toEqual([
+      "newest",
+      "mid",
+    ]);
+  });
+
+  it("excludes matches older than the cutoff and legacy zero-timestamp ones", () => {
+    const matches = [
+      createMatch({ matchId: "in", gameEndTimestamp: daysAgoMs(3) }),
+      createMatch({ matchId: "out", gameEndTimestamp: daysAgoMs(40) }),
+      createMatch({ matchId: "legacy", gameEndTimestamp: 0 }),
+    ];
+    expect(selectRecentInWindowMatchIds(matches, daysAgoMs(30), 10)).toEqual([
+      "in",
+    ]);
+  });
+
+  it("returns at most n ids", () => {
+    const matches = Array.from({ length: 5 }, (_, i) =>
+      createMatch({ matchId: `m${i}`, gameEndTimestamp: daysAgoMs(i + 1) })
+    );
+    expect(
+      selectRecentInWindowMatchIds(matches, daysAgoMs(30), 3)
+    ).toHaveLength(3);
+  });
+
+  it("returns an empty array when nothing is in window", () => {
+    const matches = [
+      createMatch({ matchId: "old", gameEndTimestamp: daysAgoMs(60) }),
+    ];
+    expect(selectRecentInWindowMatchIds(matches, daysAgoMs(30), 5)).toEqual([]);
+  });
+});
+
+describe("selectChampionParticipants", () => {
+  const LADDER = [7, 14, 30, 60];
+
+  it("uses only 7d data when the champion has >=K participants in the 7d window", () => {
+    const participants: WindowedParticipant[] = [];
+    // K within 7 days.
+    for (let i = 0; i < CHAMPION_PARTICIPANT_TARGET; i++) {
+      participants.push(
+        createWindowedParticipant({ gameEndTimestamp: daysAgoMs(3) })
+      );
+    }
+    // Plenty more in the 14d window that must NOT be used.
+    for (let i = 0; i < 50; i++) {
+      participants.push(
+        createWindowedParticipant({ gameEndTimestamp: daysAgoMs(10) })
+      );
+    }
+
+    const result = selectChampionParticipants(
+      participants,
+      LADDER,
+      NOW_MS,
+      CHAMPION_PARTICIPANT_TARGET
+    );
+    expect(result.windowDaysUsed).toBe(7);
+    expect(result.participants.length).toBe(CHAMPION_PARTICIPANT_TARGET);
+  });
+
+  it("backfills to 14d when below K at 7d but >=K at 14d", () => {
+    const participants: WindowedParticipant[] = [];
+    // 10 in the 7d window.
+    for (let i = 0; i < 10; i++) {
+      participants.push(
+        createWindowedParticipant({ gameEndTimestamp: daysAgoMs(2) })
+      );
+    }
+    // 40 more in the 8..14d band, total 50 within 14d (>= K).
+    for (let i = 0; i < 40; i++) {
+      participants.push(
+        createWindowedParticipant({ gameEndTimestamp: daysAgoMs(12) })
+      );
+    }
+
+    const result = selectChampionParticipants(
+      participants,
+      LADDER,
+      NOW_MS,
+      CHAMPION_PARTICIPANT_TARGET
+    );
+    expect(result.windowDaysUsed).toBe(14);
+    // All 50 within the 14d window are eligible once we settle on 14d.
+    expect(result.participants.length).toBe(50);
+  });
+
+  it("uses all available at the widest window when K is never reached", () => {
+    const participants: WindowedParticipant[] = [];
+    // Only 5 total, scattered, fewer than K at every rung.
+    participants.push(
+      createWindowedParticipant({ gameEndTimestamp: daysAgoMs(3) })
+    );
+    participants.push(
+      createWindowedParticipant({ gameEndTimestamp: daysAgoMs(10) })
+    );
+    participants.push(
+      createWindowedParticipant({ gameEndTimestamp: daysAgoMs(25) })
+    );
+    participants.push(
+      createWindowedParticipant({ gameEndTimestamp: daysAgoMs(45) })
+    );
+    // One outside the 60d ladder entirely: still used at the widest rung,
+    // since "use all available" applies when K is never reached.
+    participants.push(
+      createWindowedParticipant({ gameEndTimestamp: daysAgoMs(90) })
+    );
+
+    const result = selectChampionParticipants(
+      participants,
+      LADDER,
+      NOW_MS,
+      CHAMPION_PARTICIPANT_TARGET
+    );
+    expect(result.windowDaysUsed).toBe(60);
+    expect(result.participants.length).toBe(5);
+  });
+});
+
+describe("computeFreshShare", () => {
+  it("returns 1.0 when all used participants are on the target patch", () => {
+    const used = [
+      createWindowedParticipant({ gameVersion: "16.12.1.1" }),
+      createWindowedParticipant({ gameVersion: "16.12.500.999" }),
+    ];
+    expect(computeFreshShare(used, "16.12")).toBe(1);
+  });
+
+  it("returns 0.0 when none are on the target patch", () => {
+    const used = [
+      createWindowedParticipant({ gameVersion: "16.11.1.1" }),
+      createWindowedParticipant({ gameVersion: "16.10.1.1" }),
+    ];
+    expect(computeFreshShare(used, "16.12")).toBe(0);
+  });
+
+  it("returns the correct fraction for a mixed set", () => {
+    const used = [
+      createWindowedParticipant({ gameVersion: "16.12.1.1" }),
+      createWindowedParticipant({ gameVersion: "16.12.9.9" }),
+      createWindowedParticipant({ gameVersion: "16.11.1.1" }),
+      createWindowedParticipant({ gameVersion: "16.10.1.1" }),
+    ];
+    expect(computeFreshShare(used, "16.12")).toBeCloseTo(0.5, 10);
+  });
+
+  it("matches on the first two version segments only", () => {
+    const used = [createWindowedParticipant({ gameVersion: "16.12.123.456" })];
+    expect(computeFreshShare(used, "16.12")).toBe(1);
+  });
+
+  it("returns 0 for an empty set", () => {
+    expect(computeFreshShare([], "16.12")).toBe(0);
+  });
+});
+
+describe("aggregateBuilds", () => {
+  // Build a champion that has K participants spread so backfill is exercised:
+  // few in the 7d window, enough by 14d. Items identical so they cluster.
+  function freshMatchesForChampion(
+    championId: number,
+    championName: string
+  ): MatchData[] {
+    const matches: MatchData[] = [];
+    // 5 fresh (within 7d) on the target patch, all winners with the same build.
+    for (let i = 0; i < 5; i++) {
+      matches.push(
+        createMatch({
+          matchId: `${championName}-fresh-${i}`,
+          gameVersion: "16.12.10.10",
+          gameEndTimestamp: daysAgoMs(2),
+          participants: [
+            createParticipant({
+              puuid: `${championName}-p-fresh-${i}`,
+              championId,
+              championName,
+              win: true,
+              items: [3031, 6672, 3094, 3036, 3072, 3026, 3340],
+            }),
+          ],
+        })
+      );
+    }
+    // 40 more within 14d on an OLDER patch, same build, mix of wins so the
+    // cluster survives the 0.45 win-rate filter.
+    for (let i = 0; i < 40; i++) {
+      matches.push(
+        createMatch({
+          matchId: `${championName}-back-${i}`,
+          gameVersion: "16.11.5.5",
+          gameEndTimestamp: daysAgoMs(11),
+          participants: [
+            createParticipant({
+              puuid: `${championName}-p-back-${i}`,
+              championId,
+              championName,
+              win: i % 2 === 0,
+              items: [3031, 6672, 3094, 3036, 3072, 3026, 3340],
+            }),
+          ],
+        })
+      );
+    }
+    return matches;
+  }
+
+  it("produces per-champion builds via date-window backfill with freshness metrics", () => {
+    const matches = freshMatchesForChampion(222, "Jinx");
+    const output = aggregateBuilds(
+      matches,
+      ARAM_QUEUE,
+      ["16.12", "16.11"],
+      NOW_MS
+    );
+
+    expect(output.targetPatch).toBe("16.12");
+    expect(output.patch).toBe("16.12");
+    expect(output.queueId).toBe(450);
+    expect(output.queueName).toBe("ARAM");
+
+    const jinx = output.champions["222"];
+    expect(jinx).toBeDefined();
+    expect(jinx.championName).toBe("Jinx");
+    // 5 fresh at 7d is below K=40, so it backfills to 14d: 45 participants.
+    expect(jinx.windowDaysUsed).toBe(14);
+    expect(jinx.sampleSize).toBe(45);
+    // 5 of 45 used participants are on the target patch.
+    expect(jinx.freshPatchShare).toBeCloseTo(5 / 45, 10);
+    // Identical items cluster into one surviving build.
+    expect(jinx.builds.length).toBe(1);
+    expect(jinx.builds[0].games).toBe(45);
+  });
+
+  it("sets overall freshPatchShare across all used participants", () => {
+    const matches = freshMatchesForChampion(222, "Jinx");
+    const output = aggregateBuilds(
+      matches,
+      ARAM_QUEUE,
+      ["16.12", "16.11"],
+      NOW_MS
+    );
+    // All used participants belong to Jinx: 5 of 45 are fresh.
+    expect(output.freshPatchShare).toBeCloseTo(5 / 45, 10);
+  });
+
+  it("uses only the 7d window for a champion that has >=K fresh participants", () => {
+    const matches: MatchData[] = [];
+    // 40 fresh winners within 7d, plus extra older ones that must be ignored.
+    for (let i = 0; i < CHAMPION_PARTICIPANT_TARGET; i++) {
+      matches.push(
+        createMatch({
+          matchId: `fresh-${i}`,
+          gameVersion: "16.12.10.10",
+          gameEndTimestamp: daysAgoMs(3),
+          participants: [
+            createParticipant({
+              puuid: `p-fresh-${i}`,
+              championId: 99,
+              championName: "Lux",
+              win: i % 3 !== 0,
+            }),
+          ],
+        })
+      );
+    }
+    for (let i = 0; i < 20; i++) {
+      matches.push(
+        createMatch({
+          matchId: `old-${i}`,
+          gameVersion: "16.10.1.1",
+          gameEndTimestamp: daysAgoMs(40),
+          participants: [
+            createParticipant({
+              puuid: `p-old-${i}`,
+              championId: 99,
+              championName: "Lux",
+            }),
+          ],
+        })
+      );
+    }
+
+    const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
+    const lux = output.champions["99"];
+    expect(lux.windowDaysUsed).toBe(7);
+    expect(lux.sampleSize).toBe(CHAMPION_PARTICIPANT_TARGET);
+    expect(lux.freshPatchShare).toBe(1);
+  });
+
+  it("preserves the >=3-item, >=2-games, >=0.45-winrate filters", () => {
+    const matches: MatchData[] = [];
+    // A champion whose only build is a single game (fails >=2 games) → dropped.
+    matches.push(
+      createMatch({
+        matchId: "solo",
+        gameVersion: "16.12.1.1",
+        gameEndTimestamp: daysAgoMs(2),
+        participants: [
+          createParticipant({
+            puuid: "solo-p",
+            championId: 1,
+            championName: "Annie",
+            win: true,
+          }),
+        ],
+      })
+    );
+    // A participant with <3 items (remake) for another champion is excluded
+    // from clustering, leaving that champion with no qualifying build.
+    matches.push(
+      createMatch({
+        matchId: "remake",
+        gameVersion: "16.12.1.1",
+        gameEndTimestamp: daysAgoMs(2),
+        participants: [
+          createParticipant({
+            puuid: "remake-p",
+            championId: 2,
+            championName: "Olaf",
+            win: true,
+            items: [3031, 0, 0, 0, 0, 0, 3340],
+          }),
+        ],
+      })
+    );
+
+    const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
+    // Annie: single game → no build survives the >=2 games filter.
+    expect(output.champions["1"]).toBeUndefined();
+    // Olaf: only participant has <3 items → excluded, no build.
+    expect(output.champions["2"]).toBeUndefined();
+  });
+
+  it("aggregates popularAugments when participants carry augments", () => {
+    const matches: MatchData[] = [];
+    for (let i = 0; i < 4; i++) {
+      matches.push(
+        createMatch({
+          matchId: `aug-${i}`,
+          gameVersion: "16.12.1.1",
+          gameEndTimestamp: daysAgoMs(2),
+          participants: [
+            createParticipant({
+              puuid: `aug-p-${i}`,
+              championId: 555,
+              championName: "Pyke",
+              win: i % 2 === 0,
+              augments: [101, 202],
+            }),
+          ],
+        })
+      );
+    }
+
+    const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
+    const pyke = output.champions["555"];
+    expect(pyke).toBeDefined();
+    expect(pyke.popularAugments).toBeDefined();
+    const aug101 = pyke.popularAugments?.find((a) => a.augmentId === 101);
+    expect(aug101?.picks).toBe(4);
+  });
+});

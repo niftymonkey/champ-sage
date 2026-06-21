@@ -19,6 +19,8 @@ function cdragonAugmentsUrl(patchline: Patchline): string {
 
 export interface RawCDragonAugment {
   id: number;
+  /** Riot apiName, e.g. "ARAM_ADAPt". Joins the catalog to the per-mode bin. */
+  augmentNameId: string;
   nameTRA: string;
   augmentSmallIconPath: string;
   rarity: string;
@@ -58,7 +60,7 @@ export function normalizeForMatch(name: string): string {
     .trim();
 }
 
-function normalizePath(path: string, patchline: Patchline): string {
+export function normalizePath(path: string, patchline: Patchline): string {
   const cleaned = path.replace("/lol-game-data/assets/", "").toLowerCase();
   return `https://raw.communitydragon.org/${cdragonBranch(
     patchline
@@ -145,7 +147,7 @@ export async function mergeAugmentIds(
  * Mayhem augments only use kSilver/kGold/kPrismatic; anything else falls back
  * to Silver so a kept augment always has a valid tier.
  */
-function rarityToTier(rarity: string): Augment["tier"] {
+export function rarityToTier(rarity: string): Augment["tier"] {
   switch (rarity) {
     case "kPrismatic":
       return "Prismatic";
