@@ -1,6 +1,6 @@
 # KIWI (ARAM Mayhem) Augment Descriptions from Raw CommunityDragon Data
 
-Status: Ready to implement. Design approved 2026-06-20. Not started.
+Status: Implemented. Design approved 2026-06-20.
 Owner: data-ingest. Related research: `docs/research/kiwi-augment-extraction-spike.md`. Reference map: `docs/reference/technical-reference.md` ("Augment descriptions: where each mode's text comes from").
 
 ## Problem

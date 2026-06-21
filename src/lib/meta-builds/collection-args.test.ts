@@ -38,4 +38,15 @@ describe("parseModesArg", () => {
   it("returns an empty array when all requested modes are invalid", () => {
     expect(parseModesArg(["--modes=bogus"], VALID)).toEqual([]);
   });
+
+  it("dedupes repeated modes", () => {
+    expect(parseModesArg(["--modes=aram,aram,arena"], VALID)).toEqual([
+      "aram",
+      "arena",
+    ]);
+  });
+
+  it("returns an empty array when --modes is given without a value (run nothing, not all)", () => {
+    expect(parseModesArg(["--modes"], VALID)).toEqual([]);
+  });
 });

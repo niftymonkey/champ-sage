@@ -1031,6 +1031,10 @@ async function collectMatchesSnowball(
   // the live frontier is chased first. A for-loop (not while) is used so every
   // `continue` advances the queue via the update expression before re-testing.
   let consecutiveZeroNew = 0;
+  // Track how the loop actually terminates so the end-of-run log is accurate:
+  // the for-loop running out means the queue drained; the saturation break
+  // below means a long dry run. They are not the same outcome.
+  let endReason = "queue-exhausted";
   for (let puuid = queue.next(); puuid !== undefined; puuid = queue.next()) {
     if (queriedPuuids.has(puuid)) continue;
     const source = puuidSource.get(puuid) ?? "new";
@@ -1145,6 +1149,7 @@ async function collectMatchesSnowball(
     // frontier from masquerading as saturation here.
     consecutiveZeroNew = matchesAddedThisQuery > 0 ? 0 : consecutiveZeroNew + 1;
     if (consecutiveZeroNew >= SATURATION_THRESHOLD) {
+      endReason = "saturated";
       clearLiveRegion();
       console.log(
         `  ${queueKey} saturated: ${SATURATION_THRESHOLD} queries with no new matches. ${fmtN(
@@ -1261,7 +1266,7 @@ async function collectMatchesSnowball(
     inWindowMatches: inWindowCount,
     totalPlayersQueried: queriedPuuids.size,
     queueSize: queue.size,
-    reason: "queue-exhausted",
+    reason: endReason,
   });
   clearLiveRegion();
   console.log(
