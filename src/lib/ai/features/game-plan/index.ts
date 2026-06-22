@@ -2,7 +2,9 @@ import type { CoachingFeature } from "../../feature";
 import type { BuildPathItem } from "../../types";
 import type { LoadedGameData } from "../../../data-ingest";
 import type { Item } from "../../../data-ingest/types";
+import type { GameMode } from "../../../mode/types";
 import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
+import { isBuildPathEligible } from "../../item-catalog";
 import { GAME_PLAN_TASK_PROMPT } from "./prompt";
 import { createGamePlanSchema, type GamePlanResult } from "./schema";
 
@@ -91,26 +93,37 @@ export function isUpdatePlanCommand(text: string): boolean {
 }
 
 /**
- * Factory for the game-plan feature. Binds the output schema to the item
- * catalog so `buildPath[].name` can be enum-restricted to valid item names
- * (the structural intent of #109 augment-name-into-buildPath leakage).
+ * Factory for the game-plan feature. Binds the output schema's `buildPath[].name`
+ * enum to the items that are build-path-eligible in the current mode, via the
+ * shared `isBuildPathEligible` predicate (completed, purchasable, non-consumable,
+ * mode-available). This re-enables name validation (#109) and structurally rules
+ * out consumables and off-catalog entries (#127).
  *
- * DO NOT "mode-filter" this list via `filterItemsByMode` / `selectItemMode`.
- * Item modes are ID-range partitions (`selectItemMode(ARAM)` is `"aram"`, which
- * matches only the 320000+ ARAM-exclusive variants), NOT "items usable in this
- * mode". ARAM is played with standard Summoner's Rift items, so filtering to
- * `"aram"` collapses the enum to a tiny mana/enchanter subset and forces
- * nonsense build paths (observed: Kog'Maw cornered into Winter's Approach x6).
+ * Two things this deliberately does NOT do, because they are not expressible as
+ * a per-element enum and belong to post-hoc validation (#117): cross-item
+ * legality (one boots, no duplicate Legendary, mutually exclusive item groups)
+ * and excluding items the player already owns.
  *
- * The full catalog currently exceeds the schema's 500-value enum cap, so the
- * enum degrades to free strings (validation off) for now. That is preferable to
- * a wrong, over-narrow enum. Restoring validation requires a correct
- * "purchasable in this mode" item set (tracked separately), not this filter.
+ * Why not the raw catalog or `filterItemsByMode`: the full catalog (~648 items)
+ * exceeds the schema's 500-value enum cap and silently disables the enum, while
+ * `filterItemsByMode(items, "aram")` returns only the ~21 ARAM-exclusive
+ * variants (ID-range partition, not "usable in ARAM") and cornered the model
+ * into a Winter's Approach x6 build. `isBuildPathEligible` accepts standard plus
+ * ARAM-variant items, ~150-200 names, comfortably under the cap.
  */
 export function createGamePlanFeature(
-  gameData: LoadedGameData
+  gameData: LoadedGameData,
+  mode: GameMode
 ): CoachingFeature<GamePlanInput, GamePlanResult> {
-  const itemNames = Array.from(gameData.items.values()).map((i) => i.name);
+  // Dedupe by name: in ARAM a standard item and its ARAM variant are both
+  // eligible and share a name, so the raw list carries ~21 duplicate names.
+  const itemNames = [
+    ...new Set(
+      Array.from(gameData.items.values())
+        .filter((item) => isBuildPathEligible(item, mode))
+        .map((i) => i.name)
+    ),
+  ];
   const schema = createGamePlanSchema(itemNames);
 
   return {

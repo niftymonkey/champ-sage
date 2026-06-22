@@ -26,7 +26,7 @@ import {
   GAME_MODE_CLASSIC,
   GAME_MODE_MAYHEM,
 } from "../mode/types";
-import type { Champion, Item } from "../data-ingest/types";
+import type { Champion, Item, ItemMode } from "../data-ingest/types";
 import {
   deriveMetaItemPool,
   getChampionMeta,
@@ -66,6 +66,50 @@ export function selectItemMode(mode: GameMode): string {
   }
   if (mode.matches(GAME_MODE_ARENA)) return "arena";
   return "standard";
+}
+
+/**
+ * Whether a build-path slot may contain this item in the given mode. The shared
+ * "build-path content rules" predicate (issue #127): a recommendable item is
+ * purchasable, durable (not a consumable or trinket), completed (components and
+ * basic boots are not end-state slots), and available in the current mode.
+ *
+ * This is the structural floor the game-plan name enum stands on. It cannot
+ * express cross-item legality (one boots, no duplicate Legendary, mutex item
+ * groups) or "already owned": those need the full set plus inventory and are
+ * enforced post-hoc (issue #117).
+ *
+ * Mode availability is a STOPGAP. It uses the ID-range `item.mode` partition
+ * (ARAM is played with standard items plus the ARAM variant overlay, so it
+ * accepts both). The durable source is DDragon's `maps` field, which the ingest
+ * currently drops; capturing it is tracked separately.
+ */
+export function isBuildPathEligible(item: Item, mode: GameMode): boolean {
+  if (!item.gold.purchasable) return false;
+  if (item.tags.includes("Consumable") || item.tags.includes("Trinket")) {
+    return false;
+  }
+  // Completed items only. Components build INTO something and are not an
+  // end-state slot. Boots are the exception: an upgraded boot may list a
+  // further upgrade in `into` but is a legitimate finished slot.
+  const isBoots = item.tags.includes("Boots");
+  if (item.into && item.into.length > 0 && !isBoots) return false;
+  if (item.gold.total < 500) return false;
+  return modeAcceptsItemMode(mode, item.mode);
+}
+
+/**
+ * Which `item.mode` partitions count as available in a given game mode. ARAM and
+ * Mayhem are played with standard Summoner's Rift items plus the ARAM variant
+ * overlay, so both partitions are accepted. Classic is standard-only; Arena is
+ * its own pool. Stopgap until DDragon `maps`-based availability is ingested.
+ */
+function modeAcceptsItemMode(mode: GameMode, itemMode: ItemMode): boolean {
+  if (mode.matches(GAME_MODE_ARAM) || mode.matches(GAME_MODE_MAYHEM)) {
+    return itemMode === "standard" || itemMode === "aram";
+  }
+  if (mode.matches(GAME_MODE_ARENA)) return itemMode === "arena";
+  return itemMode === "standard";
 }
 
 /** Format gold with a thousands separator. Cheap but readable. */

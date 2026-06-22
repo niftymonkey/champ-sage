@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildItemCatalogSections,
+  isBuildPathEligible,
   selectItemMode,
   selectMetaFile,
 } from "./item-catalog";
@@ -447,5 +448,156 @@ describe("buildItemCatalogSections", () => {
     expect(result.text).toContain("Kraken Slayer");
     expect(result.text).not.toMatch(/\bBoots\b/);
     expect(result.tier1Count).toBe(1);
+  });
+});
+
+describe("isBuildPathEligible", () => {
+  const aram = createStubMode(GAME_MODE_ARAM);
+  const classic = createStubMode(GAME_MODE_CLASSIC);
+  const arena = createStubMode(GAME_MODE_ARENA);
+
+  // A completed, purchasable, durable standard item: the eligible baseline.
+  // Per-case overrides flip one property to assert the rule it triggers.
+  function completed(
+    overrides: Partial<Item> & Pick<Item, "id" | "name">
+  ): Item {
+    return createItem({
+      mode: "standard",
+      tags: [],
+      gold: { base: 0, total: 3000, sell: 0, purchasable: true },
+      ...overrides,
+    });
+  }
+
+  it("accepts a completed purchasable standard item in ARAM", () => {
+    expect(
+      isBuildPathEligible(completed({ id: 1, name: "On-Hit Item" }), aram)
+    ).toBe(true);
+  });
+
+  it("accepts an ARAM variant item in ARAM (standard + aram overlay)", () => {
+    expect(
+      isBuildPathEligible(
+        completed({ id: 2, name: "ARAM Variant", mode: "aram" }),
+        aram
+      )
+    ).toBe(true);
+  });
+
+  it("accepts upgraded boots despite an into-upgrade", () => {
+    expect(
+      isBuildPathEligible(
+        completed({
+          id: 3,
+          name: "Plated Steelcaps",
+          tags: ["Boots"],
+          into: [90001],
+          gold: { base: 0, total: 1100, sell: 0, purchasable: true },
+        }),
+        aram
+      )
+    ).toBe(true);
+  });
+
+  it("rejects consumables", () => {
+    expect(
+      isBuildPathEligible(
+        completed({
+          id: 4,
+          name: "Poro-Snax",
+          mode: "aram",
+          tags: ["Consumable"],
+          gold: { base: 0, total: 50, sell: 0, purchasable: true },
+        }),
+        aram
+      )
+    ).toBe(false);
+  });
+
+  it("rejects trinkets", () => {
+    expect(
+      isBuildPathEligible(
+        completed({
+          id: 5,
+          name: "Stealth Ward",
+          tags: ["Trinket"],
+          gold: { base: 0, total: 0, sell: 0, purchasable: true },
+        }),
+        aram
+      )
+    ).toBe(false);
+  });
+
+  it("rejects components that build into another item", () => {
+    expect(
+      isBuildPathEligible(
+        completed({
+          id: 6,
+          name: "Pickaxe",
+          into: [3031],
+          gold: { base: 0, total: 875, sell: 0, purchasable: true },
+        }),
+        aram
+      )
+    ).toBe(false);
+  });
+
+  it("rejects sub-500-gold items", () => {
+    expect(
+      isBuildPathEligible(
+        completed({
+          id: 7,
+          name: "Cloth Armor",
+          gold: { base: 0, total: 300, sell: 0, purchasable: true },
+        }),
+        aram
+      )
+    ).toBe(false);
+  });
+
+  it("rejects non-purchasable items", () => {
+    expect(
+      isBuildPathEligible(
+        completed({
+          id: 8,
+          name: "Quest Reward",
+          gold: { base: 0, total: 1000, sell: 0, purchasable: false },
+        }),
+        aram
+      )
+    ).toBe(false);
+  });
+
+  it("rejects an arena-only item in ARAM", () => {
+    expect(
+      isBuildPathEligible(
+        completed({ id: 9, name: "Prismatic Thing", mode: "arena" }),
+        aram
+      )
+    ).toBe(false);
+  });
+
+  it("accepts only standard items in Classic, not ARAM variants", () => {
+    expect(
+      isBuildPathEligible(completed({ id: 10, name: "SR Item" }), classic)
+    ).toBe(true);
+    expect(
+      isBuildPathEligible(
+        completed({ id: 11, name: "ARAM Variant", mode: "aram" }),
+        classic
+      )
+    ).toBe(false);
+  });
+
+  it("accepts only arena items in Arena, not standard", () => {
+    expect(
+      isBuildPathEligible(
+        completed({ id: 12, name: "Prismatic", mode: "arena" }),
+        arena
+      )
+    ).toBe(true);
+    expect(
+      isBuildPathEligible(completed({ id: 13, name: "SR Item" }), arena)
+    ).toBe(false);
   });
 });

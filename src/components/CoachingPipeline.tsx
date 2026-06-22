@@ -193,7 +193,10 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       personality: getPersonality,
       phase: "in-game",
     });
-    gamePlanFeatureRef.current = createGamePlanFeature(gameDataRef.current);
+    gamePlanFeatureRef.current = createGamePlanFeature(
+      gameDataRef.current,
+      mode
+    );
     setChosenAugments([]);
     gamePlanRevRef.current = 0;
     resetForNewGame();

@@ -628,7 +628,7 @@ function buildEvalInput(f: MultiTurnFixture): EvalInput {
       return normalize("augment-fit", value);
     }
     if (classification.kind === "game-plan") {
-      const gamePlanFeature = createGamePlanFeature(gameData);
+      const gamePlanFeature = createGamePlanFeature(gameData, mode);
       const { value } = await session.ask(
         gamePlanFeature,
         classification.input
