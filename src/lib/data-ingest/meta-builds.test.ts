@@ -130,11 +130,14 @@ describe("loadMetaBuilds", () => {
   });
 
   it("degrades to an all-null index when no module map is available", async () => {
-    // Mirrors the offline tsx harnesses (audit-augments / dump-data) where the
-    // Vite glob transform is absent. The previous `typeof import.meta.glob`
-    // guard handled this but also fired in the production renderer, silently
-    // stripping the meta item pool from coaching prompts.
-    const index = await loadMetaBuilds({});
+    // `null` is the explicit "no map" signal that exercises the degrade guard
+    // directly, mirroring the offline tsx harnesses (audit-augments /
+    // dump-data) where the Vite glob transform is absent and acquireGlobModules
+    // returns null. The previous `typeof import.meta.glob` guard handled this
+    // but also fired in the production renderer, silently stripping the meta
+    // item pool from coaching prompts. An empty map ({}) would instead pass
+    // through loadFile and is not the same code path.
+    const index = await loadMetaBuilds(null);
     expect(index).toEqual({ aram: null, rankedSolo: null, arena: null });
   });
 });

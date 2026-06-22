@@ -114,9 +114,14 @@ function acquireGlobModules(): GlobModules | null {
  * absent-reference behavior).
  */
 export async function loadMetaBuilds(
-  modulesOverride?: GlobModules
+  modulesOverride?: GlobModules | null
 ): Promise<MetaBuildIndex> {
-  const modules = modulesOverride ?? acquireGlobModules();
+  // `undefined` means "not provided, use the Vite glob"; `null` means "no map
+  // available" and drops straight to the degrade path. Distinguishing them (vs
+  // `??`) lets a test exercise the null fallback that mirrors the tsx harnesses,
+  // where `acquireGlobModules` itself returns null.
+  const modules =
+    modulesOverride === undefined ? acquireGlobModules() : modulesOverride;
   if (!modules) {
     return { aram: null, rankedSolo: null, arena: null };
   }
