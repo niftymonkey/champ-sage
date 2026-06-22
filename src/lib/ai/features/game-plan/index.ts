@@ -2,7 +2,9 @@ import type { CoachingFeature } from "../../feature";
 import type { BuildPathItem } from "../../types";
 import type { LoadedGameData } from "../../../data-ingest";
 import type { Item } from "../../../data-ingest/types";
+import type { GameMode } from "../../../mode/types";
 import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
+import { isBuildPathEligible } from "../../item-catalog";
 import { GAME_PLAN_TASK_PROMPT } from "./prompt";
 import { createGamePlanSchema, type GamePlanResult } from "./schema";
 
@@ -50,39 +52,78 @@ export function buildGamePlanQuestion(): string {
 /**
  * Voice-command trigger for mid-game plan refresh.
  *
- * Two design constraints shape the pattern:
+ * Detection is intent-based, not start-anchored. Players phrase the command
+ * naturally and mid-sentence ("you should update the game plan", "these are
+ * wrong, update the plan", "I think you should update gameplay"), so the old
+ * `^`-anchored matcher silently dropped real commands. Two parts:
  *
- * 1. **Start-anchored.** Coaching questions that mention "plan" start with
- *    wh-words or auxiliaries ("what's the plan for dragon", "should I update
- *    my plan", "is my plan working"). Imperative commands start with the verb
- *    (optionally after narrow filler like "please" / "hey" / "coach"). The
- *    `^` anchor rejects the question forms without losing command coverage.
- * 2. **Verb-gated, excluding "new".** Requires both a command verb AND "plan"
- *    in close proximity — bare "plan" appears too naturally in coaching
- *    dialogue to trigger on. "new" was considered and rejected: `"my new
- *    plan is to split push"` and `"that's a new plan"` are commentary, not
- *    commands.
- * 3. **Tolerates "gameplan" as one word.** Whisper transcription occasionally
- *    collapses "game plan" into "gameplan"; `\s*` between "game" and "plan"
- *    accepts both forms.
+ * 1. **Command, matched anywhere.** A command verb (update / refresh / rework /
+ *    redo / replace / remake, plus their `-ing` forms) followed by an optional
+ *    article and the plan target. "plan", "game plan", Whisper's one-word
+ *    "gameplan" (`game\s*plan`), and its mishearing "gameplay" all count. Bare
+ *    "plan" without a command verb stays inert, so commentary like "that's a
+ *    new plan" or "the plan is working" does not fire.
+ * 2. **Deliberative guard.** Reject self-directed questions where the player is
+ *    weighing whether to update rather than commanding it ("should I update my
+ *    plan?", "do you think I should update the plan?"). These must fall through
+ *    to a coaching answer instead of silently regenerating the plan. The guard
+ *    keys on a first-person subject ("should I", "do we", "I should"), so
+ *    coach-directed requests ("you should update...", "can you update...") still
+ *    fire.
+ *
+ * Known limitation: embedded negation ("don't update the plan", "I don't think
+ * you should") is not detected and will fire. It is rare in live voice;
+ * detecting it robustly is the intent-classifier path we deliberately skipped.
  */
-const UPDATE_PLAN_PATTERN =
-  /^(?:(?:please|hey|ok|okay|coach)\s+)*(update|refresh|rework|redo|replace|remake)\s+(?:the\s+|my\s+)?(?:game\s*)?plan\b/i;
+const UPDATE_VERB =
+  "(?:update|updating|refresh|refreshing|rework|reworking|redo|redoing|replace|replacing|remake|remaking)";
+
+const UPDATE_PLAN_COMMAND = new RegExp(
+  `\\b${UPDATE_VERB}\\s+(?:(?:the|my|our|your)\\s+)?(?:game\\s*)?(?:plan|gameplay)\\b`,
+  "i"
+);
+
+const DELIBERATIVE_QUESTION =
+  /\b(?:should|shall|can|could|would|will|do|does|did)\s+(?:i|we)\b|\b(?:i|we)\s+should\b/i;
 
 export function isUpdatePlanCommand(text: string): boolean {
-  return UPDATE_PLAN_PATTERN.test(text.trim());
+  const trimmed = text.trim();
+  if (DELIBERATIVE_QUESTION.test(trimmed)) return false;
+  return UPDATE_PLAN_COMMAND.test(trimmed);
 }
 
 /**
- * Factory for the game-plan feature. Binds the output schema to the
- * player's current item catalog so `buildPath[].name` is restricted by
- * OpenAI's strict-mode validator to valid item names only — the structural
- * fix for #109 augment-name-into-buildPath leakage.
+ * Factory for the game-plan feature. Binds the output schema's `buildPath[].name`
+ * enum to the items that are build-path-eligible in the current mode, via the
+ * shared `isBuildPathEligible` predicate (completed, purchasable, non-consumable,
+ * mode-available). This re-enables name validation (#109) and structurally rules
+ * out consumables and off-catalog entries (#127).
+ *
+ * Two things this deliberately does NOT do, because they are not expressible as
+ * a per-element enum and belong to post-hoc validation (#117): cross-item
+ * legality (one boots, no duplicate Legendary, mutually exclusive item groups)
+ * and excluding items the player already owns.
+ *
+ * Why not the raw catalog or `filterItemsByMode`: the full catalog (~648 items)
+ * exceeds the schema's 500-value enum cap and silently disables the enum, while
+ * `filterItemsByMode(items, "aram")` returns only the ~21 ARAM-exclusive
+ * variants (ID-range partition, not "usable in ARAM") and cornered the model
+ * into a Winter's Approach x6 build. `isBuildPathEligible` accepts standard plus
+ * ARAM-variant items, ~150-200 names, comfortably under the cap.
  */
 export function createGamePlanFeature(
-  gameData: LoadedGameData
+  gameData: LoadedGameData,
+  mode: GameMode
 ): CoachingFeature<GamePlanInput, GamePlanResult> {
-  const itemNames = Array.from(gameData.items.values()).map((i) => i.name);
+  // Dedupe by name: in ARAM a standard item and its ARAM variant are both
+  // eligible and share a name, so the raw list carries ~21 duplicate names.
+  const itemNames = [
+    ...new Set(
+      Array.from(gameData.items.values())
+        .filter((item) => isBuildPathEligible(item, mode))
+        .map((i) => i.name)
+    ),
+  ];
   const schema = createGamePlanSchema(itemNames);
 
   return {

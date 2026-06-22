@@ -477,6 +477,8 @@ The app should use the Live Client Data API for real-time game state during play
 
 Arena/ARAM variant items are **overrides on standard items**, not separate items. Same item, different gold cost or stats for that mode. The Mode Module should start with standard items and overlay the mode-specific variant data.
 
+**Gotcha: `item.mode` is an exclusive ID-range partition, not "available in mode."** `classifyItemMode` (in `data-dragon.ts`) assigns each item exactly ONE mode by its ID range, so `filterItemsByMode(items, "aram")` returns ONLY the ~21 ARAM variant items (mana/enchanter/tank rebalances: Tear, Archangel's, Winter's Approach, Dawncore, Redemption, Frozen Heart, ...), NOT the ~254 standard items ARAM is actually played with. Never use it as a "purchasable in this mode" filter. Feeding that 21-item set to the game-plan `buildPath` name enum collapsed the model's choices to those mana items and cornered it into a Winter's Approach x6 build. A correct "purchasable in ARAM" set is the standard items with the variant overlay applied, not the `"aram"` partition.
+
 **Item name quirks:** Some items (Gangplank upgrades) have HTML in the `name` field like `<rarityLegendary>Fire at Will</rarityLegendary><br><subtitleLeft>...`. We strip HTML and take only the text before `<br>`.
 
 **Non-purchasable zero-gold items** are system internals (turret buffs, quest trackers, structure bounties). Filtered out during ingest. Purchasable zero-gold items (wards, trinkets) are kept.
@@ -602,6 +604,14 @@ Resolution: collect records where `__type === "AugmentData"` from the KIWI bin, 
 **Why the old gate broke.** The previous design stopped collecting when TOTAL cached matches reached 50,000 (blind to recency) and aggregated with a HARD patch-set filter (`patchSet.has(p)`). Against a cache full of old-patch matches, a re-run fetched zero new matches and aggregation produced `champions: {}`. The date-window model fixes both: the gate counts only in-window matches, and selection never hard-drops a champion for being on a slightly older patch.
 
 **Pure logic lives in `src/lib/meta-builds/aggregation.ts`** (side-effect free, no `Date.now()` inside: callers pass `nowMs`/cutoffs at the boundary). The script `scripts/fetch-meta-builds.ts` owns the I/O loops and imports the types and helpers. Output adds `targetPatch` (newest major.minor from DDragon `versions.json`, element 0) and `freshPatchShare` (fraction of used participants on `targetPatch`) at both the top level and per champion, plus `windowDaysUsed` per champion. The legacy `patch` field is kept equal to `targetPatch` so existing consumers do not break.
+
+### Loading meta-build JSON in the app (`import.meta.glob`)
+
+The app loads `src/data/meta-builds/*.json` through Vite's `import.meta.glob` (`loadMetaBuilds` in `src/lib/data-ingest/meta-builds.ts`). Two non-obvious facts caused a silent production regression:
+
+- **Only the CALL form of `import.meta.glob` is rewritten.** Vite replaces `import.meta.glob("...")` at build time with a static map of lazy importers, but it does NOT define `import.meta.glob` as a runtime value. A bare reference (`import.meta.glob` without calling it) is therefore `undefined` at runtime in the bundled renderer too, not just under tsx/Node. So `typeof import.meta.glob !== "function"` is ALWAYS true and is the wrong way to feature-detect: it silently strips meta builds from production coaching prompts while still working under tsx. Guard by wrapping the actual call in `try/catch` instead (tsx throws "import.meta.glob is not a function"; the renderer never reaches the catch).
+- **Vitest reproduces the call transform but not the absent-bare-reference behavior**, so a plain `loadMetaBuilds()` integration test cannot drive this regression red. `loadMetaBuilds` takes an optional injected module map (`modulesOverride`) purely as a test seam to exercise the load and degrade branches deterministically.
+- **Symptom signature:** when meta builds fail to load, the coaching system prompt's base-context loses the per-champion "Item pool" tier-1 section (~2,300 chars). Visible in logs as the `[game-plan] ask: ... base=NNNN` number dropping from ~5k to ~2.7k.
 
 ## ARAM Balance Overrides
 

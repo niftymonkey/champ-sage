@@ -9,6 +9,7 @@
     "build": "tsc && vite build",
     "audit-augments": "tsx scripts/audit-augments.ts",
     "build:electron": "tsup --config electron/tsup.config.ts && vite build",
+    "check-buildpath-enum": "tsx scripts/check-buildpath-enum.ts",
     "check-game": "tsx scripts/check-game.ts",
     "convert-fixtures": "tsx scripts/convert-fixtures-multiturn.ts",
     "dev": "vite",

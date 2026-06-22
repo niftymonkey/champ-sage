@@ -96,6 +96,14 @@ describe("isUpdatePlanCommand", () => {
       "update my gameplan",
       "refresh gameplan",
       "rework my gameplan",
+      // Targeted widen (#2): natural, mid-sentence phrasings the old
+      // start-anchored matcher missed. Intent is a command, so the plan should
+      // regenerate. "gameplay" is Whisper mishearing "game plan".
+      "you should update the game plan",
+      "I think you should update gameplay",
+      "these are wrong, update the plan",
+      "can you update the game plan",
+      "I want you to update the game plan",
     ];
     for (const phrase of hits) {
       it(`matches "${phrase}"`, () => {
@@ -121,6 +129,12 @@ describe("isUpdatePlanCommand", () => {
       "new game plan",
       "did my build plan update",
       "can you update my build",
+      // Deliberative questions: the player is weighing whether to update, not
+      // commanding it. Must fall through to a coaching answer, not silently
+      // regenerate the plan. These guard the targeted widen (#2) from
+      // over-firing.
+      "do you think I should update the plan",
+      "should we update the game plan or keep poking",
     ];
     for (const phrase of misses) {
       it(`does not match "${phrase}"`, () => {
