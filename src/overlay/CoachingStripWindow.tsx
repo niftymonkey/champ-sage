@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BehaviorSubject, Subject } from "rxjs";
 import type { CoachingResponse } from "../lib/ai/types";
 import { getLogger } from "../lib/logger";
+import { classifyStripResponse } from "./classify-strip-response";
 import { createSlotResolver } from "./slot/resolver";
 import type {
   ActiveSlotItem,
@@ -106,12 +107,12 @@ export function CoachingStripWindow() {
         question?: string;
         rev?: number;
       };
-      if (!response?.answer) {
+      const action = classifyStripResponse(response);
+      if (action.kind === "skip") return;
+      if (action.kind === "warn-no-answer") {
         stripLog.warn("Response received with no answer - ignoring");
         return;
       }
-      // Augment-fit responses live on the separate badge overlay window.
-      if (response.source === "augment") return;
 
       setThinking(false);
       if (thinkingTimerRef.current) {
@@ -119,15 +120,13 @@ export function CoachingStripWindow() {
         thinkingTimerRef.current = null;
       }
 
-      const cleaned = stripMarkdown(response.answer);
+      const cleaned = stripMarkdown(action.answer);
       const timestamp = Date.now();
 
-      if (response.source === "plan") {
+      if (action.kind === "plan") {
         inputs.planRevision$.next({
           summary: cleaned,
-          // Defaults to 1 if the desktop sender did not include rev (older
-          // payloads or non-plan paths that misroute here).
-          rev: response.rev ?? 1,
+          rev: action.rev,
           timestamp,
         });
         return;
