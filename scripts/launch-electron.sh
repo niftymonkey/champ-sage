@@ -70,25 +70,41 @@ start_guard() {
     echo "[launch-electron] OWEPM_OVERRIDE_DISABLE=1: skipping the GEP override guard; OWEPM resolves natively (guard-off live test). Run 'pnpm ow-guard --healthcheck' for the pre-game prediction."
     return
   fi
+  # Exit codes are explicit so a guard failure never silently degrades to an
+  # unguarded launch: 3 = serve the override; 1 = no live build resolvable, a
+  # known degrade (launch unguarded, the in-app banner warns); anything else is
+  # an unexpected guard crash, so abort rather than launch onto a build we never
+  # verified.
   ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --check )
-  if [ $? -eq 3 ]; then
-    echo "[launch-electron] latest live GEP build is resolvable; serving local override manifest on port ${OWEPM_OVERRIDE_PORT}"
-    ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --serve --port "${OWEPM_OVERRIDE_PORT}" ) &
-    GUARD_PID=$!
-    echo "[launch-electron] Waiting for override manifest server..."
-    tries=0
-    until curl -s "http://localhost:${OWEPM_OVERRIDE_PORT}/packages" > /dev/null; do
-      tries=$((tries + 1))
+  guard_status=$?
+  case "${guard_status}" in
+    3)
+      echo "[launch-electron] latest live GEP build is resolvable; serving local override manifest on port ${OWEPM_OVERRIDE_PORT}"
+      ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-package-guard.ts --serve --port "${OWEPM_OVERRIDE_PORT}" ) &
+      GUARD_PID=$!
+      echo "[launch-electron] Waiting for override manifest server..."
+      tries=0
+      until curl -s "http://localhost:${OWEPM_OVERRIDE_PORT}/packages" > /dev/null; do
+        tries=$((tries + 1))
+        if [ "${tries}" -ge 50 ]; then
+          break
+        fi
+        sleep 0.2
+      done
       if [ "${tries}" -ge 50 ]; then
-        echo "[launch-electron] WARNING: override server did not start; launching without override"
-        break
+        echo "[launch-electron] WARNING: override server did not become ready; launching WITHOUT override. Augment coaching may be unavailable; the in-app 'Update required' banner will flag it." >&2
+      else
+        OWEPM_FLAG="'--owepm-packages-url=http://localhost:${OWEPM_OVERRIDE_PORT}/packages'"
       fi
-      sleep 0.2
-    done
-    if [ "${tries}" -lt 50 ]; then
-      OWEPM_FLAG="'--owepm-packages-url=http://localhost:${OWEPM_OVERRIDE_PORT}/packages'"
-    fi
-  fi
+      ;;
+    1)
+      echo "[launch-electron] WARNING: no live GEP build resolvable (guard --check exit 1); launching WITHOUT override. Augment coaching may be unavailable; the in-app 'Update required' banner will flag it." >&2
+      ;;
+    *)
+      echo "[launch-electron] ERROR: ow-package-guard --check exited ${guard_status} (unexpected); the guard itself failed. Refusing to launch silently unguarded, fix the guard and retry." >&2
+      exit "${guard_status}"
+      ;;
+  esac
 }
 
 # Launch loop. The in-app "Restart now" calls app.exit(RELAUNCH_EXIT_CODE); the

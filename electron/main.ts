@@ -7,7 +7,14 @@ import {
   screen,
   shell,
 } from "electron";
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+  readFileSync,
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import { join } from "node:path";
 import WebSocket from "ws";
 import {
@@ -38,6 +45,8 @@ import type { DecisionQuery } from "../src/lib/decision-log/types";
 import {
   fetchGepFloor,
   evaluateGepHealth,
+  GEP_UID,
+  STUB_OWEPK_MAX_BYTES,
   type GepHealthVerdict,
 } from "../src/lib/gep-health";
 
@@ -586,6 +595,33 @@ function startGepHealthPolling(): void {
  * Fire-and-forget: a failed fetch degrades to a "floor unknown" green rather
  * than blocking package init.
  */
+/**
+ * Whether the cached GEP `.owepk` is a sub-megabyte stub, or undefined when it
+ * cannot be located. Lets the in-app verdict catch a stub that reports a real
+ * version string (which a version-vs-floor compare alone would miss). Resolves
+ * the Windows roaming AppData cache, where this ow-electron process runs.
+ */
+function loadedGepIsStub(): boolean | undefined {
+  try {
+    const roots = [
+      process.env.APPDATA ? join(process.env.APPDATA, "ow-electron") : null,
+      join(app.getPath("appData"), "ow-electron"),
+    ].filter((r): r is string => !!r);
+    for (const root of roots) {
+      if (!existsSync(root)) continue;
+      for (const appHash of readdirSync(root)) {
+        const owepk = join(root, appHash, "packages", `${GEP_UID}.owepk`);
+        if (existsSync(owepk)) {
+          return statSync(owepk).size < STUB_OWEPK_MAX_BYTES;
+        }
+      }
+    }
+  } catch {
+    // Best-effort: an unreadable cache leaves stub state undetermined.
+  }
+  return undefined;
+}
+
 async function reportGepHealth(loadedVersion: string): Promise<void> {
   try {
     const floor = await fetchGepFloor(LOL_GAME_ID);
@@ -593,6 +629,7 @@ async function reportGepHealth(loadedVersion: string): Promise<void> {
       loadedVersion,
       floor: floor?.minGepVersionElectron ?? null,
       augmentsState: floor?.augmentsState ?? null,
+      isStub: loadedGepIsStub(),
     });
     if (verdict.level === "green") {
       gepLog.info(

@@ -53,7 +53,7 @@ The guard had two version-resolution paths that had silently diverged:
 
 Why discovery cannot reach it: `discoverLatestVersion` scans the baseline line plus `minorLookahead=2, majorLookahead=1`, so from `306.0.0` it only probes the `306.0.x`, `306.1.x`, `306.2.x`, and `307.0.x` lines. Live-CDN probe today:
 
-```
+```text
 306.0.10 -> 206 (real)
 307.0.0  -> 403 (entire 307.0.x line is rotated off / never shipped)
 307.1.1  -> 206 (real)

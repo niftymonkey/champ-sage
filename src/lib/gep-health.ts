@@ -29,6 +29,17 @@ export interface Version {
  */
 export const GEP_UID = "hhideknibngookbhmhalphpipjeogcfefhobblkk";
 
+/**
+ * A real GEP `.owepk` is ~19 MB; the broken Overwolf builds ship a ~21 KB stub
+ * with no in-game handler. A cached package under this size is a stub. Mirrors
+ * the constant in `scripts/ow-package-guard.ts`; lives here too so the Electron
+ * main process can derive stub state for the in-app health verdict.
+ */
+export const STUB_OWEPK_MAX_BYTES = 1_000_000;
+
+/** Bounds the floor lookup so a hung status endpoint cannot hang the check. */
+const FLOOR_FETCH_TIMEOUT_MS = 10_000;
+
 export type GepHealthLevel = "green" | "warn" | "red";
 
 /**
@@ -148,15 +159,22 @@ interface RawGepStatus {
 }
 
 /**
+ * The default fetcher: a real network GET bounded by a timeout so a hung
+ * endpoint rejects (and the lookup degrades to null) instead of hanging.
+ */
+const defaultFloorFetcher: FloorFetcher = (url) =>
+  fetch(url, { signal: AbortSignal.timeout(FLOOR_FETCH_TIMEOUT_MS) });
+
+/**
  * Reads League's GEP floor and feature health from Overwolf's public per-game
  * status endpoint. This is a SEPARATE service from the package manifest, so it
  * stays usable as a floor signal during a manifest outage. Returns null on any
- * failure (unreachable, non-ok, malformed, or missing floor field) so callers
- * degrade to "floor unknown" rather than hard-failing.
+ * failure (unreachable, timed out, non-ok, malformed, or missing floor field)
+ * so callers degrade to "floor unknown" rather than hard-failing.
  */
 export async function fetchGepFloor(
   gameId: number,
-  fetcher: FloorFetcher = fetch
+  fetcher: FloorFetcher = defaultFloorFetcher
 ): Promise<GepFloor | null> {
   try {
     const res = await fetcher(gepStatusUrl(gameId));

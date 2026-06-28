@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   manifestIndicatesOutage,
   discoverLatestVersion,
@@ -103,6 +103,10 @@ describe("discoverLatestVersion", () => {
 describe("resolveGepVersion", () => {
   const baseline = { major: 306, minor: 0, patch: 0 };
 
+  afterEach(() => {
+    delete process.env.GEP_FORCE_VERSION;
+  });
+
   it("prefers the manifest-advertised build when it is downloadable on the CDN", async () => {
     // The recovered manifest advertises 307.4.6. CDN discovery from baseline
     // 306.0.0 can only reach 306.0.10 (307.0.x is a 403 gap), so without the
@@ -150,6 +154,26 @@ describe("resolveGepVersion", () => {
       manifest: null,
     });
     expect(version).toBeNull();
+  });
+
+  it("serves GEP_FORCE_VERSION when that build is downloadable (test hook)", async () => {
+    process.env.GEP_FORCE_VERSION = "306.0.10";
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.10", "307.4.6"]),
+      manifest: manifestWithGep("307.4.6"),
+    });
+    expect(version).toBe("306.0.10");
+  });
+
+  it("ignores GEP_FORCE_VERSION when that build is not downloadable and falls back", async () => {
+    process.env.GEP_FORCE_VERSION = "999.9.9";
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.2", "306.0.3"]),
+      manifest: null,
+    });
+    expect(version).toBe("306.0.3");
   });
 });
 

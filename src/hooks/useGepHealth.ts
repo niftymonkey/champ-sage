@@ -15,15 +15,22 @@ export function useGepHealth(): GepHealthVerdict | null {
     if (!api?.onGepHealth) return;
 
     let cancelled = false;
-    // Pull the verdict already computed at package-ready (it can fire before
-    // this renderer mounts), then subscribe for any later updates.
+    let pushed = false;
+    // Subscribe first so any live push wins, then pull the verdict already
+    // computed at package-ready (it can fire before this renderer mounts).
+    // The pull only applies when no push has landed yet, so a slow-resolving
+    // snapshot can never overwrite a newer pushed verdict.
+    const unsubscribe = api.onGepHealth((v) => {
+      if (cancelled) return;
+      pushed = true;
+      setVerdict(v);
+    });
     api
       .getGepHealth?.()
       .then((v) => {
-        if (!cancelled && v) setVerdict(v);
+        if (!cancelled && !pushed && v) setVerdict(v);
       })
       .catch(() => {});
-    const unsubscribe = api.onGepHealth(setVerdict);
 
     return () => {
       cancelled = true;
