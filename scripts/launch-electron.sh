@@ -84,7 +84,10 @@ start_guard() {
       GUARD_PID=$!
       echo "[launch-electron] Waiting for override manifest server..."
       tries=0
-      until curl -s "http://localhost:${OWEPM_OVERRIDE_PORT}/packages" > /dev/null; do
+      # -f rejects non-2xx (a stray process answering 4xx/5xx on the port must
+      # not count as ready); --max-time 1 bounds each poll; 127.0.0.1 drops the
+      # localhost DNS/IPv6 ambiguity (the guard binds 127.0.0.1).
+      until curl -fs --max-time 1 "http://127.0.0.1:${OWEPM_OVERRIDE_PORT}/packages" > /dev/null; do
         tries=$((tries + 1))
         if [ "${tries}" -ge 50 ]; then
           break
@@ -94,7 +97,7 @@ start_guard() {
       if [ "${tries}" -ge 50 ]; then
         echo "[launch-electron] WARNING: override server did not become ready; launching WITHOUT override. Augment coaching may be unavailable; the in-app 'Update required' banner will flag it." >&2
       else
-        OWEPM_FLAG="'--owepm-packages-url=http://localhost:${OWEPM_OVERRIDE_PORT}/packages'"
+        OWEPM_FLAG="'--owepm-packages-url=http://127.0.0.1:${OWEPM_OVERRIDE_PORT}/packages'"
       fi
       ;;
     1)
