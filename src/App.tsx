@@ -56,6 +56,8 @@ import {
 } from "./lib/voice/stt-provider";
 import { InGameView } from "./components/InGameView";
 import { CoachingPipeline } from "./components/CoachingPipeline";
+import { GepHealthBanner } from "./components/GepHealthBanner";
+import { useGepHealth } from "./hooks/useGepHealth";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
 import { WindowChrome } from "./surfaces/WindowChrome";
 import { ChromeStatus } from "./surfaces/ChromeStatus";
@@ -128,6 +130,10 @@ function App() {
   const liveGame = useLiveGameState();
   useUserInput();
   useZoom();
+  const gepHealth = useGepHealth();
+  const handleGepRestart = useCallback(() => {
+    window.electronAPI?.restartToUpdate?.();
+  }, []);
 
   useEffect(() => {
     setMatchHistoryGameData(data);
@@ -368,6 +374,7 @@ function App() {
               />
             }
           />
+          <GepHealthBanner verdict={gepHealth} onRestart={handleGepRestart} />
           <div className="app-body">
             {surface === "in-game" ? (
               <InGameView state={effectiveState} gameData={data} />

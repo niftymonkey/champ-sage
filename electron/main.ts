@@ -35,6 +35,11 @@ import {
 } from "./decision-log/payload-map";
 import { randomUUID } from "node:crypto";
 import type { DecisionQuery } from "../src/lib/decision-log/types";
+import {
+  fetchGepFloor,
+  evaluateGepHealth,
+  type GepHealthVerdict,
+} from "../src/lib/gep-health";
 
 const app = electronApp;
 
@@ -62,6 +67,10 @@ const owApp: any =
 
 // League of Legends game IDs
 const LOL_GAME_ID = 5426;
+
+// Exit code the "Restart now" handler uses to ask the launcher to re-resolve
+// packages and restart ow-electron in place (see the launcher's relaunch loop).
+const RELAUNCH_EXIT_CODE = 42;
 
 // ---------------------------------------------------------------------------
 // Lockfile discovery
@@ -270,6 +279,27 @@ function registerSettingsIpc(): void {
 
 function registerIpcHandlers(): void {
   registerSettingsIpc();
+
+  // Renderer pulls the GEP health verdict on mount, since the GEP `ready`
+  // event that produces it can fire before the renderer subscribes.
+  ipcMain.handle("gep:get-health", () => lastGepHealth);
+
+  // "Restart now" from the update banner. GEP cannot be hot-reloaded, so a
+  // floor-clearing build only loads on a fresh launch. Exiting with this
+  // sentinel code makes the launcher (scripts/launch-electron.sh) re-run
+  // package resolution and restart ow-electron in place, which keeps the Vite
+  // dev server alive under `pnpm dev:electron`: a plain app.relaunch would exit
+  // the launcher and let `concurrently -k` tear Vite down, leaving the
+  // relaunched app with no renderer. The launcher's re-run of the guard
+  // re-resolves and purges the stale cache, so the build actually advances.
+  // User-initiated, so it never interrupts a game the player did not choose to
+  // leave.
+  ipcMain.on("gep:restart-to-update", () => {
+    appLog.info(
+      `Restart-to-update requested; exiting ${RELAUNCH_EXIT_CODE} for the launcher to re-resolve and restart`
+    );
+    app.exit(RELAUNCH_EXIT_CODE);
+  });
 
   ipcMain.handle(
     "discover_lcu",
@@ -494,6 +524,19 @@ const voiceLog = log.scope("voice");
 let gepInitialized = false;
 let overlayInitialized = false;
 
+// The most recent GEP health verdict. The GEP `ready` event fires once at
+// startup and can race the renderer's mount, so the verdict is cached here and
+// the renderer pulls it on mount (via the `gep:get-health` IPC) in addition to
+// subscribing to the `gep-health` push for any later updates.
+let lastGepHealth: GepHealthVerdict | null = null;
+
+// The GEP version ow-electron actually loaded (from the package `ready` event).
+// Re-evaluated against the live floor on a timer so a patch that raises the
+// floor mid-session surfaces a "restart to update" prompt without a relaunch.
+let loadedGepVersion: string | null = null;
+let gepHealthPollTimer: ReturnType<typeof setInterval> | null = null;
+const GEP_HEALTH_POLL_MS = 5 * 60_000;
+
 function initOverwolfFeatures(): void {
   if (!owApp) return;
 
@@ -510,7 +553,59 @@ function initOverwolfFeatures(): void {
       gepInitialized = true;
       initGep();
     }
+    // Pre-queue health check: the GEP that just loaded can still be silently
+    // rejected at game-attach if it is below League's current version floor (or
+    // a 0.0.0 stub), and no GEP event fires for that. Compare the loaded version
+    // against the floor Overwolf publishes and surface a verdict so the renderer
+    // can warn before the user queues, instead of discovering it mid-game.
+    if (packageName === "gep") {
+      loadedGepVersion = version;
+      void reportGepHealth(version);
+      startGepHealthPolling();
+    }
   });
+}
+
+/**
+ * Re-checks GEP health against the live floor on an interval. The loaded GEP
+ * version is fixed for the process lifetime, but League's floor rises on a
+ * patch, so a session left open across a patch needs a re-evaluation to surface
+ * the "restart to update" prompt. Started once, after the GEP package is ready.
+ */
+function startGepHealthPolling(): void {
+  if (gepHealthPollTimer) return;
+  gepHealthPollTimer = setInterval(() => {
+    if (loadedGepVersion) void reportGepHealth(loadedGepVersion);
+  }, GEP_HEALTH_POLL_MS);
+}
+
+/**
+ * Fetches League's published GEP floor and emits a health verdict to every
+ * window. The floor lives on a public Overwolf status endpoint separate from
+ * the package manifest, so it is readable even when the manifest is unhealthy.
+ * Fire-and-forget: a failed fetch degrades to a "floor unknown" green rather
+ * than blocking package init.
+ */
+async function reportGepHealth(loadedVersion: string): Promise<void> {
+  try {
+    const floor = await fetchGepFloor(LOL_GAME_ID);
+    const verdict = evaluateGepHealth({
+      loadedVersion,
+      floor: floor?.minGepVersionElectron ?? null,
+      augmentsState: floor?.augmentsState ?? null,
+    });
+    if (verdict.level === "green") {
+      gepLog.info(
+        `GEP health green: v${loadedVersion} clears floor ${verdict.floor ?? "unknown"}`
+      );
+    } else {
+      gepLog.warn(`GEP health ${verdict.level}: ${verdict.reason}`);
+    }
+    lastGepHealth = verdict;
+    sendToAllWindows("gep-health", verdict);
+  } catch (err) {
+    gepLog.warn("GEP health check failed", err);
+  }
 }
 
 // --- Overlay ---

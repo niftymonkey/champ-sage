@@ -57,6 +57,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("gep-game-event", handler);
   },
 
+  // GEP pre-queue health verdict (augments will/won't attach this game)
+  onGepHealth: (callback: (event: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("gep-health", handler);
+    return () => ipcRenderer.removeListener("gep-health", handler);
+  },
+
+  // Pull the current GEP health verdict (the `ready` event that produces it
+  // can fire before the renderer subscribes).
+  getGepHealth: () => ipcRenderer.invoke("gep:get-health"),
+
+  // "Restart now" from the update banner: relaunch to load the latest GEP.
+  restartToUpdate: () => ipcRenderer.send("gep:restart-to-update"),
+
   // Overlay injection status
   onOverlayStatus: (callback: (event: unknown) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>

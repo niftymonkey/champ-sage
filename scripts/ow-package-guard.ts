@@ -49,6 +49,14 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
+import {
+  fetchGepFloor,
+  evaluateGepHealth,
+  parseVersion,
+} from "../src/lib/gep-health";
+
+// League of Legends Overwolf game id; used to read the published GEP floor.
+const LOL_GAME_ID = 5426;
 
 const DEFAULT_OVERWOLF_MANIFEST_URL =
   "https://electronapi.overwolf.com/packages";
@@ -262,6 +270,81 @@ async function maxLiveInLine(
   return best;
 }
 
+/** Fetches the live Overwolf package manifest, or null when it cannot be reached. */
+export type ManifestFetcher = () => Promise<OverwolfPackagesManifest | null>;
+
+async function fetchManifestSafe(
+  url: string
+): Promise<OverwolfPackagesManifest | null> {
+  try {
+    return await fetchOverwolfManifest(url);
+  } catch (err) {
+    log(`Overwolf manifest fetch failed: ${String(err)}`);
+    return null;
+  }
+}
+
+const defaultManifestFetcher: ManifestFetcher = () =>
+  fetchManifestSafe(DEFAULT_OVERWOLF_MANIFEST_URL);
+
+/**
+ * Resolves the GEP version the override should serve: the single source of
+ * truth for both `--check` and `--serve`, so the version the guard reports and
+ * the one it actually serves never diverge.
+ *
+ * Prefers the version the recovered Overwolf manifest advertises, but only when
+ * that exact build is downloadable on the CDN. The manifest can advertise a
+ * build whose binary has not yet propagated, and during the 0.0.0 outage it
+ * advertises a stub; in those cases, and when the manifest is unreachable, this
+ * falls back to CDN baseline discovery so the guard still lands on a live build.
+ * Returns null only when neither source yields one.
+ *
+ * Seeding from the manifest is what lets the override track League's rising
+ * minimum-version floor without a hand-maintained baseline: CDN discovery alone
+ * cannot reach a new (major, minor) line beyond its lookahead window once the
+ * intervening line is a 403 gap (baseline 306.0.0 cannot see 307.4.x when the
+ * whole 307.0.x line is rotated off).
+ */
+export async function resolveGepVersion(args: {
+  baseline: Version;
+  probe: VersionProbe;
+  manifest: OverwolfPackagesManifest | null;
+}): Promise<string | null> {
+  const { baseline, probe, manifest } = args;
+  // Test hook: GEP_FORCE_VERSION pins the override to a specific (CDN-live)
+  // build so a stale-GEP restart can be exercised on demand, e.g. launching
+  // with GEP_FORCE_VERSION=306.0.10 loads a below-floor build that the
+  // "Restart now" flow then upgrades. Ignored when the build is not
+  // downloadable, and unset by the launcher after the first launch so the
+  // relaunch resolves the real latest.
+  const forced = process.env.GEP_FORCE_VERSION;
+  if (forced) {
+    if (await probe(forced)) {
+      log(
+        `GEP_FORCE_VERSION=${forced} (test): serving this build, not the latest`
+      );
+      return forced;
+    }
+    log(`GEP_FORCE_VERSION=${forced} is not downloadable on the CDN; ignoring`);
+  }
+  if (manifest && !manifestIndicatesOutage(manifest)) {
+    const advertised = manifest.packages?.find(
+      (p) => p.name === "gep"
+    )?.version;
+    if (advertised && (await probe(advertised))) {
+      return advertised;
+    }
+    if (advertised) {
+      log(
+        `Overwolf manifest advertises gep ${advertised} but the CDN has no such build; discovering via CDN`
+      );
+    }
+  } else if (manifest) {
+    log("Overwolf manifest is serving 0.0.0 stubs; discovering GEP via CDN");
+  }
+  return discoverLatestVersion({ baseline, probe });
+}
+
 /**
  * Builds the override manifest, resolving each package's version live: GEP to
  * the newest available build (it must clear League's current minimum-version
@@ -270,12 +353,14 @@ async function maxLiveInLine(
  * cannot be resolved, since an override without a working GEP is pointless.
  */
 export async function buildOverrideManifest(
-  probeFactory: ProbeFactory = makeCdnProbeFactory()
+  probeFactory: ProbeFactory = makeCdnProbeFactory(),
+  fetchManifest: ManifestFetcher = defaultManifestFetcher
 ): Promise<OverwolfPackagesManifest | null> {
+  const manifest = await fetchManifest();
   const packages: OverwolfPackage[] = [];
   for (const spec of PACKAGE_SPECS) {
     const probe = probeFactory(spec.channel);
-    const version = await resolvePackageVersion(spec, probe);
+    const version = await resolvePackageVersion(spec, probe, manifest);
     if (!version) {
       log(`could not resolve a live version for ${spec.name}`);
       if (spec.name === "gep") return null;
@@ -294,10 +379,14 @@ export async function buildOverrideManifest(
 
 async function resolvePackageVersion(
   spec: PackageSpec,
-  probe: VersionProbe
+  probe: VersionProbe,
+  manifest: OverwolfPackagesManifest | null
 ): Promise<string | null> {
   if (spec.resolve === "if-pin-dead" && spec.pin && (await probe(spec.pin))) {
     return spec.pin;
+  }
+  if (spec.resolve === "always") {
+    return resolveGepVersion({ baseline: spec.baseline, probe, manifest });
   }
   return discoverLatestVersion({ baseline: spec.baseline, probe });
 }
@@ -510,15 +599,46 @@ async function fetchOverwolfManifest(
   return (await res.json()) as OverwolfPackagesManifest;
 }
 
-async function serveOverrideManifest(port: number): Promise<void> {
-  const manifest = await buildOverrideManifest();
-  if (!manifest) {
-    log(
-      "no live GEP build found near baseline; not serving override (bump the gep baseline in PACKAGE_SPECS)"
-    );
-    process.exit(EXIT_ERROR);
-  }
+/**
+ * Wraps an async resolver in a time-to-live cache. Within `ttlMs` of the last
+ * successful resolve the cached value is returned without re-resolving; past it,
+ * the resolver runs again. A resolve that returns null does not overwrite the
+ * cache, so a transient failure keeps serving the last good value.
+ *
+ * The override server uses this so that an in-app relaunch (which re-fetches the
+ * override but does not restart the long-lived guard process) picks up a build
+ * newer than the one resolved at startup, e.g. after a League patch raises the
+ * floor while the dev session is still running.
+ */
+export function createCachedResolver<T>(opts: {
+  resolve: () => Promise<T | null>;
+  ttlMs: number;
+  now: () => number;
+}): () => Promise<T | null> {
+  let cached: { value: T; at: number } | null = null;
+  return async () => {
+    const t = opts.now();
+    if (cached && t - cached.at < opts.ttlMs) return cached.value;
+    const fresh = await opts.resolve();
+    if (fresh !== null) cached = { value: fresh, at: t };
+    return fresh ?? cached?.value ?? null;
+  };
+}
 
+// The override server re-resolves at most this often: long enough to coalesce
+// the burst of requests within one ow-electron launch, short enough that an
+// in-app relaunch after a patch fetches a newer build on the next request.
+const OVERRIDE_RESOLVE_TTL_MS = 15_000;
+
+/**
+ * Resolves the override manifest, reconciles the local cache against it, and
+ * returns the JSON body to serve (null when no live GEP build can be resolved).
+ * Run behind {@link createCachedResolver} so a re-resolve after a patch purges
+ * the now-stale cache and serves the newer build to the next launch.
+ */
+async function resolveOverrideBody(): Promise<string | null> {
+  const manifest = await buildOverrideManifest();
+  if (!manifest) return null;
   try {
     const packagesDir = resolvePackagesDir();
     if (packagesDir) {
@@ -534,18 +654,39 @@ async function serveOverrideManifest(port: number): Promise<void> {
   } catch (err) {
     log(`cache reconcile failed, continuing: ${String(err)}`);
   }
+  const versions = manifest.packages
+    .map((p) => `${p.name}@${p.version}`)
+    .join(", ");
+  log(`resolved override manifest (${versions})`);
+  return JSON.stringify(manifest);
+}
 
-  const body = JSON.stringify(manifest);
+async function serveOverrideManifest(port: number): Promise<void> {
+  const getBody = createCachedResolver({
+    resolve: resolveOverrideBody,
+    ttlMs: OVERRIDE_RESOLVE_TTL_MS,
+    now: () => Date.now(),
+  });
+
+  // Resolve once up front: fail fast if no GEP build exists, and reconcile the
+  // cache before ow-electron starts.
+  const initial = await getBody();
+  if (!initial) {
+    log(
+      "no live GEP build found near baseline; not serving override (bump the gep baseline in PACKAGE_SPECS)"
+    );
+    process.exit(EXIT_ERROR);
+  }
+
   const server = createServer((_req, res) => {
-    res.writeHead(200, { "content-type": "application/json" });
-    res.end(body);
+    void getBody().then((body) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(body ?? initial);
+    });
   });
   server.listen(port, "127.0.0.1", () => {
-    const versions = manifest.packages
-      .map((p) => `${p.name}@${p.version}`)
-      .join(", ");
     log(
-      `serving override manifest on http://localhost:${port}/packages (${versions})`
+      `serving override manifest on http://localhost:${port}/packages (re-resolves every ${OVERRIDE_RESOLVE_TTL_MS / 1000}s)`
     );
   });
   const shutdown = () => server.close(() => process.exit(0));
@@ -554,29 +695,19 @@ async function serveOverrideManifest(port: number): Promise<void> {
 }
 
 /**
- * The newest real GEP build being served, used as the target the local cache
- * must match. Trusts the Overwolf manifest's version when it is healthy (a fast
- * single fetch), and falls back to probing the CDN directly when the manifest
- * is in its 0.0.0 outage or is unreachable, so a manifest regression never
- * blinds the guard. Returns null only when neither source yields a version.
+ * The newest real GEP build the override will serve, used by `--check` as the
+ * target the local cache must match. Delegates to {@link resolveGepVersion} so
+ * `--check` reports exactly the version `--serve` will build, never a manifest
+ * value that bare CDN discovery cannot actually reach. Returns null only when
+ * neither the manifest nor the CDN yields a version.
  */
 async function resolveLatestServedGep(url: string): Promise<string | null> {
   const gep = PACKAGE_SPECS.find((s) => s.name === "gep");
   if (!gep) return null;
-  try {
-    const manifest = await fetchOverwolfManifest(url);
-    if (!manifestIndicatesOutage(manifest)) {
-      const served = manifest.packages?.find((p) => p.name === "gep")?.version;
-      if (served) return served;
-    } else {
-      log("Overwolf manifest is serving 0.0.0 stubs; discovering GEP via CDN");
-    }
-  } catch (err) {
-    log(`manifest fetch failed, discovering GEP via CDN: ${String(err)}`);
-  }
-  return discoverLatestVersion({
+  return resolveGepVersion({
     baseline: gep.baseline,
     probe: makeCdnProbeFactory()(gep.channel),
+    manifest: await fetchManifestSafe(url),
   });
 }
 
@@ -600,10 +731,61 @@ async function runCheck(url: string): Promise<number> {
     log("could not determine the latest served GEP build; skipping override");
     return EXIT_ERROR;
   }
+  await warnIfBelowFloor(latestServed);
   log(
     `serving override to the newest real GEP build [${latestServed}] (cache: ${cacheDesc}); OWEPM re-stubs without it`
   );
   return EXIT_OVERRIDE_NEEDED;
+}
+
+/**
+ * Logs a loud warning when the build the override would serve is below League's
+ * published floor, baking a floor cross-check into the per-launch drift log.
+ * Soft: an unreachable floor endpoint is silently skipped, never a hard fail.
+ */
+async function warnIfBelowFloor(served: string | null): Promise<void> {
+  if (!served) return;
+  const floor = await fetchGepFloor(LOL_GAME_ID);
+  if (!floor) return;
+  const s = parseVersion(served);
+  const f = parseVersion(floor.minGepVersionElectron);
+  if (s && f && compareVersions(s, f) < 0) {
+    log(
+      `WARNING: served GEP ${served} is BELOW League's floor ${floor.minGepVersionElectron}; it will be rejected at game-attach and augments will not fire`
+    );
+  }
+}
+
+/**
+ * Reads the cached GEP build and League's published floor and prints a pre-game
+ * health verdict, so the guard-off live test (OWEPM_OVERRIDE_DISABLE=1) has a
+ * single watchable command. Exit code: 0 green, 1 warn, 2 red.
+ */
+async function runHealthcheck(): Promise<number> {
+  const cached = readCachedGep(resolvePackagesDir());
+  const floor = await fetchGepFloor(LOL_GAME_ID);
+  const floorStr = floor?.minGepVersionElectron ?? "unknown";
+
+  if (!cached) {
+    log(
+      `healthcheck: no GEP cached yet; OWEPM will resolve on launch (floor ${floorStr})`
+    );
+    return 0;
+  }
+
+  const verdict = evaluateGepHealth({
+    loadedVersion: cached.version || "0.0.0",
+    floor: floor?.minGepVersionElectron ?? null,
+    augmentsState: floor?.augmentsState ?? null,
+    isStub: cached.isStub,
+  });
+  const cacheDesc = cached.isStub
+    ? `stub (${cached.version || "unextracted"})`
+    : cached.version || "unextracted";
+  log(
+    `healthcheck: ${verdict.level.toUpperCase()} (cached gep ${cacheDesc}, floor ${floorStr}): ${verdict.reason}`
+  );
+  return verdict.level === "green" ? 0 : verdict.level === "warn" ? 1 : 2;
 }
 
 function parsePort(args: string[]): number {
@@ -627,7 +809,11 @@ const invokedDirectly = process.argv[1] === scriptPath;
 
 if (invokedDirectly) {
   const args = process.argv.slice(2);
-  const mode = args.includes("--serve") ? "serve" : "check";
+  const mode = args.includes("--serve")
+    ? "serve"
+    : args.includes("--healthcheck")
+      ? "healthcheck"
+      : "check";
   // Resolved against the script path (not cwd) so it always lands at the repo
   // root regardless of where the guard is invoked from.
   logSink = join(dirname(scriptPath), "..", ".ow-guard.log");
@@ -642,6 +828,8 @@ if (invokedDirectly) {
 
   if (mode === "serve") {
     void serveOverrideManifest(parsePort(args));
+  } else if (mode === "healthcheck") {
+    void runHealthcheck().then((code) => process.exit(code));
   } else {
     void runCheck(parseUrl(args)).then((code) => process.exit(code));
   }
