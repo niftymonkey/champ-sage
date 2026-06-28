@@ -10,7 +10,7 @@ describe("parseAugmentOfferNames", () => {
     expect(
       parseAugmentOfferNames({
         feature: "augments",
-        key: "me",
+        key: "augments",
         value: JSON.stringify({
           augment_1: { name: "Magic Missile" },
           augment_2: { name: "Quest: Steel Your Heart" },
@@ -24,7 +24,7 @@ describe("parseAugmentOfferNames", () => {
     expect(
       parseAugmentOfferNames({
         feature: "augments",
-        key: "me",
+        key: "augments",
         value: {
           augment_1: { name: "A" },
           augment_2: { name: "B" },
@@ -38,7 +38,7 @@ describe("parseAugmentOfferNames", () => {
     expect(
       parseAugmentOfferNames({
         feature: "match",
-        key: "me",
+        key: "augments",
         value: "{}",
       })
     ).toBeNull();
@@ -58,7 +58,7 @@ describe("parseAugmentOfferNames", () => {
     expect(
       parseAugmentOfferNames({
         feature: "augments",
-        key: "me",
+        key: "augments",
         value: "not-valid-json",
       })
     ).toBeNull();
@@ -68,7 +68,7 @@ describe("parseAugmentOfferNames", () => {
     expect(
       parseAugmentOfferNames({
         feature: "augments",
-        key: "me",
+        key: "augments",
         value: JSON.stringify({
           augment_1: { name: "Only One" },
           augment_2: { name: "" },
@@ -104,7 +104,7 @@ describe("parseAugmentPickedName", () => {
     expect(
       parseAugmentPickedName({
         feature: "augments",
-        key: "me",
+        key: "augments",
         value: "{}",
       })
     ).toBeNull();

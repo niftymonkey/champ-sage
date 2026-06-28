@@ -87,9 +87,11 @@ export function initGepBridge(): () => void {
         value?: string;
       };
 
-      // Augment offers — GEP sends these when the augment selection screen appears.
-      // The key is "me" under feature "augments", category "me".
-      if (update.feature === "augments" && update.key === "me") {
+      // Augment offers: GEP sends these when the augment selection screen
+      // appears, under feature "augments", key "augments" (the "me" is the GEP
+      // category, not the key, per Overwolf's League GEP docs). The PICK arrives
+      // separately under key "picked_augment".
+      if (update.feature === "augments" && update.key === "augments") {
         try {
           const augments: GepAugmentOfferPayload =
             typeof update.value === "string"
