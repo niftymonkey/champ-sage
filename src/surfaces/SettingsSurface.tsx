@@ -10,6 +10,7 @@ import { ClearOverlaysButton } from "../components/ClearOverlaysButton";
 import { ResetStripSizeButton } from "../components/ResetStripSizeButton";
 import { SettingRow } from "../components/settings/SettingRow";
 import { useCoachingContext } from "../hooks/useCoachingContext";
+import { useGepHealth } from "../hooks/useGepHealth";
 import { SETTING_GROUPS } from "../lib/settings";
 import styles from "./SettingsSurface.module.css";
 
@@ -43,6 +44,7 @@ const SECTIONS: ReadonlyArray<{
  */
 export function SettingsSurface() {
   const { gameData } = useCoachingContext();
+  const gepHealth = useGepHealth();
   const sections = SECTIONS;
   const [activeId, setActiveId] = useState<string>(sections[0]?.id ?? "");
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -135,6 +137,12 @@ export function SettingsSurface() {
               <span className={styles.aboutLabel}>Patch</span>
               <span className={styles.aboutValue}>
                 {gameData?.version ?? "unknown"}
+              </span>
+            </div>
+            <div className={styles.aboutLine}>
+              <span className={styles.aboutLabel}>GEP version</span>
+              <span className={styles.aboutValue}>
+                {gepHealth?.loadedVersion ?? "not loaded"}
               </span>
             </div>
             <div className={styles.aboutLine}>

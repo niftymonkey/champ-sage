@@ -3,6 +3,7 @@ import type {
   LcuEventPayload,
   LcuDisconnectPayload,
 } from "./platform-bridge";
+import type { GepHealthVerdict } from "../gep-health";
 
 /**
  * Type declaration for the API exposed by electron/preload.ts
@@ -15,6 +16,9 @@ interface ElectronAPI {
   onHotkeyEvent(callback: (event: unknown) => void): () => void;
   onGepInfoUpdate(callback: (event: unknown) => void): () => void;
   onGepGameEvent(callback: (event: unknown) => void): () => void;
+  onGepHealth(callback: (verdict: GepHealthVerdict) => void): () => void;
+  getGepHealth(): Promise<GepHealthVerdict | null>;
+  restartToUpdate(): void;
   onOverlayStatus(callback: (event: unknown) => void): () => void;
   onCalibrationCapture(callback: () => void): () => void;
   onOverlayEditMode(callback: (data: { editing: boolean }) => void): () => void;

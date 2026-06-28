@@ -49,9 +49,15 @@ function isStatShard(raw: string): boolean {
   return /\bshard\s*$/i.test(raw.replace(/<[^>]*>/g, "").trim());
 }
 
-/** Returns the 3 augment names, or null if this update is not an offer. */
+/**
+ * Returns the 3 augment names, or null if this update is not an offer.
+ *
+ * GEP delivers the Mayhem augment OFFER under feature `augments`, key
+ * `augments` (the `me` is the GEP category, not the key, per Overwolf's League
+ * GEP docs). The PICK arrives separately under key `picked_augment`.
+ */
 export function parseAugmentOfferNames(update: GepUpdate): string[] | null {
-  if (update.feature !== "augments" || update.key !== "me") return null;
+  if (update.feature !== "augments" || update.key !== "augments") return null;
   let parsed: unknown;
   try {
     parsed =

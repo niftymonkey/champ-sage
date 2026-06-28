@@ -1043,3 +1043,52 @@ button.augment-card {
 .coaching-pick-content {
   flex: 1;
 }
+
+/* GEP health banner - pre-queue warning that augment coaching will be
+   unavailable this game (GEP below League's floor, a stub, or a degraded
+   augments feature). Hidden on a healthy verdict. */
+.gep-health-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-2) var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid;
+  border-radius: var(--radius-card);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.gep-health-banner__text {
+  flex: 1;
+}
+
+.gep-health-banner__action {
+  flex: none;
+  padding: 0.25rem var(--space-3);
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-chip);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.gep-health-banner__action:hover {
+  opacity: 1;
+  background-color: rgba(193, 72, 72, 0.18);
+}
+
+.gep-health-banner--red {
+  color: var(--threat-hi);
+  background-color: rgba(193, 72, 72, 0.14);
+  border-color: rgba(193, 72, 72, 0.45);
+}
+
+.gep-health-banner--warn {
+  color: var(--threat-md);
+  background-color: rgba(212, 160, 80, 0.14);
+  border-color: rgba(212, 160, 80, 0.45);
+}

@@ -57,7 +57,7 @@ export function CalibrationGrid({ onF8Capture }: CalibrationGridProps) {
         key?: string;
         value?: string;
       };
-      if (update.feature === "augments" && update.key === "me") {
+      if (update.feature === "augments" && update.key === "augments") {
         const offerKey = typeof update.value === "string" ? update.value : "";
         triggerCalibration(offerKey);
       }

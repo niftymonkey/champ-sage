@@ -1,16 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   manifestIndicatesOutage,
   discoverLatestVersion,
+  resolveGepVersion,
   buildOverrideManifest,
   planCacheReconciliation,
   decideGuardAction,
+  createCachedResolver,
   GEP_UID,
   UTILITY_UID,
   OVERLAY_UID,
   type OverwolfPackagesManifest,
   type InstalledPackage,
 } from "./ow-package-guard";
+
+/** A fetcher standing in for an unreachable manifest, forcing CDN discovery. */
+const noManifest = () => Promise.resolve<OverwolfPackagesManifest | null>(null);
 
 function manifestWithGep(gepVersion: string): OverwolfPackagesManifest {
   return {
@@ -95,15 +100,112 @@ describe("discoverLatestVersion", () => {
   });
 });
 
+describe("resolveGepVersion", () => {
+  const baseline = { major: 306, minor: 0, patch: 0 };
+
+  afterEach(() => {
+    delete process.env.GEP_FORCE_VERSION;
+  });
+
+  it("prefers the manifest-advertised build when it is downloadable on the CDN", async () => {
+    // The recovered manifest advertises 307.4.6. CDN discovery from baseline
+    // 306.0.0 can only reach 306.0.10 (307.0.x is a 403 gap), so without the
+    // manifest seed the guard would serve the stale, floor-rejected 306.0.10.
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.10", "307.4.6"]),
+      manifest: manifestWithGep("307.4.6"),
+    });
+    expect(version).toBe("307.4.6");
+  });
+
+  it("falls back to CDN discovery when the advertised build is not downloadable", async () => {
+    // Manifest advertises a build whose binary has not propagated to the CDN.
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.2", "306.0.3"]),
+      manifest: manifestWithGep("307.9.9"),
+    });
+    expect(version).toBe("306.0.3");
+  });
+
+  it("falls back to CDN discovery during the 0.0.0 outage", async () => {
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.2", "306.0.3"]),
+      manifest: manifestWithGep("0.0.0"),
+    });
+    expect(version).toBe("306.0.3");
+  });
+
+  it("falls back to CDN discovery when the manifest is unreachable", async () => {
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.2", "306.0.3"]),
+      manifest: null,
+    });
+    expect(version).toBe("306.0.3");
+  });
+
+  it("returns null when neither the manifest nor the CDN yields a build", async () => {
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe([]),
+      manifest: null,
+    });
+    expect(version).toBeNull();
+  });
+
+  it("serves GEP_FORCE_VERSION when that build is downloadable (test hook)", async () => {
+    process.env.GEP_FORCE_VERSION = "306.0.10";
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.10", "307.4.6"]),
+      manifest: manifestWithGep("307.4.6"),
+    });
+    expect(version).toBe("306.0.10");
+  });
+
+  it("ignores GEP_FORCE_VERSION when that build is not downloadable and falls back", async () => {
+    process.env.GEP_FORCE_VERSION = "999.9.9";
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.2", "306.0.3"]),
+      manifest: null,
+    });
+    expect(version).toBe("306.0.3");
+  });
+});
+
 describe("buildOverrideManifest", () => {
+  it("seeds gep from the recovered manifest when that build is downloadable", async () => {
+    // Regression for the stale-baseline bug: --serve must serve the manifest's
+    // 307.4.6, not the 306.0.10 that bare CDN discovery would settle on.
+    const live: Record<number, string[]> = {
+      1: ["306.0.10", "307.4.6"],
+      2: ["2.7.5"],
+      3: ["1.12.5"],
+    };
+    const manifest = await buildOverrideManifest(
+      (channel) => liveProbe(live[channel] ?? []),
+      () => Promise.resolve(manifestWithGep("307.4.6"))
+    );
+    const gep = manifest!.packages.find((p) => p.name === "gep");
+    expect(gep!.version).toBe("307.4.6");
+    expect(gep!.url).toBe(
+      "https://electrondl.overwolf.com/1/307.4.6/module.owepk"
+    );
+  });
+
   it("discovers gep and keeps utility/overlay on their live pins", async () => {
     const live: Record<number, string[]> = {
       1: ["306.0.2", "306.0.3"],
       2: ["2.7.5"],
       3: ["1.12.5"],
     };
-    const manifest = await buildOverrideManifest((channel) =>
-      liveProbe(live[channel] ?? [])
+    const manifest = await buildOverrideManifest(
+      (channel) => liveProbe(live[channel] ?? []),
+      noManifest
     );
     expect(manifest).not.toBeNull();
 
@@ -132,15 +234,19 @@ describe("buildOverrideManifest", () => {
       2: ["2.7.5"],
       3: ["1.12.6"],
     };
-    const manifest = await buildOverrideManifest((channel) =>
-      liveProbe(live[channel] ?? [])
+    const manifest = await buildOverrideManifest(
+      (channel) => liveProbe(live[channel] ?? []),
+      noManifest
     );
     const overlay = manifest!.packages.find((p) => p.name === "overlay");
     expect(overlay!.version).toBe("1.12.6");
   });
 
   it("returns null when gep cannot be resolved (override would be useless)", async () => {
-    const manifest = await buildOverrideManifest(() => liveProbe([]));
+    const manifest = await buildOverrideManifest(
+      () => liveProbe([]),
+      noManifest
+    );
     expect(manifest).toBeNull();
   });
 });
@@ -188,5 +294,64 @@ describe("planCacheReconciliation", () => {
       { uid: "some-other-package", version: "9.9.9" },
     ];
     expect(planCacheReconciliation(installed, desired)).toEqual([]);
+  });
+});
+
+describe("createCachedResolver", () => {
+  it("resolves once and serves the cached value within the TTL", async () => {
+    let calls = 0;
+    let t = 1000;
+    const get = createCachedResolver({
+      resolve: async () => {
+        calls++;
+        return `v${calls}`;
+      },
+      ttlMs: 100,
+      now: () => t,
+    });
+    expect(await get()).toBe("v1");
+    t = 1050; // still within the TTL window
+    expect(await get()).toBe("v1");
+    expect(calls).toBe(1);
+  });
+
+  it("re-resolves after the TTL elapses", async () => {
+    let calls = 0;
+    let t = 1000;
+    const get = createCachedResolver({
+      resolve: async () => {
+        calls++;
+        return `v${calls}`;
+      },
+      ttlMs: 100,
+      now: () => t,
+    });
+    expect(await get()).toBe("v1");
+    t = 1200; // past the TTL
+    expect(await get()).toBe("v2");
+    expect(calls).toBe(2);
+  });
+
+  it("keeps the last good value when a re-resolve returns null", async () => {
+    let t = 1000;
+    let result: string | null = "good";
+    const get = createCachedResolver({
+      resolve: async () => result,
+      ttlMs: 100,
+      now: () => t,
+    });
+    expect(await get()).toBe("good");
+    t = 1200;
+    result = null; // transient resolve failure
+    expect(await get()).toBe("good");
+  });
+
+  it("returns null when the very first resolve fails", async () => {
+    const get = createCachedResolver({
+      resolve: async () => null,
+      ttlMs: 100,
+      now: () => 0,
+    });
+    expect(await get()).toBeNull();
   });
 });

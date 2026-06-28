@@ -278,7 +278,7 @@ export function OverlayApp() {
         value?: string;
       };
 
-      if (update.feature === "augments" && update.key === "me") {
+      if (update.feature === "augments" && update.key === "augments") {
         // Deduplicate GEP double-fires
         const offerKey = typeof update.value === "string" ? update.value : "";
         if (offerKey === lastOfferKey) {
