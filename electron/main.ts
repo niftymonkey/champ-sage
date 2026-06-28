@@ -31,6 +31,9 @@ import {
 } from "./gep-replay-filter";
 import { createStripResizeLock } from "./strip-resize-lock";
 import { createStripBoundsStore } from "./strip-bounds-store";
+import { createBoundsStore } from "./bounds-store";
+import type { WindowBounds } from "./bounds-store";
+import { boundsAreVisible } from "./window-placement";
 import {
   createCoachDecisionLog,
   type CoachDecisionLog,
@@ -495,11 +498,104 @@ function loadRendererContent(win: BrowserWindow): void {
   }
 }
 
+const MAIN_WINDOW_BOUNDS_KEY = "mainWindowBounds";
+const DEFAULT_MAIN_WINDOW_SIZE = { width: 1200, height: 900 };
+const windowLog = log.scope("main-window");
+
+const mainWindowBoundsStore = createBoundsStore(
+  { read: readSettingsFile, write: writeSettingsFile },
+  MAIN_WINDOW_BOUNDS_KEY
+);
+
+/**
+ * Resolve the saved bounds to restore the main window to, or null to fall back
+ * to the default centered placement. Returns null when nothing is saved or
+ * when the saved spot is off every current display (e.g. a second monitor that
+ * is no longer attached), so the window never opens somewhere unreachable.
+ *
+ * Logs the saved value alongside every display's bounds and scale factor: a
+ * mixed-DPI multi-monitor layout is the most likely reason a restored window
+ * lands the wrong size, and these are the numbers needed to confirm it.
+ */
+function resolveSavedMainWindowBounds(): WindowBounds | null {
+  const saved = mainWindowBoundsStore.get();
+  if (!saved) {
+    windowLog.info(
+      "No saved bounds; opening default size, centered on primary"
+    );
+    return null;
+  }
+
+  const displays = screen.getAllDisplays();
+  const visible = boundsAreVisible(
+    saved,
+    displays.map((d) => d.workArea)
+  );
+  const displaySummary = displays.map((d) => ({
+    bounds: d.bounds,
+    workArea: d.workArea,
+    scale: d.scaleFactor,
+  }));
+  windowLog.info(
+    `Saved bounds (${saved.x},${saved.y} ${saved.width}x${saved.height}); ` +
+      `visible=${visible}; displays=${JSON.stringify(displaySummary)}`
+  );
+
+  return visible ? saved : null;
+}
+
+/**
+ * Persist the main window's bounds after every move/resize so the next launch
+ * reopens where the user left it. Debounced so only the resting bounds at the
+ * end of a drag hit disk. We persist `getBounds()` rather than the normalized
+ * bounds on purpose: dragging the window to a screen edge (Windows Aero Snap)
+ * leaves it docked to half a monitor, which is exactly the layout the user
+ * wants reproduced. Persisting while maximized is skipped so a maximized
+ * session does not overwrite that docked size.
+ */
+function persistMainWindowBounds(win: BrowserWindow): void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let pending: WindowBounds | null = null;
+
+  const flush = (): void => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    if (!pending) return;
+    mainWindowBoundsStore.set(pending);
+    windowLog.info(
+      `Persisted bounds (${pending.x},${pending.y} ${pending.width}x${pending.height})`
+    );
+    pending = null;
+  };
+
+  const save = (): void => {
+    if (win.isDestroyed() || win.isMinimized() || win.isMaximized()) return;
+    pending = win.getBounds();
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(flush, 250);
+  };
+
+  // Subscribe to both gesture-end and in-progress events: some Electron builds
+  // only emit one pair. The debounce coalesces them to a single write.
+  win.on("moved", save);
+  win.on("resized", save);
+  win.on("move", save);
+  win.on("resize", save);
+  // A quit or window close within the debounce window would otherwise drop the
+  // final move; flush synchronously while the window still exists.
+  win.on("close", flush);
+}
+
 function createMainWindow(): BrowserWindow {
+  const saved = resolveSavedMainWindowBounds();
   const win = new BrowserWindow({
-    width: 1200,
-    height: 900,
+    width: saved?.width ?? DEFAULT_MAIN_WINDOW_SIZE.width,
+    height: saved?.height ?? DEFAULT_MAIN_WINDOW_SIZE.height,
+    ...(saved ? { x: saved.x, y: saved.y } : {}),
     minWidth: 800,
+    show: false,
     backgroundColor: "#000000",
     webPreferences: {
       contextIsolation: true,
@@ -509,8 +605,29 @@ function createMainWindow(): BrowserWindow {
     },
   });
 
+  if (saved) {
+    // Re-assert the saved bounds on the constructed window. On Windows
+    // multi-monitor setups with mixed DPI, the constructor sizes the window
+    // using the primary display's scale factor and does not rescale when the
+    // window lands on a secondary monitor, so the size comes out wrong and the
+    // window's edge clips off-screen. setBounds runs after the window is placed
+    // on its target display, so position and size both resolve correctly.
+    win.setBounds(saved);
+  }
+
+  const actual = win.getBounds();
+  windowLog.info(
+    `Main window bounds after setup: (${actual.x},${actual.y} ${actual.width}x${actual.height})`
+  );
+
   loadRendererContent(win);
   mainWindow = win;
+  // Attach move/resize persistence only after the window is shown, so the
+  // programmatic restore above is not recorded back as a user-driven change.
+  win.once("ready-to-show", () => {
+    win.show();
+    persistMainWindowBounds(win);
+  });
   win.on("closed", () => {
     mainWindow = null;
   });
