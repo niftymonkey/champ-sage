@@ -28,6 +28,17 @@ export interface PlatformBridge {
   /** Proxy fetch to the Riot Live Client Data API. */
   fetchRiotApi(endpoint: string): Promise<string>;
 
+  /**
+   * Write the local player's two summoner spells into the active champ-select
+   * session (LCU `PATCH /lol-champ-select/v1/session/my-selection`).
+   */
+  setSummonerSpells(
+    port: number,
+    token: string,
+    spell1Id: number,
+    spell2Id: number
+  ): Promise<void>;
+
   /** Connect the LCU WebSocket (main process spawns reader, emits events). */
   connectLcuWebSocket(port: number, token: string): Promise<void>;
 

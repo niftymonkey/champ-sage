@@ -142,6 +142,10 @@ Available during the ChampSelect phase. Fires on every change (pick, ban, timer 
 
 **Champion ID resolution:** The LCU uses numeric champion keys (e.g., 136 = Aurelion Sol, 497 = Rakan). These map to `Champion.key` in our DDragon data ingest. Use `resolveChampionName()` from `src/lib/data-ingest/champion-id-map.ts` for reverse lookup.
 
+### Writing the player's own summoner spells (`PATCH /lol-champ-select/v1/session/my-selection`)
+
+The LCU is not read-only: during champ select the local player's selection is mutable via `PATCH /lol-champ-select/v1/session/my-selection` with JSON body `{ spell1Id, spell2Id }`. This is the app's first and only mutating LCU call (every other LCU access is GET). Request shape mirrors the read side but with a body: HTTPS PATCH to `127.0.0.1:<port>`, self-signed cert (`rejectUnauthorized: false`), Basic auth (`riot:<lockfile token>`), `Content-Type: application/json`; a 2xx (usually 204) means applied. Implemented in `electron/lcu-write.ts` (transport injected so it is unit-testable), wired through the `set_summoner_spells` IPC handler. The recommended pair is sent ascending because slot order is a keybind, not a pairing (see the data-layer note near the end of this doc); the player can swap D/F in-client afterward. Compliance: setting the player's OWN spells is permitted (see `docs/research/augment-detection-research.md`); it is distinct from the prohibited enemy summoner-spell tracking.
+
 ### End-of-game stats (`/lol-end-of-game/v1/eog-stats-block`)
 
 Available at the `PreEndOfGame` phase transition (immediately when the nexus dies — ~20 seconds before `EndOfGame`).

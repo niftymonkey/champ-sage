@@ -1,0 +1,48 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.pair {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--ink);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.button {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: var(--type-meta-tracking);
+  text-transform: uppercase;
+  color: var(--accent-2);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.error {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--danger, #d66);
+  text-align: center;
+}

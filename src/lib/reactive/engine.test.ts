@@ -74,6 +74,8 @@ function createMockBridge(): MockBridge {
       return JSON.stringify(riotApiResponse);
     }),
 
+    setSummonerSpells: vi.fn(async () => {}),
+
     connectLcuWebSocket: vi.fn(async () => {}),
 
     listenLcuEvent: vi.fn((handler) => {

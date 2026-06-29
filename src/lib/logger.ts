@@ -39,6 +39,7 @@ export type LogModule =
   | "overlay:calibration"
   | "overlay:strip"
   | "build-direction"
+  | "champ-select"
   | "match-history"
   | "swr-bridge"
   | "post-game-readiness";

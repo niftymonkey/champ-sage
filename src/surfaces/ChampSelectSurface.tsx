@@ -6,6 +6,12 @@ import { resolveChampionName } from "../lib/data-ingest/champion-id-map";
 import type { RawChampSelectMember } from "../lib/reactive/types";
 import { setPlayerBuildDirection } from "../lib/reactive/build-direction-store";
 import { BuildDirectionPicker } from "../components/BuildDirectionPicker";
+import { SummonerSpellImport } from "../components/SummonerSpellImport";
+import { useSummonerSpellImport } from "../hooks/useSummonerSpellImport";
+import {
+  deriveRecommendedSpells,
+  getChampionMeta,
+} from "../lib/data-ingest/meta-builds";
 import type { BuildDirection } from "../lib/build-direction/taxonomy";
 import styles from "./ChampSelectSurface.module.css";
 
@@ -17,6 +23,8 @@ interface SlotData {
   champion: Champion | undefined;
   isMine: boolean;
   pending: boolean;
+  /** Meta-recommended summoner-spell pair for the local player's champion. */
+  recommendedSpells?: [number, number];
 }
 
 /**
@@ -106,10 +114,20 @@ function toSlotData(
   const champion = championName
     ? data.champions.get(championName.toLowerCase())
     : undefined;
+  const isMine = member.cellId === localCellId;
+  // Recommend off the ARAM index, the designed Mayhem proxy. Only the local
+  // player's slot can act on it, so skip the lookup for everyone else.
+  const recommendedSpells =
+    isMine && champion
+      ? deriveRecommendedSpells(
+          getChampionMeta(data.metaBuilds?.aram ?? null, champion.key)
+        )
+      : undefined;
   return {
     champion,
-    isMine: member.cellId === localCellId,
+    isMine,
     pending: id > 0 && locked === 0,
+    recommendedSpells,
   };
 }
 
@@ -152,6 +170,33 @@ function Slot({ slot, playerDirection, onPickDirection }: SlotProps) {
           />
         </div>
       ) : null}
+      {slot.isMine && slot.recommendedSpells ? (
+        <div className={styles.spellImport}>
+          {/* Key by the pair so the import status resets when the player's
+              recommendation changes (e.g. hovering a different champion). */}
+          <SpellImportAffordance
+            key={slot.recommendedSpells.join("-")}
+            spells={slot.recommendedSpells}
+          />
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * Wires the meta-recommended spell pair to the import status machine and the
+ * presentational control. Lives at this level (not in `Slot`) so its hook runs
+ * unconditionally, only mounted for the local player's slot when a pair exists.
+ */
+function SpellImportAffordance({ spells }: { spells: [number, number] }) {
+  const { status, importSpells } = useSummonerSpellImport();
+  return (
+    <SummonerSpellImport
+      spell1Id={spells[0]}
+      spell2Id={spells[1]}
+      status={status}
+      onImport={() => importSpells(spells[0], spells[1])}
+    />
   );
 }

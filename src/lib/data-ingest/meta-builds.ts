@@ -196,3 +196,17 @@ export function deriveMetaItemPool(
     .sort((a, b) => b[1] - a[1] || a[0] - b[0])
     .map(([itemId]) => itemId);
 }
+
+/**
+ * The single summoner-spell pair to recommend for a champion: the most-picked
+ * pair (`popularSpells` is already ranked by pick popularity). Returns undefined
+ * when the data isn't collected, the champion has no pairs, or the top pair is
+ * incomplete, so callers can omit the recommendation rather than render half of
+ * one. Recommendation is by popularity, never win rate.
+ */
+export function deriveRecommendedSpells(
+  champion: MetaBuildChampion | null
+): [number, number] | undefined {
+  const pair = champion?.popularSpells?.[0]?.spells;
+  return pair && pair.length === 2 ? [pair[0], pair[1]] : undefined;
+}
