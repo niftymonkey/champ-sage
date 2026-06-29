@@ -47,11 +47,21 @@ export interface MetaBuildAugment {
   winRate: number;
 }
 
+export interface MetaBuildSpell {
+  /** Normalized (ascending) summoner-spell ID pair, e.g. [4, 6] for Flash + Ghost. */
+  spells: number[];
+  picks: number;
+  wins: number;
+  pickRate: number;
+  winRate: number;
+}
+
 export interface MetaBuildChampion {
   championName: string;
   sampleSize: number;
   builds: MetaBuild[];
   popularAugments?: MetaBuildAugment[];
+  popularSpells?: MetaBuildSpell[];
 }
 
 export interface MetaBuildFile {

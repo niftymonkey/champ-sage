@@ -43,6 +43,14 @@ export interface ParticipantData {
   };
   teamPosition: string;
   augments: number[]; // playerAugment1-4
+  /**
+   * The two summoner spells the player ran, as Riot spell IDs (e.g. 4 = Flash,
+   * 6 = Ghost). Order is not meaningful: Riot's summoner1Id/summoner2Id reflect
+   * client slot assignment (D vs F keybind), not a canonical pairing, so this is
+   * stored as the raw pair and normalized (sorted) at aggregation time. Empty
+   * for matches cached before this field existed.
+   */
+  summonerSpells: number[];
 }
 
 export interface MatchData {
@@ -86,6 +94,19 @@ export interface ChampionBuilds {
   windowDaysUsed: number;
   popularAugments?: Array<{
     augmentId: number;
+    picks: number;
+    wins: number;
+    pickRate: number;
+    winRate: number;
+  }>;
+  /**
+   * Most-run summoner-spell pairs for this champion, most-picked first. Each
+   * entry's `spells` is the normalized (ascending) ID pair, mirroring how build
+   * sites present spells as a combo (e.g. Flash + Ghost) rather than two
+   * independent slots. Omitted when no participant carried a complete pair.
+   */
+  popularSpells?: Array<{
+    spells: number[];
     picks: number;
     wins: number;
     pickRate: number;
@@ -164,6 +185,9 @@ export function extractMatchData(
         p.playerAugment3 as number,
         p.playerAugment4 as number,
       ].filter((a) => a != null && a > 0),
+      summonerSpells: [p.summoner1Id as number, p.summoner2Id as number].filter(
+        (s) => s != null && s > 0
+      ),
     })),
   };
 }
@@ -407,6 +431,40 @@ export function aggregateBuilds(
         winRate: stats.picks > 0 ? stats.wins / stats.picks : 0,
       }));
 
+    // Most-run summoner-spell pairs. The pair is the meaningful unit (build
+    // sites present spells as a combo like Flash + Ghost), and Riot's
+    // summoner1Id/summoner2Id order only reflects client slot assignment, so
+    // each pair is normalized ascending before clustering. Participants without
+    // a complete pair (matches cached before this field existed, remakes) carry
+    // an empty/short array and are skipped.
+    const spellStats = new Map<
+      string,
+      { spells: number[]; picks: number; wins: number }
+    >();
+    for (const p of participants) {
+      const spells = p.summonerSpells ?? [];
+      if (spells.length !== 2) continue;
+      const pair = [...spells].sort((a, b) => a - b);
+      const key = pair.join(",");
+      const existing = spellStats.get(key) ?? {
+        spells: pair,
+        picks: 0,
+        wins: 0,
+      };
+      existing.picks += 1;
+      if (p.win) existing.wins += 1;
+      spellStats.set(key, existing);
+    }
+    const popularSpells = [...spellStats.values()]
+      .sort((a, b) => b.picks - a.picks)
+      .map((s) => ({
+        spells: s.spells,
+        picks: s.picks,
+        wins: s.wins,
+        pickRate: totalGames > 0 ? s.picks / totalGames : 0,
+        winRate: s.picks > 0 ? s.wins / s.picks : 0,
+      }));
+
     for (const wp of usedWindowed) allUsed.push(wp);
 
     champions[String(championId)] = {
@@ -422,6 +480,7 @@ export function aggregateBuilds(
         games: b.games,
       })),
       ...(popularAugments.length > 0 ? { popularAugments } : {}),
+      ...(popularSpells.length > 0 ? { popularSpells } : {}),
     };
   }
 

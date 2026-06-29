@@ -49,6 +49,7 @@ function createParticipant(
     perks: createPerks(),
     teamPosition: "BOTTOM",
     augments: [],
+    summonerSpells: [4, 6], // Flash + Ghost
     ...overrides,
   };
 }
@@ -114,6 +115,70 @@ describe("extractMatchData", () => {
     expect(match?.matchId).toBe("NA1_42");
     expect(match?.gameVersion).toBe("16.12.1.1");
     expect(match?.participants[0].championId).toBe(222);
+  });
+
+  it("captures summoner spells from summoner1Id/summoner2Id", () => {
+    const raw = {
+      info: {
+        queueId: 450,
+        gameVersion: "16.12.1.1",
+        gameDuration: 1500,
+        gameEndTimestamp: daysAgoMs(1),
+        participants: [
+          {
+            puuid: "p1",
+            championId: 222,
+            championName: "Jinx",
+            win: true,
+            item0: 3031,
+            item1: 6672,
+            item2: 3094,
+            item3: 0,
+            item4: 0,
+            item5: 0,
+            item6: 3340,
+            perks: createPerks(),
+            teamPosition: "BOTTOM",
+            summoner1Id: 4,
+            summoner2Id: 7,
+          },
+        ],
+      },
+    };
+
+    const match = extractMatchData("NA1_77", raw);
+    expect(match?.participants[0].summonerSpells).toEqual([4, 7]);
+  });
+
+  it("yields an empty spell pair when summoner spell fields are absent", () => {
+    const raw = {
+      info: {
+        queueId: 450,
+        gameVersion: "16.12.1.1",
+        gameDuration: 1500,
+        gameEndTimestamp: daysAgoMs(1),
+        participants: [
+          {
+            puuid: "p1",
+            championId: 222,
+            championName: "Jinx",
+            win: true,
+            item0: 3031,
+            item1: 6672,
+            item2: 3094,
+            item3: 0,
+            item4: 0,
+            item5: 0,
+            item6: 3340,
+            perks: createPerks(),
+            teamPosition: "BOTTOM",
+          },
+        ],
+      },
+    };
+
+    const match = extractMatchData("NA1_78", raw);
+    expect(match?.participants[0].summonerSpells).toEqual([]);
   });
 
   it("returns null when info is missing", () => {
@@ -511,5 +576,74 @@ describe("aggregateBuilds", () => {
     expect(pyke.popularAugments).toBeDefined();
     const aug101 = pyke.popularAugments?.find((a) => a.augmentId === 101);
     expect(aug101?.picks).toBe(4);
+  });
+
+  it("aggregates popularSpells as normalized pairs ordered by picks", () => {
+    const spellsByIndex = [
+      [4, 6], // win
+      [6, 4], // loss: same pair, reversed order, must cluster with [4,6]
+      [4, 7], // win: a different pair
+      [4, 6], // win
+    ];
+    const matches: MatchData[] = spellsByIndex.map((spells, i) =>
+      createMatch({
+        matchId: `spell-${i}`,
+        gameVersion: "16.12.1.1",
+        gameEndTimestamp: daysAgoMs(2),
+        participants: [
+          createParticipant({
+            puuid: `spell-p-${i}`,
+            championId: 555,
+            championName: "Pyke",
+            win: i !== 1,
+            summonerSpells: spells,
+          }),
+        ],
+      })
+    );
+
+    const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
+    const pyke = output.champions["555"];
+    expect(pyke.popularSpells).toBeDefined();
+
+    // [4,6] appears 3x (including the reversed [6,4]); [4,7] once. Most-picked
+    // first, with the pair normalized ascending.
+    const [top, second] = pyke.popularSpells!;
+    expect(top.spells).toEqual([4, 6]);
+    expect(top.picks).toBe(3);
+    expect(top.wins).toBe(2); // the reversed [6,4] entry was the loss
+    expect(top.pickRate).toBeCloseTo(3 / 4, 10);
+    expect(top.winRate).toBeCloseTo(2 / 3, 10);
+    expect(second.spells).toEqual([4, 7]);
+    expect(second.picks).toBe(1);
+  });
+
+  it("omits popularSpells when no participant carries a complete spell pair", () => {
+    // Simulate matches cached before the field existed: the participant object
+    // has no summonerSpells key at all. Aggregation must not crash and must
+    // leave popularSpells off the champion.
+    const matches: MatchData[] = [];
+    for (let i = 0; i < 3; i++) {
+      const participant = createParticipant({
+        puuid: `legacy-p-${i}`,
+        championId: 777,
+        championName: "Ashe",
+        win: i % 2 === 0,
+      });
+      delete (participant as Partial<ParticipantData>).summonerSpells;
+      matches.push(
+        createMatch({
+          matchId: `legacy-${i}`,
+          gameVersion: "16.12.1.1",
+          gameEndTimestamp: daysAgoMs(2),
+          participants: [participant],
+        })
+      );
+    }
+
+    const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
+    const ashe = output.champions["777"];
+    expect(ashe).toBeDefined();
+    expect(ashe.popularSpells).toBeUndefined();
   });
 });
