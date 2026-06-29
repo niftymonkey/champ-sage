@@ -15,10 +15,25 @@
 }
 
 .pair {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-sm, 4px);
+  display: block;
+  object-fit: cover;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+
+.iconFallback {
   font-family: var(--font-ui);
   font-size: 0.7rem;
   color: var(--ink);
-  text-align: center;
   white-space: nowrap;
 }
 

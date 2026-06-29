@@ -12,6 +12,7 @@ import {
   deriveRecommendedSpells,
   getChampionMeta,
 } from "../lib/data-ingest/meta-builds";
+import { summonerSpellIconUrl } from "../lib/data-ingest/summoner-spells";
 import type { BuildDirection } from "../lib/build-direction/taxonomy";
 import styles from "./ChampSelectSurface.module.css";
 
@@ -19,12 +20,19 @@ interface ChampSelectSurfaceProps {
   data: LoadedGameData;
 }
 
+interface RecommendedSpells {
+  spell1Id: number;
+  spell2Id: number;
+  spell1Icon: string;
+  spell2Icon: string;
+}
+
 interface SlotData {
   champion: Champion | undefined;
   isMine: boolean;
   pending: boolean;
-  /** Meta-recommended summoner-spell pair for the local player's champion. */
-  recommendedSpells?: [number, number];
+  /** Meta-recommended summoner-spell pair (with icons) for the local player. */
+  recommendedSpells?: RecommendedSpells;
 }
 
 /**
@@ -117,12 +125,20 @@ function toSlotData(
   const isMine = member.cellId === localCellId;
   // Recommend off the ARAM index, the designed Mayhem proxy. Only the local
   // player's slot can act on it, so skip the lookup for everyone else.
-  const recommendedSpells =
+  const pair =
     isMine && champion
       ? deriveRecommendedSpells(
           getChampionMeta(data.metaBuilds?.aram ?? null, champion.key)
         )
       : undefined;
+  const recommendedSpells: RecommendedSpells | undefined = pair
+    ? {
+        spell1Id: pair[0],
+        spell2Id: pair[1],
+        spell1Icon: summonerSpellIconUrl(pair[0], data.version),
+        spell2Icon: summonerSpellIconUrl(pair[1], data.version),
+      }
+    : undefined;
   return {
     champion,
     isMine,
@@ -175,7 +191,7 @@ function Slot({ slot, playerDirection, onPickDirection }: SlotProps) {
           {/* Key by the pair so the import status resets when the player's
               recommendation changes (e.g. hovering a different champion). */}
           <SpellImportAffordance
-            key={slot.recommendedSpells.join("-")}
+            key={`${slot.recommendedSpells.spell1Id}-${slot.recommendedSpells.spell2Id}`}
             spells={slot.recommendedSpells}
           />
         </div>
@@ -189,14 +205,16 @@ function Slot({ slot, playerDirection, onPickDirection }: SlotProps) {
  * presentational control. Lives at this level (not in `Slot`) so its hook runs
  * unconditionally, only mounted for the local player's slot when a pair exists.
  */
-function SpellImportAffordance({ spells }: { spells: [number, number] }) {
+function SpellImportAffordance({ spells }: { spells: RecommendedSpells }) {
   const { status, importSpells } = useSummonerSpellImport();
   return (
     <SummonerSpellImport
-      spell1Id={spells[0]}
-      spell2Id={spells[1]}
+      spell1Id={spells.spell1Id}
+      spell2Id={spells.spell2Id}
+      spell1Icon={spells.spell1Icon}
+      spell2Icon={spells.spell2Icon}
       status={status}
-      onImport={() => importSpells(spells[0], spells[1])}
+      onImport={() => importSpells(spells.spell1Id, spells.spell2Id)}
     />
   );
 }
