@@ -66,6 +66,14 @@ describe("boundsAreVisible", () => {
     ).toBe(true);
   });
 
+  it("returns true for a fully visible window smaller than the reachable threshold", () => {
+    // A 40x40 window sitting entirely on screen is reachable even though it is
+    // smaller than MIN_VISIBLE_PX; the required overlap clamps to its own size.
+    expect(
+      boundsAreVisible({ x: 100, y: 100, width: 40, height: 40 }, [PRIMARY])
+    ).toBe(true);
+  });
+
   it("returns false when overlap is below the reachable threshold on the y axis", () => {
     const sliver = MIN_VISIBLE_PX - 1;
     expect(

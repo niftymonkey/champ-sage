@@ -30,6 +30,10 @@ export function boundsAreVisible(
   displays: Rect[]
 ): boolean {
   return displays.some((display) => {
+    // Clamp the required overlap to the window's own size so a window smaller
+    // than MIN_VISIBLE_PX is not rejected when it is fully on screen.
+    const requiredX = Math.min(bounds.width, MIN_VISIBLE_PX);
+    const requiredTopStrip = Math.min(bounds.height, MIN_VISIBLE_PX);
     const overlapX =
       Math.min(bounds.x + bounds.width, display.x + display.width) -
       Math.max(bounds.x, display.x);
@@ -38,8 +42,8 @@ export function boundsAreVisible(
     // with its lower edge, but if the title bar is off-screen the user cannot
     // grab it to drag it back, so that placement must count as unreachable.
     const topStripOverlapY =
-      Math.min(bounds.y + MIN_VISIBLE_PX, display.y + display.height) -
+      Math.min(bounds.y + requiredTopStrip, display.y + display.height) -
       Math.max(bounds.y, display.y);
-    return overlapX >= MIN_VISIBLE_PX && topStripOverlapY >= MIN_VISIBLE_PX;
+    return overlapX >= requiredX && topStripOverlapY >= requiredTopStrip;
   });
 }
