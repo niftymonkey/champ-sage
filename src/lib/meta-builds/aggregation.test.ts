@@ -7,6 +7,8 @@ import {
   computeFreshShare,
   aggregateBuilds,
   CHAMPION_PARTICIPANT_TARGET,
+  ITEM_POOL_PRESENCE_FLOOR,
+  ITEM_POOL_MAX_SIZE,
   type MatchData,
   type ParticipantData,
   type WindowedParticipant,
@@ -447,6 +449,12 @@ describe("aggregateBuilds", () => {
     // Identical items cluster into one surviving build.
     expect(jinx.builds.length).toBe(1);
     expect(jinx.builds[0].games).toBe(45);
+    // Every used participant builds the same six items, so each sits at 100%
+    // presence; the pool is those six, ordered by presence then item id.
+    expect(jinx.itemPool.map((e) => e.itemId)).toEqual([
+      3026, 3031, 3036, 3072, 3094, 6672,
+    ]);
+    expect(jinx.itemPool.every((e) => e.presence === 1)).toBe(true);
   });
 
   it("sets overall freshPatchShare across all used participants", () => {
@@ -505,9 +513,12 @@ describe("aggregateBuilds", () => {
     expect(lux.freshPatchShare).toBe(1);
   });
 
-  it("preserves the >=3-item, >=2-games, >=0.45-winrate filters", () => {
+  it("gates BUILDS by the >=2-games/>=0.45-winrate filters but still emits the item pool", () => {
     const matches: MatchData[] = [];
-    // A champion whose only build is a single game (fails >=2 games) → dropped.
+    // Annie: a single game with a valid six-item set. The build cluster fails
+    // the >=2-games filter (so `builds` is empty), but item PRESENCE still
+    // yields a pool, so the champion is emitted. The pool is never gated by the
+    // build threshold. She carries no spells, proving the pool alone keeps her.
     matches.push(
       createMatch({
         matchId: "solo",
@@ -519,12 +530,13 @@ describe("aggregateBuilds", () => {
             championId: 1,
             championName: "Annie",
             win: true,
+            summonerSpells: [],
           }),
         ],
       })
     );
-    // A participant with <3 items (remake) for another champion is excluded
-    // from clustering, leaving that champion with no qualifying build.
+    // Olaf: the only participant has <3 completed items (remake), excluded
+    // before grouping, so the champion has no games at all and is dropped.
     matches.push(
       createMatch({
         matchId: "remake",
@@ -543,10 +555,138 @@ describe("aggregateBuilds", () => {
     );
 
     const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
-    // Annie: single game → no build survives the >=2 games filter.
-    expect(output.champions["1"]).toBeUndefined();
-    // Olaf: only participant has <3 items → excluded, no build.
+    // Annie: build filtered out, but emitted with a presence-sourced item pool.
+    const annie = output.champions["1"];
+    expect(annie).toBeDefined();
+    expect(annie.builds).toEqual([]);
+    expect(annie.itemPool.length).toBeGreaterThan(0);
+    // Olaf: no qualifying participant, dropped entirely.
     expect(output.champions["2"]).toBeUndefined();
+  });
+
+  it("sources the item pool from presence with a floor, ordered by presence then item id", () => {
+    // 20 participants for one champion. Item 1000 is in every game (100%), 2000
+    // in 6 (30%), 3000 in 2 (10%, exactly the floor, kept), 4000 in 1 (5%,
+    // dropped). Each participant also carries unique filler items (5% each,
+    // dropped) so every participant clears the >=3-completed-items grouping gate.
+    const matches: MatchData[] = [];
+    for (let i = 0; i < 20; i++) {
+      let extra: number;
+      if (i < 6) extra = 2000;
+      else if (i < 8) extra = 3000;
+      else if (i < 9) extra = 4000;
+      else extra = 5000 + i;
+      matches.push(
+        createMatch({
+          matchId: `pool-${i}`,
+          gameVersion: "16.12.1.1",
+          gameEndTimestamp: daysAgoMs(2),
+          participants: [
+            createParticipant({
+              puuid: `pool-p-${i}`,
+              championId: 300,
+              championName: "Ahri",
+              win: i % 2 === 0,
+              items: [1000, extra, 9000 + i, 9500 + i, 0, 0, 3340],
+            }),
+          ],
+        })
+      );
+    }
+
+    const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
+    const ahri = output.champions["300"];
+    expect(ahri.itemPool.map((e) => e.itemId)).toEqual([1000, 2000, 3000]);
+    expect(ahri.itemPool[0].presence).toBeCloseTo(1.0, 10);
+    expect(ahri.itemPool[1].presence).toBeCloseTo(0.3, 10);
+    expect(ahri.itemPool[2].presence).toBeCloseTo(ITEM_POOL_PRESENCE_FLOOR, 10);
+    // Below-floor items (4000 at 5%, every filler at 5%) are excluded.
+    expect(ahri.itemPool.some((e) => e.itemId === 4000)).toBe(false);
+  });
+
+  it("caps the item pool at ITEM_POOL_MAX_SIZE when many items clear the floor", () => {
+    // 10 participants, each building 6 unique items, so 60 distinct items each
+    // appear in exactly 1/10 games (10%, at the floor). All clear the floor, so
+    // only the cap bounds the pool; ties on presence break by item id ascending,
+    // so the 30 lowest ids survive.
+    const matches: MatchData[] = [];
+    for (let i = 0; i < 10; i++) {
+      const base = 1000 + i * 6;
+      matches.push(
+        createMatch({
+          matchId: `cap-${i}`,
+          gameVersion: "16.12.1.1",
+          gameEndTimestamp: daysAgoMs(2),
+          participants: [
+            createParticipant({
+              puuid: `cap-p-${i}`,
+              championId: 301,
+              championName: "Sona",
+              win: i % 2 === 0,
+              items: [
+                base,
+                base + 1,
+                base + 2,
+                base + 3,
+                base + 4,
+                base + 5,
+                3340,
+              ],
+            }),
+          ],
+        })
+      );
+    }
+
+    const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
+    const sona = output.champions["301"];
+    expect(sona.itemPool.length).toBe(ITEM_POOL_MAX_SIZE);
+    expect(sona.itemPool[0].itemId).toBe(1000);
+    expect(sona.itemPool[ITEM_POOL_MAX_SIZE - 1].itemId).toBe(
+      1000 + ITEM_POOL_MAX_SIZE - 1
+    );
+    expect(
+      sona.itemPool.some((e) => e.itemId === 1000 + ITEM_POOL_MAX_SIZE)
+    ).toBe(false);
+  });
+
+  it("keeps a champion with spell data even when no item build clusters", () => {
+    // Two games, each a distinct one-off item set, so every build cluster has
+    // only 1 game and is filtered out (no surviving builds). Both carry the same
+    // spell pair. The champion must still appear, with empty builds and its
+    // popularSpells, so the summoner-spell recommendation is never gated by the
+    // item-build threshold.
+    const items1 = [1001, 1002, 1003, 1004, 0, 0, 3340];
+    const items2 = [2001, 2002, 2003, 2004, 0, 0, 3340];
+    const matches: MatchData[] = [items1, items2].map((items, i) =>
+      createMatch({
+        matchId: `nobuild-${i}`,
+        gameVersion: "16.12.1.1",
+        gameEndTimestamp: daysAgoMs(2),
+        participants: [
+          createParticipant({
+            puuid: `nobuild-p-${i}`,
+            championId: 77,
+            championName: "Udyr",
+            win: true,
+            items,
+            summonerSpells: [4, 32],
+          }),
+        ],
+      })
+    );
+
+    const output = aggregateBuilds(matches, ARAM_QUEUE, ["16.12"], NOW_MS);
+    const udyr = output.champions["77"];
+    expect(udyr).toBeDefined();
+    expect(udyr.builds).toEqual([]);
+    // Each one-off set contributes four items at 50% presence, so the pool holds
+    // all eight even though no exact-set build cluster survives.
+    expect(udyr.itemPool.length).toBe(8);
+    expect(udyr.itemPool.every((e) => e.presence === 0.5)).toBe(true);
+    expect(udyr.popularSpells).toBeDefined();
+    expect(udyr.popularSpells![0].spells).toEqual([4, 32]);
+    expect(udyr.popularSpells![0].picks).toBe(2);
   });
 
   it("aggregates popularAugments when participants carry augments", () => {

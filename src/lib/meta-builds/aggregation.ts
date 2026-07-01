@@ -14,6 +14,8 @@
  * pick how far back to build each champion from.
  */
 
+import { itemPresence } from "./coverage-analysis";
+
 /**
  * The ladder of freshness windows in days, narrowest first. Applied at
  * SELECTION time only (per-champion backfill); collection uses one fixed wide
@@ -23,6 +25,24 @@ export const FRESHNESS_LADDER_DAYS: readonly number[] = [7, 14, 30, 60];
 
 /** Per-champion participant target for selection backfill. */
 export const CHAMPION_PARTICIPANT_TARGET = 40;
+
+/**
+ * Minimum share of a champion's selected games an item must appear in to enter
+ * the item POOL (0..1). TUNABLE. The pool is sourced from item PRESENCE across
+ * all of a champion's games, not exact-set build clusters (which shatter into
+ * 2-8 game singletons even at hundreds of games), so a floor rather than a fixed
+ * top-N makes the pool size data-driven: a single-direction champion clears
+ * ~8-12 items, a true two-build champion (e.g. AP and tank) clears ~16-24
+ * because both cores pass the floor. No separate multi-build detection needed.
+ */
+export const ITEM_POOL_PRESENCE_FLOOR = 0.1;
+
+/**
+ * Generous safety ceiling on item-pool size, so a pathological high-diversity
+ * champion cannot produce an unbounded pool. Well above the ~24 a real two-build
+ * champion clears; it only ever trims noise.
+ */
+export const ITEM_POOL_MAX_SIZE = 30;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -75,6 +95,18 @@ export interface BuildEntry {
   games: number;
 }
 
+/**
+ * One item in a champion's presence-sourced pool: the item id and the fraction
+ * of the champion's selected games that built it (0..1). Stored ranked by
+ * presence descending so consumers can read how-standard an item is and how
+ * multi-modal the champion's itemization is directly (e.g. a 0.62 core vs a 0.28
+ * situational pickup).
+ */
+export interface ItemPoolEntry {
+  itemId: number;
+  presence: number;
+}
+
 export interface ChampionBuilds {
   championName: string;
   sampleSize: number;
@@ -85,6 +117,15 @@ export interface ChampionBuilds {
     pickRate: number;
     games: number;
   }>;
+  /**
+   * Presence-sourced item pool: every item built in at least
+   * ITEM_POOL_PRESENCE_FLOOR of the selected games, ranked by presence
+   * descending and capped at ITEM_POOL_MAX_SIZE. This is the pool the coaching
+   * prompt draws Tier-1 items from. Unlike `builds` (exact-set clusters that
+   * fragment into tiny samples), presence is stable across a champion's games,
+   * so a richer, more representative set of items survives.
+   */
+  itemPool: ItemPoolEntry[];
   /**
    * Fraction of this champion's USED participants whose match gameVersion
    * major.minor equals the target patch. 0..1.
@@ -407,10 +448,21 @@ export function aggregateBuilds(
       .sort((a, b) => b.games - a.games)
       .slice(0, 10);
 
-    if (sorted.length === 0) continue;
-
     const champName = participants[0].championName;
     const totalGames = participants.length;
+
+    // Presence-sourced item pool: which items this champion's players build
+    // REGULARLY, across all selected games, rather than which exact six-item set
+    // recurs. Exact-set clustering shatters into 2-8 game singletons even at
+    // hundreds of games, so the pool is built from per-item presence with a
+    // floor instead. A two-build champion automatically yields a larger pool
+    // because both cores clear the floor, so no separate multi-build detection
+    // is needed; the prompt consumer reads the presence rate to disambiguate.
+    const itemPool: ItemPoolEntry[] = [...itemPresence(participants).entries()]
+      .map(([itemId, count]) => ({ itemId, presence: count / totalGames }))
+      .filter((e) => e.presence >= ITEM_POOL_PRESENCE_FLOOR)
+      .sort((a, b) => b.presence - a.presence || a.itemId - b.itemId)
+      .slice(0, ITEM_POOL_MAX_SIZE);
 
     const augmentStats = new Map<number, { picks: number; wins: number }>();
     for (const p of participants) {
@@ -465,6 +517,20 @@ export function aggregateBuilds(
         winRate: s.picks > 0 ? s.wins / s.picks : 0,
       }));
 
+    // A champion is worth emitting if it has any usable data. The item POOL is
+    // built from presence, so any champion with at least one selected game has a
+    // non-empty pool; the legacy `builds` clusters remain gated by the
+    // >=2-games/>=0.45-winrate filters above, and spells/augments are
+    // independent. Skip only when there is nothing at all to say.
+    if (
+      itemPool.length === 0 &&
+      sorted.length === 0 &&
+      popularSpells.length === 0 &&
+      popularAugments.length === 0
+    ) {
+      continue;
+    }
+
     for (const wp of usedWindowed) allUsed.push(wp);
 
     champions[String(championId)] = {
@@ -479,6 +545,7 @@ export function aggregateBuilds(
         pickRate: totalGames > 0 ? b.games / totalGames : 0,
         games: b.games,
       })),
+      itemPool,
       ...(popularAugments.length > 0 ? { popularAugments } : {}),
       ...(popularSpells.length > 0 ? { popularSpells } : {}),
     };
