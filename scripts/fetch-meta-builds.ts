@@ -1177,20 +1177,6 @@ async function collectMatchesSnowball(
       detailsFailed: detailsFailedThisQuery,
     });
 
-    // Early stop: every champion seen has reached the per-champion game target,
-    // armed at the periodic-aggregation cadence above. Checked here so it shares
-    // the loop's natural break point with saturation.
-    if (readinessReached) {
-      endReason = "all-champions-ready";
-      clearLiveRegion();
-      console.log(
-        `  ${queueKey}: every champion reached ${COLLECTION_GAME_TARGET} games. ${fmtN(
-          matches.length
-        )} cached. Stopping.`
-      );
-      break;
-    }
-
     // Saturation terminator (see SATURATION_THRESHOLD). A productive query resets
     // the counter; a long dry run means the window is fully collected, so stop
     // and let the next mode run. The key-change bootstrap above keeps a purged
@@ -1220,6 +1206,22 @@ async function collectMatchesSnowball(
       matchesAfter: matches.length,
       queueSizeAfter: queue.size,
     });
+
+    // Early stop: every champion seen has reached the per-champion game target,
+    // armed at the periodic-aggregation cadence above. Checked AFTER this query's
+    // success log (unlike the saturation break above) so the final productive
+    // query is still recorded before we stop. The post-loop persist() flushes
+    // state regardless.
+    if (readinessReached) {
+      endReason = "all-champions-ready";
+      clearLiveRegion();
+      console.log(
+        `  ${queueKey}: every champion reached ${COLLECTION_GAME_TARGET} games. ${fmtN(
+          matches.length
+        )} cached. Stopping.`
+      );
+      break;
+    }
 
     // Every 100 queries, write a rich summary showing rolling efficiency
     // broken down by source and ID-return distribution. This is the key

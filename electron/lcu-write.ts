@@ -105,6 +105,13 @@ export const httpsLcuRequester: LcuRequester = async ({
         );
       }
     );
+    // Bound the request so a stalled LCU (connection accepted, no response)
+    // cannot leave the Import action hung forever. On timeout, destroy the
+    // request with an error, which fires the "error" handler below and rejects.
+    // A healthy local PATCH returns in well under a second, so 5s is generous.
+    req.setTimeout(5000, () => {
+      req.destroy(new Error("TIMEOUT"));
+    });
     req.on("error", (err: Error) =>
       reject(new Error(`CONNECTION_FAILED:${err.message}`))
     );

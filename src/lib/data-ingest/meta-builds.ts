@@ -213,8 +213,12 @@ export function deriveMetaItemPoolEntries(
 
   // Preferred source: the presence-sourced pool, already ranked by presence
   // descending. Carry the rate through so the prompt can show how-standard each
-  // item is (e.g. a 62% core vs a 28% situational pickup).
-  if (champion.itemPool && champion.itemPool.length > 0) {
+  // item is (e.g. a 62% core vs a 28% situational pickup). Presence is keyed on
+  // the field being PRESENT, not non-empty: a present-but-empty pool means
+  // presence was computed and nothing cleared the floor, which is a valid "no
+  // pool" answer, not a reason to fall back to noisy legacy clusters. Only an
+  // ABSENT itemPool (a legacy file that predates the field) falls through.
+  if (champion.itemPool) {
     return champion.itemPool.map((e) => ({
       itemId: e.itemId,
       presence: e.presence,

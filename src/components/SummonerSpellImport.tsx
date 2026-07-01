@@ -1,7 +1,6 @@
 import { resolveSummonerSpellName } from "../lib/data-ingest/summoner-spells";
+import type { SummonerSpellImportStatus } from "../hooks/useSummonerSpellImport";
 import styles from "./SummonerSpellImport.module.css";
-
-export type SummonerSpellImportStatus = "idle" | "importing" | "done" | "error";
 
 export interface SummonerSpellImportProps {
   spell1Id: number;

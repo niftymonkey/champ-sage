@@ -1,6 +1,12 @@
 import { useCallback, useState } from "react";
 import { applySummonerSpells } from "../lib/champ-select/apply-summoner-spells";
-import type { SummonerSpellImportStatus } from "../components/SummonerSpellImport";
+
+/**
+ * The Import button's status-machine states. Owned here because this hook is the
+ * source of truth for the status; the presentational component imports it from
+ * the hook, keeping the dependency pointing component -> hook.
+ */
+export type SummonerSpellImportStatus = "idle" | "importing" | "done" | "error";
 
 export interface UseSummonerSpellImportDeps {
   /** Injectable for tests; defaults to the real LCU write action. */

@@ -165,6 +165,15 @@ describe("deriveMetaItemPoolEntries", () => {
     expect(deriveMetaItemPoolEntries(createChampion([]))).toEqual([]);
     expect(deriveMetaItemPoolEntries(championWithItemPool([]))).toEqual([]);
   });
+
+  it("honors a present-but-empty itemPool and does NOT fall back to builds", () => {
+    // A current-pipeline champion whose presence pool computed to empty (nothing
+    // cleared the floor) but that still has legacy build clusters. The empty
+    // itemPool is authoritative; the noisy clusters must NOT resurface.
+    const champion = championWithItemPool([], [{ items: [1001, 1002] }]);
+    expect(deriveMetaItemPoolEntries(champion)).toEqual([]);
+    expect(deriveMetaItemPool(champion)).toEqual([]);
+  });
 });
 
 describe("loadMetaBuilds", () => {

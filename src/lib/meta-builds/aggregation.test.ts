@@ -650,15 +650,13 @@ describe("aggregateBuilds", () => {
     ).toBe(false);
   });
 
-  it("keeps a champion with spell data even when no item build clusters", () => {
-    // Two games, each a distinct one-off item set, so every build cluster has
-    // only 1 game and is filtered out (no surviving builds). Both carry the same
-    // spell pair. The champion must still appear, with empty builds and its
-    // popularSpells, so the summoner-spell recommendation is never gated by the
-    // item-build threshold.
-    const items1 = [1001, 1002, 1003, 1004, 0, 0, 3340];
-    const items2 = [2001, 2002, 2003, 2004, 0, 0, 3340];
-    const matches: MatchData[] = [items1, items2].map((items, i) =>
+  it("keeps a champion on spell data alone when neither builds nor pool survive", () => {
+    // 11 games, each a distinct four-item set, so (a) every build cluster has one
+    // game and is filtered (no surviving builds) and (b) every item appears in
+    // 1/11 = 9.1% of games, below the 10% pool floor, so the itemPool is empty
+    // too. Only the shared spell pair remains, so the champion must still appear
+    // purely on popularSpells: this isolates the spell clause of the emit gate.
+    const matches: MatchData[] = Array.from({ length: 11 }, (_, i) =>
       createMatch({
         matchId: `nobuild-${i}`,
         gameVersion: "16.12.1.1",
@@ -669,7 +667,15 @@ describe("aggregateBuilds", () => {
             championId: 77,
             championName: "Udyr",
             win: true,
-            items,
+            items: [
+              1000 + i * 4,
+              1001 + i * 4,
+              1002 + i * 4,
+              1003 + i * 4,
+              0,
+              0,
+              3340,
+            ],
             summonerSpells: [4, 32],
           }),
         ],
@@ -680,13 +686,10 @@ describe("aggregateBuilds", () => {
     const udyr = output.champions["77"];
     expect(udyr).toBeDefined();
     expect(udyr.builds).toEqual([]);
-    // Each one-off set contributes four items at 50% presence, so the pool holds
-    // all eight even though no exact-set build cluster survives.
-    expect(udyr.itemPool.length).toBe(8);
-    expect(udyr.itemPool.every((e) => e.presence === 0.5)).toBe(true);
+    expect(udyr.itemPool).toEqual([]);
     expect(udyr.popularSpells).toBeDefined();
     expect(udyr.popularSpells![0].spells).toEqual([4, 32]);
-    expect(udyr.popularSpells![0].picks).toBe(2);
+    expect(udyr.popularSpells![0].picks).toBe(11);
   });
 
   it("aggregates popularAugments when participants carry augments", () => {
