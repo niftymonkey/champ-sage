@@ -78,6 +78,7 @@ These rules are non-negotiable. Every feature, prompt, notification, and UI elem
 - Champion select assistance
 - Presenting multiple options with reasoning for the player to choose from
 - Contextual coaching that responds to player questions
+- Importing the player's OWN recommended summoner spells (or runes) into the client during champ select, on an explicit user action (e.g. an Import button). Setting your own spells is champ-select assistance: the player chooses to click and can still change them manually. This is distinct from the prohibited enemy summoner-spell tracking below. Verified 2026-06-29 (see `docs/research/augment-detection-research.md`): no Riot/Overwolf prohibition; longstanding mainstream precedent (Mobalytics/Blitz/Porofessor). Conditions: keep it user-initiated (never silent auto-apply), never show a win-rate number, and the whole app must be registered on the Riot Developer Portal (required for any LCU use).
 
 ### Prohibited
 

@@ -7,6 +7,7 @@
   "main": "dist-electron/main.cjs",
   "scripts": {
     "build": "tsc && vite build",
+    "analyze-coverage": "tsx scripts/analyze-coverage.ts",
     "audit-augments": "tsx scripts/audit-augments.ts",
     "build:electron": "tsup --config electron/tsup.config.ts && vite build",
     "check-buildpath-enum": "tsx scripts/check-buildpath-enum.ts",

@@ -47,11 +47,34 @@ export interface MetaBuildAugment {
   winRate: number;
 }
 
+export interface MetaBuildSpell {
+  /** Normalized (ascending) summoner-spell ID pair, e.g. [4, 6] for Flash + Ghost. */
+  spells: number[];
+  picks: number;
+  wins: number;
+  pickRate: number;
+  winRate: number;
+}
+
+export interface MetaBuildItemPoolEntry {
+  /** DDragon item id. */
+  itemId: number;
+  /** Fraction of the champion's selected games that built this item (0..1). */
+  presence: number;
+}
+
 export interface MetaBuildChampion {
   championName: string;
   sampleSize: number;
   builds: MetaBuild[];
+  /**
+   * Presence-sourced item pool, ranked by presence descending. Present in files
+   * produced by the current pipeline (ARAM); absent in legacy ranked-solo/arena
+   * files that predate it, where the pool is derived from `builds` instead.
+   */
+  itemPool?: MetaBuildItemPoolEntry[];
   popularAugments?: MetaBuildAugment[];
+  popularSpells?: MetaBuildSpell[];
 }
 
 export interface MetaBuildFile {
@@ -163,26 +186,82 @@ export function getChampionMeta(
 }
 
 /**
- * Derive the set of unique item IDs that appear in the top builds for a
- * champion — the "meta-derived item pool" used as Tier 1 in the coaching
- * prompt. Returns IDs sorted by frequency across the builds (most common
- * first), so the prompt can prioritize items that show up in multiple builds.
+ * One item in a champion's derived pool for the coaching prompt: the item id and
+ * its presence rate (fraction of the champion's games that built it), or null
+ * when the source is a legacy build-cluster file that predates presence
+ * tracking. Consumers show the rate when present and omit it otherwise.
  */
-export function deriveMetaItemPool(
-  champion: MetaBuildChampion | null
-): number[] {
-  if (!champion || champion.builds.length === 0) return [];
+export interface DerivedPoolItem {
+  itemId: number;
+  presence: number | null;
+}
 
-  // Count how many builds each item appears in
+/**
+ * Derive a champion's item pool as ordered entries for the coaching prompt.
+ *
+ * Prefers the presence-sourced `itemPool` (already ranked by presence
+ * descending), carrying each item's presence rate through. Falls back to the
+ * legacy exact-set `builds` for ranked-solo/arena files that predate item-pool
+ * tracking, ordering those by how many build clusters each item appears in
+ * (most common first) and reporting a null rate since clusters carry no true
+ * presence. Returns an empty array when neither source has data.
+ */
+export function deriveMetaItemPoolEntries(
+  champion: MetaBuildChampion | null
+): DerivedPoolItem[] {
+  if (!champion) return [];
+
+  // Preferred source: the presence-sourced pool, already ranked by presence
+  // descending. Carry the rate through so the prompt can show how-standard each
+  // item is (e.g. a 62% core vs a 28% situational pickup). Presence is keyed on
+  // the field being PRESENT, not non-empty: a present-but-empty pool means
+  // presence was computed and nothing cleared the floor, which is a valid "no
+  // pool" answer, not a reason to fall back to noisy legacy clusters. Only an
+  // ABSENT itemPool (a legacy file that predates the field) falls through.
+  if (champion.itemPool) {
+    return champion.itemPool.map((e) => ({
+      itemId: e.itemId,
+      presence: e.presence,
+    }));
+  }
+
+  // Legacy fallback: ranked-solo/arena files predate the pool and still carry
+  // exact-set build clusters. Rank items by how many clusters they appear in
+  // (most common first); clusters carry no true presence rate, so report null.
+  if (champion.builds.length === 0) return [];
   const itemCounts = new Map<number, number>();
   for (const build of champion.builds) {
     for (const itemId of build.items) {
       itemCounts.set(itemId, (itemCounts.get(itemId) ?? 0) + 1);
     }
   }
-
-  // Sort by frequency desc, then by item ID for stable ordering
   return [...itemCounts.entries()]
     .sort((a, b) => b[1] - a[1] || a[0] - b[0])
-    .map(([itemId]) => itemId);
+    .map(([itemId]) => ({ itemId, presence: null }));
+}
+
+/**
+ * The set of unique item IDs in a champion's pool, ordered most-relevant first.
+ * Thin wrapper over deriveMetaItemPoolEntries for callers that only need ids
+ * (e.g. tier-1 lookup and tier-2 exclusion); see that function for the
+ * source-selection rules.
+ */
+export function deriveMetaItemPool(
+  champion: MetaBuildChampion | null
+): number[] {
+  return deriveMetaItemPoolEntries(champion).map((e) => e.itemId);
+}
+
+/**
+ * The single summoner-spell pair to recommend for a champion: the most-picked
+ * pair (`popularSpells` is already ranked by pick popularity). Returns undefined
+ * when the data isn't collected, the champion has no pairs, or the top pair is
+ * incomplete, so callers can omit the recommendation rather than render half of
+ * one. Recommendation is by popularity, never win rate.
+ */
+export function deriveRecommendedSpells(
+  champion: MetaBuildChampion | null
+): [number, number] | undefined {
+  const pair = champion?.popularSpells?.[0]?.spells;
+  return pair && pair.length === 2 ? [pair[0], pair[1]] : undefined;
 }

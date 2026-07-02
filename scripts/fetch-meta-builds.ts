@@ -39,6 +39,13 @@ import {
   barProgressLines,
 } from "../src/lib/meta-builds/progress-format";
 import {
+  tallyChampionGames,
+  buildReadinessReport,
+  formatReadinessLine,
+  formatReadinessReport,
+  COLLECTION_GAME_TARGET,
+} from "../src/lib/meta-builds/readiness";
+import {
   keyFingerprint,
   shouldPurgePuuidCaches,
   isDecryptError,
@@ -960,6 +967,14 @@ async function collectMatchesSnowball(
   // the existing file until the collection run is complete, at which point
   // the user manually promotes the new file (delete old, rename .new). This
   // keeps the app stable while new data is being built up.
+  // Set once every champion seen has reached COLLECTION_GAME_TARGET in-window
+  // games. Checked at the periodic-aggregation cadence; when true the snowball
+  // stops early (the per-champion game floor is the real "done" signal for the
+  // presence pool). Saturation/exhaustion stays the backstop, and in practice
+  // this rarely fires because rare champions may never reach the target in one
+  // freshness window, so the readiness REPORT naming laggards is the main tool.
+  let readinessReached = false;
+
   let lastAggregatedAtCount = Math.floor(matches.length / 1000) * 1000;
   const maybeAggregatePeriodically = () => {
     const currentThousand = Math.floor(matches.length / 1000) * 1000;
@@ -989,6 +1004,25 @@ async function collectMatchesSnowball(
       output.patch,
       `${queueKey}.new.json`
     );
+
+    // Per-champion collection readiness against the convergence target. Printed
+    // as a permanent line so progress toward "enough games per champion" is
+    // visible during the long run, and used to arm the early stop above.
+    const readiness = buildReadinessReport(
+      tallyChampionGames(matches, cutoffMs),
+      COLLECTION_GAME_TARGET
+    );
+    clearLiveRegion();
+    console.log(formatReadinessLine(readiness));
+    logQuery({
+      event: "readiness",
+      totalChampions: readiness.totalChampions,
+      readyCount: readiness.readyCount,
+      target: readiness.target,
+      rarest: readiness.rarest,
+      allReady: readiness.allReady,
+    });
+    if (readiness.allReady) readinessReached = true;
   };
 
   let savedAt = Date.now();
@@ -1172,6 +1206,22 @@ async function collectMatchesSnowball(
       matchesAfter: matches.length,
       queueSizeAfter: queue.size,
     });
+
+    // Early stop: every champion seen has reached the per-champion game target,
+    // armed at the periodic-aggregation cadence above. Checked AFTER this query's
+    // success log (unlike the saturation break above) so the final productive
+    // query is still recorded before we stop. The post-loop persist() flushes
+    // state regardless.
+    if (readinessReached) {
+      endReason = "all-champions-ready";
+      clearLiveRegion();
+      console.log(
+        `  ${queueKey}: every champion reached ${COLLECTION_GAME_TARGET} games. ${fmtN(
+          matches.length
+        )} cached. Stopping.`
+      );
+      break;
+    }
 
     // Every 100 queries, write a rich summary showing rolling efficiency
     // broken down by source and ID-return distribution. This is the key
@@ -1612,6 +1662,17 @@ async function main() {
     console.log(
       `  Wrote ${outputPath} (${champCount} champions, target patch ${output.targetPatch}, fresh share ${(output.freshPatchShare * 100).toFixed(1)}%)`
     );
+
+    // Per-champion readiness against the convergence target, naming the laggards
+    // so the user can judge whether the tail is good enough or another pass is
+    // worth it. Rare champions may never reach the target in one window.
+    const readiness = buildReadinessReport(
+      tallyChampionGames(matches, cutoffMs),
+      COLLECTION_GAME_TARGET
+    );
+    for (const line of formatReadinessReport(readiness)) {
+      console.log(`  ${line}`);
+    }
   }
 
   console.log("\n=== Done ===");
