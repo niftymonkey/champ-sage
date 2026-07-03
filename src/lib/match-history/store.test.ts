@@ -57,6 +57,7 @@ function fakeBridge(
     discoverLcu: vi.fn(),
     fetchLcu: fetchLcuImpl ?? vi.fn(),
     fetchRiotApi: vi.fn(),
+    setSummonerSpells: vi.fn(),
     connectLcuWebSocket: vi.fn(),
     listenLcuEvent: vi.fn(() => () => {}),
     listenLcuDisconnect: vi.fn(() => () => {}),
@@ -157,7 +158,9 @@ describe("createMatchHistoryStore", () => {
       // does fail transiently, SWR sees the error; the next `lcuReady$`
       // flip drives a fresh invocation.
       const fetchLcu = vi.fn(async () => {
-        throw new Error("CONNECTION_FAILED:connect ECONNREFUSED 127.0.0.1:1234");
+        throw new Error(
+          "CONNECTION_FAILED:connect ECONNREFUSED 127.0.0.1:1234"
+        );
       });
       const harness = makeHarness(fakeBridge(fetchLcu));
       const store = createMatchHistoryStore(harness);

@@ -28,7 +28,7 @@ import {
 } from "../mode/types";
 import type { Champion, Item, ItemMode } from "../data-ingest/types";
 import {
-  deriveMetaItemPool,
+  deriveMetaItemPoolEntries,
   getChampionMeta,
   type MetaBuildFile,
   type MetaBuildIndex,
@@ -153,9 +153,16 @@ function formatKeyStats(item: Item): string {
 
 /**
  * Format an item for tier 1 (meta-derived). Full detail: description, key
- * stats (if not already covered by description), total cost, and build path.
+ * stats (if not already covered by description), total cost, and build path. A
+ * non-null `presence` (the fraction of the champion's games that built the item)
+ * is appended as a usage rate so the LLM can read how-standard the item is;
+ * legacy build-derived pools pass null and the rate is omitted.
  */
-function formatMetaItem(item: Item, allItems: Map<number, Item>): string {
+function formatMetaItem(
+  item: Item,
+  allItems: Map<number, Item>,
+  presence: number | null
+): string {
   const parts: string[] = [`**${item.name}** — `];
   // Prefer the stripped description; it's the authoritative effect text.
   if (item.description) {
@@ -174,6 +181,9 @@ function formatMetaItem(item: Item, allItems: Map<number, Item>): string {
     if (components.length > 0) {
       parts.push(` (builds from: ${components.join(" + ")})`);
     }
+  }
+  if (presence != null) {
+    parts.push(` (used in ${Math.round(presence * 100)}% of games)`);
   }
   return parts.join("");
 }
@@ -225,10 +235,10 @@ export function buildItemCatalogSections(
     ? getChampionMeta(metaFile, champion.key)
     : null;
 
-  const tier1Ids = deriveMetaItemPool(championMeta);
-  const tier1Items: Item[] = [];
-  for (const id of tier1Ids) {
-    const item = allItems.get(id);
+  const tier1Entries = deriveMetaItemPoolEntries(championMeta);
+  const tier1Items: Array<{ item: Item; presence: number | null }> = [];
+  for (const entry of tier1Entries) {
+    const item = allItems.get(entry.itemId);
     if (!item) continue;
     // Skip components and consumables. These show up in meta builds when
     // players finish games with leftover inventory (Refillable Potion, Ruby
@@ -240,13 +250,13 @@ export function buildItemCatalogSections(
     if (item.gold.total < 500) continue;
     const isBoots = item.tags.includes("Boots");
     if (item.into && item.into.length > 0 && !isBoots) continue;
-    tier1Items.push(item);
+    tier1Items.push({ item, presence: entry.presence });
   }
 
   // Tier 2 = mode-valid items minus tier 1 items. Sort alphabetically for
   // predictable output; the LLM doesn't care about order but it makes the
   // prompt easier to eyeball when debugging.
-  const tier1Set = new Set(tier1Ids);
+  const tier1Set = new Set(tier1Entries.map((e) => e.itemId));
   const tier2Items = [...modeItems.values()]
     .filter((item) => !tier1Set.has(item.id))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -267,8 +277,8 @@ export function buildItemCatalogSections(
       `These items show up in the top community builds for ${champion.name} this patch. Treat this as a CURATED POOL to choose from, NOT a build order. The list is unordered — use your knowledge of League itemization to determine build order. Do NOT simply list all of these items — pick the subset that best counters the enemy team composition, matches the player's current gold and inventory, and addresses the player's current question.`
     );
     lines.push("");
-    for (const item of tier1Items) {
-      lines.push(formatMetaItem(item, allItems));
+    for (const { item, presence } of tier1Items) {
+      lines.push(formatMetaItem(item, allItems, presence));
     }
   }
 

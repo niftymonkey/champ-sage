@@ -88,6 +88,28 @@ function createMetaFile(
   };
 }
 
+function createMetaFileWithItemPool(
+  championKey: number,
+  championName: string,
+  pool: Array<{ itemId: number; presence: number }>
+): MetaBuildFile {
+  return {
+    patch: "16.7",
+    region: "na1",
+    queueId: 450,
+    queueName: "ARAM",
+    collectedAt: new Date().toISOString(),
+    champions: {
+      [String(championKey)]: {
+        championName,
+        sampleSize: 100,
+        builds: [],
+        itemPool: pool,
+      },
+    },
+  };
+}
+
 describe("selectMetaFile", () => {
   const aramFile = createMetaFile(1, "A", [[1001]]);
   const rankedFile = createMetaFile(1, "A", [[1002]]);
@@ -252,6 +274,49 @@ describe("buildItemCatalogSections", () => {
     expect(result.text).toContain("Kraken Slayer");
     expect(result.text).toContain("Galeforce");
     expect(result.text).toContain("Cost: 3100g");
+  });
+
+  it("shows each tier 1 item's presence rate from the item pool", () => {
+    const metaFile = createMetaFileWithItemPool(jinx.key, "Jinx", [
+      { itemId: kraken.id, presence: 0.62 },
+      { itemId: zhonyas.id, presence: 0.28 },
+    ]);
+    const index: MetaBuildIndex = {
+      aram: metaFile,
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      allItems,
+      index
+    );
+
+    expect(result.tier1Count).toBe(2);
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).toContain("used in 62% of games");
+    expect(result.text).toContain("used in 28% of games");
+  });
+
+  it("omits the presence rate for legacy build-derived pools", () => {
+    const metaFile = createMetaFile(jinx.key, "Jinx", [[kraken.id]]);
+    const index: MetaBuildIndex = {
+      aram: metaFile,
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      allItems,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).not.toContain("% of games");
   });
 
   it("includes non-meta mode items in tier 2", () => {

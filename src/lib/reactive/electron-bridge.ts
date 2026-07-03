@@ -78,6 +78,7 @@ function createNoOpBridge(): PlatformBridge {
     discoverLcu: fail,
     fetchLcu: fail,
     fetchRiotApi: fail,
+    setSummonerSpells: fail,
     connectLcuWebSocket: fail,
     listenLcuEvent: () => () => {},
     listenLcuDisconnect: () => () => {},
@@ -105,6 +106,17 @@ export function createElectronBridge(): PlatformBridge {
 
     async fetchRiotApi(endpoint: string) {
       return unwrap<string>(await api.invoke("fetch_riot_api", endpoint));
+    },
+
+    async setSummonerSpells(
+      port: number,
+      token: string,
+      spell1Id: number,
+      spell2Id: number
+    ) {
+      return unwrap<void>(
+        await api.invoke("set_summoner_spells", port, token, spell1Id, spell2Id)
+      );
     },
 
     async connectLcuWebSocket(port: number, token: string) {

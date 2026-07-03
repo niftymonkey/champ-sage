@@ -33,6 +33,7 @@ import { createStripResizeLock } from "./strip-resize-lock";
 import { createStripBoundsStore } from "./strip-bounds-store";
 import { createBoundsStore } from "./bounds-store";
 import type { WindowBounds } from "./bounds-store";
+import { setSummonerSpells, httpsLcuRequester } from "./lcu-write";
 import { boundsAreVisible } from "./window-placement";
 import {
   createCoachDecisionLog,
@@ -363,6 +364,29 @@ function registerIpcHandlers(): void {
               reject(new Error(`CONNECTION_FAILED:${err.message}`))
             );
         });
+      }
+    )
+  );
+
+  // Write the local player's summoner spells into the active champ-select
+  // session. This is the app's only mutating LCU call; the player triggers it
+  // explicitly from the champ-select Import button (never silent auto-apply).
+  ipcMain.handle(
+    "set_summoner_spells",
+    quietHandler(
+      async (
+        _event: unknown,
+        port: number,
+        token: string,
+        spell1Id: number,
+        spell2Id: number
+      ) => {
+        await setSummonerSpells(
+          { port, token },
+          spell1Id,
+          spell2Id,
+          httpsLcuRequester
+        );
       }
     )
   );

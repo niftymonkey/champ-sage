@@ -182,6 +182,26 @@ GEP uses internal augment names (e.g., `TFT8_Augment_DefenderTrait`) that need t
 
 Champ Sage provides contextual coaching recommendations ("given your build and the enemy team, this augment synergizes best") rather than statistical win rates ("this augment has a 58% win rate"). This aligns with Riot's allowance of tools that "highlight decisions and give multiple choices" without "dictating player action."
 
+### Setting the player's OWN summoner spells via the LCU (champ-select Import button): ALLOWED
+
+Verdict reached 2026-06-29 for the `feat/meta-summoner-spells` Import feature, which writes the player's recommended summoner-spell pair into the client on an explicit click via LCU `PATCH /lol-champ-select/v1/session/my-selection`. Conclusion: permitted, no display-only fallback required, provided the conditions below hold.
+
+Evidence (primary sources read directly):
+
+- **Riot general policy** (`developer.riotgames.com/policies/general`, last updated March 2025): contains no clause prohibiting setting summoner spells, automating the LCU, or "importing" runes/spells. The operative Game Integrity language is: "Products should not remove game decisions, but may highlight decisions that are important and give multiple choices to help players make good decisions," and "Products must not use or incorporate information not present in the game client that would give players a competitive edge." A user-initiated Import uses only the player's own champ-select state, removes no decision (the player clicks, and can still change spells), and confers no informational edge.
+- **Overwolf Riot compliance** (`dev.overwolf.com/ow-native/guides/game-compliance/riot-games/`): the only summoner-spell rule is "Tracking of enemy summoner spells cooldowns, or facilitating players tracking these with timers." That governs ENEMY cooldown tracking, a different feature. Nothing prohibits setting the player's own spells.
+- **LCU API terms** (`developer.riotgames.com/docs/lol`, League Client API section): the LCU "is not officially supported for use with third party applications" with "no guarantees of full documentation, service uptime, or change communication." No prohibition on writes/automation or on setting runes/spells. It does require registration: any app touching the LCU must be registered with Riot ("we need to know about it").
+- **Current precedent**: Mobalytics auto-imports runes/items/SPELLS into the client (support article 4404450110349), user-configurable down to "Default Flash Position" (the same keybind-slot nuance noted in `docs/reference/technical-reference.md`), live since 2021 and still current in 2026. Blitz, Porofessor, and Mimic.lol do the same via LCU. Exa-corroborated 2026: Riot has NOT banned rune/spell import; the May 2025 crackdown targeted in-client ADS and enemy ultimate timers, not import.
+
+Conditions (all currently satisfied by the implementation):
+
+1. **User-initiated, never silent auto-apply.** The Import button requires an explicit click.
+2. **Does not remove the decision.** The player sees the recommendation, chooses whether to apply, and can still change spells in-client afterward.
+3. **No win-rate number shown.** The recommendation ranks by pick popularity only (win rates remain banned for augments/Arena items, so the app stays clear of that line by design).
+4. **App registration on the Riot Developer Portal.** Project-level obligation for ANY LCU use (already true: the app reads the LCU and uses GEP). Not specific to this feature, but required before public distribution.
+
+Residual risks (accepted): the LCU is unsupported, so the endpoint can change or break without notice (same operational risk as the existing LCU reads). Regional caveat: in-client LCU _plugin_ injection is prohibited in the Korean region; this feature uses external REST calls (the same channel as our existing LCU reads), not client-side plugin injection, so it is a different category.
+
 ### Vanguard anti-cheat
 
 - Kernel-level anti-cheat (Ring 0), live on LoL since April 2024
