@@ -46,6 +46,11 @@ export interface ReadinessReport {
  * Tally per-champion in-window game counts from cached matches. A "game" is one
  * participant appearance; matches older than `cutoffMs` are excluded so the
  * count reflects fresh collection progress, not stale cache.
+ *
+ * Participants with fewer than 3 completed items (remakes / early surrenders)
+ * are skipped, mirroring the eligibility gate in `aggregateBuilds` and the
+ * coverage study. Without this, readiness would over-count vs the usable sample
+ * the item pool is actually built from and could stop collection early.
  */
 export function tallyChampionGames(
   matches: MatchData[],
@@ -55,6 +60,8 @@ export function tallyChampionGames(
   for (const m of matches) {
     if (m.gameEndTimestamp < cutoffMs) continue;
     for (const p of m.participants) {
+      const completedItems = p.items.slice(0, 6).filter((id) => id > 0).length;
+      if (completedItems < 3) continue;
       const existing = byChampion.get(p.championId);
       if (existing) {
         existing.games += 1;

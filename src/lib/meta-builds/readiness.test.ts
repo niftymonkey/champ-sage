@@ -84,6 +84,21 @@ describe("tallyChampionGames", () => {
     // Olaf appears only in the out-of-window match, so he is absent entirely.
     expect(counts.find((c) => c.championId === 2)).toBeUndefined();
   });
+
+  it("excludes participants with fewer than 3 completed items (remakes)", () => {
+    // Mirror aggregateBuilds' eligibility rule: a participant with <3 completed
+    // items (remake / early surrender) is not a usable sample, so it must not
+    // inflate the readiness count above the games the item pool is actually
+    // built from.
+    const remake = participant(1, "Annie");
+    remake.items = [3031, 0, 0, 0, 0, 0, 3340]; // 1 completed item
+    const matches: AggMatchData[] = [
+      match(daysAgoMs(1), [participant(1, "Annie"), remake]),
+    ];
+    const counts = tallyChampionGames(matches, daysAgoMs(30));
+    // Only the full build counts; the remake is excluded.
+    expect(counts.find((c) => c.championId === 1)?.games).toBe(1);
+  });
 });
 
 describe("buildReadinessReport", () => {

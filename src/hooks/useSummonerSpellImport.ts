@@ -1,5 +1,8 @@
 import { useCallback, useState } from "react";
 import { applySummonerSpells } from "../lib/champ-select/apply-summoner-spells";
+import { getLogger } from "../lib/logger";
+
+const log = getLogger("champ-select");
 
 /**
  * The Import button's status-machine states. Owned here because this hook is the
@@ -21,8 +24,8 @@ export interface SummonerSpellImport {
 /**
  * Drives the summoner-spell Import button's status machine: idle, then
  * importing while the LCU write is in flight, then done or error. Failures are
- * swallowed into the `error` status (the action logs the cause) so the button
- * can offer a retry without throwing into render.
+ * logged here and folded into the `error` status (never thrown into render) so
+ * the button can offer a retry and the cause stays diagnosable in the logs.
  */
 export function useSummonerSpellImport(
   deps: UseSummonerSpellImportDeps = {}
@@ -36,7 +39,11 @@ export function useSummonerSpellImport(
       try {
         await apply(spell1Id, spell2Id);
         setStatus("done");
-      } catch {
+      } catch (err) {
+        log.error(
+          `summoner spell import failed (${spell1Id} + ${spell2Id})`,
+          err
+        );
         setStatus("error");
       }
     },

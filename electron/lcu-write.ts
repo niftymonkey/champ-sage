@@ -100,6 +100,12 @@ export const httpsLcuRequester: LcuRequester = async ({
       (res) => {
         let data = "";
         res.on("data", (chunk: string) => (data += chunk));
+        // A socket error after headers arrive surfaces on the response stream,
+        // not the request; without this listener it would throw as an unhandled
+        // 'error' (crashing the main process) or leave the promise pending.
+        res.on("error", (err: Error) =>
+          reject(new Error(`CONNECTION_FAILED:${err.message}`))
+        );
         res.on("end", () =>
           resolve({ statusCode: res.statusCode ?? 0, body: data })
         );
