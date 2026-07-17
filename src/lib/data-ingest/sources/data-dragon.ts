@@ -110,30 +110,6 @@ function mapRune(raw: RawRune): Rune {
 }
 
 /**
- * Fetch full ability data for a list of champions by their DDragon IDs.
- * Each champion requires an individual API call — callers should batch
- * strategically (e.g., only the 10 in a live game, or one at a time during idle).
- *
- * Returns a Map keyed by lowercase champion ID (e.g., "ahri", "aurelionsol").
- */
-export async function fetchChampionAbilities(
-  version: string,
-  championIds: string[]
-): Promise<Map<string, ChampionAbilities>> {
-  const results = await Promise.allSettled(
-    championIds.map((id) => fetchSingleChampionAbilities(version, id))
-  );
-
-  const abilities = new Map<string, ChampionAbilities>();
-  for (const result of results) {
-    if (result.status === "fulfilled" && result.value) {
-      abilities.set(result.value.key, result.value.abilities);
-    }
-  }
-  return abilities;
-}
-
-/**
  * Fetch ability data for EVERY champion in a single request.
  *
  * DDragon's `championFull.json` carries the same passive/spell payload as the
@@ -189,27 +165,6 @@ function normalizeAbilities(data: RawChampionFull): ChampionAbilities {
       costs: spell.cost,
       range: spell.range,
     })),
-  };
-}
-
-async function fetchSingleChampionAbilities(
-  version: string,
-  championId: string
-): Promise<{ key: string; abilities: ChampionAbilities } | null> {
-  const res = await fetch(
-    `${BASE_URL}/cdn/${version}/data/en_US/champion/${championId}.json`
-  );
-  if (!res.ok) return null;
-
-  const json = (await res.json()) as {
-    data?: Record<string, RawChampionFull>;
-  };
-  const data = json.data?.[championId];
-  if (!data) return null;
-
-  return {
-    key: championId.toLowerCase(),
-    abilities: normalizeAbilities(data),
   };
 }
 
