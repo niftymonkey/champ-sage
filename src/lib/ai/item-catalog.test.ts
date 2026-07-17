@@ -721,6 +721,21 @@ describe("tier 2 mode availability (ARAM/Mayhem play with standard items)", () =
     expect(result.text).toContain("Rabadon's Deathcap");
   });
 
+  it("includes the ARAM variant overlay alongside standard items in Mayhem", () => {
+    // Both mode contracts matter, and they are the whole point of the fix:
+    // Mayhem is standard items PLUS the variant overlay, so asserting only
+    // one of the two would let a regression through on the other.
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_MAYHEM),
+      champ,
+      items,
+      undefined
+    );
+
+    expect(result.text).toContain("Abyssal Mask");
+    expect(result.text).not.toContain("Arena Abyssal Mask");
+  });
+
   it("excludes components and consumables from tier 2", () => {
     // Tier 2 is a recommendable-item reference, not the raw catalog. Listing
     // B. F. Sword or a potion invites the coach to name them as purchases.

@@ -488,6 +488,32 @@ describe("fetchAllChampionAbilities", () => {
     expect(abilities.size).toBe(0);
   });
 
+  // A network drop and a truncated body reach this differently from an HTTP
+  // error: they REJECT rather than resolve. Ingest handles that at the call
+  // site (degrade to no abilities, warn, and skip the cache write so the next
+  // start retries), so what matters here is that the rejection propagates
+  // rather than being swallowed into a silent empty result that would look
+  // identical to "DDragon has no abilities".
+  it("propagates a rejected fetch rather than swallowing it", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("ECONNRESET"));
+
+    await expect(fetchAllChampionAbilities("15.6.1")).rejects.toThrow(
+      "ECONNRESET"
+    );
+  });
+
+  it("propagates a malformed JSON body rather than swallowing it", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.reject(new SyntaxError("Unexpected end of JSON input")),
+    });
+
+    await expect(fetchAllChampionAbilities("15.6.1")).rejects.toThrow(
+      "Unexpected end of JSON input"
+    );
+  });
+
   describe("payload validation", () => {
     /** A valid champion entry, so tests can corrupt one field at a time. */
     function validChampion() {
