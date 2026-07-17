@@ -35,12 +35,16 @@ vite.config.ts.timestamp-*
 # Data dumps
 data-dump/
 
-# Meta build cache (intermediate API data, not the final output)
-data/meta-builds/.cache/
+# Meta build cache (intermediate API data, not the final output).
+# Globbed, not an exact path: these caches get copied or renamed per worktree
+# and per collection run (.cache.bak, .cache-spells-worktree-2026-06-30, ...),
+# and every one of them holds harvested Riot PUUIDs. An exact-path rule only
+# covers the name someone happened to use, so a rename silently drops player
+# identifiers back into `git add -A` range.
+data/meta-builds/.cache*/
 
 # Staging files for in-progress meta build collection runs
 src/data/meta-builds/*.new.json
-data/meta-builds/.cache.bak/
 
 # "Current status" files
 **/STATUS.md
