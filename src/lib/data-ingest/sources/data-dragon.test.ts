@@ -403,15 +403,17 @@ describe("fetchAllChampionAbilities", () => {
         Ahri: {
           passive: {
             name: "Essence Theft",
-            description: "After killing 9 minions, <b>Ahri</b> heals.",
+            // Real DDragon ability text is plain prose whose only markup is
+            // <br>, which the stripper turns into a " | " separator.
+            description:
+              "After killing 9 minions, Ahri heals.<br>Takedowns heal more.",
             image: { full: "Ahri_SoulEater2.png" },
           },
           spells: [
             {
               id: "AhriQ",
               name: "Orb of Deception",
-              description:
-                "Ahri sends out her orb, dealing <b>magic damage</b>.",
+              description: "Ahri sends out her orb, dealing magic damage.",
               maxrank: 5,
               cooldown: [7, 7, 7, 7, 7],
               cost: [55, 65, 75, 85, 95],
@@ -462,9 +464,13 @@ describe("fetchAllChampionAbilities", () => {
 
     const ahri = abilities.get("ahri")!;
     expect(ahri.passive.name).toBe("Essence Theft");
-    expect(ahri.passive.description).not.toContain("<");
+    expect(ahri.passive.description).toBe(
+      "After killing 9 minions, Ahri heals. | Takedowns heal more."
+    );
     expect(ahri.spells[0].name).toBe("Orb of Deception");
-    expect(ahri.spells[0].description).not.toContain("<");
+    expect(ahri.spells[0].description).toBe(
+      "Ahri sends out her orb, dealing magic damage."
+    );
     expect(ahri.spells[0].maxRank).toBe(5);
     expect(ahri.spells[0].cooldowns).toEqual([7, 7, 7, 7, 7]);
     expect(ahri.spells[0].costs).toEqual([55, 65, 75, 85, 95]);
