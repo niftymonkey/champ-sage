@@ -816,6 +816,21 @@ describe("champion abilities in the cached payload", () => {
 
     expect(cache.writeCache).not.toHaveBeenCalled();
   });
+
+  it("does NOT cache the payload when the abilities fetch REJECTS", async () => {
+    // A network drop rejects rather than resolving empty, which reaches the
+    // guard by a different path (the catch in fetchAndCache). Same rule has
+    // to hold: degrade for the session, cache nothing, retry next start.
+    vi.mocked(dataDragon.fetchAllChampionAbilities).mockRejectedValue(
+      new Error("ECONNRESET")
+    );
+
+    const data = await loadGameData();
+
+    expect(cache.writeCache).not.toHaveBeenCalled();
+    expect(data.champions.get("aatrox")).toBeDefined();
+    expect(data.champions.get("aatrox")!.abilities).toBeUndefined();
+  });
 });
 
 describe("mergeAbilityScaling", () => {

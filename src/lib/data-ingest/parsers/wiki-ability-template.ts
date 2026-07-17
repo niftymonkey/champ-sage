@@ -364,6 +364,19 @@ function substituteVariables(
     if (text === before) break;
   }
 
+  // Falling out of the loop with markers still present means substitution
+  // never reached a fixpoint (a self-referential or mutually-recursive
+  // vardefine). The residual-markup gate downstream would quarantine this
+  // anyway, but reporting it as unresolved-variable keeps the audit's reason
+  // breakdown honest about WHY a stat was dropped.
+  if (text.includes("{{#var:")) {
+    const name = /\{\{#var:\s*([^|}]+?)\s*\}\}/.exec(text)?.[1] ?? "unknown";
+    return {
+      ok: false,
+      reason: { kind: "unresolved-variable", variable: name },
+    };
+  }
+
   return { ok: true, text };
 }
 
