@@ -10,10 +10,11 @@
  *   should default to.
  *
  *   Tier 2 — Remaining mode-valid items: all other items purchasable in the
- *   current game mode, minus the tier 1 items. Presented with lighter detail
- *   (name, key stats, cost) so the LLM has a complete reference for situational
- *   deviations (grievous wounds, defensive swaps, etc.) without diluting the
- *   tier 1 signal.
+ *   current game mode (per `isBuildPathEligible`, the same predicate the
+ *   game-plan build-path enum stands on), minus the tier 1 items. Presented with
+ *   lighter detail (name, key stats, cost) so the LLM has a complete reference
+ *   for situational deviations (grievous wounds, defensive swaps, etc.) without
+ *   diluting the tier 1 signal.
  *
  * The formatting strategy follows the exploration doc's approach: give the
  * LLM a hierarchy (strong default + full reference) rather than a flat list.
@@ -33,7 +34,6 @@ import {
   type MetaBuildFile,
   type MetaBuildIndex,
 } from "../data-ingest/meta-builds";
-import { filterItemsByMode } from "../mode/utils";
 
 /**
  * Decide which meta build file to use for a given game mode. ARAM and Mayhem
@@ -54,18 +54,6 @@ export function selectMetaFile(
     return index.arena;
   }
   return null;
-}
-
-/**
- * Pick the item-mode string used by the existing `filterItemsByMode` helper,
- * which filters the global item catalog down to items valid for a given mode.
- */
-export function selectItemMode(mode: GameMode): string {
-  if (mode.matches(GAME_MODE_ARAM) || mode.matches(GAME_MODE_MAYHEM)) {
-    return "aram";
-  }
-  if (mode.matches(GAME_MODE_ARENA)) return "arena";
-  return "standard";
 }
 
 /**
@@ -222,9 +210,22 @@ export function buildItemCatalogSections(
   allItems: Map<number, Item>,
   metaBuilds: MetaBuildIndex | undefined
 ): ItemCatalogSections {
-  // Filter down to the items valid for this game mode first. This is the
-  // tier 2 universe — without it we'd be listing jungle items in ARAM, etc.
-  const modeItems = filterItemsByMode(allItems, selectItemMode(mode));
+  // The tier 2 universe: every item this mode could legitimately have us
+  // recommend. `isBuildPathEligible` is the shared "recommendable item"
+  // predicate (purchasable, durable, completed, available in this mode) that
+  // the game-plan build-path enum already stands on, so the catalog we show
+  // the model and the enum it must answer within describe the same set.
+  //
+  // This deliberately does NOT use `filterItemsByMode`, which exact-matches
+  // `item.mode`. ARAM and Mayhem are played with the standard Summoner's Rift
+  // items PLUS the ARAM variant overlay; an exact match on "aram" yielded only
+  // the ~21 variant items and hid every standard item from the model, while
+  // the base context simultaneously told it that anything absent from this
+  // catalog is not purchasable.
+  const modeItems = new Map<number, Item>();
+  for (const [id, item] of allItems) {
+    if (isBuildPathEligible(item, mode)) modeItems.set(id, item);
+  }
 
   const metaFile = selectMetaFile(mode, metaBuilds);
 
