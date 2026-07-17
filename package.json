@@ -9,6 +9,7 @@
     "build": "tsc && vite build",
     "analyze-coverage": "tsx scripts/analyze-coverage.ts",
     "audit-augments": "tsx scripts/audit-augments.ts",
+    "audit-ability-scaling": "tsx scripts/audit-ability-scaling.ts",
     "build:electron": "tsup --config electron/tsup.config.ts && vite build",
     "check-buildpath-enum": "tsx scripts/check-buildpath-enum.ts",
     "check-game": "tsx scripts/check-game.ts",

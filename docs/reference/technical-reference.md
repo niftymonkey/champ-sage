@@ -510,6 +510,45 @@ Scaling ratios and base damage (the "40/65/90/115/140 (+50% AP)" a wiki shows) c
 - Riot moved spell calculations into game binary data that the public static APIs do not expose. See hextechdocs.dev "Resolving spells and variables in spell texts" for the bin-parsing approach.
 - **The wiki has it.** `Template:Data {Champion}/{Ability Name}?action=raw` carries a `leveling` field, e.g. `{{st|Damage Per Pass|{{ap|35 to 135}} {{as|(+ 50% AP)}}}}`, plus `cooldown`, `cost`, `range`, and `damagetype`. Note `Data Ahri/Q` is a REDIRECT to the named page, so resolve redirects (the MediaWiki API does this with `redirects=1` and batches titles). `{{ap|35 to 135}}` is shorthand for the per-rank series; our `stripWikiMarkup` already renders it as "35 to 135", which is a reasonable condensed form.
 
+### Ability scaling from the League Wiki (implemented 2026-07-17)
+
+`src/lib/data-ingest/sources/wiki-champion-abilities.ts` fetches it; `parsers/wiki-ability-template.ts` parses it. Measured on 16.14.1: **642/692 abilities (92.8%) carry scaling, 1582 stats accepted, 84 quarantined (5.0%)**. Re-run `pnpm audit-ability-scaling` after any parser change; it reports coverage and a ranked breakdown of what got dropped and why.
+
+**MediaWiki API mechanics:**
+
+- **A `User-Agent` header is REQUIRED.** Without one the API answers **HTTP 403**, not a rate-limit error. `curl` accidentally works because it sends its own; a bare `fetch` does not. This is the single easiest way to break this source.
+- Endpoint: `api.php?action=query&titles=...&redirects=1&prop=revisions&rvprop=content&rvslots=main&format=json&formatversion=2`. Use `formatversion=2`: `pages` becomes an array with a clean `content` key instead of a pageid-keyed object with the awkward `*` key.
+- **50 titles per request** is the unauthenticated cap. The full roster is 173 champions x 4 slots = 692 titles = 14 requests, fetched sequentially to stay a good citizen.
+- `URLSearchParams` encodes spaces as `+`; the API accepts that fine (verified).
+- All 692 `Template:Data {Champion}/{Q,W,E,R}` pages exist and resolve, keyed off the DDragon champion `name`. Every page declares `|champion` and `|skill`, and `skill` is exactly Q/W/E/R (173 each), which is a free cross-check that a redirect landed where you expected.
+
+**Template shape gotchas (each one silently produced wrong text before being handled):**
+
+- **`leveling` is not the only key.** Abilities also use `leveling2`, `leveling3`... paired with the matching numbered `description`. Reading only `leveling` finds 497 abilities; reading all of them finds 656. Sort them NUMERICALLY, or `leveling10` sorts before `leveling2`.
+- **Params are line-anchored** (`^|name = value`, value runs to the next line starting with `|`). Do not try brace-depth tracking to find them: every page opens with a `{{{{{1<noinclude>|Ability data</noinclude>}}}` invocation header whose braces are deliberately unbalanced, which defeats it.
+- **One `leveling` param often holds SEVERAL `{{st|...}}` tables** (277 of them do). A greedy `^\{\{st\|(.*)\}\}$` splices the first table's label onto the last table's value and invents a stat that does not exist. Extract each table with brace matching.
+- **`{{#vardefine:name|value}}` / `{{#var:name}}`** hoist tunable numbers to a page preamble (Aatrox, Garen, Fiddlesticks). Two traps: a vardefine's value can itself reference other variables, so substitution must iterate to a fixpoint; and the value can nest templates, so it must be read with brace matching rather than a regex terminating on the first `}}`.
+- **Values embed unevaluated arithmetic**, e.g. `{{ap|40*0.4 to 120*0.4}}` or `{{ap|(45/8)*26}}`. Rendering these raw puts "40*0.4" in a coaching prompt. `parsers/arithmetic.ts` is a small hand-rolled recursive-descent evaluator (`+ - * /`, unary minus, parens); it exists rather than `eval`/`Function` because that would execute arbitrary wiki-authored text in-process.
+- **`{{ap|200|350|500}}` is an explicit per-rank series, not one expression.** Ultimates use it in place of a range. Renders as `200/350/500`, matching how the prompt already writes per-rank cooldowns/costs. `stripWikiMarkup` would flatten the pipes to spaces and emit an ambiguous "200 350 500".
+- **`{{ap|...|round=4}}`**: params after the first can be named render options rather than rank values. Drop anything containing `=`.
+- **`{{st<!--\n-->|...}}`**: comments are used to wrap long params across lines and land between `{{st` and its first pipe. Strip comments before detecting tables.
+- `{{st|L1|v1|L2|v2}}` (stat table) and `{{tt|display|hover}}` (tooltip) are now handled by `stripWikiMarkup`. Before, both hit the unknown-template fallback, which silently dropped the first stat of every table.
+
+**The quarantine policy (why coverage is 95% and not 100%):**
+
+Wrong damage numbers in a coaching prompt are worse than absent ones, so a stat is emitted only if it parses cleanly and confidently. The trap is `stripWikiMarkup`'s `default` branch, which returns an unknown template's LAST param: that never fails, it just yields plausible-but-wrong text. `StripWikiMarkupOptions.onUnknownTemplate` now reports when that heuristic fires so the scaling path can refuse it, while augment callers keep the lenient behaviour unchanged. A stat is dropped when it hits an unknown template, an undefined variable, arithmetic that will not evaluate, residual markup (`{}[]|*=#` surviving), or a value with no digit in it. What remains quarantined is genuinely not worth recovering:
+
+- `arithmetic-failed` (56): mostly ambiguous or malformed wiki source, e.g. Annie R's `{{ap|10 to 20 3}}` and Fiddlesticks' range-of-ranges `{{ap|(120 to 360)*(25 to 55)/100}}`. Do not try to interpret these. They are almost all derived "Total Maximum X" rows; the primary damage row on the same ability parses fine.
+- `unknown-template:#expr` (7): `{{#expr:}}` wrapping a `{{#invoke:ItemData|...}}` lookup (Garen, Zeri) that has no static answer.
+- `unknown-template:ccd` (4), `pplevel` (2), `times` (1): champion crit-data and per-level-formula lookups (Yasuo/Yone/Sivir crit rows).
+- `residual-markup` (13): `{{tip|pathing radius|icononly = true}}` leaks its named param through `tip`'s last-param behaviour. All are "Width"-type geometry stats, not damage.
+- `malformed-leveling` (1): Locke Q genuinely has unbalanced braces in the wiki source.
+- **Aphelios, Jayce, Udyr get nothing** (3/173 champions). Their base `Data {Champ}/{slot}` pages carry no leveling because their kits are weapon/stance-based and live on sub-pages. Expected, not a bug.
+
+**Ingest wiring:** scaling is merged onto `champion.abilities.spells[i].scaling` BEFORE `writeCache` (same rule as abilities themselves), keyed by lowercase champion NAME (the champions map key), matched to slots positionally in Q/W/E/R order. The fetch is chained off the champion fetch but kept inside the same `Promise.all` so its ~14 round-trips overlap the other sources. Unlike abilities, low scaling coverage NEVER blocks the cache write (`SCALING_MIN_COVERAGE_RATE` only warns): scaling is an enhancement, so a wiki outage should cost prompts their damage numbers for a session, not cost the app its game data.
+
+**Cost:** +220KB of cache payload (1.82MB to 2.04MB against the ~5MB cap; 64.5% to 60.2% free) and +434 bytes on Ahri's ~12KB coaching prompt.
+
 ### League Wiki Lua Module (augments)
 
 - **Mayhem augments:** `https://wiki.leagueoflegends.com/en-us/Module:MayhemAugmentData/data?action=raw`

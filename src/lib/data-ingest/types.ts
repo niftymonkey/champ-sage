@@ -29,6 +29,26 @@ export interface AbilitySpell {
   cooldowns: number[];
   costs: number[];
   range: number[];
+  /**
+   * Per-rank scaling sourced from the League Wiki, e.g.
+   * `{ label: "Damage Per Pass", value: "35 to 135 (+ 50% AP)" }`.
+   *
+   * Riot's own feeds cannot supply this (DDragon serves unresolved
+   * `{{ totaldamage }}` placeholders with empty `vars`; CommunityDragon serves
+   * `@TotalDamage@` with zeroed coefficients), so the wiki is the only source.
+   * Absent whenever the wiki fetch failed or every stat on the ability
+   * quarantined: scaling is an enhancement, and omitting it is always
+   * preferable to feeding a coach wrong numbers.
+   */
+  scaling?: AbilityScalingStat[];
+}
+
+/** One row of a wiki ability leveling table, condensed to rank-1-to-max form. */
+export interface AbilityScalingStat {
+  /** Stat name, e.g. "Magic Damage". */
+  label: string;
+  /** Condensed value, e.g. "35 to 135 (+ 50% AP)". */
+  value: string;
 }
 
 export interface AramOverrides {
