@@ -48,7 +48,17 @@ export interface ParsedAbilityTemplate {
  * long tail (`{{ccd}}`, `{{critical damage}}`, `{{#invoke:}}`) is exactly the
  * shape that produces plausible-but-wrong text under lenient stripping.
  */
-export function parseAbilityTemplate(wikitext: string): ParsedAbilityTemplate {
+export function parseAbilityTemplate(
+  rawWikitext: string
+): ParsedAbilityTemplate {
+  // Strip comments before anything reads the page. Commented-out content is
+  // not data: a commented `|leveling = ...` still starts a line with a pipe and
+  // would be read as live by the line-anchored param scan, and a commented
+  // `{{#vardefine}}` would define a variable the page has actually retired.
+  // Doing this first also fixes up the comments the wiki uses purely to wrap
+  // long params across lines, which land between "{{st" and its first pipe.
+  const wikitext = stripWikitextComments(rawWikitext);
+
   const variables = extractPageVariables(wikitext);
   const params = extractNamedParams(wikitext);
 
@@ -56,10 +66,7 @@ export function parseAbilityTemplate(wikitext: string): ParsedAbilityTemplate {
   const quarantined: QuarantinedStat[] = [];
 
   for (const leveling of collectLevelingParams(params)) {
-    // Comments are used to wrap long params across lines, and land between
-    // "{{st" and its first pipe. Dropped up front so table detection and param
-    // splitting both see the template's real shape.
-    const tables = extractStatTables(leveling.replace(/<!--[\s\S]*?-->/g, ""));
+    const tables = extractStatTables(leveling);
     if (tables.length === 0) {
       quarantined.push({ label: "", reason: { kind: "malformed-leveling" } });
       continue;
@@ -75,6 +82,16 @@ export function parseAbilityTemplate(wikitext: string): ParsedAbilityTemplate {
     stats,
     quarantined,
   };
+}
+
+/**
+ * Remove `<!-- ... -->` comments, including unterminated ones. An unclosed
+ * comment blanks the rest of the page rather than being ignored, matching how
+ * MediaWiki renders it: treating the tail as live data would resurrect exactly
+ * the content the author commented out.
+ */
+function stripWikitextComments(wikitext: string): string {
+  return wikitext.replace(/<!--[\s\S]*?-->/g, "").replace(/<!--[\s\S]*$/, "");
 }
 
 function parseSlot(raw: string | undefined): SpellSlot | null {
@@ -433,9 +450,12 @@ function renderApValue(body: string): string | null {
   const single = evaluateExpression(value);
   if (single !== null) return formatNumber(single);
 
-  // Not arithmetic: only safe to pass through when it holds no operators that
-  // would otherwise reach the prompt unevaluated.
-  return /[*/]/.test(value) ? null : value;
+  // Evaluation failed. Anything carrying an arithmetic operator or a paren is
+  // arithmetic we could not resolve ("40 +", "(40"), so refuse it: the caller's
+  // residual gate screens {}[]|*=# but not + - ( ), and this would otherwise
+  // reach a coaching prompt verbatim. Operator-free text is `ap` being used
+  // for styling rather than maths, and passes through.
+  return /[+\-*/()]/.test(value) ? null : value;
 }
 
 /** Trim float noise from evaluated arithmetic: 100 stays "100", 5.625 becomes "5.63". */

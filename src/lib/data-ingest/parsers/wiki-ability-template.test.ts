@@ -200,6 +200,28 @@ describe("parseAbilityTemplate", () => {
       ]);
     });
 
+    it("keeps trailing prose around a resolved range", () => {
+      const result = parseAbilityTemplate(
+        page(`|champion     = Ahri
+|skill        = E
+|leveling     = {{st|Disable Duration|{{ap|1.2 to 1.8}} seconds}}`)
+      );
+      expect(result.stats).toEqual([
+        { label: "Disable Duration", value: "1.2 to 1.8 seconds" },
+      ]);
+    });
+
+    it("keeps a percentage-of-stat value, parentheses and all", () => {
+      const result = parseAbilityTemplate(
+        page(`|champion     = Nasus
+|skill        = E
+|leveling     = {{st|Armor Reduction|{{ap|30 to 50}}% of target's armor}}`)
+      );
+      expect(result.stats).toEqual([
+        { label: "Armor Reduction", value: "30 to 50% of target's armor" },
+      ]);
+    });
+
     it("resolves a {{tt}} tooltip used as a stat label", () => {
       const result = parseAbilityTemplate(
         page(`|champion     = Anivia
@@ -230,6 +252,65 @@ describe("parseAbilityTemplate", () => {
       );
       expect(result.stats).toEqual([]);
       expect(result.quarantined).toEqual([]);
+    });
+  });
+
+  describe("wikitext comments", () => {
+    it("ignores a commented-out leveling param", () => {
+      // The param regex is line-anchored, so a commented-out param still
+      // starts a line with a pipe and would otherwise be read as live data.
+      const result = parseAbilityTemplate(
+        page(`|champion     = Ahri
+|skill        = Q
+<!--
+|leveling     = {{st|Old Damage|{{ap|1 to 2}}}}
+-->
+|leveling2    = {{st|Magic Damage|{{ap|35 to 135}}}}`)
+      );
+      expect(result.stats).toEqual([
+        { label: "Magic Damage", value: "35 to 135" },
+      ]);
+    });
+
+    it("ignores a commented-out vardefine rather than letting it win", () => {
+      const result = parseAbilityTemplate(
+        page(
+          `|champion     = Aatrox
+|skill        = Q
+|leveling     = {{st|Damage|{{ap|{{#var:b1}} to 70}}}}`,
+          `<!--{{#vardefine:b1|999}}-->{{#vardefine:b1|10}}`
+        )
+      );
+      expect(result.stats).toEqual([{ label: "Damage", value: "10 to 70" }]);
+    });
+
+    it("quarantines a stat whose only vardefine was commented out", () => {
+      const result = parseAbilityTemplate(
+        page(
+          `|champion     = Aatrox
+|skill        = Q
+|leveling     = {{st|Damage|{{ap|{{#var:b1}} to 70}}}}`,
+          `<!--{{#vardefine:b1|10}}-->`
+        )
+      );
+      expect(result.stats).toEqual([]);
+      expect(result.quarantined).toEqual([
+        {
+          label: "Damage",
+          reason: { kind: "unresolved-variable", variable: "b1" },
+        },
+      ]);
+    });
+
+    it("keeps uncommented content that neighbours a comment", () => {
+      const result = parseAbilityTemplate(
+        page(`|champion     = Ahri
+|skill        = Q
+|leveling     = {{st|Magic Damage|{{ap|35 to 135}}<!-- do not touch --> {{as|(+ 50% AP)}}}}`)
+      );
+      expect(result.stats).toEqual([
+        { label: "Magic Damage", value: "35 to 135 (+ 50% AP)" },
+      ]);
     });
   });
 
@@ -307,6 +388,28 @@ describe("parseAbilityTemplate", () => {
           reason: { kind: "unknown-template", template: "#invoke" },
         },
       ]);
+    });
+
+    it("drops a stat whose {{ap}} arithmetic is left dangling", () => {
+      // The residual-markup gate checks for {}[]|*=# but not + - ( ), so a
+      // failed evaluation must be refused here or "40 +" reaches the prompt.
+      const result = parseAbilityTemplate(
+        page(`|champion     = Ahri
+|skill        = Q
+|leveling     = {{st|Magic Damage|{{ap|40 +}}}}`)
+      );
+      expect(result.stats).toEqual([]);
+      expect(result.quarantined).toHaveLength(1);
+    });
+
+    it("drops a stat whose {{ap}} parenthesis is unbalanced", () => {
+      const result = parseAbilityTemplate(
+        page(`|champion     = Ahri
+|skill        = Q
+|leveling     = {{st|Magic Damage|{{ap|(40}}}}`)
+      );
+      expect(result.stats).toEqual([]);
+      expect(result.quarantined).toHaveLength(1);
     });
 
     it("drops a stat whose value carries no number", () => {

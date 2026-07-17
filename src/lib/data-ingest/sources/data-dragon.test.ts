@@ -487,6 +487,120 @@ describe("fetchAllChampionAbilities", () => {
 
     expect(abilities.size).toBe(0);
   });
+
+  describe("payload validation", () => {
+    /** A valid champion entry, so tests can corrupt one field at a time. */
+    function validChampion() {
+      return {
+        passive: {
+          name: "Essence Theft",
+          description: "Ahri heals.",
+          image: { full: "Ahri_SoulEater2.png" },
+        },
+        spells: [
+          {
+            id: "AhriQ",
+            name: "Orb of Deception",
+            description: "Ahri sends out her orb.",
+            maxrank: 5,
+            cooldown: [7],
+            cost: [55],
+            costType: " Mana",
+            range: [970],
+          },
+        ],
+      };
+    }
+
+    function expectOnlyValidSurvives(badEntry: unknown) {
+      return jsonResponse({ data: { Ahri: validChampion(), Bad: badEntry } });
+    }
+
+    it("skips a champion whose spells array holds a malformed element", async () => {
+      const bad = validChampion();
+      // Numbers where the shape expects strings/arrays: no throw, just garbage.
+      bad.spells.push({
+        id: 42,
+        name: null,
+        description: undefined,
+        maxrank: "five",
+        cooldown: "7",
+        cost: null,
+        costType: " Mana",
+        range: 970,
+      } as unknown as (typeof bad.spells)[number]);
+      mockFetch.mockResolvedValueOnce(expectOnlyValidSurvives(bad));
+
+      const abilities = await fetchAllChampionAbilities("15.6.1");
+
+      expect(abilities.has("bad")).toBe(false);
+      expect(abilities.has("ahri")).toBe(true);
+    });
+
+    it("skips a champion whose cooldown array holds non-numbers", async () => {
+      const bad = validChampion();
+      bad.spells[0].cooldown = [7, "nope"] as unknown as number[];
+      mockFetch.mockResolvedValueOnce(expectOnlyValidSurvives(bad));
+
+      const abilities = await fetchAllChampionAbilities("15.6.1");
+
+      expect(abilities.has("bad")).toBe(false);
+      expect(abilities.has("ahri")).toBe(true);
+    });
+
+    it("skips a champion whose passive is not an object", async () => {
+      const bad = validChampion();
+      mockFetch.mockResolvedValueOnce(
+        expectOnlyValidSurvives({ ...bad, passive: "Essence Theft" })
+      );
+
+      const abilities = await fetchAllChampionAbilities("15.6.1");
+
+      expect(abilities.has("bad")).toBe(false);
+      expect(abilities.has("ahri")).toBe(true);
+    });
+
+    it("skips a champion whose spells is not an array", async () => {
+      const bad = validChampion();
+      mockFetch.mockResolvedValueOnce(
+        expectOnlyValidSurvives({ ...bad, spells: {} })
+      );
+
+      const abilities = await fetchAllChampionAbilities("15.6.1");
+
+      expect(abilities.has("bad")).toBe(false);
+      expect(abilities.has("ahri")).toBe(true);
+    });
+
+    it("skips a champion with no spells at all", async () => {
+      const bad = validChampion();
+      mockFetch.mockResolvedValueOnce(
+        expectOnlyValidSurvives({ ...bad, spells: [] })
+      );
+
+      const abilities = await fetchAllChampionAbilities("15.6.1");
+
+      expect(abilities.has("bad")).toBe(false);
+      expect(abilities.has("ahri")).toBe(true);
+    });
+
+    it("skips a null champion entry", async () => {
+      mockFetch.mockResolvedValueOnce(expectOnlyValidSurvives(null));
+
+      const abilities = await fetchAllChampionAbilities("15.6.1");
+
+      expect(abilities.has("bad")).toBe(false);
+      expect(abilities.has("ahri")).toBe(true);
+    });
+
+    it("returns an empty map when data is not an object", async () => {
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: [] }));
+
+      const abilities = await fetchAllChampionAbilities("15.6.1");
+
+      expect(abilities.size).toBe(0);
+    });
+  });
 });
 
 describe("fetchAllChampionAbilities resilience", () => {

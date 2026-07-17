@@ -1,5 +1,7 @@
 import { getLogger } from "../../logger";
 import type {
+  AbilityPassive,
+  AbilitySpell,
   Champion,
   ChampionAbilities,
   Item,
@@ -135,21 +137,28 @@ export async function fetchAllChampionAbilities(
     return abilities;
   }
 
-  const json = (await res.json()) as {
-    data?: Record<string, RawChampionFull>;
-  };
-  if (!json.data) return abilities;
+  const json: unknown = await res.json();
+  const data = isRecord(json) && isRecord(json.data) ? json.data : null;
+  if (!data) {
+    log.warn(
+      "championFull payload has no usable `data` object; champion abilities will be absent from coaching prompts"
+    );
+    return abilities;
+  }
 
-  // Normalize per champion so one malformed entry costs that champion's
-  // abilities, not all 173. A single missing `passive` or `spells` would
-  // otherwise throw straight out of the bulk fetch and empty the whole map.
+  // Validate per champion so one malformed entry costs that champion's
+  // abilities, not the whole roster. Validation is explicit rather than a cast:
+  // a cast only describes what we HOPE arrived, and a partially malformed entry
+  // (a cooldown array holding a string, a spell missing its name) would not
+  // throw, it would quietly reach coaching prompts as garbage.
   const failed: string[] = [];
-  for (const [championId, raw] of Object.entries(json.data)) {
-    try {
-      abilities.set(championId.toLowerCase(), normalizeAbilities(raw));
-    } catch {
+  for (const [championId, raw] of Object.entries(data)) {
+    const parsed = parseChampionAbilities(raw);
+    if (!parsed) {
       failed.push(championId);
+      continue;
     }
+    abilities.set(championId.toLowerCase(), parsed);
   }
   if (failed.length > 0) {
     log.warn(
@@ -159,25 +168,79 @@ export async function fetchAllChampionAbilities(
   return abilities;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** An array of finite numbers, or null. Guards the per-rank value series. */
+function toNumberArray(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null;
+  const numbers: number[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "number" || !Number.isFinite(entry)) return null;
+    numbers.push(entry);
+  }
+  return numbers;
+}
+
 /**
- * Normalize DDragon's raw passive/spell payload into our shape. Shared by the
- * bulk and per-champion fetches so both produce byte-identical abilities.
+ * Validate and normalize DDragon's raw passive/spell payload into our shape.
+ * Returns null for anything that does not carry every field we depend on, so
+ * the caller can skip that champion and record it.
  */
-function normalizeAbilities(data: RawChampionFull): ChampionAbilities {
+function parseChampionAbilities(value: unknown): ChampionAbilities | null {
+  if (!isRecord(value)) return null;
+
+  const passive = parseAbilityPassive(value.passive);
+  if (!passive) return null;
+
+  // Every real champion has spells; an empty list means the entry is a stub.
+  if (!Array.isArray(value.spells) || value.spells.length === 0) return null;
+
+  const spells: AbilitySpell[] = [];
+  for (const raw of value.spells) {
+    const spell = parseAbilitySpell(raw);
+    if (!spell) return null;
+    spells.push(spell);
+  }
+
+  return { passive, spells };
+}
+
+function parseAbilityPassive(value: unknown): AbilityPassive | null {
+  if (!isRecord(value)) return null;
+  const { name, description } = value;
+  if (typeof name !== "string" || typeof description !== "string") return null;
+  return { name, description: stripHtml(description) };
+}
+
+function parseAbilitySpell(value: unknown): AbilitySpell | null {
+  if (!isRecord(value)) return null;
+
+  const { id, name, description, maxrank } = value;
+  if (
+    typeof id !== "string" ||
+    typeof name !== "string" ||
+    typeof description !== "string" ||
+    typeof maxrank !== "number" ||
+    !Number.isFinite(maxrank)
+  ) {
+    return null;
+  }
+
+  const cooldowns = toNumberArray(value.cooldown);
+  const costs = toNumberArray(value.cost);
+  const range = toNumberArray(value.range);
+  if (!cooldowns || !costs || !range) return null;
+
   return {
-    passive: {
-      name: data.passive.name,
-      description: stripHtml(data.passive.description),
-    },
-    spells: data.spells.map((spell) => ({
-      id: spell.id,
-      name: spell.name,
-      description: stripHtml(spell.description),
-      maxRank: spell.maxrank,
-      cooldowns: spell.cooldown,
-      costs: spell.cost,
-      range: spell.range,
-    })),
+    id,
+    name,
+    description: stripHtml(description),
+    maxRank: maxrank,
+    cooldowns,
+    costs,
+    range,
   };
 }
 
@@ -238,24 +301,6 @@ interface RawItem {
   from?: string[];
   into?: string[];
   image: { full: string };
-}
-
-interface RawChampionFull {
-  passive: {
-    name: string;
-    description: string;
-    image: { full: string };
-  };
-  spells: {
-    id: string;
-    name: string;
-    description: string;
-    maxrank: number;
-    cooldown: number[];
-    cost: number[];
-    costType: string;
-    range: number[];
-  }[];
 }
 
 interface RawRuneTree {

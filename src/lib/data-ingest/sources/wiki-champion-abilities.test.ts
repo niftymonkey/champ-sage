@@ -220,6 +220,85 @@ describe("fetchChampionAbilityScaling", () => {
     expect(result.byChampion.has("ahri")).toBe(false);
   });
 
+  it("rejects a redirect that lands on a different champion's page", async () => {
+    // Attributing one champion's damage numbers to another is the worst
+    // failure this source can produce, so identity is verified, not assumed.
+    respondWith(
+      [
+        {
+          title: "Template:Data Zed/Razor Shuriken",
+          champion: "Zed",
+          slot: "Q",
+          leveling: "{{st|Physical Damage|{{ap|80 to 240}}}}",
+        },
+      ],
+      [{ from: "Template:Data Ahri/Q", to: "Template:Data Zed/Razor Shuriken" }]
+    );
+
+    const result = await fetchChampionAbilityScaling(["Ahri"]);
+
+    expect(result.byChampion.has("ahri")).toBe(false);
+    expect(result.byChampion.has("zed")).toBe(false);
+  });
+
+  it("rejects a page that declares no champion at all", async () => {
+    respondWith([
+      {
+        title: "Template:Data Ahri/Q",
+        champion: "",
+        slot: "Q",
+        leveling: "{{st|Magic Damage|{{ap|35 to 135}}}}",
+      },
+    ]);
+
+    const result = await fetchChampionAbilityScaling(["Ahri"]);
+
+    expect(result.byChampion.has("ahri")).toBe(false);
+  });
+
+  it("rejects a champion whose name merely prefixes the declared one", async () => {
+    // "Vi" prefixes both "Viego" and "Viktor", so identity matching must be
+    // exact rather than prefix-based.
+    respondWith([
+      {
+        title: "Template:Data Vi/Q",
+        champion: "Viego",
+        slot: "Q",
+        leveling: "{{st|Physical Damage|{{ap|10 to 20}}}}",
+      },
+    ]);
+
+    const result = await fetchChampionAbilityScaling(["Vi"]);
+
+    expect(result.byChampion.has("vi")).toBe(false);
+  });
+
+  it("accepts the wiki naming a compound champion by its primary name", async () => {
+    // Data Dragon calls it "Nunu & Willump"; the wiki page declares "Nunu".
+    respondWith(
+      [
+        {
+          title: "Template:Data Nunu & Willump/Consume",
+          champion: "Nunu",
+          slot: "W",
+          leveling: "{{st|Magic Damage|{{ap|85 to 265}}}}",
+        },
+      ],
+      [
+        {
+          from: "Template:Data Nunu & Willump/W",
+          to: "Template:Data Nunu & Willump/Consume",
+        },
+      ]
+    );
+
+    const result = await fetchChampionAbilityScaling(["Nunu & Willump"]);
+
+    expect(result.byChampion.get("nunu & willump")?.slots.W).toEqual([
+      { label: "Magic Damage", value: "85 to 265" },
+    ]);
+  });
+
   it("resolves titles the API normalizes before redirecting", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

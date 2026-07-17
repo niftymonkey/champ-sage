@@ -131,10 +131,18 @@ export async function fetchChampionAbilityScaling(
 
       const parsed = parseAbilityTemplate(content);
 
-      // A page reached through a redirect should still describe the slot we
-      // asked for. A mismatch means the redirect landed somewhere unexpected,
-      // and attributing its numbers to this slot would be a silent lie.
-      if (parsed.slot !== requested.slot) continue;
+      // A page reached through a redirect must still describe the champion AND
+      // the slot we asked for. A mismatch means the redirect landed somewhere
+      // unexpected, and attributing those numbers to this ability would be a
+      // silent lie. Checking the slot alone would let a redirect to another
+      // champion's same-slot page through, which is the worst outcome this
+      // source can produce.
+      if (
+        parsed.slot !== requested.slot ||
+        !championMatches(requested.champion, parsed.champion)
+      ) {
+        continue;
+      }
 
       for (const dropped of parsed.quarantined) {
         diagnostics.statsQuarantined++;
@@ -158,6 +166,37 @@ export async function fetchChampionAbilityScaling(
 
 function abilityTitle(champion: string, slot: SpellSlot): string {
   return `Template:Data ${champion}/${slot}`;
+}
+
+function normalizeChampionName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Whether a page's declared champion is the one we asked for.
+ *
+ * Matched exactly (after casing/punctuation normalization) rather than by
+ * prefix, because several champion names prefix another's ("Vi" prefixes both
+ * "Viego" and "Viktor") and a prefix rule would wave through exactly the
+ * cross-champion redirect this guards against.
+ *
+ * The one accepted divergence is the wiki naming a compound champion by its
+ * primary name: Data Dragon's "Nunu & Willump" is "Nunu" on the wiki. Derived
+ * from the "&" convention rather than a hardcoded roster, so a future compound
+ * champion needs no change here.
+ */
+function championMatches(requested: string, declared: string | null): boolean {
+  if (!declared) return false;
+
+  const normalizedDeclared = normalizeChampionName(declared);
+  if (normalizedDeclared === "") return false;
+
+  const accepted = new Set([
+    normalizeChampionName(requested),
+    normalizeChampionName(requested.split("&")[0]),
+  ]);
+
+  return accepted.has(normalizedDeclared);
 }
 
 async function fetchBatch(titles: string[]): Promise<WikiQueryResponse> {
