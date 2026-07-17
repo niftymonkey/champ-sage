@@ -412,6 +412,24 @@ describe("parseAbilityTemplate", () => {
       expect(result.quarantined).toHaveLength(1);
     });
 
+    it("quarantines a pathologically nested expression without taking the page down", () => {
+      // A stack overflow here would escape parseAbilityTemplate entirely and
+      // cost every champion their scaling for the session, not just this stat.
+      const pathological = "(".repeat(50_000) + "5" + ")".repeat(50_000);
+      const result = parseAbilityTemplate(
+        page(`|champion     = Ahri
+|skill        = Q
+|leveling     = {{st|Magic Damage|{{ap|35 to 135}} {{as|(+ 50% AP)}}}} {{st|Broken|{{ap|${pathological}}}}}`)
+      );
+
+      // The clean stat on the same ability must still survive.
+      expect(result.stats).toEqual([
+        { label: "Magic Damage", value: "35 to 135 (+ 50% AP)" },
+      ]);
+      expect(result.quarantined).toHaveLength(1);
+      expect(result.quarantined[0].reason.kind).toBe("arithmetic-failed");
+    });
+
     it("drops a stat whose value carries no number", () => {
       const result = parseAbilityTemplate(
         page(`|champion     = Ahri

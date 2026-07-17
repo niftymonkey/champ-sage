@@ -27,6 +27,18 @@ export function evaluateExpression(expr: string): number | null {
   return value;
 }
 
+/**
+ * How deep `factor` may nest before an expression is treated as malformed.
+ *
+ * Parenthesis nesting and unary-minus runs both recurse, so an unbounded parser
+ * on user-editable wiki text can exhaust the stack. A stack overflow would not
+ * quarantine one stat: it would escape the whole ability parse and cost every
+ * champion their scaling for the session. The deepest expression in real wiki
+ * data nests 3 levels (Aurelion Sol's Breath of Light), so this leaves an order
+ * of magnitude of headroom while staying far below any stack limit.
+ */
+const MAX_PARSE_DEPTH = 32;
+
 type Token = { kind: "number"; value: number } | { kind: "op"; value: string };
 
 const OPERATORS = new Set(["+", "-", "*", "/", "(", ")"]);
@@ -65,6 +77,7 @@ function tokenize(expr: string): Token[] | null {
 
 class Parser {
   private position = 0;
+  private depth = 0;
 
   constructor(private readonly tokens: Token[]) {}
 
@@ -103,8 +116,21 @@ class Parser {
     return left;
   }
 
-  /** factor := "-" factor | "(" expression ")" | number */
+  /**
+   * Bounded entry point for `factor`, the only rule that recurses. Exceeding
+   * the depth is a normal parse failure, so a pathological expression flows
+   * into the caller's existing quarantine path instead of throwing.
+   */
   private parseFactor(): number | null {
+    if (this.depth >= MAX_PARSE_DEPTH) return null;
+    this.depth++;
+    const value = this.parseFactorAtDepth();
+    this.depth--;
+    return value;
+  }
+
+  /** factor := "-" factor | "(" expression ")" | number */
+  private parseFactorAtDepth(): number | null {
     if (this.peekOperator("-")) {
       this.next();
       const operand = this.parseFactor();

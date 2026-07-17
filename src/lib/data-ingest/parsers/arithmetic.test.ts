@@ -69,4 +69,35 @@ describe("evaluateExpression", () => {
   it("returns null for percent signs, which are not arithmetic", () => {
     expect(evaluateExpression("50%")).toBeNull();
   });
+
+  describe("recursion bounds", () => {
+    // The wiki is user-editable third-party content parsed at ingest, so a
+    // pathological expression must fail like any other bad input rather than
+    // exhaust the stack and take the whole parse down with it.
+    it("returns null for pathologically nested parentheses", () => {
+      const expression = "(".repeat(50_000) + "5" + ")".repeat(50_000);
+      expect(evaluateExpression(expression)).toBeNull();
+    });
+
+    it("returns null for a pathological run of unary minus", () => {
+      expect(evaluateExpression("-".repeat(50_000) + "5")).toBeNull();
+    });
+
+    it("returns null for pathologically unbalanced open parentheses", () => {
+      expect(evaluateExpression("(".repeat(50_000) + "5")).toBeNull();
+    });
+
+    it("still evaluates the deepest nesting real wiki data contains", () => {
+      // Aurelion Sol's Breath of Light, the deepest real expression at 3 levels.
+      expect(evaluateExpression("((45+(105-45)*(3/4))/8)*26")).toBe(292.5);
+    });
+
+    it("still evaluates nesting well beyond real data but within the bound", () => {
+      expect(evaluateExpression("((((((((((5))))))))))")).toBe(5);
+    });
+
+    it("still evaluates a short run of unary minus", () => {
+      expect(evaluateExpression("--5")).toBe(5);
+    });
+  });
 });
