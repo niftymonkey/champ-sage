@@ -39,11 +39,26 @@ export function evaluateExpression(expr: string): number | null {
  */
 const MAX_PARSE_DEPTH = 32;
 
+/**
+ * How long an expression may be before it is treated as malformed.
+ *
+ * Expression length is untrusted input for the same reason nesting depth is:
+ * the wiki is user-editable and we parse it at ingest for the whole roster.
+ * `MAX_PARSE_DEPTH` stops the parser recursing, but a single flat megabyte of
+ * `1+1+1+...` would still be tokenized in full. The longest real expression in
+ * wiki data is ~50 characters (Aurelion Sol's Breath of Light), so this keeps
+ * an order of magnitude of headroom while making pathological input cheap to
+ * reject.
+ */
+const MAX_EXPRESSION_LENGTH = 512;
+
 type Token = { kind: "number"; value: number } | { kind: "op"; value: string };
 
 const OPERATORS = new Set(["+", "-", "*", "/", "(", ")"]);
 
 function tokenize(expr: string): Token[] | null {
+  if (expr.length > MAX_EXPRESSION_LENGTH) return null;
+
   const tokens: Token[] = [];
   let i = 0;
 

@@ -101,3 +101,23 @@ describe("evaluateExpression", () => {
     });
   });
 });
+
+describe("expression size bound", () => {
+  it("rejects an oversized expression instead of tokenizing it", () => {
+    // Wiki text is user-editable, so expression length is untrusted input.
+    // The depth bound stops the parser recursing; this stops a single huge
+    // page from making us tokenize megabytes at ingest. Real expressions top
+    // out around 50 characters (Aurelion Sol's Breath of Light is the
+    // deepest), so anything at this scale is pathological, not data.
+    const oversized = `1${"+1".repeat(50_000)}`;
+
+    expect(evaluateExpression(oversized)).toBeNull();
+  });
+
+  it("still evaluates an expression comfortably larger than real wiki data", () => {
+    // Guard the bound from being set so tight it rejects genuine content.
+    const realistic = "((45+(105-45)*(3/4))/8)*26";
+
+    expect(evaluateExpression(realistic)).toBe(292.5);
+  });
+});
