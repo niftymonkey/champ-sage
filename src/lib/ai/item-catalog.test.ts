@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   buildItemCatalogSections,
   isBuildPathEligible,
-  selectItemMode,
   selectMetaFile,
 } from "./item-catalog";
 import type { GameMode, ModeContext } from "../mode/types";
@@ -148,24 +147,6 @@ describe("selectMetaFile", () => {
     expect(
       selectMetaFile(createStubMode(GAME_MODE_ARAM), undefined)
     ).toBeNull();
-  });
-});
-
-describe("selectItemMode", () => {
-  it("maps Mayhem to the ARAM item mode", () => {
-    expect(selectItemMode(createStubMode(GAME_MODE_MAYHEM))).toBe("aram");
-  });
-
-  it("maps ARAM to the ARAM item mode", () => {
-    expect(selectItemMode(createStubMode(GAME_MODE_ARAM))).toBe("aram");
-  });
-
-  it("maps Arena to the arena item mode", () => {
-    expect(selectItemMode(createStubMode(GAME_MODE_ARENA))).toBe("arena");
-  });
-
-  it("defaults to standard for Classic", () => {
-    expect(selectItemMode(createStubMode(GAME_MODE_CLASSIC))).toBe("standard");
   });
 });
 
@@ -664,5 +645,116 @@ describe("isBuildPathEligible", () => {
     expect(
       isBuildPathEligible(completed({ id: 13, name: "SR Item" }), arena)
     ).toBe(false);
+  });
+});
+
+describe("tier 2 mode availability (ARAM/Mayhem play with standard items)", () => {
+  const standardLegendary = createItem({
+    id: 3089,
+    name: "Rabadon's Deathcap",
+    mode: "standard",
+    gold: { base: 1100, total: 3600, sell: 2520, purchasable: true },
+    stats: { FlatMagicDamageMod: 130 },
+  });
+  const aramVariant = createItem({
+    id: 328020,
+    name: "Abyssal Mask",
+    mode: "aram",
+    gold: { base: 500, total: 2850, sell: 1995, purchasable: true },
+    stats: { FlatSpellBlockMod: 50 },
+  });
+  const component = createItem({
+    id: 1038,
+    name: "B. F. Sword",
+    mode: "standard",
+    gold: { base: 1300, total: 1300, sell: 910, purchasable: true },
+    into: [3089],
+    stats: { FlatPhysicalDamageMod: 40 },
+  });
+  const potion = createItem({
+    id: 2003,
+    name: "Health Potion",
+    mode: "standard",
+    tags: ["Consumable"],
+    gold: { base: 50, total: 50, sell: 20, purchasable: true },
+  });
+  const arenaOnly = createItem({
+    id: 228020,
+    name: "Arena Abyssal Mask",
+    mode: "arena",
+    gold: { base: 500, total: 2500, sell: 1750, purchasable: true },
+  });
+
+  const items = new Map<number, Item>([
+    [3089, standardLegendary],
+    [328020, aramVariant],
+    [1038, component],
+    [2003, potion],
+    [228020, arenaOnly],
+  ]);
+
+  const champ = createChampion(222, "Jinx", ["Marksman"]);
+
+  it("includes standard Summoner's Rift items in the ARAM tier-2 catalog", () => {
+    // ARAM/Mayhem are played with the standard item set plus the ARAM variant
+    // overlay. Excluding standard items left the coach unable to name most of
+    // the game's items, while the game-plan buildPath enum offered them.
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      champ,
+      items,
+      undefined
+    );
+
+    expect(result.text).toContain("Rabadon's Deathcap");
+    expect(result.text).toContain("Abyssal Mask");
+  });
+
+  it("includes standard items in the Mayhem tier-2 catalog", () => {
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_MAYHEM),
+      champ,
+      items,
+      undefined
+    );
+
+    expect(result.text).toContain("Rabadon's Deathcap");
+  });
+
+  it("excludes components and consumables from tier 2", () => {
+    // Tier 2 is a recommendable-item reference, not the raw catalog. Listing
+    // B. F. Sword or a potion invites the coach to name them as purchases.
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      champ,
+      items,
+      undefined
+    );
+
+    expect(result.text).not.toContain("B. F. Sword");
+    expect(result.text).not.toContain("Health Potion");
+  });
+
+  it("excludes items from other modes' pools", () => {
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      champ,
+      items,
+      undefined
+    );
+
+    expect(result.text).not.toContain("Arena Abyssal Mask");
+  });
+
+  it("keeps Arena's tier-2 catalog to arena items", () => {
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARENA),
+      champ,
+      items,
+      undefined
+    );
+
+    expect(result.text).toContain("Arena Abyssal Mask");
+    expect(result.text).not.toContain("Rabadon's Deathcap");
   });
 });
