@@ -140,8 +140,21 @@ export async function fetchAllChampionAbilities(
   };
   if (!json.data) return abilities;
 
+  // Normalize per champion so one malformed entry costs that champion's
+  // abilities, not all 173. A single missing `passive` or `spells` would
+  // otherwise throw straight out of the bulk fetch and empty the whole map.
+  const failed: string[] = [];
   for (const [championId, raw] of Object.entries(json.data)) {
-    abilities.set(championId.toLowerCase(), normalizeAbilities(raw));
+    try {
+      abilities.set(championId.toLowerCase(), normalizeAbilities(raw));
+    } catch {
+      failed.push(championId);
+    }
+  }
+  if (failed.length > 0) {
+    log.warn(
+      `Could not parse abilities for ${failed.length} champion(s): ${failed.join(", ")}`
+    );
   }
   return abilities;
 }

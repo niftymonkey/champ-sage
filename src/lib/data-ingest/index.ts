@@ -47,6 +47,18 @@ function errMessage(err: unknown): string {
  */
 export const KIWI_MIN_RESOLUTION_RATE = 0.9;
 
+/**
+ * Minimum share of champions that must come out of ingest carrying abilities
+ * before the payload is worth persisting. Below this, something structural
+ * broke (a dead championFull fetch, or a DDragon id-format change that makes
+ * every merge miss), and caching the result would make a transient failure
+ * permanent: every later start would read ability-less champions from the
+ * cache and never retry until the patch version changed. Degrade for the
+ * session and let the next start try again. Mirrors KIWI_MIN_RESOLUTION_RATE:
+ * warn and degrade, never fail.
+ */
+export const ABILITY_MIN_COVERAGE_RATE = 0.9;
+
 export interface KiwiResolutionStats {
   total: number;
   nonEmpty: number;
@@ -284,7 +296,7 @@ export async function fetchAndCache(
   await mergeAugmentIds(augments, patchline);
   enrichQuestAugments(augments, items);
   mergeAramOverrides(champions, aramOverrideMap);
-  mergeChampionAbilities(champions, championAbilities);
+  const abilityCoverage = mergeChampionAbilities(champions, championAbilities);
 
   const augmentSets = getMayhemAugmentSets();
 
@@ -298,20 +310,20 @@ export async function fetchAndCache(
     lastRefreshedAt: Date.now(),
   };
 
-  // Only persist a payload that carries abilities. Caching an ability-less
-  // payload would make a transient DDragon failure permanent: every later
-  // start would read abilities-free champions from the cache and never retry
-  // until the patch version changed, which is precisely the regression this
-  // ingest path exists to prevent. Degrade for this session instead and let
-  // the next start try again. A PARTIAL miss (some champions resolved, some
-  // not) still caches; `mergeChampionAbilities` names the stragglers, and
-  // refusing to cache over one absent champion would mean refetching the whole
-  // catalog on every start forever.
-  if (championAbilities.size > 0) {
+  // Only persist a payload whose champions actually CARRY abilities. Measured
+  // on coverage rather than on the fetch succeeding: a full fetch whose ids no
+  // longer match our champions merges nothing, and a fetch-success guard would
+  // cache that ability-less payload forever. A handful of stragglers still
+  // caches (they are named in the warning above); refusing over one absent
+  // champion would refetch the whole catalog on every start.
+  const coverageRate =
+    champions.size === 0 ? 0 : abilityCoverage / champions.size;
+  if (coverageRate >= ABILITY_MIN_COVERAGE_RATE) {
     await writeCache(patchlineCacheKey(patchline), data);
   } else {
     log.warn(
-      "Skipping cache write: no champion abilities resolved. Game data is degraded for this session and will be refetched on next start."
+      `Skipping cache write: only ${abilityCoverage}/${champions.size} champions resolved abilities ` +
+        `(below ${ABILITY_MIN_COVERAGE_RATE * 100}%). Game data is degraded for this session and will be refetched on next start.`
     );
   }
 
@@ -332,10 +344,11 @@ export async function fetchAndCache(
 function mergeChampionAbilities(
   champions: Map<string, Champion>,
   abilities: Map<string, ChampionAbilities>
-): void {
-  if (abilities.size === 0) return;
+): number {
+  if (abilities.size === 0) return 0;
 
   const missing: string[] = [];
+  let merged = 0;
   for (const champion of champions.values()) {
     const resolved = abilities.get(champion.id.toLowerCase());
     if (!resolved) {
@@ -343,6 +356,7 @@ function mergeChampionAbilities(
       continue;
     }
     champion.abilities = resolved;
+    merged++;
   }
 
   if (missing.length > 0) {
@@ -350,6 +364,7 @@ function mergeChampionAbilities(
       `No ability data for ${missing.length} champion(s): ${missing.join(", ")}`
     );
   }
+  return merged;
 }
 
 function mergeAramOverrides(

@@ -706,6 +706,28 @@ describe("champion abilities in the cached payload", () => {
     expect(data.champions.get("aatrox")!.abilities).toBeUndefined();
   });
 
+  it("does NOT cache when abilities resolve but fail to match any champion", async () => {
+    // The fetch succeeding is not the same as champions HAVING abilities. If
+    // DDragon ever changes its id format, every merge misses while the fetched
+    // map is full, and a size-of-fetch guard would happily cache an
+    // ability-less payload forever. Guard on coverage, not on fetch success.
+    vi.mocked(dataDragon.fetchAllChampionAbilities).mockResolvedValue(
+      new Map([
+        [
+          "some-unrecognized-id",
+          {
+            passive: { name: "Whatever", description: "Unmatched." },
+            spells: [],
+          },
+        ],
+      ])
+    );
+
+    await loadGameData();
+
+    expect(cache.writeCache).not.toHaveBeenCalled();
+  });
+
   it("does NOT cache the payload when the abilities fetch fails", async () => {
     // Caching an ability-less payload would persist the very bug this fixes:
     // every later start would read abilities-free champions straight from the

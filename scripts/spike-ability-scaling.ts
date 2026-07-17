@@ -162,10 +162,16 @@ async function runProbe(label: string, probe: () => Promise<void>) {
 async function main() {
   const championId = process.argv[2] ?? "Ahri";
   const numericKey = process.argv[3] ?? "103";
-  const version = await fetchLatestVersion();
-  console.log(`DDragon version: ${version}`);
 
-  await runProbe("DDragon", () => probeDataDragon(version, championId));
+  // The version lookup only DDragon needs, so keep its failure inside
+  // DDragon's probe. The CDragon and Meraki probes do not take a version and
+  // must still run when it dies; the whole point of this spike is comparing
+  // sources, which a single dead source should not prevent.
+  await runProbe("DDragon", async () => {
+    const version = await fetchLatestVersion();
+    console.log(`DDragon version: ${version}`);
+    await probeDataDragon(version, championId);
+  });
   await runProbe("CDragon", () => probeCommunityDragon(numericKey));
   await runProbe("Meraki", () => probeMeraki(championId));
 }

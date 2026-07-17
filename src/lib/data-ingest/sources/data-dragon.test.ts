@@ -488,3 +488,37 @@ describe("fetchAllChampionAbilities", () => {
     expect(abilities.size).toBe(0);
   });
 });
+
+describe("fetchAllChampionAbilities resilience", () => {
+  it("keeps the healthy champions when one entry is malformed", async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          Ahri: {
+            passive: { name: "Essence Theft", description: "Heals." },
+            spells: [
+              {
+                id: "AhriQ",
+                name: "Orb of Deception",
+                description: "Throws an orb.",
+                maxrank: 5,
+                cooldown: [7],
+                cost: [55],
+                costType: " Mana",
+                range: [970],
+              },
+            ],
+          },
+          // No `passive` / `spells`: normalizing this throws.
+          Broken: {},
+        },
+      })
+    );
+
+    const abilities = await fetchAllChampionAbilities("15.6.1");
+
+    expect(abilities.has("ahri")).toBe(true);
+    expect(abilities.has("broken")).toBe(false);
+    expect(abilities.get("ahri")!.passive.name).toBe("Essence Theft");
+  });
+});
