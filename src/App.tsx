@@ -75,7 +75,6 @@ import {
   detectMode,
 } from "./lib/mode";
 import { addSelectedAugment } from "./lib/mode/augment-selection";
-import { ensureAbilities } from "./lib/data-ingest/ensure-abilities";
 import type { Augment } from "./lib/data-ingest/types";
 import type { GameState } from "./lib/game-state/types";
 
@@ -162,14 +161,13 @@ function App() {
   const voice = useVoiceInput(whisperProvider);
 
   const [selectedAugments, setSelectedAugments] = useState<Augment[]>([]);
-  const abilitiesFetchedRef = useRef(false);
+  const gameDetectedLoggedRef = useRef(false);
 
   useEffect(() => {
     if (!data || liveGame.players.length === 0) return;
-    if (abilitiesFetchedRef.current) return;
-    abilitiesFetchedRef.current = true;
+    if (gameDetectedLoggedRef.current) return;
+    gameDetectedLoggedRef.current = true;
     const championNames = liveGame.players.map((p) => p.championName);
-    ensureAbilities(data, championNames, data.version).catch(() => {});
 
     const detectedMode = detectMode(
       registry,
@@ -190,7 +188,7 @@ function App() {
       if (phase === "ChampSelect" || phase === "None") {
         if (prevPhaseRef.current !== phase) {
           setSelectedAugments([]);
-          abilitiesFetchedRef.current = false;
+          gameDetectedLoggedRef.current = false;
         }
       }
       prevPhaseRef.current = phase;

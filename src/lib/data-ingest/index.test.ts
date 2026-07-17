@@ -58,6 +58,31 @@ function createMockChampions() {
   ]);
 }
 
+function createMockAbilities() {
+  return new Map([
+    [
+      "aatrox",
+      {
+        passive: {
+          name: "Deathbringer Stance",
+          description: "Periodically, Aatrox's next attack deals bonus damage.",
+        },
+        spells: [
+          {
+            id: "AatroxQ",
+            name: "The Darkin Blade",
+            description: "Aatrox slams his greatsword down.",
+            maxRank: 5,
+            cooldowns: [14, 12, 10, 8, 6],
+            costs: [0, 0, 0, 0, 0],
+            range: [650, 650, 650, 650, 650],
+          },
+        ],
+      },
+    ],
+  ]);
+}
+
 const mockItems = new Map<number, Item>([
   [
     1001,
@@ -130,6 +155,9 @@ beforeEach(() => {
   vi.mocked(dataDragon.fetchChampions).mockResolvedValue(createMockChampions());
   vi.mocked(dataDragon.fetchItems).mockResolvedValue(mockItems);
   vi.mocked(dataDragon.fetchRunes).mockResolvedValue(mockRunes);
+  vi.mocked(dataDragon.fetchAllChampionAbilities).mockResolvedValue(
+    createMockAbilities()
+  );
   // KIWI (CDragon raw) is the primary Mayhem source; the wiki is the fallback
   // (empty by default so each test opts into the fallback scenario it needs).
   vi.mocked(kiwiAugments.fetchKiwiAugments).mockResolvedValue(
@@ -600,5 +628,95 @@ describe("checkForNewVersion", () => {
     const result = await checkForNewVersion("15.6.1");
 
     expect(result).toBe(false);
+  });
+});
+
+describe("champion abilities in the cached payload", () => {
+  it("merges abilities onto champions during ingest", async () => {
+    const data = await loadGameData();
+
+    const aatrox = data.champions.get("aatrox");
+    expect(aatrox!.abilities).toBeDefined();
+    expect(aatrox!.abilities!.passive.name).toBe("Deathbringer Stance");
+    expect(aatrox!.abilities!.spells[0].name).toBe("The Darkin Blade");
+  });
+
+  it("looks abilities up by DDragon id, not by champion map key", async () => {
+    // Champions are keyed by lowercase NAME ("aurelion sol") but abilities
+    // come back keyed by lowercase ID ("aurelionsol"). A merge that uses the
+    // map key would silently miss every multi-word champion.
+    vi.mocked(dataDragon.fetchChampions).mockResolvedValue(
+      new Map<string, Champion>([
+        [
+          "aurelion sol",
+          {
+            id: "AurelionSol",
+            key: 136,
+            name: "Aurelion Sol",
+            title: "The Star Forger",
+            tags: ["Mage"],
+            partype: "Mana",
+            stats: {} as Champion["stats"],
+            image: "",
+          },
+        ],
+      ])
+    );
+    vi.mocked(dataDragon.fetchAllChampionAbilities).mockResolvedValue(
+      new Map([
+        [
+          "aurelionsol",
+          {
+            passive: { name: "Cosmic Creator", description: "Stardust." },
+            spells: [],
+          },
+        ],
+      ])
+    );
+
+    const data = await loadGameData();
+
+    expect(data.champions.get("aurelion sol")!.abilities!.passive.name).toBe(
+      "Cosmic Creator"
+    );
+  });
+
+  it("writes abilities into the cache payload", async () => {
+    // The regression this guards: abilities resolved AFTER the cache write
+    // never persist, so every session starts ability-less and has to race a
+    // network fetch it loses.
+    await loadGameData();
+
+    const [, payload] = vi.mocked(cache.writeCache).mock.calls[0];
+    const cached = payload as { champions: Record<string, Champion> };
+    expect(cached.champions.aatrox.abilities).toBeDefined();
+    expect(cached.champions.aatrox.abilities!.passive.name).toBe(
+      "Deathbringer Stance"
+    );
+  });
+
+  it("still returns champions when the abilities fetch fails", async () => {
+    vi.mocked(dataDragon.fetchAllChampionAbilities).mockResolvedValue(
+      new Map()
+    );
+
+    const data = await loadGameData();
+
+    expect(data.champions.get("aatrox")).toBeDefined();
+    expect(data.champions.get("aatrox")!.abilities).toBeUndefined();
+  });
+
+  it("does NOT cache the payload when the abilities fetch fails", async () => {
+    // Caching an ability-less payload would persist the very bug this fixes:
+    // every later start would read abilities-free champions straight from the
+    // cache and never retry, until the patch version happened to change.
+    // Degrade for this session, but leave the next start free to retry.
+    vi.mocked(dataDragon.fetchAllChampionAbilities).mockResolvedValue(
+      new Map()
+    );
+
+    await loadGameData();
+
+    expect(cache.writeCache).not.toHaveBeenCalled();
   });
 });

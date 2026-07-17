@@ -3,6 +3,7 @@ import type {
   AramOverrides,
   AugmentSet,
   Champion,
+  ChampionAbilities,
   Item,
   Augment,
   RuneTree,
@@ -13,6 +14,7 @@ import {
   fetchChampions,
   fetchItems,
   fetchRunes,
+  fetchAllChampionAbilities,
 } from "./sources/data-dragon";
 import { fetchWikiAugments } from "./sources/wiki-augments";
 import { fetchArenaAugments } from "./sources/wiki-arena-augments";
@@ -218,6 +220,7 @@ export async function fetchAndCache(
     champions,
     items,
     runes,
+    championAbilities,
     kiwiAugments,
     wikiMayhemAugments,
     arenaAugments,
@@ -226,6 +229,12 @@ export async function fetchAndCache(
     fetchChampions(version),
     fetchItems(version),
     fetchRunes(version),
+    fetchAllChampionAbilities(version).catch((err) => {
+      log.warn(
+        `Champion abilities fetch failed; coaching prompts will omit abilities this session: ${errMessage(err)}`
+      );
+      return new Map<string, ChampionAbilities>();
+    }),
     fetchKiwiAugments(patchline).catch((err) => {
       log.warn(
         `KIWI augment fetch failed; falling back to the wiki: ${errMessage(err)}`
@@ -275,6 +284,7 @@ export async function fetchAndCache(
   await mergeAugmentIds(augments, patchline);
   enrichQuestAugments(augments, items);
   mergeAramOverrides(champions, aramOverrideMap);
+  mergeChampionAbilities(champions, championAbilities);
 
   const augmentSets = getMayhemAugmentSets();
 
@@ -288,11 +298,58 @@ export async function fetchAndCache(
     lastRefreshedAt: Date.now(),
   };
 
-  await writeCache(patchlineCacheKey(patchline), data);
+  // Only persist a payload that carries abilities. Caching an ability-less
+  // payload would make a transient DDragon failure permanent: every later
+  // start would read abilities-free champions from the cache and never retry
+  // until the patch version changed, which is precisely the regression this
+  // ingest path exists to prevent. Degrade for this session instead and let
+  // the next start try again. A PARTIAL miss (some champions resolved, some
+  // not) still caches; `mergeChampionAbilities` names the stragglers, and
+  // refusing to cache over one absent champion would mean refetching the whole
+  // catalog on every start forever.
+  if (championAbilities.size > 0) {
+    await writeCache(patchlineCacheKey(patchline), data);
+  } else {
+    log.warn(
+      "Skipping cache write: no champion abilities resolved. Game data is degraded for this session and will be refetched on next start."
+    );
+  }
 
   const loaded = fromCached(data);
   loaded.metaBuilds = await loadMetaBuilds();
   return loaded;
+}
+
+/**
+ * Attach ability data to champions before the cache write, so abilities are
+ * part of the persisted payload and are present the instant game data loads.
+ *
+ * Keyed deliberately by DDragon `id` rather than the champion map's key: the
+ * map is keyed by lowercase NAME ("aurelion sol") while abilities come back
+ * keyed by lowercase ID ("aurelionsol"), so keying by the map key would drop
+ * every multi-word champion.
+ */
+function mergeChampionAbilities(
+  champions: Map<string, Champion>,
+  abilities: Map<string, ChampionAbilities>
+): void {
+  if (abilities.size === 0) return;
+
+  const missing: string[] = [];
+  for (const champion of champions.values()) {
+    const resolved = abilities.get(champion.id.toLowerCase());
+    if (!resolved) {
+      missing.push(champion.name);
+      continue;
+    }
+    champion.abilities = resolved;
+  }
+
+  if (missing.length > 0) {
+    log.warn(
+      `No ability data for ${missing.length} champion(s): ${missing.join(", ")}`
+    );
+  }
 }
 
 function mergeAramOverrides(

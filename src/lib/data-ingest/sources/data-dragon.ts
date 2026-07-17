@@ -1,3 +1,4 @@
+import { getLogger } from "../../logger";
 import type {
   Champion,
   ChampionAbilities,
@@ -9,6 +10,8 @@ import type {
 } from "../types";
 
 const BASE_URL = "https://ddragon.leagueoflegends.com";
+
+const log = getLogger("data-ingest");
 
 export async function fetchLatestVersion(): Promise<string> {
   const res = await fetch(`${BASE_URL}/api/versions.json`);
@@ -107,61 +110,61 @@ function mapRune(raw: RawRune): Rune {
 }
 
 /**
- * Fetch full ability data for a list of champions by their DDragon IDs.
- * Each champion requires an individual API call — callers should batch
- * strategically (e.g., only the 10 in a live game, or one at a time during idle).
+ * Fetch ability data for EVERY champion in a single request.
  *
- * Returns a Map keyed by lowercase champion ID (e.g., "ahri", "aurelionsol").
+ * DDragon's `championFull.json` carries the same passive/spell payload as the
+ * per-champion endpoint for all champions at once (~2MB). One request at
+ * ingest time removes the need to fetch abilities per match, which is what
+ * makes it possible to persist abilities into the cache before anything reads
+ * them.
+ *
+ * Returns a Map keyed by lowercase champion ID (e.g. "ahri", "aurelionsol").
  */
-export async function fetchChampionAbilities(
-  version: string,
-  championIds: string[]
+export async function fetchAllChampionAbilities(
+  version: string
 ): Promise<Map<string, ChampionAbilities>> {
-  const results = await Promise.allSettled(
-    championIds.map((id) => fetchSingleChampionAbilities(version, id))
-  );
-
   const abilities = new Map<string, ChampionAbilities>();
-  for (const result of results) {
-    if (result.status === "fulfilled" && result.value) {
-      abilities.set(result.value.key, result.value.abilities);
-    }
-  }
-  return abilities;
-}
 
-async function fetchSingleChampionAbilities(
-  version: string,
-  championId: string
-): Promise<{ key: string; abilities: ChampionAbilities } | null> {
   const res = await fetch(
-    `${BASE_URL}/cdn/${version}/data/en_US/champion/${championId}.json`
+    `${BASE_URL}/cdn/${version}/data/en_US/championFull.json`
   );
-  if (!res.ok) return null;
+  if (!res.ok) {
+    log.warn(
+      `championFull fetch failed (HTTP ${res.status}); champion abilities will be absent from coaching prompts`
+    );
+    return abilities;
+  }
 
   const json = (await res.json()) as {
     data?: Record<string, RawChampionFull>;
   };
-  const data = json.data?.[championId];
-  if (!data) return null;
+  if (!json.data) return abilities;
 
+  for (const [championId, raw] of Object.entries(json.data)) {
+    abilities.set(championId.toLowerCase(), normalizeAbilities(raw));
+  }
+  return abilities;
+}
+
+/**
+ * Normalize DDragon's raw passive/spell payload into our shape. Shared by the
+ * bulk and per-champion fetches so both produce byte-identical abilities.
+ */
+function normalizeAbilities(data: RawChampionFull): ChampionAbilities {
   return {
-    key: championId.toLowerCase(),
-    abilities: {
-      passive: {
-        name: data.passive.name,
-        description: stripHtml(data.passive.description),
-      },
-      spells: data.spells.map((spell) => ({
-        id: spell.id,
-        name: spell.name,
-        description: stripHtml(spell.description),
-        maxRank: spell.maxrank,
-        cooldowns: spell.cooldown,
-        costs: spell.cost,
-        range: spell.range,
-      })),
+    passive: {
+      name: data.passive.name,
+      description: stripHtml(data.passive.description),
     },
+    spells: data.spells.map((spell) => ({
+      id: spell.id,
+      name: spell.name,
+      description: stripHtml(spell.description),
+      maxRank: spell.maxrank,
+      cooldowns: spell.cooldown,
+      costs: spell.cost,
+      range: spell.range,
+    })),
   };
 }
 

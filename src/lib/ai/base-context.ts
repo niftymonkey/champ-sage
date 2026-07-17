@@ -1,6 +1,10 @@
 import type { GameMode } from "../mode/types";
 import type { LoadedGameData } from "../data-ingest";
-import type { AramOverrides, Champion } from "../data-ingest/types";
+import type {
+  AbilitySpell,
+  AramOverrides,
+  Champion,
+} from "../data-ingest/types";
 import type { GameState } from "../game-state/types";
 import { formatModifier } from "../format";
 import { GAME_MODE_MAYHEM, GAME_MODE_ARAM } from "../mode/types";
@@ -143,6 +147,41 @@ function formatChampionProfile(champion: Champion): string {
   ].join("\n");
 }
 
+const SPELL_SLOTS = ["Q", "W", "E", "R"] as const;
+
+/**
+ * Collapse a per-rank value series for the prompt. Ranks that share one value
+ * (a flat 7s cooldown) render as a single number; ranks that vary keep the
+ * full series, because the ramp is the decision-relevant part. A series that
+ * is uniformly zero carries no information and renders as nothing.
+ */
+function formatRankSeries(values: readonly number[]): string | null {
+  if (values.length === 0) return null;
+  const unique = [...new Set(values)];
+  if (unique.length === 1) {
+    return unique[0] === 0 ? null : String(unique[0]);
+  }
+  return values.join("/");
+}
+
+/**
+ * Render one spell's numbers as a compact bracketed suffix. Values that carry
+ * no information (a zero-cost ability, a self-cast with no range) are omitted
+ * rather than printed as "0", which would read as a real number to the model.
+ */
+function formatSpellNumbers(spell: AbilitySpell): string {
+  const cooldown = formatRankSeries(spell.cooldowns);
+  const cost = formatRankSeries(spell.costs);
+  const range = formatRankSeries(spell.range);
+
+  const parts: string[] = [];
+  if (cooldown) parts.push(`CD ${cooldown}s`);
+  if (cost) parts.push(`cost ${cost}`);
+  if (range) parts.push(`range ${range}`);
+
+  return parts.length > 0 ? ` [${parts.join(" | ")}]` : "";
+}
+
 function formatAbilitiesForPrompt(
   abilities: NonNullable<Champion["abilities"]>
 ): string {
@@ -150,9 +189,12 @@ function formatAbilitiesForPrompt(
   parts.push(
     `Passive: ${abilities.passive.name} — ${abilities.passive.description}`
   );
-  for (const spell of abilities.spells) {
-    parts.push(`${spell.name} — ${spell.description}`);
-  }
+  abilities.spells.forEach((spell, index) => {
+    const slot = SPELL_SLOTS[index] ?? `S${index + 1}`;
+    parts.push(
+      `${slot} - ${spell.name}: ${spell.description}${formatSpellNumbers(spell)}`
+    );
+  });
   return parts.join("\n");
 }
 
