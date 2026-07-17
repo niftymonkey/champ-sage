@@ -489,12 +489,24 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 
 ### DDragon (champion abilities)
 
+- **Bulk data (preferred):** `https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/championFull.json` returns EVERY champion's passive and spells in one request. Verified 2026-07-17 on 16.14.1: 173/173 champions, all with a passive and exactly 4 spells, field-for-field identical to the per-champion endpoint. ~2.2MB over the wire; the subset we keep serializes to ~247KB.
 - **Per-champion full data:** `https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/champion/{ChampionId}.json`
-- **No bulk endpoint** — requires one request per champion (~170 total). Fetch lazily, not upfront.
-- The `description` field on spells is clean plain text (no markup). The `tooltip` field has `{{ variable }}` placeholders and custom XML tags — not statically resolvable.
-- Scaling ratios and base damage numbers are NOT available from DDragon. The `vars` and `effect` arrays are empty/zeros on modern champions. For the recommendation engine, the clean `description` text is what the LLM reasons about.
+- This doc previously claimed there was **no** bulk endpoint and that abilities must be fetched lazily per match. That was wrong, and it was load-bearing: it produced a lazy per-match fetch that raced the prompt build and lost, so abilities were absent from coaching prompts entirely (0/173 champions in the cached payload). Abilities are now resolved inside `fetchAndCache` and persisted with the payload. Do not reintroduce a lazy path.
+- Ability data must be merged BEFORE `writeCache`. Anything attached to champions afterward never persists, and champions load ability-less on every subsequent start.
+- Merge abilities by DDragon `id` (lowercased), NOT by the champion map's key. The map is keyed by lowercase champion NAME (`"aurelion sol"`) while abilities key off the ID (`"aurelionsol"`); keying by the map key silently drops every multi-word champion.
+- The `description` field on spells is clean plain text (no markup). The `tooltip` field has `{{ variable }}` placeholders and custom XML tags, not statically resolvable.
 - Useful numeric data per spell: `cooldown[]` (per rank), `cost[]` (per rank), `range[]` (per rank), `maxrank`.
-- Passive has only `name` and `description` — no cooldown or scaling data.
+- Passive has only `name` and `description`, no cooldown or scaling data.
+
+### Ability scaling ratios: not available from Riot (verified 2026-07-17)
+
+Scaling ratios and base damage (the "40/65/90/115/140 (+50% AP)" a wiki shows) cannot be had from any Riot source. Verified with `pnpm spike-ability-scaling`:
+
+- **DDragon:** `tooltip` carries named placeholders (`{{ totaldamage }}`) whose values are not resolvable. `vars` is `[]` and `effectBurn` is all zeros on modern champions.
+- **CommunityDragon:** same story with different syntax. `dynamicDescription` carries `@TotalDamage@`, and `coefficients` is `{coefficient1: 0, coefficient2: 0}`.
+- **Meraki Analytics** (`cdn.merakianalytics.com`), the usual third-party resolver, now returns 404. Treat it as dead.
+- Riot moved spell calculations into game binary data that the public static APIs do not expose. See hextechdocs.dev "Resolving spells and variables in spell texts" for the bin-parsing approach.
+- **The wiki has it.** `Template:Data {Champion}/{Ability Name}?action=raw` carries a `leveling` field, e.g. `{{st|Damage Per Pass|{{ap|35 to 135}} {{as|(+ 50% AP)}}}}`, plus `cooldown`, `cost`, `range`, and `damagetype`. Note `Data Ahri/Q` is a REDIRECT to the named page, so resolve redirects (the MediaWiki API does this with `redirects=1` and batches titles). `{{ap|35 to 135}}` is shorthand for the per-rank series; our `stripWikiMarkup` already renders it as "35 to 135", which is a reasonable condensed form.
 
 ### League Wiki Lua Module (augments)
 
@@ -674,6 +686,7 @@ The `MatchSession` (`src/lib/ai/match-session.ts`) is the dispatch boundary. Pro
 - **History stores prose summaries, not structured JSON** — `feature.summarizeForHistory(result)` returns the `.answer` string for most features, or a synthesized prose summary (e.g. `"Augment ratings: X [exceptional], Y [strong]"` for augment-fit). Keeps multi-turn history homogeneous regardless of which features fired earlier.
 - **Settings persistence via Electron IPC + JSON file** — renderer's `localStorage` didn't survive launches in the ow-electron setup. Settings (e.g. selected personality) round-trip through `settings:get` / `settings:set` IPC handlers that read/write `<userData>/settings.json`.
 - **Balance overrides are formatted as human-readable text** for the LLM (e.g., "Damage taken: -5%"), not raw multipliers (0.95).
+- **The base context is built ONCE per match and frozen into the session.** `CoachingPipeline` builds it in an effect keyed on `[apiKey, mode, activePlayer.championName]`, and `gameData` is deliberately excluded from the deps (a background data refresh must not reset a mid-game conversation); the effect reads `gameDataRef.current` instead. Consequence worth internalizing: the system prompt is a STRING snapshot taken the instant a game is detected. Anything that mutates `gameData` afterward, however correctly, never reaches that match's prompt. Any data the prompt depends on must therefore be resolved before game data is handed to the renderer, not lazily afterward. This is exactly how ability text went missing for every first match of a session (the resolve was a fire-and-forget fetch that lost the race by ~20ms plus a network round-trip, per the 2026-07-16 logs), while later matches in the same session silently got a RICHER prompt because the in-place mutation persisted across matches. If a prompt section is mysteriously present sometimes and absent others, suspect this lifecycle first.
 - **API key is via Vite env var** — `VITE_OPENAI_API_KEY` in `.env` for production, `EVAL_OPENROUTER_API_KEY` for eval (separate billing).
 - **`recommendation-engine.ts` accepts an injected `model`** — production uses `createCoachingModel(apiKey)`; the eval harness injects an OpenRouter-backed model. Same code path, different provider — the eval and the app exercise identical wiring.
 

@@ -196,6 +196,31 @@ describe("buildBaseContext", () => {
     expect(context).toContain("Zed (Assassin)");
   });
 
+  it("labels spells by their slot so the model can map them to the kit", () => {
+    const context = buildBaseContext({
+      mode: createStubMode(),
+      gameData: createStubGameData(),
+      gameState: createGameState(),
+    });
+
+    expect(context).toContain("Q - Orb of Deception");
+  });
+
+  it("includes cooldown, cost, and range for each spell", () => {
+    const context = buildBaseContext({
+      mode: createStubMode(),
+      gameData: createStubGameData(),
+      gameState: createGameState(),
+    });
+
+    // Uniform per-rank values collapse to one number; varying ones keep the
+    // per-rank series. Both matter: a flat 7s cooldown and a 60-to-100 mana
+    // ramp are different decisions.
+    expect(context).toContain("CD 7s");
+    expect(context).toContain("cost 60/70/80/90/100");
+    expect(context).toContain("range 880");
+  });
+
   it("does NOT include feature-specific rule blocks", () => {
     const mode = createStubMode({
       decisionTypes: [

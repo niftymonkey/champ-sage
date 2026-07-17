@@ -1,3 +1,4 @@
+import { getLogger } from "../../logger";
 import type {
   Champion,
   ChampionAbilities,
@@ -9,6 +10,8 @@ import type {
 } from "../types";
 
 const BASE_URL = "https://ddragon.leagueoflegends.com";
+
+const log = getLogger("data-ingest");
 
 export async function fetchLatestVersion(): Promise<string> {
   const res = await fetch(`${BASE_URL}/api/versions.json`);
@@ -130,6 +133,65 @@ export async function fetchChampionAbilities(
   return abilities;
 }
 
+/**
+ * Fetch ability data for EVERY champion in a single request.
+ *
+ * DDragon's `championFull.json` carries the same passive/spell payload as the
+ * per-champion endpoint for all champions at once (~2MB). One request at
+ * ingest time removes the need to fetch abilities per match, which is what
+ * makes it possible to persist abilities into the cache before anything reads
+ * them.
+ *
+ * Returns a Map keyed by lowercase champion ID (e.g. "ahri", "aurelionsol").
+ */
+export async function fetchAllChampionAbilities(
+  version: string
+): Promise<Map<string, ChampionAbilities>> {
+  const abilities = new Map<string, ChampionAbilities>();
+
+  const res = await fetch(
+    `${BASE_URL}/cdn/${version}/data/en_US/championFull.json`
+  );
+  if (!res.ok) {
+    log.warn(
+      `championFull fetch failed (HTTP ${res.status}); champion abilities will be absent from coaching prompts`
+    );
+    return abilities;
+  }
+
+  const json = (await res.json()) as {
+    data?: Record<string, RawChampionFull>;
+  };
+  if (!json.data) return abilities;
+
+  for (const [championId, raw] of Object.entries(json.data)) {
+    abilities.set(championId.toLowerCase(), normalizeAbilities(raw));
+  }
+  return abilities;
+}
+
+/**
+ * Normalize DDragon's raw passive/spell payload into our shape. Shared by the
+ * bulk and per-champion fetches so both produce byte-identical abilities.
+ */
+function normalizeAbilities(data: RawChampionFull): ChampionAbilities {
+  return {
+    passive: {
+      name: data.passive.name,
+      description: stripHtml(data.passive.description),
+    },
+    spells: data.spells.map((spell) => ({
+      id: spell.id,
+      name: spell.name,
+      description: stripHtml(spell.description),
+      maxRank: spell.maxrank,
+      cooldowns: spell.cooldown,
+      costs: spell.cost,
+      range: spell.range,
+    })),
+  };
+}
+
 async function fetchSingleChampionAbilities(
   version: string,
   championId: string
@@ -147,21 +209,7 @@ async function fetchSingleChampionAbilities(
 
   return {
     key: championId.toLowerCase(),
-    abilities: {
-      passive: {
-        name: data.passive.name,
-        description: stripHtml(data.passive.description),
-      },
-      spells: data.spells.map((spell) => ({
-        id: spell.id,
-        name: spell.name,
-        description: stripHtml(spell.description),
-        maxRank: spell.maxrank,
-        cooldowns: spell.cooldown,
-        costs: spell.cost,
-        range: spell.range,
-      })),
-    },
+    abilities: normalizeAbilities(data),
   };
 }
 

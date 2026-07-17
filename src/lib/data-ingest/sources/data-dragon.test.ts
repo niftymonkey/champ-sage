@@ -4,6 +4,7 @@ import {
   fetchItems,
   fetchRunes,
   fetchChampionAbilities,
+  fetchAllChampionAbilities,
 } from "./data-dragon";
 
 const mockFetch = vi.fn();
@@ -676,5 +677,92 @@ describe("fetchChampionAbilities", () => {
     expect(ahri.spells[0].description).not.toContain("<");
     expect(ahri.spells[0].description).toContain("magic damage");
     expect(ahri.spells[0].description).toContain("true damage");
+  });
+});
+
+describe("fetchAllChampionAbilities", () => {
+  function championFullResponse() {
+    return jsonResponse({
+      data: {
+        Ahri: {
+          passive: {
+            name: "Essence Theft",
+            description: "After killing 9 minions, <b>Ahri</b> heals.",
+            image: { full: "Ahri_SoulEater2.png" },
+          },
+          spells: [
+            {
+              id: "AhriQ",
+              name: "Orb of Deception",
+              description:
+                "Ahri sends out her orb, dealing <b>magic damage</b>.",
+              maxrank: 5,
+              cooldown: [7, 7, 7, 7, 7],
+              cost: [55, 65, 75, 85, 95],
+              costType: " Mana",
+              range: [970, 970, 970, 970, 970],
+            },
+          ],
+        },
+        AurelionSol: {
+          passive: {
+            name: "Cosmic Creator",
+            description: "Aurelion Sol gains Stardust.",
+            image: { full: "AurelionSol_P.png" },
+          },
+          spells: [
+            {
+              id: "AurelionSolQ",
+              name: "Breath of Light",
+              description: "Aurelion Sol breathes.",
+              maxrank: 5,
+              cooldown: [4, 4, 4, 4, 4],
+              cost: [30, 30, 30, 30, 30],
+              costType: " Mana",
+              range: [810, 810, 810, 810, 810],
+            },
+          ],
+        },
+      },
+    });
+  }
+
+  it("fetches every champion's abilities in a single request", async () => {
+    mockFetch.mockResolvedValueOnce(championFullResponse());
+
+    const abilities = await fetchAllChampionAbilities("15.6.1");
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://ddragon.leagueoflegends.com/cdn/15.6.1/data/en_US/championFull.json"
+    );
+    expect(abilities.size).toBe(2);
+  });
+
+  it("keys by lowercase champion id and normalizes abilities", async () => {
+    mockFetch.mockResolvedValueOnce(championFullResponse());
+
+    const abilities = await fetchAllChampionAbilities("15.6.1");
+
+    const ahri = abilities.get("ahri")!;
+    expect(ahri.passive.name).toBe("Essence Theft");
+    expect(ahri.passive.description).not.toContain("<");
+    expect(ahri.spells[0].name).toBe("Orb of Deception");
+    expect(ahri.spells[0].description).not.toContain("<");
+    expect(ahri.spells[0].maxRank).toBe(5);
+    expect(ahri.spells[0].cooldowns).toEqual([7, 7, 7, 7, 7]);
+    expect(ahri.spells[0].costs).toEqual([55, 65, 75, 85, 95]);
+    expect(ahri.spells[0].range).toEqual([970, 970, 970, 970, 970]);
+
+    expect(abilities.has("aurelionsol")).toBe(true);
+    expect(abilities.has("aurelion sol")).toBe(false);
+  });
+
+  it("returns an empty map when the request fails", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 503 });
+
+    const abilities = await fetchAllChampionAbilities("15.6.1");
+
+    expect(abilities.size).toBe(0);
   });
 });
