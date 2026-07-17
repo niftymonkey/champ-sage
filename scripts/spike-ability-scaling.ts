@@ -160,8 +160,34 @@ async function runProbe(label: string, probe: () => Promise<void>) {
 }
 
 async function main() {
-  const championId = process.argv[2] ?? "Ahri";
-  const numericKey = process.argv[3] ?? "103";
+  const [championId, numericKey] = process.argv.slice(2);
+
+  // DDragon keys by name and CDragon by numeric key, so defaulting them
+  // independently would let `spike-ability-scaling Nasus` probe Nasus on one
+  // source and Ahri on the other, and silently report the two as if they
+  // described the same champion. Take both or neither.
+  if ((championId === undefined) !== (numericKey === undefined)) {
+    console.error(
+      "Pass BOTH a champion id and its numeric key, or neither.\n" +
+        "  pnpm spike-ability-scaling            (defaults to Ahri 103)\n" +
+        "  pnpm spike-ability-scaling Nasus 75\n" +
+        "Find a champion's numeric key in DDragon's champion.json `key` field."
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  if (numericKey !== undefined && !/^\d+$/.test(numericKey)) {
+    console.error(
+      `Numeric key must be digits, got "${numericKey}". Did you swap the arguments?`
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const champion = championId ?? "Ahri";
+  const key = numericKey ?? "103";
+  console.log(`Probing ${champion} (numeric key ${key})\n`);
 
   // The version lookup only DDragon needs, so keep its failure inside
   // DDragon's probe. The CDragon and Meraki probes do not take a version and
@@ -170,10 +196,10 @@ async function main() {
   await runProbe("DDragon", async () => {
     const version = await fetchLatestVersion();
     console.log(`DDragon version: ${version}`);
-    await probeDataDragon(version, championId);
+    await probeDataDragon(version, champion);
   });
-  await runProbe("CDragon", () => probeCommunityDragon(numericKey));
-  await runProbe("Meraki", () => probeMeraki(championId));
+  await runProbe("CDragon", () => probeCommunityDragon(key));
+  await runProbe("Meraki", () => probeMeraki(champion));
 }
 
 main().catch((err) => {

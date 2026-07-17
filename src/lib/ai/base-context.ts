@@ -168,6 +168,10 @@ function formatRankSeries(values: readonly number[]): string | null {
  * Render one spell's numbers as a compact bracketed suffix. Values that carry
  * no information (a zero-cost ability, a self-cast with no range) are omitted
  * rather than printed as "0", which would read as a real number to the model.
+ *
+ * Wiki-sourced scaling ("Damage Per Pass: 35 to 135 (+ 50% AP)") joins the same
+ * bracket. Only stats that parsed cleanly reach here, so a spell the wiki could
+ * not be trusted on simply renders its cooldown and cost as before.
  */
 function formatSpellNumbers(spell: AbilitySpell): string {
   const cooldown = formatRankSeries(spell.cooldowns);
@@ -178,6 +182,9 @@ function formatSpellNumbers(spell: AbilitySpell): string {
   if (cooldown) parts.push(`CD ${cooldown}s`);
   if (cost) parts.push(`cost ${cost}`);
   if (range) parts.push(`range ${range}`);
+  for (const stat of spell.scaling ?? []) {
+    parts.push(`${stat.label}: ${stat.value}`);
+  }
 
   return parts.length > 0 ? ` [${parts.join(" | ")}]` : "";
 }

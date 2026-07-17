@@ -1,3 +1,15 @@
+export interface StripWikiMarkupOptions {
+  /**
+   * Invoked with the lowercased template name each time an unrecognized
+   * template falls through to the last-param heuristic. That heuristic is a
+   * guess: it yields plausible-but-wrong text rather than failing, so callers
+   * that cannot tolerate a silent guess (ability scaling) use this to detect
+   * and quarantine. Callers rendering prose (augments) simply omit it and keep
+   * the lenient behaviour.
+   */
+  onUnknownTemplate?: (templateName: string) => void;
+}
+
 /**
  * Strip League Wiki markup from augment descriptions, producing plain text.
  *
@@ -22,7 +34,10 @@
  * - {{rd|val1|val2|...}} → val1 (ranged/reduced, keeps first)
  * - {{ap|expr}} → expr (arithmetic/percentage)
  * - {{ft|simple|detailed}} → simple (footnote, keeps first param)
- * - {{other|...|display}} → display (last param fallback)
+ * - {{st|L1|v1|L2|v2}} → "L1: v1, L2: v2" (stat table)
+ * - {{tt|display|hover}} → display (tooltip)
+ * - {{other|...|display}} → display (last param fallback, reported via
+ *   StripWikiMarkupOptions.onUnknownTemplate)
  * - [[Page|display]] → display
  * - [[Page]] → Page
  * - '''bold''' → bold
@@ -30,7 +45,10 @@
  * - HTML tags → removed (with space insertion for block-level tags)
  * - HTML comments → removed
  */
-export function stripWikiMarkup(text: string): string {
+export function stripWikiMarkup(
+  text: string,
+  options: StripWikiMarkupOptions = {}
+): string {
   let result = text;
 
   // Strip HTML comments first (before tag stripping)
@@ -62,7 +80,7 @@ export function stripWikiMarkup(text: string): string {
 
     // Match innermost templates: {{ ... }} where ... contains no {{ or }}
     result = result.replace(/\{\{([^{}]*)\}\}/g, (_match, content: string) =>
-      resolveTemplate(content)
+      resolveTemplate(content, options)
     );
 
     // If nothing changed, we have malformed templates — break to avoid looping
@@ -99,11 +117,22 @@ export function stripWikiMarkup(text: string): string {
  * Resolve a single (innermost, no nesting) template.
  * Input is the content between {{ and }}, e.g., "ii|The Golden Spatula".
  */
-function resolveTemplate(content: string): string {
+function resolveTemplate(
+  content: string,
+  options: StripWikiMarkupOptions
+): string {
   const parts = content.split("|");
   const templateName = parts[0].trim().toLowerCase();
 
   switch (templateName) {
+    // Stat tables: {{st|Label1|value1|Label2|value2}} → "Label1: value1, Label2: value2"
+    case "st":
+      return resolveStatTable(parts.slice(1));
+
+    // Tooltips: {{tt|display|hover}} → display (the hover text is an aside)
+    case "tt":
+      return parts[1] ?? "";
+
     // Stat references: {{as|content}} or {{as|content|stat_type}}
     case "as":
       return parts[1] ?? "";
@@ -179,6 +208,7 @@ function resolveTemplate(content: string): string {
       return parts[1] ?? "";
 
     default:
+      options.onUnknownTemplate?.(templateName);
       // Unknown template with params — return last param (most likely display text)
       if (parts.length > 1) {
         return parts[parts.length - 1];
@@ -186,4 +216,22 @@ function resolveTemplate(content: string): string {
       // No params — drop entirely
       return "";
   }
+}
+
+/**
+ * Render a stat table's params as "Label: value" pairs. Params alternate
+ * label/value; a trailing label with no value is kept on its own so a
+ * malformed table still surfaces what it names rather than vanishing.
+ */
+function resolveStatTable(entries: string[]): string {
+  const rendered: string[] = [];
+
+  for (let i = 0; i < entries.length; i += 2) {
+    const label = entries[i]?.trim() ?? "";
+    const value = entries[i + 1]?.trim();
+    if (!label && !value) continue;
+    rendered.push(value ? `${label}: ${value}` : label);
+  }
+
+  return rendered.join(", ");
 }

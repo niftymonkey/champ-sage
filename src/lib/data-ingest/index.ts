@@ -25,6 +25,10 @@ import {
   MISSING_DESCRIPTION_PLACEHOLDER,
 } from "./sources/community-dragon";
 import { fetchAramOverrides } from "./sources/wiki-aram-overrides";
+import {
+  fetchChampionAbilityScaling,
+  type ChampionAbilityScaling,
+} from "./sources/wiki-champion-abilities";
 import { getMayhemAugmentSets } from "./sources/mayhem-augment-sets";
 import { enrichQuestAugments } from "./sources/quest-augment-rewards";
 import { readCache, writeCache, mapToObject, objectToMap } from "./cache";
@@ -58,6 +62,47 @@ export const KIWI_MIN_RESOLUTION_RATE = 0.9;
  * warn and degrade, never fail.
  */
 export const ABILITY_MIN_COVERAGE_RATE = 0.9;
+
+/**
+ * Minimum share of abilities that must carry wiki-sourced scaling before ingest
+ * stops warning. Unlike abilities, low coverage here never blocks the cache
+ * write: scaling is an enhancement on top of the ability text, so a wiki outage
+ * or a template rework should cost prompts their damage numbers for a session,
+ * not cost the app its game data. Warn so the degradation is visible.
+ */
+export const SCALING_MIN_COVERAGE_RATE = 0.9;
+
+/**
+ * Attach wiki-sourced scaling to each champion's spells before the cache write,
+ * so it is persisted with the payload rather than resolved lazily.
+ *
+ * Spells arrive from DDragon in Q/W/E/R order and the wiki is keyed by that
+ * slot, so the two are matched positionally. Returns the number of spells that
+ * received scaling.
+ */
+export function mergeAbilityScaling(
+  champions: Map<string, Champion>,
+  scaling: Map<string, ChampionAbilityScaling>
+): number {
+  if (scaling.size === 0) return 0;
+
+  const slots = ["Q", "W", "E", "R"] as const;
+  let merged = 0;
+
+  for (const [key, champion] of champions) {
+    const resolved = scaling.get(key);
+    if (!resolved || !champion.abilities) continue;
+
+    champion.abilities.spells.forEach((spell, index) => {
+      const stats = resolved.slots[slots[index]];
+      if (!stats || stats.length === 0) return;
+      spell.scaling = stats;
+      merged++;
+    });
+  }
+
+  return merged;
+}
 
 export interface KiwiResolutionStats {
   total: number;
@@ -228,17 +273,35 @@ export async function fetchAndCache(
   patchline: Patchline = "live"
 ): Promise<LoadedGameData> {
   const version = await fetchLatestVersion();
+
+  // Scaling is keyed by champion name, so its fetch is chained off the champion
+  // fetch rather than listed alongside it. Kept inside the same Promise.all so
+  // the wiki round-trips still overlap the other sources instead of extending
+  // ingest by their full duration.
+  const championsPromise = fetchChampions(version);
+  const abilityScalingPromise = championsPromise
+    .then((champs) =>
+      fetchChampionAbilityScaling([...champs.values()].map((c) => c.name))
+    )
+    .catch((err) => {
+      log.warn(
+        `Champion ability scaling fetch failed; coaching prompts will omit scaling this session: ${errMessage(err)}`
+      );
+      return null;
+    });
+
   const [
     champions,
     items,
     runes,
     championAbilities,
+    abilityScaling,
     kiwiAugments,
     wikiMayhemAugments,
     arenaAugments,
     aramOverrideMap,
   ] = await Promise.all([
-    fetchChampions(version),
+    championsPromise,
     fetchItems(version),
     fetchRunes(version),
     fetchAllChampionAbilities(version).catch((err) => {
@@ -247,6 +310,7 @@ export async function fetchAndCache(
       );
       return new Map<string, ChampionAbilities>();
     }),
+    abilityScalingPromise,
     fetchKiwiAugments(patchline).catch((err) => {
       log.warn(
         `KIWI augment fetch failed; falling back to the wiki: ${errMessage(err)}`
@@ -297,6 +361,10 @@ export async function fetchAndCache(
   enrichQuestAugments(augments, items);
   mergeAramOverrides(champions, aramOverrideMap);
   const abilityCoverage = mergeChampionAbilities(champions, championAbilities);
+  reportScalingCoverage(
+    champions,
+    mergeAbilityScaling(champions, abilityScaling?.byChampion ?? new Map())
+  );
 
   const augmentSets = getMayhemAugmentSets();
 
@@ -365,6 +433,30 @@ function mergeChampionAbilities(
     );
   }
   return merged;
+}
+
+/**
+ * Warn when wiki-sourced scaling covers noticeably fewer abilities than usual,
+ * which is how a template rework or a partial wiki outage announces itself.
+ * Never blocks the cache write: see SCALING_MIN_COVERAGE_RATE.
+ */
+function reportScalingCoverage(
+  champions: Map<string, Champion>,
+  scaledSpells: number
+): void {
+  let totalSpells = 0;
+  for (const champion of champions.values()) {
+    totalSpells += champion.abilities?.spells.length ?? 0;
+  }
+  if (totalSpells === 0) return;
+
+  const rate = scaledSpells / totalSpells;
+  if (rate < SCALING_MIN_COVERAGE_RATE) {
+    log.warn(
+      `Ability scaling coverage low (${scaledSpells}/${totalSpells} abilities, ` +
+        `below ${SCALING_MIN_COVERAGE_RATE * 100}%); coaching prompts will omit scaling for the rest.`
+    );
+  }
 }
 
 function mergeAramOverrides(

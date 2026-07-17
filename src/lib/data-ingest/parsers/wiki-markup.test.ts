@@ -264,4 +264,82 @@ describe("stripWikiMarkup", () => {
       "some textmore text"
     );
   });
+
+  describe("{{st|...}} stat tables", () => {
+    it("renders a single label/value pair", () => {
+      expect(stripWikiMarkup("{{st|Damage Per Pass|35 to 135}}")).toBe(
+        "Damage Per Pass: 35 to 135"
+      );
+    });
+
+    it("keeps every stat, not just the last param", () => {
+      expect(
+        stripWikiMarkup(
+          "{{st|Physical Damage|30 to 70|Minion Damage|60 to 140}}"
+        )
+      ).toBe("Physical Damage: 30 to 70, Minion Damage: 60 to 140");
+    });
+
+    it("resolves nested templates inside a stat table", () => {
+      expect(
+        stripWikiMarkup(
+          "{{st|Damage Per Pass|{{ap|35 to 135}} {{as|(+ 50% AP)}}}}"
+        )
+      ).toBe("Damage Per Pass: 35 to 135 (+ 50% AP)");
+    });
+
+    it("keeps a trailing label that has no value", () => {
+      expect(stripWikiMarkup("{{st|Damage|50|Orphan Label}}")).toBe(
+        "Damage: 50, Orphan Label"
+      );
+    });
+
+    it("renders an empty stat table as empty", () => {
+      expect(stripWikiMarkup("{{st}}")).toBe("");
+    });
+  });
+
+  describe("{{tt|...}} tooltips", () => {
+    it("keeps the display text and drops the hover text", () => {
+      expect(stripWikiMarkup("{{tt|Width|Pathfinding}}")).toBe("Width");
+    });
+
+    it("keeps the display text when used as a stat label", () => {
+      expect(
+        stripWikiMarkup("{{st|{{tt|Total Damage|Ranks 1-4}}|100 to 200}}")
+      ).toBe("Total Damage: 100 to 200");
+    });
+  });
+
+  describe("unknown template reporting", () => {
+    it("reports the template name when falling through to the last-param guess", () => {
+      const seen: string[] = [];
+      stripWikiMarkup("deals {{ccd|Yasuo|crit_base}} damage", {
+        onUnknownTemplate: (name) => seen.push(name),
+      });
+      expect(seen).toEqual(["ccd"]);
+    });
+
+    it("reports a paramless unknown template", () => {
+      const seen: string[] = [];
+      stripWikiMarkup("{{times}}", {
+        onUnknownTemplate: (name) => seen.push(name),
+      });
+      expect(seen).toEqual(["times"]);
+    });
+
+    it("stays silent for recognized templates", () => {
+      const seen: string[] = [];
+      stripWikiMarkup("{{as|100% bonus AD}} and {{ap|35 to 135}}", {
+        onUnknownTemplate: (name) => seen.push(name),
+      });
+      expect(seen).toEqual([]);
+    });
+
+    it("still returns the last-param guess so existing callers are unaffected", () => {
+      expect(stripWikiMarkup("deals {{ccd|Yasuo|crit_base}} damage")).toBe(
+        "deals crit_base damage"
+      );
+    });
+  });
 });

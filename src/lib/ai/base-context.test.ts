@@ -122,6 +122,10 @@ function createStubGameData(): LoadedGameData {
               cooldowns: [7, 7, 7, 7, 7],
               costs: [60, 70, 80, 90, 100],
               range: [880, 880, 880, 880, 880],
+              scaling: [
+                { label: "Damage Per Pass", value: "35 to 135 (+ 50% AP)" },
+                { label: "Total Mixed Damage", value: "70 to 270 (+ 100% AP)" },
+              ],
             },
           ],
         },
@@ -219,6 +223,34 @@ describe("buildBaseContext", () => {
     expect(context).toContain("CD 7s");
     expect(context).toContain("cost 60/70/80/90/100");
     expect(context).toContain("range 880");
+  });
+
+  it("includes wiki-sourced ability scaling alongside the other spell numbers", () => {
+    const context = buildBaseContext({
+      mode: createStubMode(),
+      gameData: createStubGameData(),
+      gameState: createGameState(),
+    });
+
+    expect(context).toContain(
+      "[CD 7s | cost 60/70/80/90/100 | range 880 | " +
+        "Damage Per Pass: 35 to 135 (+ 50% AP) | " +
+        "Total Mixed Damage: 70 to 270 (+ 100% AP)]"
+    );
+  });
+
+  it("omits scaling for a spell the wiki could not supply it for", () => {
+    const gameData = createStubGameData();
+    delete gameData.champions.get("ahri")!.abilities!.spells[0].scaling;
+
+    const context = buildBaseContext({
+      mode: createStubMode(),
+      gameData,
+      gameState: createGameState(),
+    });
+
+    expect(context).toContain("[CD 7s | cost 60/70/80/90/100 | range 880]");
+    expect(context).not.toContain("Damage Per Pass");
   });
 
   it("does NOT include feature-specific rule blocks", () => {

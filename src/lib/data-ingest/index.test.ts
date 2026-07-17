@@ -5,8 +5,11 @@ import {
   checkForNewVersion,
   mergeMayhemAugments,
   kiwiResolutionStats,
+  mergeAbilityScaling,
   KIWI_MIN_RESOLUTION_RATE,
 } from "./index";
+import type { ChampionAbilityScaling } from "./sources/wiki-champion-abilities";
+import * as wikiChampionAbilities from "./sources/wiki-champion-abilities";
 import * as dataDragon from "./sources/data-dragon";
 import * as wikiAugments from "./sources/wiki-augments";
 import * as arenaAugments from "./sources/wiki-arena-augments";
@@ -14,7 +17,14 @@ import * as kiwiAugments from "./sources/cdragon-kiwi-augments";
 import * as communityDragon from "./sources/community-dragon";
 import * as aramOverrides from "./sources/wiki-aram-overrides";
 import * as cache from "./cache";
-import type { AramOverrides, Champion, Item, Augment, RuneTree } from "./types";
+import type {
+  AramOverrides,
+  Champion,
+  Item,
+  Augment,
+  RuneTree,
+  AbilitySpell,
+} from "./types";
 
 vi.mock("./sources/data-dragon");
 vi.mock("./sources/wiki-augments");
@@ -31,6 +41,15 @@ vi.mock("./sources/community-dragon", async (importOriginal) => {
   };
 });
 vi.mock("./sources/wiki-aram-overrides");
+// Partial mock: only the network call is stubbed, so the real
+// describeQuarantineReason stays available to any caller that needs it.
+vi.mock("./sources/wiki-champion-abilities", async (importOriginal) => {
+  const actual = await importOriginal<typeof wikiChampionAbilities>();
+  return {
+    ...actual,
+    fetchChampionAbilityScaling: vi.fn(),
+  };
+});
 vi.mock("./cache", async (importOriginal) => {
   const actual = await importOriginal<typeof cache>();
   return {
@@ -169,6 +188,19 @@ beforeEach(() => {
   );
   vi.mocked(communityDragon.mergeAugmentIds).mockResolvedValue(undefined);
   vi.mocked(aramOverrides.fetchAramOverrides).mockResolvedValue(new Map());
+  vi.mocked(
+    wikiChampionAbilities.fetchChampionAbilityScaling
+  ).mockResolvedValue({
+    byChampion: new Map(),
+    diagnostics: {
+      abilitiesRequested: 0,
+      abilitiesWithScaling: 0,
+      statsAccepted: 0,
+      statsQuarantined: 0,
+      quarantineReasons: new Map(),
+      quarantineExamples: new Map(),
+    },
+  });
 });
 
 describe("loadGameData", () => {
@@ -205,6 +237,49 @@ describe("loadGameData", () => {
     await loadGameData();
 
     expect(cache.writeCache).toHaveBeenCalled();
+  });
+
+  it("still caches game data when the ability scaling wiki fetch fails", async () => {
+    // Scaling is an enhancement, so a wiki outage must cost prompts their
+    // damage numbers, never cost the app its game data.
+    vi.mocked(
+      wikiChampionAbilities.fetchChampionAbilityScaling
+    ).mockRejectedValue(new Error("wiki is down"));
+
+    const data = await loadGameData();
+
+    expect(cache.writeCache).toHaveBeenCalled();
+    expect(data.champions.size).toBe(1);
+  });
+
+  it("attaches wiki scaling to champion abilities before caching", async () => {
+    vi.mocked(
+      wikiChampionAbilities.fetchChampionAbilityScaling
+    ).mockResolvedValue({
+      byChampion: new Map<string, ChampionAbilityScaling>([
+        [
+          "aatrox",
+          { slots: { Q: [{ label: "Damage", value: "10 to 70 (+ 60% AD)" }] } },
+        ],
+      ]),
+      diagnostics: {
+        abilitiesRequested: 4,
+        abilitiesWithScaling: 1,
+        statsAccepted: 1,
+        statsQuarantined: 0,
+        quarantineReasons: new Map(),
+        quarantineExamples: new Map(),
+      },
+    });
+
+    await loadGameData();
+
+    const cached = vi.mocked(cache.writeCache).mock.calls[0][1] as {
+      champions: Record<string, Champion>;
+    };
+    expect(cached.champions.aatrox.abilities?.spells[0].scaling).toEqual([
+      { label: "Damage", value: "10 to 70 (+ 60% AD)" },
+    ]);
   });
 
   it("returns cached data when available (production mode)", async () => {
@@ -740,5 +815,151 @@ describe("champion abilities in the cached payload", () => {
     await loadGameData();
 
     expect(cache.writeCache).not.toHaveBeenCalled();
+  });
+
+  it("does NOT cache the payload when the abilities fetch REJECTS", async () => {
+    // A network drop rejects rather than resolving empty, which reaches the
+    // guard by a different path (the catch in fetchAndCache). Same rule has
+    // to hold: degrade for the session, cache nothing, retry next start.
+    vi.mocked(dataDragon.fetchAllChampionAbilities).mockRejectedValue(
+      new Error("ECONNRESET")
+    );
+
+    const data = await loadGameData();
+
+    expect(cache.writeCache).not.toHaveBeenCalled();
+    expect(data.champions.get("aatrox")).toBeDefined();
+    expect(data.champions.get("aatrox")!.abilities).toBeUndefined();
+  });
+});
+
+describe("mergeAbilityScaling", () => {
+  function makeSpell(id: string, name: string): AbilitySpell {
+    return {
+      id,
+      name,
+      description: "does a thing",
+      maxRank: 5,
+      cooldowns: [7],
+      costs: [55],
+      range: [970],
+    };
+  }
+
+  function makeChampionWithAbilities(
+    key: string,
+    name: string
+  ): Map<string, Champion> {
+    return new Map<string, Champion>([
+      [
+        key,
+        {
+          id: name.replace(/[^A-Za-z]/g, ""),
+          key: 1,
+          name,
+          title: "the Tested",
+          tags: [],
+          partype: "Mana",
+          stats: {} as Champion["stats"],
+          image: "",
+          abilities: {
+            passive: { name: "Passive", description: "passive text" },
+            spells: [
+              makeSpell("Q1", "First"),
+              makeSpell("W1", "Second"),
+              makeSpell("E1", "Third"),
+              makeSpell("R1", "Fourth"),
+            ],
+          },
+        },
+      ],
+    ]);
+  }
+
+  it("attaches scaling to the spell in the matching slot", () => {
+    const champions = makeChampionWithAbilities("ahri", "Ahri");
+    const scaling = new Map<string, ChampionAbilityScaling>([
+      [
+        "ahri",
+        {
+          slots: {
+            Q: [{ label: "Damage Per Pass", value: "35 to 135 (+ 50% AP)" }],
+            R: [{ label: "Magic Damage", value: "75 to 175 (+ 35% AP)" }],
+          },
+        },
+      ],
+    ]);
+
+    const merged = mergeAbilityScaling(champions, scaling);
+
+    const spells = champions.get("ahri")!.abilities!.spells;
+    expect(spells[0].scaling).toEqual([
+      { label: "Damage Per Pass", value: "35 to 135 (+ 50% AP)" },
+    ]);
+    expect(spells[3].scaling).toEqual([
+      { label: "Magic Damage", value: "75 to 175 (+ 35% AP)" },
+    ]);
+    expect(merged).toBe(2);
+  });
+
+  it("leaves a slot with no wiki scaling untouched", () => {
+    const champions = makeChampionWithAbilities("ahri", "Ahri");
+    const scaling = new Map<string, ChampionAbilityScaling>([
+      ["ahri", { slots: { Q: [{ label: "Damage", value: "10 to 20" }] } }],
+    ]);
+
+    mergeAbilityScaling(champions, scaling);
+
+    const spells = champions.get("ahri")!.abilities!.spells;
+    expect(spells[1].scaling).toBeUndefined();
+    expect(spells[2].scaling).toBeUndefined();
+  });
+
+  it("matches multi-word champions by name, not by DDragon id", () => {
+    const champions = makeChampionWithAbilities("aurelion sol", "Aurelion Sol");
+    const scaling = new Map<string, ChampionAbilityScaling>([
+      [
+        "aurelion sol",
+        { slots: { W: [{ label: "Magic Damage", value: "45 to 105" }] } },
+      ],
+    ]);
+
+    const merged = mergeAbilityScaling(champions, scaling);
+
+    expect(champions.get("aurelion sol")!.abilities!.spells[1].scaling).toEqual(
+      [{ label: "Magic Damage", value: "45 to 105" }]
+    );
+    expect(merged).toBe(1);
+  });
+
+  it("merges nothing when the wiki returned no scaling", () => {
+    const champions = makeChampionWithAbilities("ahri", "Ahri");
+
+    const merged = mergeAbilityScaling(
+      champions,
+      new Map<string, ChampionAbilityScaling>()
+    );
+
+    expect(merged).toBe(0);
+    expect(champions.get("ahri")!.abilities!.spells[0].scaling).toBeUndefined();
+  });
+
+  it("skips a champion whose abilities never resolved", () => {
+    const champions = makeChampionWithAbilities("ahri", "Ahri");
+    delete champions.get("ahri")!.abilities;
+    const scaling = new Map<string, ChampionAbilityScaling>([
+      ["ahri", { slots: { Q: [{ label: "Damage", value: "10 to 20" }] } }],
+    ]);
+
+    expect(mergeAbilityScaling(champions, scaling)).toBe(0);
+  });
+
+  it("ignores scaling for a champion absent from the roster", () => {
+    const champions = makeChampionWithAbilities("ahri", "Ahri");
+    const scaling = new Map<string, ChampionAbilityScaling>([
+      ["nasus", { slots: { Q: [{ label: "Damage", value: "10 to 20" }] } }],
+    ]);
+
+    expect(mergeAbilityScaling(champions, scaling)).toBe(0);
   });
 });
