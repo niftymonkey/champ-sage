@@ -16,6 +16,7 @@ function item(overrides: Partial<Item> = {}): Item {
     stats: {},
     image: "",
     mode: "standard",
+    maps: [11, 12],
     ...overrides,
   };
 }

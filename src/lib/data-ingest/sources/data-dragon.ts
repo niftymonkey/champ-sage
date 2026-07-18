@@ -77,6 +77,7 @@ export async function fetchItems(version: string): Promise<Map<number, Item>> {
       into: raw.into?.map(Number),
       image: `${BASE_URL}/cdn/${version}/img/item/${raw.image.full}`,
       mode: classifyItemMode(id),
+      maps: parseAvailableMaps(raw.maps),
     });
   }
 
@@ -252,6 +253,22 @@ function parseAbilitySpell(value: unknown): AbilitySpell | null {
  * - 320000-329999: aram
  * - everything else: other (mode-specific variants, internal items)
  */
+/**
+ * The DDragon map IDs an item is available on, from its `maps` record of
+ * `{ mapId: boolean }`. Only the true entries are kept, as numbers. A missing
+ * record yields an empty list (available nowhere), which is correct: every
+ * real purchasable item carries a maps record, so absence marks an internal
+ * or deprecated entry that no catalog should surface.
+ */
+function parseAvailableMaps(
+  maps: Record<string, boolean> | undefined
+): number[] {
+  if (!maps) return [];
+  return Object.entries(maps)
+    .filter(([, available]) => available)
+    .map(([mapId]) => Number(mapId));
+}
+
 function classifyItemMode(id: number): ItemMode {
   if (id >= 9000 && id < 10000) return "swarm";
   if (id >= 220000 && id < 230000) return "arena";
@@ -301,6 +318,7 @@ interface RawItem {
   from?: string[];
   into?: string[];
   image: { full: string };
+  maps?: Record<string, boolean>;
 }
 
 interface RawRuneTree {

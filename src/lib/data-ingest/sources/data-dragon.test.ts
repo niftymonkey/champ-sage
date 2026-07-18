@@ -235,6 +235,33 @@ describe("fetchItems", () => {
     expect(items.get(328020)!.mode).toBe("aram");
   });
 
+  it("parses the maps field into the list of available map IDs", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse({
+        data: {
+          "8020": {
+            name: "Abyssal Mask",
+            description: "MR",
+            gold: { base: 500, total: 2650, sell: 1855, purchasable: true },
+            image: { full: "8020.png" },
+            maps: { "11": true, "12": true, "21": false, "30": false },
+          },
+          "3095": {
+            name: "Deprecated item",
+            description: "junk",
+            gold: { base: 1000, total: 3000, sell: 2100, purchasable: true },
+            image: { full: "3095.png" },
+            maps: { "11": false, "12": false, "30": false },
+          },
+        },
+      })
+    );
+    const items = await fetchItems("15.6.1");
+    expect(items.get(8020)!.maps).toEqual([11, 12]);
+    // Available on no map: an empty list, which every catalog reads as absent.
+    expect(items.get(3095)!.maps).toEqual([]);
+  });
+
   it("classifies 9xxx purchasable items as swarm", async () => {
     mockFetch.mockResolvedValue(
       jsonResponse({

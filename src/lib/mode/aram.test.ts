@@ -108,6 +108,7 @@ function createGameData(): LoadedGameData {
         stats: {},
         image: "",
         mode: "aram",
+        maps: [11, 12],
       },
     ],
   ]);

@@ -67,10 +67,15 @@ export function selectMetaFile(
  * groups) or "already owned": those need the full set plus inventory and are
  * enforced post-hoc (issue #117).
  *
- * Mode availability is a STOPGAP. It uses the ID-range `item.mode` partition
- * (ARAM is played with standard items plus the ARAM variant overlay, so it
- * accepts both). The durable source is DDragon's `maps` field, which the ingest
- * currently drops; capturing it is tracked separately.
+ * Mode availability uses the ID-range `item.mode` partition (ARAM is played
+ * with standard items plus the ARAM variant overlay, so it accepts both). This
+ * is deliberately permissive: DDragon's per-map `maps` flags are INCOMPLETE for
+ * ARAM (they mark real staples like Guardian Angel and Mejai's as map-12-absent),
+ * so filtering on a specific map would drop items that are genuinely buildable.
+ * The one thing `maps` IS reliable for is "available on NO map at all", which is
+ * how deprecated and internal entries (Deprecated item, Quest markers) are
+ * excluded here without touching real items (issue #138 remains the tracked
+ * home for a fully map-accurate availability model).
  */
 export function isBuildPathEligible(item: Item, mode: GameMode): boolean {
   if (!item.gold.purchasable) return false;
@@ -83,6 +88,8 @@ export function isBuildPathEligible(item: Item, mode: GameMode): boolean {
   const isBoots = item.tags.includes("Boots");
   if (item.into && item.into.length > 0 && !isBoots) return false;
   if (item.gold.total < 500) return false;
+  // Available on no map = deprecated or internal, recommendable nowhere.
+  if (item.maps.length === 0) return false;
   return modeAcceptsItemMode(mode, item.mode);
 }
 
@@ -90,7 +97,7 @@ export function isBuildPathEligible(item: Item, mode: GameMode): boolean {
  * Which `item.mode` partitions count as available in a given game mode. ARAM and
  * Mayhem are played with standard Summoner's Rift items plus the ARAM variant
  * overlay, so both partitions are accepted. Classic is standard-only; Arena is
- * its own pool. Stopgap until DDragon `maps`-based availability is ingested.
+ * its own pool.
  */
 function modeAcceptsItemMode(mode: GameMode, itemMode: ItemMode): boolean {
   if (mode.matches(GAME_MODE_ARAM) || mode.matches(GAME_MODE_MAYHEM)) {
@@ -98,6 +105,36 @@ function modeAcceptsItemMode(mode: GameMode, itemMode: ItemMode): boolean {
   }
   if (mode.matches(GAME_MODE_ARENA)) return itemMode === "arena";
   return itemMode === "standard";
+}
+
+/**
+ * Collapse same-named items to one entry so the catalog never shows a name
+ * twice. Map filtering already removes off-map variants for a mode like ARAM,
+ * but a mode can still legitimately list two same-named variants (both on its
+ * map), and the base context tells the model each catalog name is a distinct
+ * purchasable item. Keep the most broadly-available variant (the most maps),
+ * tie-broken by lowest cost then lowest id, so the choice is deterministic and
+ * favors the canonical item over a niche rebalance.
+ */
+function dedupeByName(items: Item[]): Item[] {
+  const byName = new Map<string, Item>();
+  for (const item of items) {
+    const current = byName.get(item.name);
+    if (!current || isMoreCanonical(item, current)) {
+      byName.set(item.name, item);
+    }
+  }
+  return [...byName.values()];
+}
+
+function isMoreCanonical(candidate: Item, incumbent: Item): boolean {
+  if (candidate.maps.length !== incumbent.maps.length) {
+    return candidate.maps.length > incumbent.maps.length;
+  }
+  if (candidate.gold.total !== incumbent.gold.total) {
+    return candidate.gold.total < incumbent.gold.total;
+  }
+  return candidate.id < incumbent.id;
 }
 
 /** Format gold with a thousands separator. Cheap but readable. */
@@ -258,9 +295,9 @@ export function buildItemCatalogSections(
   // predictable output; the LLM doesn't care about order but it makes the
   // prompt easier to eyeball when debugging.
   const tier1Set = new Set(tier1Entries.map((e) => e.itemId));
-  const tier2Items = [...modeItems.values()]
-    .filter((item) => !tier1Set.has(item.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const tier2Items = dedupeByName(
+    [...modeItems.values()].filter((item) => !tier1Set.has(item.id))
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   // Produce nothing if we have neither tier. Unlikely but guards against
   // a misconfigured mode or a missing item catalog.

@@ -322,6 +322,7 @@ describe("takeGameSnapshot", () => {
           stats: {},
           image: "",
           mode: "standard",
+          maps: [11, 12],
         },
       ],
     ]);

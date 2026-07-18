@@ -76,6 +76,7 @@ function createGameData(): LoadedGameData {
         stats: { FlatPhysicalDamageMod: 60 },
         image: "",
         mode: "standard",
+        maps: [11, 12],
       },
     ],
   ]);

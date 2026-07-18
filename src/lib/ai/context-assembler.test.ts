@@ -211,6 +211,7 @@ function createGameData(): LoadedGameData {
         stats: {},
         image: "",
         mode: "standard",
+        maps: [11, 12],
       },
     ],
     [
@@ -225,6 +226,7 @@ function createGameData(): LoadedGameData {
         stats: {},
         image: "",
         mode: "standard",
+        maps: [11, 12],
       },
     ],
     [
@@ -240,6 +242,7 @@ function createGameData(): LoadedGameData {
         stats: {},
         image: "",
         mode: "standard",
+        maps: [11, 12],
       },
     ],
   ]);

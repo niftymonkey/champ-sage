@@ -38,6 +38,7 @@ function createItem(stats: Record<string, number> = {}): Item {
     stats,
     image: "",
     mode: "standard",
+    maps: [11, 12],
   };
 }
 

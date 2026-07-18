@@ -97,6 +97,14 @@ export interface Item {
   into?: number[];
   image: string;
   mode: ItemMode;
+  /**
+   * DDragon map IDs this item is actually available on (11 = Summoner's Rift,
+   * 12/14 = ARAM, 30 = Arena). This is the durable "purchasable in this mode"
+   * signal, unlike the ID-range `mode` partition which mislabels items (an
+   * `aram`-range id can be SR-only). Empty means available nowhere (deprecated
+   * or internal items), which excludes it from every catalog.
+   */
+  maps: number[];
 }
 
 export interface ItemGold {

@@ -248,6 +248,7 @@ describe("findDuplicateBoots", () => {
       stats: {},
       image: `${id}.png`,
       mode: "standard",
+      maps: [11, 12],
     };
   }
 

@@ -20,6 +20,7 @@ function item(
     stats: {},
     image: "",
     mode,
+    maps: [11, 12],
     ...overrides,
   };
 }
@@ -72,7 +73,7 @@ describe("createGamePlanFeature", () => {
         tags: ["Consumable"],
         gold: { base: 0, total: 50, sell: 0, purchasable: true },
       }),
-      item(3, "Arena Only Item", "arena"),
+      item(3, "Arena Only Item", "arena", { maps: [30] }),
     ]);
 
     const nameEnum = buildPathNameEnum(

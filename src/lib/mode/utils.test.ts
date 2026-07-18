@@ -13,6 +13,7 @@ function makeItem(id: number, mode: string): Item {
     stats: {},
     image: "",
     mode: mode as Item["mode"],
+    maps: [11, 12],
   };
 }
 

@@ -4,6 +4,9 @@
  */
 
 // Bump this version when the cache schema changes to invalidate stale data.
+// v7: items now carry a `maps` field (DDragon map availability) that filters
+// the coaching item catalog. A v6 payload has no `maps`, so every item reads
+// as available-nowhere and the ARAM/Mayhem catalog empties out. Invalidate it.
 // v6: champion abilities now carry wiki-sourced per-rank scaling. A v5 payload
 // holds spells with no scaling at all, and nothing would refetch it until the
 // patch version changed, so prompts would go a whole patch without damage
@@ -15,7 +18,7 @@
 // v4: the 26.12 Mayhem rework removed augment sets/traits; a v3 payload still
 // holds set data (populated augmentSets + per-augment sets), so invalidate it
 // to force one refetch that drops sets from the coaching context.
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const CACHE_PREFIX = `champ-sage:v${CACHE_VERSION}:`;
 
 export async function readCache<T>(key: string): Promise<T | null> {

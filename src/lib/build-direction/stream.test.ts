@@ -70,6 +70,7 @@ function makeItem(id: number, overrides: Partial<Item> = {}): Item {
     stats: {},
     image: "",
     mode: "standard",
+    maps: [11, 12],
     into: [],
     ...overrides,
   };

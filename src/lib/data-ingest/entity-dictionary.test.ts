@@ -44,6 +44,7 @@ const mockItems = new Map<number, Item>([
       stats: {},
       image: "",
       mode: "standard",
+      maps: [11, 12],
     },
   ],
   [
@@ -58,6 +59,7 @@ const mockItems = new Map<number, Item>([
       stats: {},
       image: "",
       mode: "standard",
+      maps: [11, 12],
     },
   ],
 ]);
