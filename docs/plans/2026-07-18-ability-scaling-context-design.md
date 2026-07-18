@@ -24,7 +24,12 @@ Three gaps:
 
 Extend the wiki ability fetch (`src/lib/data-ingest/sources/wiki-champion-abilities.ts`) to request each champion's `Template:Data <Champion>/I` page alongside Q/W/E/R. The existing batched fetch and redirect resolution already handle the `/I` redirect form (verified: `Template:Data Morgana/I` redirects to `Template:Data Morgana/Soul Siphon`, same `Ability data` template, `skill = I`).
 
-**Innate pages do not use `leveling` params.** Innates scale with champion level, not ability rank; their numbers live in the `description`/`description2`/`description3` params via templates like `{{pplevel|26 to 196|type=his level|label1=level}}` or plain prose ("18% of the post-mitigation damage"). Verified on Morgana, Braum, Ashe, Kog'Maw, Jinx: zero leveling params on all five. So the rank-based scaling parser is NOT applied to `/I`; instead the description params are rendered to plain text via `stripWikiMarkup` (`src/lib/data-ingest/parsers/wiki-markup.ts`), which already handles nearly every template these pages use. One addition: a `pplevel` case (sibling of `pp`: first value param, suffixed "(based on level)").
+**Innate pages do not use `leveling` params.** Innates scale with champion level, not ability rank; their numbers live in the `description`/`description2`/`description3` params via templates like `{{pplevel|26 to 196|type=his level|label1=level}}` or plain prose ("18% of the post-mitigation damage"). Verified on Morgana, Braum, Ashe, Kog'Maw, Jinx: zero leveling params on all five. So the rank-based scaling parser is NOT applied to `/I`; instead the description params are rendered to plain text via `stripWikiMarkup` (`src/lib/data-ingest/parsers/wiki-markup.ts`), which already handles nearly every template these pages use. One addition: a `pplevel` case, with this contract:
+
+- Take the first positional (non-`name=value`) param verbatim and suffix "(based on level)". Named params (`type=`, `label1=`, `changedisplay=`...) are presentation hints and are dropped.
+- Plain form: `{{pplevel|26 to 196|type=his level|label1=level}}` renders `26 to 196 (based on level)`.
+- Arithmetic form: `{{pplevel|26*0.4 to 196*0.4}}` renders `26*0.4 to 196*0.4 (based on level)`: expressions are preserved verbatim, not evaluated. `stripWikiMarkup` has no expression evaluator and the unevaluated form is still unambiguous to an LLM; evaluating is a possible later refinement, not part of this design.
+- Nested templates resolve inside-out as today, so a nested unknown template still fires `onUnknownTemplate` and quarantines the whole passive description (fall back to DDragon text) rather than dropping content silently.
 
 Behavior:
 
