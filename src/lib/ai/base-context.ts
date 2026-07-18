@@ -82,11 +82,15 @@ export function buildBaseContext(inputs: BaseContextInputs): string {
       );
     }
 
-    const runes = gameState.activePlayer.runes;
-    sections.push("");
-    sections.push(
-      `Runes: ${runes.keystone} (${runes.primaryTree} / ${runes.secondaryTree})`
-    );
+    // Mayhem has no runes (the Live Client reports them empty), so the line
+    // would always render as "Runes:  ( / )". Regular ARAM does have runes.
+    if (!mode.matches(GAME_MODE_MAYHEM)) {
+      const runes = gameState.activePlayer.runes;
+      sections.push("");
+      sections.push(
+        `Runes: ${runes.keystone} (${runes.primaryTree} / ${runes.secondaryTree})`
+      );
+    }
 
     const itemCatalog = buildItemCatalogSections(
       mode,

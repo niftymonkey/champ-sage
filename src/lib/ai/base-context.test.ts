@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildBaseContext } from "./base-context";
 import type { GameMode, ModeContext } from "../mode/types";
+import { GAME_MODE_ARAM, GAME_MODE_MAYHEM } from "../mode/types";
 import type { GameState } from "../game-state/types";
 import type { LoadedGameData } from "../data-ingest";
 import type { Champion } from "../data-ingest/types";
@@ -198,6 +199,34 @@ describe("buildBaseContext", () => {
     expect(context).toContain("Match Roster");
     expect(context).toContain("Ahri (Mage/Assassin)");
     expect(context).toContain("Zed (Assassin)");
+  });
+
+  it("omits the Runes line in Mayhem, where runes do not exist", () => {
+    const mode = createStubMode({
+      displayName: "ARAM Mayhem",
+      matches: (m: string) => m === GAME_MODE_MAYHEM,
+    });
+    const context = buildBaseContext({
+      mode,
+      gameData: createStubGameData(),
+      gameState: createGameState(),
+    });
+
+    expect(context).not.toContain("Runes:");
+  });
+
+  it("keeps the Runes line in regular ARAM, which does have runes", () => {
+    const mode = createStubMode({
+      displayName: "ARAM",
+      matches: (m: string) => m === GAME_MODE_ARAM,
+    });
+    const context = buildBaseContext({
+      mode,
+      gameData: createStubGameData(),
+      gameState: createGameState(),
+    });
+
+    expect(context).toContain("Runes: Electrocute (Domination / Sorcery)");
   });
 
   it("labels spells by their slot so the model can map them to the kit", () => {
