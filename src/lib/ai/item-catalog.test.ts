@@ -658,6 +658,33 @@ describe("isBuildPathEligible", () => {
       )
     ).toBe(false);
   });
+
+  it("rejects Golden Spatula variants by name (augment-granted, never bought)", () => {
+    // DDragon marks these purchasable with a full maps record, so no structural
+    // rule catches them: only the curated name blocklist does.
+    expect(
+      isBuildPathEligible(
+        completed({ id: 224403, name: "The Golden Spatula" }),
+        aram
+      )
+    ).toBe(false);
+    expect(
+      isBuildPathEligible(completed({ id: 4403, name: "Golden Spatula" }), aram)
+    ).toBe(false);
+  });
+
+  it("rejects the Guardian starter items by name in every mode", () => {
+    const starters = [
+      { id: 2051, name: "Guardian's Horn" },
+      { id: 3112, name: "Guardian's Orb" },
+      { id: 3177, name: "Guardian's Blade" },
+      { id: 3184, name: "Guardian's Hammer" },
+    ];
+    for (const starter of starters) {
+      expect(isBuildPathEligible(completed(starter), aram)).toBe(false);
+      expect(isBuildPathEligible(completed(starter), classic)).toBe(false);
+    }
+  });
 });
 
 describe("tier 2 catalog: dedupe and junk exclusion", () => {

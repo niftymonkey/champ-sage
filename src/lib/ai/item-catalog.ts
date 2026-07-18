@@ -77,7 +77,28 @@ export function selectMetaFile(
  * excluded here without touching real items (issue #138 remains the tracked
  * home for a fully map-accurate availability model).
  */
+/**
+ * Curated name blocklist for items that pass every structural rule but should
+ * never be recommended. Name-based (not id) so it survives id churn and catches
+ * every same-named variant at once:
+ *
+ *   - Golden Spatula: DDragon marks it purchasable, but in real games it is
+ *     granted by a rare augment and cannot be bought.
+ *   - Guardian's starters: buyable, but strictly starter-tier; recommending
+ *     one mid-game is never right, and start-of-game item advice isn't a
+ *     coaching surface here.
+ */
+const NEVER_RECOMMEND_ITEM_NAMES = new Set([
+  "The Golden Spatula",
+  "Golden Spatula",
+  "Guardian's Blade",
+  "Guardian's Hammer",
+  "Guardian's Horn",
+  "Guardian's Orb",
+]);
+
 export function isBuildPathEligible(item: Item, mode: GameMode): boolean {
+  if (NEVER_RECOMMEND_ITEM_NAMES.has(item.name)) return false;
   if (!item.gold.purchasable) return false;
   if (item.tags.includes("Consumable") || item.tags.includes("Trinket")) {
     return false;
