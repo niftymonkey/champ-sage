@@ -22,6 +22,7 @@ import type { LanguageModel, ModelMessage } from "ai";
 import type { AskResult, CoachingFeature, MatchPhase } from "./feature";
 import { runFeatureCall } from "./recommendation-engine";
 import { briefPersonality, type PersonalityLayer } from "./personality";
+import { summarizeBaseContext } from "./prompt-summary";
 import { getLogger } from "../logger";
 
 const sessionLog = getLogger("coaching:session");
@@ -113,7 +114,15 @@ export function createMatchSession(
   let phase: MatchPhase = options.phase ?? "in-game";
 
   sessionLog.info(
-    `Session created. phase=${phase} baseContext=${systemPrompt.length} chars, personality=${resolvePersonality().id}`
+    `Session created. phase=${phase} baseContext=${systemPrompt.length} chars, personality=${resolvePersonality().id} | ${summarizeBaseContext(systemPrompt).line}`
+  );
+  // The full prompt, once per match, for eyeballing exactly what abilities,
+  // scaling, and item catalog reached the model. Gated to `debug` because it
+  // is ~12KB; switch the level via the app's File > Log Level menu BEFORE a
+  // match to capture it. The info line above always carries the presence
+  // signals, so a regression is visible even without this on.
+  sessionLog.debug(
+    `Base context (${systemPrompt.length} chars):\n${systemPrompt}`
   );
 
   return {
