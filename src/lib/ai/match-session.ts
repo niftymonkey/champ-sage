@@ -97,6 +97,23 @@ function formatUserContent(stateSnapshot: string, question: string): string {
   return `[Game State]\n${stateSnapshot}\n\n[Question]\n${question}`;
 }
 
+/**
+ * Log a base context whenever it is installed (session start or phase change):
+ * an always-on `info` line carrying the presence signals, plus the full prompt
+ * at `debug` for eyeballing exactly what reached the model. Sharing this keeps
+ * a phase transition as verifiable as the initial in-game prompt.
+ */
+function logBaseContext(headline: string, systemPrompt: string): void {
+  sessionLog.info(
+    `${headline} baseContext=${systemPrompt.length} chars | ${summarizeBaseContext(systemPrompt).line}`
+  );
+  // ~12KB; gated to debug. Switch the level via the app's File > Log Level menu
+  // BEFORE a match to capture it.
+  sessionLog.debug(
+    `Base context (${systemPrompt.length} chars):\n${systemPrompt}`
+  );
+}
+
 export function createMatchSession(
   initialSystemPrompt: string,
   apiKey: string,
@@ -113,16 +130,9 @@ export function createMatchSession(
   let systemPrompt = initialSystemPrompt;
   let phase: MatchPhase = options.phase ?? "in-game";
 
-  sessionLog.info(
-    `Session created. phase=${phase} baseContext=${systemPrompt.length} chars, personality=${resolvePersonality().id} | ${summarizeBaseContext(systemPrompt).line}`
-  );
-  // The full prompt, once per match, for eyeballing exactly what abilities,
-  // scaling, and item catalog reached the model. Gated to `debug` because it
-  // is ~12KB; switch the level via the app's File > Log Level menu BEFORE a
-  // match to capture it. The info line above always carries the presence
-  // signals, so a regression is visible even without this on.
-  sessionLog.debug(
-    `Base context (${systemPrompt.length} chars):\n${systemPrompt}`
+  logBaseContext(
+    `Session created. phase=${phase} personality=${resolvePersonality().id}`,
+    systemPrompt
   );
 
   return {
@@ -142,8 +152,9 @@ export function createMatchSession(
       const previousPhase = phase;
       phase = nextPhase;
       systemPrompt = nextSystemPrompt;
-      sessionLog.info(
-        `Session phase ${previousPhase} → ${nextPhase}. baseContext=${systemPrompt.length} chars, history preserved (${messages.length} msgs)`
+      logBaseContext(
+        `Session phase ${previousPhase} > ${nextPhase}. history preserved (${messages.length} msgs)`,
+        systemPrompt
       );
     },
 

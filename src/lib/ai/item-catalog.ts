@@ -291,12 +291,13 @@ export function buildItemCatalogSections(
     tier1Items.push({ item, presence: entry.presence });
   }
 
-  // Tier 2 = mode-valid items minus tier 1 items. Sort alphabetically for
-  // predictable output; the LLM doesn't care about order but it makes the
-  // prompt easier to eyeball when debugging.
-  const tier1Set = new Set(tier1Entries.map((e) => e.itemId));
+  // Tier 2 = mode-valid items minus tier 1, excluded by NAME not just id: a
+  // tier-1 item and its same-named off-map variant carry different ids, so an
+  // id-only exclusion would surface the name in both sections. Sort
+  // alphabetically for predictable, eyeball-friendly output.
+  const tier1Names = new Set(tier1Items.map(({ item }) => item.name));
   const tier2Items = dedupeByName(
-    [...modeItems.values()].filter((item) => !tier1Set.has(item.id))
+    [...modeItems.values()].filter((item) => !tier1Names.has(item.name))
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   // Produce nothing if we have neither tier. Unlikely but guards against

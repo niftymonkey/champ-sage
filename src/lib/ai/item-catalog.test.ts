@@ -758,6 +758,33 @@ describe("tier 2 catalog: dedupe and junk exclusion", () => {
     expect(aramText()).not.toContain("Deprecated item");
   });
 
+  it("does not repeat a tier-1 item name in tier 2 via a different variant id", () => {
+    // Jinx's meta pool holds Abyssal Mask by the id 8020. The SR-only variant
+    // 328020 shares the name but a different id, so an id-only tier-1 exclusion
+    // leaves it in tier 2 and "Abyssal Mask" appears in BOTH sections.
+    const index: MetaBuildIndex = {
+      aram: createMetaFileWithItemPool(222, "Jinx", [
+        { itemId: 8020, presence: 0.6 },
+      ]),
+      rankedSolo: null,
+      arena: null,
+    };
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      champ,
+      items,
+      index
+    );
+    const text = result.text ?? "";
+
+    // Present once, in tier 1 (the "**Abyssal Mask**" meta line), and absent
+    // from the "- Abyssal Mask" tier-2 reference list.
+    expect(text).toContain("**Abyssal Mask**");
+    expect(
+      text.split("\n").filter((l) => l.startsWith("- Abyssal Mask"))
+    ).toHaveLength(0);
+  });
+
   it("excludes components", () => {
     expect(aramText()).not.toContain("B. F. Sword");
   });

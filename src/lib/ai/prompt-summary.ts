@@ -9,8 +9,6 @@
  * no scaling ratios, a handful of catalog items instead of ~150) is the
  * regression tell after a data-source or ingest change, without needing debug
  * logging switched on before the match.
- *
- * Stub returns are intentionally wrong so the tests fail on assertions.
  */
 export interface BaseContextSummary {
   /** Whether the "### Abilities" section rendered at all. */
