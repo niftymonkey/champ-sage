@@ -673,7 +673,8 @@ describe("isBuildPathEligible", () => {
     ).toBe(false);
   });
 
-  it("rejects the Guardian starter items by name in every mode", () => {
+  it("rejects the Guardian starter items by name in ARAM, Mayhem, and Classic", () => {
+    const mayhem = createStubMode(GAME_MODE_MAYHEM);
     const starters = [
       { id: 2051, name: "Guardian's Horn" },
       { id: 3112, name: "Guardian's Orb" },
@@ -682,6 +683,7 @@ describe("isBuildPathEligible", () => {
     ];
     for (const starter of starters) {
       expect(isBuildPathEligible(completed(starter), aram)).toBe(false);
+      expect(isBuildPathEligible(completed(starter), mayhem)).toBe(false);
       expect(isBuildPathEligible(completed(starter), classic)).toBe(false);
     }
   });
