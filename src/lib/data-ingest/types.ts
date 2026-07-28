@@ -116,6 +116,18 @@ export interface Item {
    * the item has no group restriction.
    */
   mutexGroups?: string[];
+  /**
+   * For transformation-only items (Muramana, Seraph's Embrace, Fimbulwinter,
+   * Runic Compass, Bounty of Worlds), the DDragon id of the item they
+   * transform FROM: the purchasable base the player actually buys. These
+   * items carry `gold.purchasable: false` (that flag, not this pointer, is
+   * what marks them un-buyable: one purchasable item, Arena Prowler's Claw,
+   * also carries `specialRecipe`). The pointer may cross ID partitions (Arena
+   * Fimbulwinter 223121 points at standard 3119), and Bounty of Worlds needs
+   * two hops (via Runic Compass) to reach purchasable World Atlas. Absent on
+   * ordinary items.
+   */
+  specialRecipe?: number;
 }
 
 export interface ItemGold {

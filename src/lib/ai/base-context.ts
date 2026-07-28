@@ -36,7 +36,7 @@ export function buildBaseContext(inputs: BaseContextInputs): string {
   );
   sections.push("");
   sections.push(
-    "ITEM AWARENESS: Do not recommend purchasing items already listed in the player's inventory. Only recommend items that exist in the Item Catalog sections below — if a name does not appear there, it is NOT a purchasable item. Augments listed in the player's state are passive bonuses, not items — never recommend an augment name as an item to buy."
+    "ITEM AWARENESS: Do not recommend purchasing items already listed in the player's inventory. Only recommend items that exist in the Item Catalog sections below — if a name does not appear there, it is NOT a purchasable item. Augments listed in the player's state are passive bonuses, not items — never recommend an augment name as an item to buy. Some catalog items transform into a new item once their condition is met (the description states what they transform into, e.g. Manamune becomes Muramana): if the inventory holds the transformed item, the base item is already bought and complete, so never recommend buying it again."
   );
   sections.push(
     "GOLD AWARENESS: The gold amount shown is the player's exact current gold. Use it to determine what they can afford. Do not hedge with 'if you can buy' when the gold amount is visible."

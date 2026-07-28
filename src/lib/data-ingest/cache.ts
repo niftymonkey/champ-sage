@@ -4,13 +4,16 @@
  */
 
 // Bump this version when the cache schema changes to invalidate stale data.
-// v13: items now carry wiki-sourced `mutexGroups` (mutually exclusive purchase
-// groups, e.g. the Last Whisper "Fatality" family). A v12 payload has none, so
-// mutex-group prompt warnings and build-path enforcement would silently stay
-// disabled until the next patch bumped the version. Invalidate it. Numbered 13
-// because v12 shipped while this branch was in flight: a bump has to land on a
-// key nobody is holding, so a branch takes the next number above whatever main
-// carries, never the higher of the two sides of a merge.
+// v13: items now carry DDragon's `specialRecipe` (the transform-to-base pointer
+// for transformation-only items like Muramana) alongside wiki-sourced
+// `mutexGroups` (mutually exclusive purchase groups, e.g. the Last Whisper
+// "Fatality" family). A v12 payload has neither, so the tier-1 pool could not
+// substitute purchasable bases, and mutex-group prompt warnings and build-path
+// enforcement would silently stay disabled until the next patch bumped the
+// version. Invalidate it. Numbered 13 because v12 shipped while this branch was
+// in flight: a bump has to land on a key nobody is holding, so a branch takes
+// the next number above whatever main carries, never the higher of the two
+// sides of a merge.
 // v12: champion passives now carry the wiki's innate (`/I`) description in
 // place of DDragon's numberless flavor text, and abilities carry the parsed
 // scaling those profiles are built from. An earlier payload holds the flavor

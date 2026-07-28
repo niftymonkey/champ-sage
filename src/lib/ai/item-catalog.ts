@@ -245,6 +245,35 @@ function formatReferenceItem(item: Item): string {
     : `- ${item.name} — ${formatGold(item.gold.total)}`;
 }
 
+/**
+ * Resolve an item to its purchasable form for recommendation purposes.
+ *
+ * Transformation-only items (Muramana, Seraph's Embrace, Fimbulwinter, Runic
+ * Compass, Bounty of Worlds) carry `gold.purchasable: false` and point at the
+ * item they transform FROM via `specialRecipe`. `purchasable` is the gate and
+ * `specialRecipe` only the pointer: a purchasable item that happens to carry
+ * `specialRecipe` (Arena Prowler's Claw pointing at an Anvil Voucher) is
+ * returned unchanged. The walk iterates because Bounty of Worlds needs two
+ * hops (via Runic Compass) to reach purchasable World Atlas, and it may land
+ * in a different ID partition (Arena Fimbulwinter 223121 points at standard
+ * 3119). Returns null when the walk dead-ends on a missing pointer, an
+ * unknown id, or a cycle: no buyable form exists to recommend.
+ */
+function resolveToPurchasable(
+  item: Item,
+  allItems: Map<number, Item>
+): Item | null {
+  const visited = new Set<number>();
+  let current: Item | undefined = item;
+  while (current && !current.gold.purchasable) {
+    visited.add(current.id);
+    if (current.specialRecipe === undefined) return null;
+    if (visited.has(current.specialRecipe)) return null;
+    current = allItems.get(current.specialRecipe);
+  }
+  return current ?? null;
+}
+
 export interface ItemCatalogSections {
   /** The full block of text ready to drop into the system prompt, or null
    *  if no item data could be assembled (e.g. unknown champion, no meta file). */
@@ -296,8 +325,16 @@ export function buildItemCatalogSections(
 
   const tier1Entries = deriveMetaItemPoolEntries(championMeta);
   const tier1Items: Array<{ item: Item; presence: number | null }> = [];
+  const tier1IndexById = new Map<number, number>();
   for (const entry of tier1Entries) {
-    const item = allItems.get(entry.itemId);
+    const poolItem = allItems.get(entry.itemId);
+    if (!poolItem) continue;
+    // Community pools hold end-of-game inventories, so transformation-only
+    // items (Muramana, Seraph's Embrace, ...) appear as the EVOLVED form: the
+    // only form players ever finish with. Those cannot be bought; resolve to
+    // the purchasable base and recommend that instead. Dropping without
+    // substituting would delete the whole item line from the pool.
+    const item = resolveToPurchasable(poolItem, allItems);
     if (!item) continue;
     // Skip components and consumables. These show up in meta builds when
     // players finish games with leftover inventory (Refillable Potion, Ruby
@@ -309,6 +346,21 @@ export function buildItemCatalogSections(
     if (item.gold.total < 500) continue;
     const isBoots = item.tags.includes("Boots");
     if (item.into && item.into.length > 0 && !isBoots) continue;
+    // When the base and its transform independently clear the presence floor,
+    // both resolve to the same base id. Each game's end inventory holds
+    // exactly ONE of the two, so summing the presences is the true share of
+    // games that bought the base, not a double count. A null presence (legacy
+    // build-cluster pools) stays null: no true rate exists to sum.
+    const existingIndex = tier1IndexById.get(item.id);
+    if (existingIndex !== undefined) {
+      const existing = tier1Items[existingIndex];
+      existing.presence =
+        existing.presence != null && entry.presence != null
+          ? existing.presence + entry.presence
+          : null;
+      continue;
+    }
+    tier1IndexById.set(item.id, tier1Items.length);
     tier1Items.push({ item, presence: entry.presence });
   }
 
