@@ -4,7 +4,7 @@ import type { LoadedGameData } from "../../../data-ingest";
 import type { Item } from "../../../data-ingest/types";
 import type { GameMode } from "../../../mode/types";
 import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
-import { isBuildPathEligible } from "../../item-catalog";
+import { isBuildPathEligible, resolveToPurchasable } from "../../item-catalog";
 import { GAME_PLAN_TASK_PROMPT } from "./prompt";
 import { createGamePlanSchema, type GamePlanResult } from "./schema";
 
@@ -208,71 +208,166 @@ export function findDuplicateBoots(
   return boots.length > 1 ? boots : [];
 }
 
-/** A build-path entry removed because it collided with an earlier entry's
- *  mutex group, plus the details a remediation log line needs. */
-export interface MutexGroupDrop {
+/** A build-path entry removed because its restriction group is already
+ *  occupied, either by an earlier path entry or by an item the player
+ *  already owns. */
+export interface MutexCollisionDrop {
+  kind: "mutex-collision";
   /** The entry removed from the build path. */
   entry: BuildPathItem;
   /** The restriction group both items share (e.g. "Fatality"). */
   group: string;
-  /** The earlier entry that keeps the group's single legal slot. */
+  /** The item name holding the group's single legal slot. For an
+   *  inventory-held slot this is the player's actual item name (e.g.
+   *  "Muramana"), which may differ from the purchasable base. */
   keptName: string;
+  /** Where the slot-holder lives: an earlier kept path entry, or the
+   *  player's current inventory. */
+  keptSource: "path" | "inventory";
 }
 
-export interface MutexEnforcementResult {
-  /** The build path with every mutex-group collision removed. */
+/** A build-path entry removed because its name already appears earlier in
+ *  the surfaced path (including the single allowed appearance of an item
+ *  the player already owns). */
+export interface DuplicateNameDrop {
+  kind: "duplicate-name";
+  /** The entry removed from the build path. */
+  entry: BuildPathItem;
+}
+
+export type BuildPathDrop = MutexCollisionDrop | DuplicateNameDrop;
+
+export interface BuildPathLegalityResult {
+  /** The build path with every illegal entry removed. */
   buildPath: BuildPathItem[];
   /** Entries dropped, in build-path order. Empty when the path was legal. */
-  dropped: MutexGroupDrop[];
+  dropped: BuildPathDrop[];
 }
 
+/** Which side of the sweep currently holds a name or group slot. */
+type SlotSource = "path" | "inventory";
+
 /**
- * Deterministic post-hoc enforcement of mutually exclusive item groups
- * (#117 minimal slice). League caps restricted groups (Last Whisper family,
- * Spellblade, Hydra, Lifeline, ...) at one owned item; a schema enum cannot
- * express that cross-item constraint, so the prompt carries the primary rule
- * and this sweep guarantees it.
+ * Deterministic post-hoc enforcement of build-path purchase legality
+ * (issue #117): mutually exclusive item groups, duplicate item names, and
+ * the player's current inventory, in one first-entry-wins sweep. A schema
+ * enum cannot express any of these cross-item constraints, so the prompt
+ * carries the primary rules and this sweep guarantees them.
  *
- * Policy: first entry wins. Build-path order is priority order (the model
- * lists purchases in build order), so the earlier of two colliding items is
- * kept and every later same-group entry is dropped and reported. Entries
- * whose names are unknown or carry no `mutexGroups` are never touched.
+ * Rules, in the order each entry is checked:
+ *
+ * 1. **One copy per name.** The path is a 6-slot END-STATE inventory of
+ *    finished items, so no name may appear twice. Name equality needs no
+ *    catalog proof, which also covers degraded free-string mode.
+ * 2. **End-state echo of owned items.** The game-plan question REQUIRES
+ *    owned items to reappear once in their end-state slot, so an owned
+ *    name's first path appearance is kept (and consumes the name's slot);
+ *    only a second appearance is a duplicate. An owned evolved item
+ *    (Muramana) counts as its purchasable base (Manamune) via the
+ *    `specialRecipe` walk, because the base name is the only form the
+ *    catalog enum lets the model echo.
+ * 3. **One item per restriction group.** Groups occupied by owned items are
+ *    seeded before the sweep (the shop blocks buying a sibling of an owned
+ *    group member); within the path, build order is priority order, so the
+ *    earlier of two colliding items keeps the slot.
+ *
+ * Entries and owned names the catalog cannot prove illegal are never
+ * touched: unknown names carry no groups, and an unknown owned name only
+ * ever blocks an exact same-name re-buy.
  */
-export function enforceMutexGroups(
+export function enforceBuildPathLegality(
   buildPath: readonly BuildPathItem[],
-  items: ReadonlyMap<number, Item>
-): MutexEnforcementResult {
+  items: ReadonlyMap<number, Item>,
+  ownedItemNames: readonly string[] = []
+): BuildPathLegalityResult {
   // Union groups across same-named variants (an ARAM rebalance and its
-  // standard item share a name and must carry the same restrictions).
+  // standard item share a name and must carry the same restrictions), and
+  // keep one representative item per name for the specialRecipe walk.
   const groupsByName = new Map<string, Set<string>>();
+  const itemByName = new Map<string, Item>();
   for (const item of items.values()) {
+    if (!itemByName.has(item.name)) itemByName.set(item.name, item);
     if (!item.mutexGroups || item.mutexGroups.length === 0) continue;
     const groups = groupsByName.get(item.name) ?? new Set<string>();
     for (const group of item.mutexGroups) groups.add(group);
     groupsByName.set(item.name, groups);
   }
 
-  const keptNameByGroup = new Map<string, string>();
+  const nameSlots = new Map<string, SlotSource>();
+  const groupSlots = new Map<string, { name: string; source: SlotSource }>();
+
+  // Seed slots from the player's inventory. The owned display name (what the
+  // playtest log should show, e.g. "Muramana") holds the group slots; both
+  // the owned name and its purchasable base name (the only form the path can
+  // echo) hold name slots.
+  for (const ownedName of ownedItemNames) {
+    const ownedItem = itemByName.get(ownedName);
+    const base = ownedItem ? resolveToPurchasable(ownedItem, items) : null;
+    const ownedNames =
+      base && base.name !== ownedName ? [ownedName, base.name] : [ownedName];
+    for (const name of ownedNames) {
+      if (!nameSlots.has(name)) nameSlots.set(name, "inventory");
+      for (const group of groupsByName.get(name) ?? []) {
+        if (!groupSlots.has(group)) {
+          groupSlots.set(group, { name: ownedName, source: "inventory" });
+        }
+      }
+    }
+  }
+
   const kept: BuildPathItem[] = [];
-  const dropped: MutexGroupDrop[] = [];
+  const dropped: BuildPathDrop[] = [];
 
   for (const entry of buildPath) {
+    const nameSlot = nameSlots.get(entry.name);
+    if (nameSlot === "path") {
+      dropped.push({ kind: "duplicate-name", entry });
+      continue;
+    }
+    if (nameSlot === "inventory") {
+      // The end-state echo of an owned item: legal exactly once. Its groups
+      // are already seeded by the same owned item, so no group check.
+      nameSlots.set(entry.name, "path");
+      kept.push(entry);
+      continue;
+    }
+
     const groups = groupsByName.get(entry.name);
-    let collision: { group: string; keptName: string } | null = null;
+    let collision: Omit<MutexCollisionDrop, "kind" | "entry"> | null = null;
     for (const group of groups ?? []) {
-      const keptName = keptNameByGroup.get(group);
-      if (keptName !== undefined) {
-        collision = { group, keptName };
+      const slot = groupSlots.get(group);
+      if (slot !== undefined) {
+        collision = { group, keptName: slot.name, keptSource: slot.source };
         break;
       }
     }
     if (collision) {
-      dropped.push({ entry, ...collision });
+      dropped.push({ kind: "mutex-collision", entry, ...collision });
       continue;
     }
-    for (const group of groups ?? []) keptNameByGroup.set(group, entry.name);
+
+    nameSlots.set(entry.name, "path");
+    for (const group of groups ?? []) {
+      groupSlots.set(group, { name: entry.name, source: "path" });
+    }
     kept.push(entry);
   }
 
   return { buildPath: kept, dropped };
+}
+
+/**
+ * One drop as a human-readable log fragment. The remediation warn line is
+ * the primary debugging surface in playtest logs, so each fragment names the
+ * dropped item and exactly why it lost its slot.
+ */
+export function describeBuildPathDrop(drop: BuildPathDrop): string {
+  switch (drop.kind) {
+    case "duplicate-name":
+      return `${drop.entry.name} (duplicate of an earlier build-path entry)`;
+    case "mutex-collision":
+      return drop.keptSource === "inventory"
+        ? `${drop.entry.name} (group ${drop.group}, player owns ${drop.keptName})`
+        : `${drop.entry.name} (group ${drop.group}, kept ${drop.keptName})`;
+  }
 }

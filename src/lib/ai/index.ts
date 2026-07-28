@@ -14,14 +14,17 @@ export { buildBaseContext, type BaseContextInputs } from "./base-context";
 export {
   createGamePlanFeature,
   buildGamePlanQuestion,
-  enforceMutexGroups,
+  describeBuildPathDrop,
+  enforceBuildPathLegality,
   extractBuildPath,
   findDuplicateBoots,
   isUpdatePlanCommand,
+  type BuildPathDrop,
+  type BuildPathLegalityResult,
+  type DuplicateNameDrop,
   type GamePlanInput,
   type GamePlanResult,
-  type MutexEnforcementResult,
-  type MutexGroupDrop,
+  type MutexCollisionDrop,
 } from "./features/game-plan";
 export {
   augmentFitFeature,

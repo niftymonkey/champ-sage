@@ -15,7 +15,8 @@ import type { MatchSession } from "../lib/ai/match-session";
 import type { CoachingFeature } from "../lib/ai/feature";
 import {
   createGamePlanFeature,
-  enforceMutexGroups,
+  describeBuildPathDrop,
+  enforceBuildPathLegality,
   extractBuildPath,
   findDuplicateBoots,
   isUpdatePlanCommand,
@@ -536,21 +537,23 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         );
       }
 
-      // #117 mutex slice: the prompt forbids two items from the same
-      // purchase-restriction group (Last Whisper family, Spellblade, ...),
-      // and this deterministic sweep guarantees the surfaced plan is legal.
-      // First entry wins (build order is priority order); a shorter path
-      // with a logged warning beats an illegal 6-item path.
-      const { buildPath, dropped: mutexDrops } = enforceMutexGroups(
+      // #117: the prompt forbids restriction-group pairs, duplicate names,
+      // and re-buying owned items; this deterministic sweep guarantees the
+      // surfaced plan is legal. First entry wins (build order is priority
+      // order); a shorter path with a logged warning beats an illegal 6-item
+      // path. Owned names come from the SAME snapshot that rendered the
+      // [Game State] Items line, so the prompt and the validator agree on
+      // what the player holds.
+      const ownedItemNames = snapshot?.player.items.map((i) => i.name) ?? [];
+      const { buildPath, dropped } = enforceBuildPathLegality(
         rawBuildPath,
-        gameDataRef.current.items
+        gameDataRef.current.items,
+        ownedItemNames
       );
-      if (mutexDrops.length > 0) {
+      if (dropped.length > 0) {
         proactiveLog.warn(
-          `Game plan mutex-group remediation dropped: ${mutexDrops
-            .map(
-              (d) => `${d.entry.name} (group ${d.group}, kept ${d.keptName})`
-            )
+          `Game plan legality remediation dropped: ${dropped
+            .map(describeBuildPathDrop)
             .join("; ")}`
         );
       }

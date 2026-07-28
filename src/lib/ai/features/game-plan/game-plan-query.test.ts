@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   buildGamePlanQuestion,
-  enforceMutexGroups,
+  describeBuildPathDrop,
+  enforceBuildPathLegality,
   extractBuildPath,
   findDuplicateBoots,
   isUpdatePlanCommand,
@@ -240,9 +241,26 @@ describe("GAME_PLAN_TASK_PROMPT", () => {
     // #117 mutex slice: two Last Whisper items (Lord Dominik's Regards +
     // Mortal Reminder) cannot coexist. The rule references the item catalog's
     // Purchase restrictions section and is double-checked post-hoc by
-    // enforceMutexGroups.
+    // enforceBuildPathLegality.
     expect(GAME_PLAN_TASK_PROMPT).toMatch(/purchase restrictions/i);
     expect(GAME_PLAN_TASK_PROMPT).toMatch(/never.*two items.*same/is);
+  });
+
+  it("forbids listing the same item name twice", () => {
+    // #117 duplicate slice: the shop allows only one copy of a completed
+    // item, so a 6-slot end-state path can never repeat a name. Enforced
+    // post-hoc by enforceBuildPathLegality.
+    expect(GAME_PLAN_TASK_PROMPT).toMatch(/same item name twice/i);
+  });
+
+  it("keeps the end-state contract for owned items while forbidding re-buys", () => {
+    // Owned items MUST still appear once (the buildPath is the end-state
+    // inventory), so the rule targets second copies and restriction-group
+    // siblings of owned items, not the owned items themselves.
+    expect(GAME_PLAN_TASK_PROMPT).toMatch(/already own/i);
+    expect(GAME_PLAN_TASK_PROMPT).toMatch(
+      /restriction group as .*already own/i
+    );
   });
 });
 
@@ -326,11 +344,17 @@ describe("findDuplicateBoots", () => {
   });
 });
 
-describe("enforceMutexGroups", () => {
+describe("enforceBuildPathLegality", () => {
+  interface MakeItemOptions {
+    mutexGroups?: string[];
+    purchasable?: boolean;
+    specialRecipe?: number;
+  }
+
   function makeItem(
     id: number,
     name: string,
-    mutexGroups?: string[]
+    options: MakeItemOptions = {}
   ): [number, Item] {
     return [
       id,
@@ -339,25 +363,38 @@ describe("enforceMutexGroups", () => {
         name,
         description: "",
         plaintext: "",
-        gold: { base: 0, total: 3000, sell: 2100, purchasable: true },
+        gold: {
+          base: 0,
+          total: 3000,
+          sell: 2100,
+          purchasable: options.purchasable ?? true,
+        },
         tags: [],
         stats: {},
         image: `${id}.png`,
         mode: "standard",
         maps: [11, 12],
-        mutexGroups,
+        mutexGroups: options.mutexGroups,
+        specialRecipe: options.specialRecipe,
       },
     ];
   }
 
   const items = new Map<number, Item>([
-    makeItem(3036, "Lord Dominik's Regards", ["Fatality"]),
-    makeItem(3033, "Mortal Reminder", ["Fatality"]),
-    makeItem(6694, "Serylda's Grudge", ["Fatality"]),
-    makeItem(3302, "Terminus", ["Fatality", "Blight"]),
-    makeItem(3135, "Void Staff", ["Blight"]),
-    makeItem(3004, "Manamune", ["Manaflow"]),
-    makeItem(3508, "Essence Reaver", ["Spellblade"]),
+    makeItem(3036, "Lord Dominik's Regards", { mutexGroups: ["Fatality"] }),
+    makeItem(3033, "Mortal Reminder", { mutexGroups: ["Fatality"] }),
+    makeItem(6694, "Serylda's Grudge", { mutexGroups: ["Fatality"] }),
+    makeItem(3302, "Terminus", { mutexGroups: ["Fatality", "Blight"] }),
+    makeItem(3135, "Void Staff", { mutexGroups: ["Blight"] }),
+    makeItem(3004, "Manamune", { mutexGroups: ["Manaflow"] }),
+    // Transformation-only: not purchasable, points at its base (Manamune).
+    makeItem(3042, "Muramana", {
+      mutexGroups: ["Manaflow"],
+      purchasable: false,
+      specialRecipe: 3004,
+    }),
+    makeItem(3003, "Archangel's Staff", { mutexGroups: ["Manaflow"] }),
+    makeItem(3508, "Essence Reaver", { mutexGroups: ["Spellblade"] }),
     makeItem(3158, "Ionian Boots of Lucidity"),
     makeItem(3031, "Infinity Edge"),
   ]);
@@ -377,7 +414,7 @@ describe("enforceMutexGroups", () => {
       entry("Infinity Edge"),
     ];
 
-    const result = enforceMutexGroups(path, items);
+    const result = enforceBuildPathLegality(path, items);
 
     expect(result.buildPath).toEqual(path);
     expect(result.dropped).toEqual([]);
@@ -390,7 +427,7 @@ describe("enforceMutexGroups", () => {
       entry("Mortal Reminder", "counter"),
     ];
 
-    const result = enforceMutexGroups(path, items);
+    const result = enforceBuildPathLegality(path, items);
 
     expect(result.buildPath.map((e) => e.name)).toEqual([
       "Lord Dominik's Regards",
@@ -398,9 +435,11 @@ describe("enforceMutexGroups", () => {
     ]);
     expect(result.dropped).toEqual([
       {
+        kind: "mutex-collision",
         entry: entry("Mortal Reminder", "counter"),
         group: "Fatality",
         keptName: "Lord Dominik's Regards",
+        keptSource: "path",
       },
     ]);
   });
@@ -417,7 +456,7 @@ describe("enforceMutexGroups", () => {
       entry("Infinity Edge", "damage"),
     ];
 
-    const result = enforceMutexGroups(path, items);
+    const result = enforceBuildPathLegality(path, items);
 
     expect(result.buildPath.map((e) => e.name)).toEqual([
       "Ionian Boots of Lucidity",
@@ -438,39 +477,48 @@ describe("enforceMutexGroups", () => {
       entry("Mortal Reminder"),
     ];
 
-    const result = enforceMutexGroups(path, items);
+    const result = enforceBuildPathLegality(path, items);
 
     expect(result.buildPath.map((e) => e.name)).toEqual(["Serylda's Grudge"]);
-    expect(result.dropped.map((d) => d.keptName)).toEqual([
-      "Serylda's Grudge",
-      "Serylda's Grudge",
-    ]);
+    expect(
+      result.dropped.map((d) =>
+        d.kind === "mutex-collision" ? d.keptName : d.kind
+      )
+    ).toEqual(["Serylda's Grudge", "Serylda's Grudge"]);
   });
 
   it("enforces every group a dual-group item belongs to", () => {
     const path = [entry("Terminus"), entry("Void Staff")];
 
-    const result = enforceMutexGroups(path, items);
+    const result = enforceBuildPathLegality(path, items);
 
     expect(result.buildPath.map((e) => e.name)).toEqual(["Terminus"]);
     expect(result.dropped).toEqual([
-      { entry: entry("Void Staff"), group: "Blight", keptName: "Terminus" },
+      {
+        kind: "mutex-collision",
+        entry: entry("Void Staff"),
+        group: "Blight",
+        keptName: "Terminus",
+        keptSource: "path",
+      },
     ]);
   });
 
   it("drops a dual-group item when either of its groups is taken", () => {
     const path = [entry("Lord Dominik's Regards"), entry("Terminus")];
 
-    const result = enforceMutexGroups(path, items);
+    const result = enforceBuildPathLegality(path, items);
 
     expect(result.buildPath.map((e) => e.name)).toEqual([
       "Lord Dominik's Regards",
     ]);
     expect(result.dropped).toEqual([
       {
+        kind: "mutex-collision",
         entry: entry("Terminus"),
         group: "Fatality",
         keptName: "Lord Dominik's Regards",
+        keptSource: "path",
       },
     ]);
   });
@@ -482,9 +530,265 @@ describe("enforceMutexGroups", () => {
       entry("Infinity Edge"),
     ];
 
-    const result = enforceMutexGroups(path, items);
+    const result = enforceBuildPathLegality(path, items);
 
     expect(result.buildPath).toEqual(path);
     expect(result.dropped).toEqual([]);
+  });
+
+  describe("duplicate names in the path", () => {
+    it("drops the second occurrence of a repeated name and keeps the first", () => {
+      const path = [
+        entry("Infinity Edge", "core"),
+        entry("Ionian Boots of Lucidity"),
+        entry("Infinity Edge", "damage"),
+      ];
+
+      const result = enforceBuildPathLegality(path, items);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Infinity Edge",
+        "Ionian Boots of Lucidity",
+      ]);
+      expect(result.dropped).toEqual([
+        { kind: "duplicate-name", entry: entry("Infinity Edge", "damage") },
+      ]);
+    });
+
+    it("drops every repeat when a name appears three times", () => {
+      const path = [
+        entry("Infinity Edge"),
+        entry("Infinity Edge"),
+        entry("Infinity Edge"),
+      ];
+
+      const result = enforceBuildPathLegality(path, items);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual(["Infinity Edge"]);
+      expect(result.dropped.map((d) => d.kind)).toEqual([
+        "duplicate-name",
+        "duplicate-name",
+      ]);
+    });
+
+    it("reports a repeated grouped item as a duplicate, not a mutex collision", () => {
+      // Same-name repetition is the more precise diagnosis; the mutex report
+      // is reserved for two DIFFERENT items sharing a group.
+      const path = [
+        entry("Lord Dominik's Regards"),
+        entry("Lord Dominik's Regards"),
+      ];
+
+      const result = enforceBuildPathLegality(path, items);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Lord Dominik's Regards",
+      ]);
+      expect(result.dropped.map((d) => d.kind)).toEqual(["duplicate-name"]);
+    });
+
+    it("dedupes names the catalog does not know", () => {
+      // Name equality needs no catalog proof: two identical names can never
+      // be two legal slots, even in degraded free-string mode.
+      const path = [
+        entry("Totally Made Up Item"),
+        entry("Totally Made Up Item"),
+      ];
+
+      const result = enforceBuildPathLegality(path, items);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Totally Made Up Item",
+      ]);
+      expect(result.dropped.map((d) => d.kind)).toEqual(["duplicate-name"]);
+    });
+  });
+
+  describe("inventory-aware enforcement", () => {
+    it("behaves identically to the no-inventory sweep when inventory is empty", () => {
+      const path = [entry("Lord Dominik's Regards"), entry("Mortal Reminder")];
+
+      const withDefault = enforceBuildPathLegality(path, items);
+      const withEmpty = enforceBuildPathLegality(path, items, []);
+
+      expect(withEmpty).toEqual(withDefault);
+      expect(withEmpty.buildPath.map((e) => e.name)).toEqual([
+        "Lord Dominik's Regards",
+      ]);
+    });
+
+    it("keeps the single end-state appearance of an owned item", () => {
+      // The buildPath is the END-STATE inventory: the prompt requires owned
+      // items to appear once, so ownership must not drop that appearance.
+      const path = [entry("Mortal Reminder"), entry("Infinity Edge")];
+
+      const result = enforceBuildPathLegality(path, items, ["Mortal Reminder"]);
+
+      expect(result.buildPath).toEqual(path);
+      expect(result.dropped).toEqual([]);
+    });
+
+    it("drops a second appearance of an owned item as a duplicate", () => {
+      const path = [
+        entry("Mortal Reminder"),
+        entry("Infinity Edge"),
+        entry("Mortal Reminder"),
+      ];
+
+      const result = enforceBuildPathLegality(path, items, ["Mortal Reminder"]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Mortal Reminder",
+        "Infinity Edge",
+      ]);
+      expect(result.dropped.map((d) => d.kind)).toEqual(["duplicate-name"]);
+    });
+
+    it("drops a restriction-group sibling of an owned item", () => {
+      // Owning Mortal Reminder makes Lord Dominik's Regards unbuyable: the
+      // shop blocks the purchase, so recommending it is illegal even though
+      // the path itself has no internal collision.
+      const path = [entry("Lord Dominik's Regards"), entry("Infinity Edge")];
+
+      const result = enforceBuildPathLegality(path, items, ["Mortal Reminder"]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual(["Infinity Edge"]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "mutex-collision",
+          entry: entry("Lord Dominik's Regards"),
+          group: "Fatality",
+          keptName: "Mortal Reminder",
+          keptSource: "inventory",
+        },
+      ]);
+    });
+
+    it("drops a sibling while keeping the owned item's own echo", () => {
+      const path = [entry("Mortal Reminder"), entry("Lord Dominik's Regards")];
+
+      const result = enforceBuildPathLegality(path, items, ["Mortal Reminder"]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual(["Mortal Reminder"]);
+      expect(result.dropped.map((d) => d.kind)).toEqual(["mutex-collision"]);
+    });
+
+    it("counts an owned evolved item as its purchasable base for the echo", () => {
+      // Muramana is what the player OWNS; Manamune is what the catalog can
+      // recommend. The path echoing Manamune is the owned item's end-state
+      // slot, not a re-buy.
+      const path = [entry("Manamune"), entry("Infinity Edge")];
+
+      const result = enforceBuildPathLegality(path, items, ["Muramana"]);
+
+      expect(result.buildPath).toEqual(path);
+      expect(result.dropped).toEqual([]);
+    });
+
+    it("drops a second Manamune when the player owns Muramana", () => {
+      const path = [
+        entry("Manamune"),
+        entry("Infinity Edge"),
+        entry("Manamune"),
+      ];
+
+      const result = enforceBuildPathLegality(path, items, ["Muramana"]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Manamune",
+        "Infinity Edge",
+      ]);
+      expect(result.dropped.map((d) => d.kind)).toEqual(["duplicate-name"]);
+    });
+
+    it("blocks group siblings of an owned evolved item under the owned name", () => {
+      const path = [entry("Archangel's Staff")];
+
+      const result = enforceBuildPathLegality(path, items, ["Muramana"]);
+
+      expect(result.buildPath).toEqual([]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "mutex-collision",
+          entry: entry("Archangel's Staff"),
+          group: "Manaflow",
+          keptName: "Muramana",
+          keptSource: "inventory",
+        },
+      ]);
+    });
+
+    it("ignores owned names the catalog does not know", () => {
+      // Cannot prove anything illegal from an unknown inventory name; the
+      // sweep must neither crash nor drop unrelated entries.
+      const path = [entry("Lord Dominik's Regards"), entry("Infinity Edge")];
+
+      const result = enforceBuildPathLegality(path, items, [
+        "Mystery Trophy",
+        "Health Potion",
+      ]);
+
+      expect(result.buildPath).toEqual(path);
+      expect(result.dropped).toEqual([]);
+    });
+
+    it("still enforces path-internal collisions alongside inventory seeds", () => {
+      const path = [
+        entry("Serylda's Grudge"),
+        entry("Mortal Reminder"),
+        entry("Essence Reaver"),
+        entry("Essence Reaver"),
+      ];
+
+      const result = enforceBuildPathLegality(path, items, ["Void Staff"]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Serylda's Grudge",
+        "Essence Reaver",
+      ]);
+      expect(result.dropped.map((d) => d.kind)).toEqual([
+        "mutex-collision",
+        "duplicate-name",
+      ]);
+    });
+  });
+});
+
+describe("describeBuildPathDrop", () => {
+  function entry(name: string): BuildPathItem {
+    return { name, category: "core", targetEnemy: null, reason: "" };
+  }
+
+  it("describes a path-internal mutex collision", () => {
+    expect(
+      describeBuildPathDrop({
+        kind: "mutex-collision",
+        entry: entry("Mortal Reminder"),
+        group: "Fatality",
+        keptName: "Lord Dominik's Regards",
+        keptSource: "path",
+      })
+    ).toBe("Mortal Reminder (group Fatality, kept Lord Dominik's Regards)");
+  });
+
+  it("describes a collision with an owned item", () => {
+    expect(
+      describeBuildPathDrop({
+        kind: "mutex-collision",
+        entry: entry("Archangel's Staff"),
+        group: "Manaflow",
+        keptName: "Muramana",
+        keptSource: "inventory",
+      })
+    ).toBe("Archangel's Staff (group Manaflow, player owns Muramana)");
+  });
+
+  it("describes a duplicate name", () => {
+    expect(
+      describeBuildPathDrop({
+        kind: "duplicate-name",
+        entry: entry("Infinity Edge"),
+      })
+    ).toBe("Infinity Edge (duplicate of an earlier build-path entry)");
   });
 });

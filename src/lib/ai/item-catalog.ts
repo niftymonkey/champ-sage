@@ -258,10 +258,14 @@ function formatReferenceItem(item: Item): string {
  * in a different ID partition (Arena Fimbulwinter 223121 points at standard
  * 3119). Returns null when the walk dead-ends on a missing pointer, an
  * unknown id, or a cycle: no buyable form exists to recommend.
+ *
+ * Exported because build-path legality (issue #117) needs the same walk in
+ * the opposite direction: an owned EVOLVED item must count as its purchasable
+ * base when deciding whether a path entry re-buys something the player has.
  */
-function resolveToPurchasable(
+export function resolveToPurchasable(
   item: Item,
-  allItems: Map<number, Item>
+  allItems: ReadonlyMap<number, Item>
 ): Item | null {
   const visited = new Set<number>();
   let current: Item | undefined = item;
