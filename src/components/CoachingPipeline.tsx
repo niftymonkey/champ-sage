@@ -15,6 +15,7 @@ import type { MatchSession } from "../lib/ai/match-session";
 import type { CoachingFeature } from "../lib/ai/feature";
 import {
   createGamePlanFeature,
+  enforceMutexGroups,
   extractBuildPath,
   findDuplicateBoots,
   isUpdatePlanCommand,
@@ -508,15 +509,15 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         { snapshot }
       );
 
-      const buildPath = extractBuildPath(response);
+      const rawBuildPath = extractBuildPath(response);
 
       // Smoke check: the schema requires 6 items. Fewer indicates a
       // degraded-mode path (item-catalog exceeded the enum size limit and
       // the schema fell back to free-string names) — still useful to the
       // player but worth a warn log.
-      if (buildPath.length !== 6) {
+      if (rawBuildPath.length !== 6) {
         proactiveLog.warn(
-          `Game plan build path has ${buildPath.length} items (expected 6)`
+          `Game plan build path has ${rawBuildPath.length} items (expected 6)`
         );
       }
 
@@ -524,7 +525,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       // schema enum can't express uniqueness. Log when the LLM slips so
       // regressions are visible in playtest logs.
       const duplicateBoots = findDuplicateBoots(
-        buildPath,
+        rawBuildPath,
         gameDataRef.current.items
       );
       if (duplicateBoots.length > 0) {
@@ -532,6 +533,25 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           `Game plan build path contains ${duplicateBoots.length} boots items: ${duplicateBoots
             .map((b) => b.name)
             .join(", ")}`
+        );
+      }
+
+      // #117 mutex slice: the prompt forbids two items from the same
+      // purchase-restriction group (Last Whisper family, Spellblade, ...),
+      // and this deterministic sweep guarantees the surfaced plan is legal.
+      // First entry wins (build order is priority order); a shorter path
+      // with a logged warning beats an illegal 6-item path.
+      const { buildPath, dropped: mutexDrops } = enforceMutexGroups(
+        rawBuildPath,
+        gameDataRef.current.items
+      );
+      if (mutexDrops.length > 0) {
+        proactiveLog.warn(
+          `Game plan mutex-group remediation dropped: ${mutexDrops
+            .map(
+              (d) => `${d.entry.name} (group ${d.group}, kept ${d.keptName})`
+            )
+            .join("; ")}`
         );
       }
 

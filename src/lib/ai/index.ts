@@ -14,11 +14,14 @@ export { buildBaseContext, type BaseContextInputs } from "./base-context";
 export {
   createGamePlanFeature,
   buildGamePlanQuestion,
+  enforceMutexGroups,
   extractBuildPath,
   findDuplicateBoots,
   isUpdatePlanCommand,
   type GamePlanInput,
   type GamePlanResult,
+  type MutexEnforcementResult,
+  type MutexGroupDrop,
 } from "./features/game-plan";
 export {
   augmentFitFeature,

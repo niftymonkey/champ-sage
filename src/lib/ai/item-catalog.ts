@@ -354,9 +354,56 @@ export function buildItemCatalogSections(
     }
   }
 
+  const restrictions = formatPurchaseRestrictions([
+    ...tier1Items.map(({ item }) => item),
+    ...tier2Items,
+  ]);
+  if (restrictions.length > 0) {
+    if (lines.length > 0) lines.push("");
+    lines.push(...restrictions);
+  }
+
   return {
     text: lines.join("\n"),
     tier1Count: tier1Items.length,
     tier2Count: tier2Items.length,
   };
+}
+
+/**
+ * Render the "Purchase restrictions" block: one line per mutex group with two
+ * or more distinct item names in the shown catalog (#117 mutex slice). The
+ * game caps each group (Last Whisper family "Fatality", Spellblade, Hydra,
+ * Lifeline, ...) at one owned item, so listing colliding names next to the
+ * pool is the prompt-level defense that keeps the model from recommending,
+ * say, Lord Dominik's Regards and Mortal Reminder together. Groups and names
+ * are sorted alphabetically so the output is deterministic. Returns [] when
+ * no shown group has a possible collision (including when mutex data is
+ * absent because the wiki fetch failed).
+ */
+function formatPurchaseRestrictions(catalogItems: Item[]): string[] {
+  const namesByGroup = new Map<string, Set<string>>();
+  for (const item of catalogItems) {
+    for (const group of item.mutexGroups ?? []) {
+      const names = namesByGroup.get(group) ?? new Set<string>();
+      names.add(item.name);
+      namesByGroup.set(group, names);
+    }
+  }
+
+  const collidingGroups = [...namesByGroup.entries()]
+    .filter(([, names]) => names.size >= 2)
+    .sort(([a], [b]) => a.localeCompare(b));
+  if (collidingGroups.length === 0) return [];
+
+  const lines = [
+    "## Purchase restrictions",
+    "The game only allows owning ONE item from each group below at a time. Never put two items from the same group in a build path, and never recommend one while the player already owns another from that group.",
+    "",
+  ];
+  for (const [group, names] of collidingGroups) {
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    lines.push(`- ${group}: at most ONE of ${sorted.join(", ")}`);
+  }
+  return lines;
 }

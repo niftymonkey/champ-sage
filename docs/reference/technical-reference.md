@@ -553,6 +553,15 @@ Arena/ARAM variant items are **overrides on standard items**, not separate items
 
 **Non-purchasable zero-gold items** are system internals (turret buffs, quest trackers, structure bounties). Filtered out during ingest. Purchasable zero-gold items (wards, trinkets) are kept.
 
+### Mutually exclusive item groups: membership is wiki-only (verified 2026-07-28)
+
+League caps some item families at one owned copy ("Limited to 1 Last Whisper item"), and a build path recommending two of them (observed live: Lord Dominik's Regards + Mortal Reminder, four consecutive plans) is illegal. Where the data lives:
+
+- **DDragon knows the groups exist but not who is in them.** `item.json` has a top-level `groups` array with entries like `{id: "LastWhisper", MaxGroupOwnable: "1"}`, but NO item carries a group-membership field. Membership is not derivable from DDragon, and item `description` `<passive>` markers are not a reliable proxy for the Last Whisper family (its members carry differently named passives).
+- **CommunityDragon `v1/items.json` has the same gap**: its `categories` mirror DDragon tags.
+- **The wiki's `Module:ItemData/data` is the machine-readable source.** Each restricted item carries a scalar `itemlimit` field naming its group, plus `itemlimit2` for dual-membership (Terminus is in both "Fatality" and "Blight"). The wiki's group names differ from DDragon's (`Fatality` is DDragon's `LastWhisper`). Verified live: 81 items across 19 groups; Fatality = Black Cleaver, Last Whisper, Lord Dominik's Regards, Mortal Reminder, Perplexity, Serylda's Grudge, Terminus. Two parsing gotchas: some values carry stray trailing whitespace (`"Spellblade        "`), and boots are NOT an itemlimit group (boots uniqueness stays tag-based per #109).
+- Ingest: `wiki-item-groups.ts` fetches and parses it (reusing `parseLuaTable`), `mergeItemMutexGroups` attaches `Item.mutexGroups` by lowercase name (so same-named mode variants inherit it) before the cache write (cache v8). Enforcement: the item catalog renders a "Purchase restrictions" section for any group with 2+ pool members, and `enforceMutexGroups` deterministically drops later same-group entries from returned build paths (first entry wins). `pnpm check-item-mutex-groups` verifies the live wiki format hasn't drifted.
+
 ### DDragon (champion abilities)
 
 - **Bulk data (preferred):** `https://ddragon.leagueoflegends.com/cdn/{version}/data/en_US/championFull.json` returns EVERY champion's passive and spells in one request. Verified 2026-07-17 on 16.14.1: 173/173 champions, all with a passive and exactly 4 spells, field-for-field identical to the per-champion endpoint. ~2.2MB over the wire; the subset we keep costs ~494KB of localStorage quota, taking the cached payload from ~1.32MB to ~1.82MB against Chromium's ~5MB cap (64.5% still free). **Measure quota in UTF-16 bytes, not characters:** Chromium charges 2 bytes per code unit, so a raw `.length` understates real usage by half. `pnpm measure-cache` does this correctly; `writeCache` swallows quota errors silently, so overflow would degrade to "refetch on every start" with nothing surfaced.

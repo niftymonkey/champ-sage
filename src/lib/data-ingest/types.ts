@@ -105,6 +105,17 @@ export interface Item {
    * or internal items), which excludes it from every catalog.
    */
   maps: number[];
+  /**
+   * Mutually exclusive purchase groups this item belongs to, sourced from the
+   * League Wiki ItemData `itemlimit`/`itemlimit2` fields (e.g. "Fatality" for
+   * the Last Whisper family). The game caps ownership at ONE item per group,
+   * so a build path must never contain two items sharing a group. Riot's own
+   * feeds cannot supply this: DDragon's top-level `groups` array names the
+   * groups (with MaxGroupOwnable) but no item carries a membership field, and
+   * CommunityDragon mirrors the same gap. Absent when the wiki fetch failed or
+   * the item has no group restriction.
+   */
+  mutexGroups?: string[];
 }
 
 export interface ItemGold {

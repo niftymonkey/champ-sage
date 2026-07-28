@@ -207,3 +207,72 @@ export function findDuplicateBoots(
   const boots = buildPath.filter((entry) => bootsNames.has(entry.name));
   return boots.length > 1 ? boots : [];
 }
+
+/** A build-path entry removed because it collided with an earlier entry's
+ *  mutex group, plus the details a remediation log line needs. */
+export interface MutexGroupDrop {
+  /** The entry removed from the build path. */
+  entry: BuildPathItem;
+  /** The restriction group both items share (e.g. "Fatality"). */
+  group: string;
+  /** The earlier entry that keeps the group's single legal slot. */
+  keptName: string;
+}
+
+export interface MutexEnforcementResult {
+  /** The build path with every mutex-group collision removed. */
+  buildPath: BuildPathItem[];
+  /** Entries dropped, in build-path order. Empty when the path was legal. */
+  dropped: MutexGroupDrop[];
+}
+
+/**
+ * Deterministic post-hoc enforcement of mutually exclusive item groups
+ * (#117 minimal slice). League caps restricted groups (Last Whisper family,
+ * Spellblade, Hydra, Lifeline, ...) at one owned item; a schema enum cannot
+ * express that cross-item constraint, so the prompt carries the primary rule
+ * and this sweep guarantees it.
+ *
+ * Policy: first entry wins. Build-path order is priority order (the model
+ * lists purchases in build order), so the earlier of two colliding items is
+ * kept and every later same-group entry is dropped and reported. Entries
+ * whose names are unknown or carry no `mutexGroups` are never touched.
+ */
+export function enforceMutexGroups(
+  buildPath: readonly BuildPathItem[],
+  items: ReadonlyMap<number, Item>
+): MutexEnforcementResult {
+  // Union groups across same-named variants (an ARAM rebalance and its
+  // standard item share a name and must carry the same restrictions).
+  const groupsByName = new Map<string, Set<string>>();
+  for (const item of items.values()) {
+    if (!item.mutexGroups || item.mutexGroups.length === 0) continue;
+    const groups = groupsByName.get(item.name) ?? new Set<string>();
+    for (const group of item.mutexGroups) groups.add(group);
+    groupsByName.set(item.name, groups);
+  }
+
+  const keptNameByGroup = new Map<string, string>();
+  const kept: BuildPathItem[] = [];
+  const dropped: MutexGroupDrop[] = [];
+
+  for (const entry of buildPath) {
+    const groups = groupsByName.get(entry.name);
+    let collision: { group: string; keptName: string } | null = null;
+    for (const group of groups ?? []) {
+      const keptName = keptNameByGroup.get(group);
+      if (keptName !== undefined) {
+        collision = { group, keptName };
+        break;
+      }
+    }
+    if (collision) {
+      dropped.push({ entry, ...collision });
+      continue;
+    }
+    for (const group of groups ?? []) keptNameByGroup.set(group, entry.name);
+    kept.push(entry);
+  }
+
+  return { buildPath: kept, dropped };
+}

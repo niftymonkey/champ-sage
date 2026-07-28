@@ -6,6 +6,7 @@ import {
   mergeMayhemAugments,
   kiwiResolutionStats,
   mergeAbilityScaling,
+  mergeItemMutexGroups,
   KIWI_MIN_RESOLUTION_RATE,
 } from "./index";
 import type { ChampionAbilityScaling } from "./sources/wiki-champion-abilities";
@@ -16,6 +17,7 @@ import * as arenaAugments from "./sources/wiki-arena-augments";
 import * as kiwiAugments from "./sources/cdragon-kiwi-augments";
 import * as communityDragon from "./sources/community-dragon";
 import * as aramOverrides from "./sources/wiki-aram-overrides";
+import * as wikiItemGroups from "./sources/wiki-item-groups";
 import * as cache from "./cache";
 import type {
   AramOverrides,
@@ -41,6 +43,7 @@ vi.mock("./sources/community-dragon", async (importOriginal) => {
   };
 });
 vi.mock("./sources/wiki-aram-overrides");
+vi.mock("./sources/wiki-item-groups");
 // Partial mock: only the network call is stubbed, so the real
 // describeQuarantineReason stays available to any caller that needs it.
 vi.mock("./sources/wiki-champion-abilities", async (importOriginal) => {
@@ -189,6 +192,7 @@ beforeEach(() => {
   );
   vi.mocked(communityDragon.mergeAugmentIds).mockResolvedValue(undefined);
   vi.mocked(aramOverrides.fetchAramOverrides).mockResolvedValue(new Map());
+  vi.mocked(wikiItemGroups.fetchItemMutexGroups).mockResolvedValue(new Map());
   vi.mocked(
     wikiChampionAbilities.fetchChampionAbilityScaling
   ).mockResolvedValue({
@@ -984,5 +988,125 @@ describe("mergeAbilityScaling", () => {
     );
     // The innate is prose on the passive, not a scaled spell: only Zed's Q counts.
     expect(merged).toBe(1);
+  });
+});
+
+describe("mergeItemMutexGroups", () => {
+  function makeItem(id: number, name: string): Item {
+    return {
+      id,
+      name,
+      description: "",
+      plaintext: "",
+      gold: { base: 0, total: 3000, sell: 2100, purchasable: true },
+      tags: [],
+      stats: {},
+      image: "",
+      mode: "standard",
+      maps: [11, 12],
+    };
+  }
+
+  it("attaches groups to items by lowercase name and reports the count", () => {
+    const items = new Map<number, Item>([
+      [3036, makeItem(3036, "Lord Dominik's Regards")],
+      [3033, makeItem(3033, "Mortal Reminder")],
+      [3802, makeItem(3802, "Lost Chapter")],
+    ]);
+    const groups = new Map<string, string[]>([
+      ["lord dominik's regards", ["Fatality"]],
+      ["mortal reminder", ["Fatality"]],
+    ]);
+
+    const merged = mergeItemMutexGroups(items, groups);
+
+    expect(merged).toBe(2);
+    expect(items.get(3036)!.mutexGroups).toEqual(["Fatality"]);
+    expect(items.get(3033)!.mutexGroups).toEqual(["Fatality"]);
+    expect(items.get(3802)!.mutexGroups).toBeUndefined();
+  });
+
+  it("attaches the same groups to every same-named variant", () => {
+    const items = new Map<number, Item>([
+      [3036, makeItem(3036, "Lord Dominik's Regards")],
+      [223036, makeItem(223036, "Lord Dominik's Regards")],
+    ]);
+    const groups = new Map<string, string[]>([
+      ["lord dominik's regards", ["Fatality"]],
+    ]);
+
+    expect(mergeItemMutexGroups(items, groups)).toBe(2);
+    expect(items.get(223036)!.mutexGroups).toEqual(["Fatality"]);
+  });
+
+  it("is a no-op when the wiki fetch failed (null groups)", () => {
+    const items = new Map<number, Item>([
+      [3036, makeItem(3036, "Lord Dominik's Regards")],
+    ]);
+
+    expect(mergeItemMutexGroups(items, null)).toBe(0);
+    expect(items.get(3036)!.mutexGroups).toBeUndefined();
+  });
+
+  it("copies group arrays so later mutation of the source cannot leak in", () => {
+    const items = new Map<number, Item>([
+      [3036, makeItem(3036, "Lord Dominik's Regards")],
+    ]);
+    const fatality = ["Fatality"];
+    const groups = new Map<string, string[]>([
+      ["lord dominik's regards", fatality],
+    ]);
+
+    mergeItemMutexGroups(items, groups);
+    fatality.push("Poisoned");
+
+    expect(items.get(3036)!.mutexGroups).toEqual(["Fatality"]);
+  });
+});
+
+describe("loadGameData mutex-group ingestion", () => {
+  it("persists wiki mutex groups on items in the cached payload", async () => {
+    const freshItems = new Map<number, Item>([
+      [
+        3036,
+        {
+          id: 3036,
+          name: "Lord Dominik's Regards",
+          description: "",
+          plaintext: "",
+          gold: { base: 1100, total: 3300, sell: 2310, purchasable: true },
+          tags: [],
+          stats: {},
+          image: "",
+          mode: "standard",
+          maps: [11, 12],
+        },
+      ],
+    ]);
+    vi.mocked(dataDragon.fetchItems).mockResolvedValue(freshItems);
+    vi.mocked(wikiItemGroups.fetchItemMutexGroups).mockResolvedValue(
+      new Map([["lord dominik's regards", ["Fatality"]]])
+    );
+
+    const data = await loadGameData();
+
+    expect(data.items.get(3036)!.mutexGroups).toEqual(["Fatality"]);
+    const written = vi.mocked(cache.writeCache).mock.calls[0][1] as {
+      items: Record<string, Item>;
+    };
+    expect(written.items["3036"].mutexGroups).toEqual(["Fatality"]);
+  });
+
+  it("degrades to group-less items when the wiki fetch rejects", async () => {
+    vi.mocked(wikiItemGroups.fetchItemMutexGroups).mockRejectedValue(
+      new Error("wiki down")
+    );
+
+    const data = await loadGameData();
+
+    expect(data.items.size).toBeGreaterThan(0);
+    for (const item of data.items.values()) {
+      expect(item.mutexGroups).toBeUndefined();
+    }
   });
 });

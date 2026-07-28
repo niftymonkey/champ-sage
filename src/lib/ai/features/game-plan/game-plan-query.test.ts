@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildGamePlanQuestion,
+  enforceMutexGroups,
   extractBuildPath,
   findDuplicateBoots,
   isUpdatePlanCommand,
@@ -234,6 +235,15 @@ describe("GAME_PLAN_TASK_PROMPT", () => {
     expect(GAME_PLAN_TASK_PROMPT).toMatch(/\bboots\b/i);
     expect(GAME_PLAN_TASK_PROMPT).toMatch(/at most one/i);
   });
+
+  it("forbids two items from the same purchase-restriction group", () => {
+    // #117 mutex slice: two Last Whisper items (Lord Dominik's Regards +
+    // Mortal Reminder) cannot coexist. The rule references the item catalog's
+    // Purchase restrictions section and is double-checked post-hoc by
+    // enforceMutexGroups.
+    expect(GAME_PLAN_TASK_PROMPT).toMatch(/purchase restrictions/i);
+    expect(GAME_PLAN_TASK_PROMPT).toMatch(/never.*two items.*same/is);
+  });
 });
 
 describe("findDuplicateBoots", () => {
@@ -313,5 +323,168 @@ describe("findDuplicateBoots", () => {
     // most leakage. Helper should not throw or false-positive.
     const path = [item("Totally Made Up Item"), item("Luden's Companion")];
     expect(findDuplicateBoots(path, items)).toEqual([]);
+  });
+});
+
+describe("enforceMutexGroups", () => {
+  function makeItem(
+    id: number,
+    name: string,
+    mutexGroups?: string[]
+  ): [number, Item] {
+    return [
+      id,
+      {
+        id,
+        name,
+        description: "",
+        plaintext: "",
+        gold: { base: 0, total: 3000, sell: 2100, purchasable: true },
+        tags: [],
+        stats: {},
+        image: `${id}.png`,
+        mode: "standard",
+        maps: [11, 12],
+        mutexGroups,
+      },
+    ];
+  }
+
+  const items = new Map<number, Item>([
+    makeItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+    makeItem(3033, "Mortal Reminder", ["Fatality"]),
+    makeItem(6694, "Serylda's Grudge", ["Fatality"]),
+    makeItem(3302, "Terminus", ["Fatality", "Blight"]),
+    makeItem(3135, "Void Staff", ["Blight"]),
+    makeItem(3004, "Manamune", ["Manaflow"]),
+    makeItem(3508, "Essence Reaver", ["Spellblade"]),
+    makeItem(3158, "Ionian Boots of Lucidity"),
+    makeItem(3031, "Infinity Edge"),
+  ]);
+
+  function entry(
+    name: string,
+    category: BuildPathItem["category"] = "core"
+  ): BuildPathItem {
+    return { name, category, targetEnemy: null, reason: "" };
+  }
+
+  it("returns the path unchanged with no drops when no groups collide", () => {
+    const path = [
+      entry("Manamune"),
+      entry("Essence Reaver"),
+      entry("Lord Dominik's Regards"),
+      entry("Infinity Edge"),
+    ];
+
+    const result = enforceMutexGroups(path, items);
+
+    expect(result.buildPath).toEqual(path);
+    expect(result.dropped).toEqual([]);
+  });
+
+  it("drops the later of two same-group items and reports the collision", () => {
+    const path = [
+      entry("Lord Dominik's Regards", "counter"),
+      entry("Infinity Edge", "damage"),
+      entry("Mortal Reminder", "counter"),
+    ];
+
+    const result = enforceMutexGroups(path, items);
+
+    expect(result.buildPath.map((e) => e.name)).toEqual([
+      "Lord Dominik's Regards",
+      "Infinity Edge",
+    ]);
+    expect(result.dropped).toEqual([
+      {
+        entry: entry("Mortal Reminder", "counter"),
+        group: "Fatality",
+        keptName: "Lord Dominik's Regards",
+      },
+    ]);
+  });
+
+  it("remediates the exact playtest regression (LDR + Mortal Reminder)", () => {
+    // 2026-07-27 game log: 4 consecutive plans carried both Last Whisper
+    // items, surviving two voice corrections.
+    const path = [
+      entry("Ionian Boots of Lucidity"),
+      entry("Manamune"),
+      entry("Essence Reaver"),
+      entry("Lord Dominik's Regards", "counter"),
+      entry("Mortal Reminder", "counter"),
+      entry("Infinity Edge", "damage"),
+    ];
+
+    const result = enforceMutexGroups(path, items);
+
+    expect(result.buildPath.map((e) => e.name)).toEqual([
+      "Ionian Boots of Lucidity",
+      "Manamune",
+      "Essence Reaver",
+      "Lord Dominik's Regards",
+      "Infinity Edge",
+    ]);
+    expect(result.dropped.map((d) => d.entry.name)).toEqual([
+      "Mortal Reminder",
+    ]);
+  });
+
+  it("keeps only the first of three same-group items", () => {
+    const path = [
+      entry("Serylda's Grudge"),
+      entry("Lord Dominik's Regards"),
+      entry("Mortal Reminder"),
+    ];
+
+    const result = enforceMutexGroups(path, items);
+
+    expect(result.buildPath.map((e) => e.name)).toEqual(["Serylda's Grudge"]);
+    expect(result.dropped.map((d) => d.keptName)).toEqual([
+      "Serylda's Grudge",
+      "Serylda's Grudge",
+    ]);
+  });
+
+  it("enforces every group a dual-group item belongs to", () => {
+    const path = [entry("Terminus"), entry("Void Staff")];
+
+    const result = enforceMutexGroups(path, items);
+
+    expect(result.buildPath.map((e) => e.name)).toEqual(["Terminus"]);
+    expect(result.dropped).toEqual([
+      { entry: entry("Void Staff"), group: "Blight", keptName: "Terminus" },
+    ]);
+  });
+
+  it("drops a dual-group item when either of its groups is taken", () => {
+    const path = [entry("Lord Dominik's Regards"), entry("Terminus")];
+
+    const result = enforceMutexGroups(path, items);
+
+    expect(result.buildPath.map((e) => e.name)).toEqual([
+      "Lord Dominik's Regards",
+    ]);
+    expect(result.dropped).toEqual([
+      {
+        entry: entry("Terminus"),
+        group: "Fatality",
+        keptName: "Lord Dominik's Regards",
+      },
+    ]);
+  });
+
+  it("ignores unknown names and items without mutex groups", () => {
+    const path = [
+      entry("Totally Made Up Item"),
+      entry("Ionian Boots of Lucidity"),
+      entry("Infinity Edge"),
+    ];
+
+    const result = enforceMutexGroups(path, items);
+
+    expect(result.buildPath).toEqual(path);
+    expect(result.dropped).toEqual([]);
   });
 });

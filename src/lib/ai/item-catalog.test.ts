@@ -830,3 +830,89 @@ describe("tier 2 catalog: dedupe and junk exclusion", () => {
     expect(text).not.toContain("Rabadon's Deathcap");
   });
 });
+
+describe("purchase restrictions section", () => {
+  const mode = createStubMode(GAME_MODE_ARAM);
+  const gold = { base: 0, total: 3000, sell: 2100, purchasable: true };
+
+  function eligibleItem(
+    id: number,
+    name: string,
+    mutexGroups?: string[]
+  ): [number, Item] {
+    return [id, createItem({ id, name, gold, mutexGroups })];
+  }
+
+  it("lists each group with two or more catalog members", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(3033, "Mortal Reminder", ["Fatality"]),
+      eligibleItem(3157, "Zhonya's Hourglass"),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).toContain("## Purchase restrictions");
+    expect(text).toContain("ONE");
+    expect(text).toContain(
+      "- Fatality: at most ONE of Lord Dominik's Regards, Mortal Reminder"
+    );
+  });
+
+  it("omits groups with only one catalog member", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(3157, "Zhonya's Hourglass"),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).not.toContain("Fatality");
+    expect(text).not.toContain("## Purchase restrictions");
+  });
+
+  it("omits the section when no item carries mutex groups", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3036, "Lord Dominik's Regards"),
+      eligibleItem(3157, "Zhonya's Hourglass"),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).not.toContain("## Purchase restrictions");
+  });
+
+  it("lists a dual-group item under each of its colliding groups", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3302, "Terminus", ["Fatality", "Blight"]),
+      eligibleItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(3135, "Void Staff", ["Blight"]),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).toContain("- Blight: at most ONE of Terminus, Void Staff");
+    expect(text).toContain(
+      "- Fatality: at most ONE of Lord Dominik's Regards, Terminus"
+    );
+  });
+
+  it("counts distinct names once even when same-named variants both qualify", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(223036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(3033, "Mortal Reminder", ["Fatality"]),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).toContain(
+      "- Fatality: at most ONE of Lord Dominik's Regards, Mortal Reminder"
+    );
+  });
+});
