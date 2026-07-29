@@ -195,6 +195,13 @@ describe("buildCorrectiveMessage", () => {
     expect(message).toMatch(/restriction group/i);
   });
 
+  it("tells the model to keep one of the two and refill the freed slot", () => {
+    // "Never contain two items from the same group" states the rule but not
+    // the repair; a 6-item plan minus one entry is still short a slot.
+    expect(message).toMatch(/keep only the better fit/i);
+    expect(message).toMatch(/fill the freed slot with a different legal item/i);
+  });
+
   it("states the duplicate rule as 'listed twice'", () => {
     expect(message).toMatch(/listed twice/i);
   });

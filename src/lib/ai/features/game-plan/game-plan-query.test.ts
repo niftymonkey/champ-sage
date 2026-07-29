@@ -287,6 +287,7 @@ describe("enforceBuildPathLegality", () => {
     mode?: ItemMode;
     maps?: number[];
     tags?: string[];
+    goldTotal?: number;
   }
 
   function makeItem(
@@ -303,7 +304,7 @@ describe("enforceBuildPathLegality", () => {
         plaintext: "",
         gold: {
           base: 0,
-          total: 3000,
+          total: options.goldTotal ?? 3000,
           sell: 2100,
           purchasable: options.purchasable ?? true,
         },
@@ -715,8 +716,12 @@ describe("enforceBuildPathLegality", () => {
       makeItem(3009, "Boots of Swiftness", { tags: ["Boots"] }),
       makeItem(3111, "Mercury's Treads", { tags: ["Boots"] }),
       makeItem(3006, "Berserker's Greaves", { tags: ["Boots"] }),
+      makeItem(3020, "Sorcerer's Shoes", { tags: ["Boots"] }),
+      // DDragon's tier-1 boots: carries the "Boots" tag but is a 300g
+      // component, not a finished slot.
+      makeItem(1001, "Boots", { tags: ["Boots"], goldTotal: 300 }),
       // Standard variant untagged, ARAM variant tagged: the any-variant
-      // quantifier must still classify the name as boots in Classic.
+      // quantifier must still classify the name as boots.
       makeItem(3158, "Ionian Boots of Lucidity"),
       makeItem(223158, "Ionian Boots of Lucidity", {
         mode: "aram",
@@ -856,6 +861,38 @@ describe("enforceBuildPathLegality", () => {
       ]);
     });
 
+    it("lets an owned tier-1 Boots be upgraded into finished boots", () => {
+      // Tier-1 Boots (300g) is a component every boots build passes through.
+      // Treating it as the occupant of the single boots slot false-drops the
+      // upgrade the player is saving for.
+      const path = [entry("Sorcerer's Shoes"), entry("Infinity Edge")];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic, [
+        "Boots",
+      ]);
+
+      expect(result.buildPath).toEqual(path);
+      expect(result.dropped).toEqual([]);
+    });
+
+    it("still blocks finished boots when the player owns a finished pair", () => {
+      const path = [entry("Sorcerer's Shoes"), entry("Infinity Edge")];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic, [
+        "Berserker's Greaves",
+      ]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual(["Infinity Edge"]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "boots-collision",
+          entry: entry("Sorcerer's Shoes"),
+          keptName: "Berserker's Greaves",
+          keptSource: "inventory",
+        },
+      ]);
+    });
+
     it("ignores unknown names: the catalog cannot prove them boots", () => {
       const path = [entry("Totally Made Up Item"), entry("Boots of Swiftness")];
 
@@ -866,14 +903,16 @@ describe("enforceBuildPathLegality", () => {
     });
 
     it("classifies a name as boots when ANY same-named variant carries the tag", () => {
-      // The standard Ionian variant is untagged in this map; only the ARAM
-      // variant carries "Boots". The name must still occupy the boots slot.
+      // The standard Ionian variant is untagged in this map and inserted
+      // first; only the ARAM variant carries "Boots". In ARAM both variants
+      // are purchasable, so the union over same-named variants must still
+      // classify the name as boots. A first-variant-wins lookup would not.
       const path = [
         entry("Ionian Boots of Lucidity"),
         entry("Mercury's Treads"),
       ];
 
-      const result = enforceBuildPathLegality(path, bootsItems, classic);
+      const result = enforceBuildPathLegality(path, bootsItems, aram);
 
       expect(result.buildPath.map((e) => e.name)).toEqual([
         "Ionian Boots of Lucidity",

@@ -83,7 +83,7 @@ function describeViolation(drop: BuildPathDrop): string {
     case "mutex-collision":
       return drop.keptSource === "inventory"
         ? `${drop.entry.name} is in the same restriction group ("${drop.group}") as ${drop.keptName}, which the player already owns. The shop blocks that purchase.`
-        : `${drop.entry.name} is in the same restriction group ("${drop.group}") as ${drop.keptName}. The build path must never contain two items from the same restriction group.`;
+        : `${drop.entry.name} is in the same restriction group ("${drop.group}") as ${drop.keptName}, and the build path may hold only one of them. Keep only the better fit of the two and fill the freed slot with a different legal item.`;
     case "mode-unavailable":
       return `${drop.entry.name} is not purchasable in ${drop.modeName}.`;
     case "boots-collision":

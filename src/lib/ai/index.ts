@@ -44,6 +44,23 @@ export {
   type ItemRecResult,
 } from "./features/item-rec";
 export {
+  describeRecommendationDrop,
+  enforceRecommendationLegality,
+  type AlreadyOwnedDrop,
+  type DuplicateOptionDrop,
+  type OptionModeUnavailableDrop,
+  type OwnedBootsCollisionDrop,
+  type OwnedGroupCollisionDrop,
+  type RecommendationDrop,
+  type RecommendationLegalityResult,
+} from "./features/item-rec/legality";
+export {
+  buildItemRecCorrectiveMessage,
+  remediateItemRec,
+  type RemediatedItemRec,
+  type RemediateItemRecOptions,
+} from "./features/item-rec/remediation";
+export {
   voiceQueryFeature,
   type VoiceQueryInput,
   type VoiceQueryResult,

@@ -4,7 +4,8 @@ import type { LoadedGameData } from "../../../data-ingest";
 import type { Item } from "../../../data-ingest/types";
 import type { GameMode } from "../../../mode/types";
 import { formatStateSnapshot, type GameSnapshot } from "../../state-formatter";
-import { isBuildPathEligible, resolveToPurchasable } from "../../item-catalog";
+import { isBuildPathEligible } from "../../item-catalog";
+import { buildItemNameIndex, resolveInventorySlots } from "../../item-legality";
 import { GAME_PLAN_TASK_PROMPT } from "./prompt";
 import { createGamePlanSchema, type GamePlanResult } from "./schema";
 
@@ -277,10 +278,13 @@ type SlotSource = "path" | "inventory";
  *    holds is a fact of the game, not a recommendation.
  * 4. **At most one Boots item (#109).** Boots are NOT a wiki itemlimit
  *    group, so this rule is tag-based: a name is a boots item when ANY
- *    same-named catalog variant carries the "Boots" tag (the same
- *    any-variant quantifier as rule 3). An owned Boots item occupies the
- *    slot before the sweep (the shop refuses a second pair); within the
- *    path, the first boots entry wins. Owned echoes are exempt via rule 2.
+ *    same-named catalog variant is both "Boots"-tagged and mode-eligible
+ *    (the same any-variant quantifier as rule 3). The eligibility half
+ *    matters for the inventory: DDragon's 300g tier-1 Boots carries the tag,
+ *    and a player holding it is mid-upgrade, not holding the slot. An owned
+ *    finished Boots item occupies the slot before the sweep (the shop
+ *    refuses a second pair); within the path, the first boots entry wins.
+ *    Owned echoes are exempt via rule 2.
  * 5. **One item per restriction group.** Groups occupied by owned items are
  *    seeded before the sweep (the shop blocks buying a sibling of an owned
  *    group member); within the path, build order is priority order, so the
@@ -297,49 +301,26 @@ export function enforceBuildPathLegality(
   mode: GameMode,
   ownedItemNames: readonly string[] = []
 ): BuildPathLegalityResult {
-  // Union groups across same-named variants (an ARAM rebalance and its
-  // standard item share a name and must carry the same restrictions), keep
-  // one representative item per name for the specialRecipe walk, and record
-  // which names have at least one mode-eligible variant.
-  const groupsByName = new Map<string, Set<string>>();
-  const itemByName = new Map<string, Item>();
-  const modeLegalNames = new Set<string>();
-  const bootsNames = new Set<string>();
-  for (const item of items.values()) {
-    if (!itemByName.has(item.name)) itemByName.set(item.name, item);
-    if (isBuildPathEligible(item, mode)) modeLegalNames.add(item.name);
-    if (item.tags.includes("Boots")) bootsNames.add(item.name);
-    if (!item.mutexGroups || item.mutexGroups.length === 0) continue;
-    const groups = groupsByName.get(item.name) ?? new Set<string>();
-    for (const group of item.mutexGroups) groups.add(group);
-    groupsByName.set(item.name, groups);
-  }
+  const index = buildItemNameIndex(items, mode);
+  const { groupsByName, itemByName, modeLegalNames, bootsNames } = index;
+  const inventory = resolveInventorySlots(index, items, ownedItemNames);
 
+  // Seed the sweep's slots from the inventory. The owned display name (what
+  // the playtest log should show, e.g. "Muramana") holds the group and boots
+  // slots; both the owned name and its purchasable base name (the only form
+  // the path can echo) hold name slots.
   const nameSlots = new Map<string, SlotSource>();
-  const groupSlots = new Map<string, { name: string; source: SlotSource }>();
-  let bootsSlot: { name: string; source: SlotSource } | null = null;
-
-  // Seed slots from the player's inventory. The owned display name (what the
-  // playtest log should show, e.g. "Muramana") holds the group slots; both
-  // the owned name and its purchasable base name (the only form the path can
-  // echo) hold name slots.
-  for (const ownedName of ownedItemNames) {
-    const ownedItem = itemByName.get(ownedName);
-    const base = ownedItem ? resolveToPurchasable(ownedItem, items) : null;
-    const ownedNames =
-      base && base.name !== ownedName ? [ownedName, base.name] : [ownedName];
-    for (const name of ownedNames) {
-      if (!nameSlots.has(name)) nameSlots.set(name, "inventory");
-      if (bootsNames.has(name) && bootsSlot === null) {
-        bootsSlot = { name: ownedName, source: "inventory" };
-      }
-      for (const group of groupsByName.get(name) ?? []) {
-        if (!groupSlots.has(group)) {
-          groupSlots.set(group, { name: ownedName, source: "inventory" });
-        }
-      }
-    }
+  for (const name of inventory.ownedNames.keys()) {
+    nameSlots.set(name, "inventory");
   }
+  const groupSlots = new Map<string, { name: string; source: SlotSource }>();
+  for (const [group, ownerName] of inventory.groups) {
+    groupSlots.set(group, { name: ownerName, source: "inventory" });
+  }
+  let bootsSlot: { name: string; source: SlotSource } | null =
+    inventory.boots === null
+      ? null
+      : { name: inventory.boots, source: "inventory" };
 
   const kept: BuildPathItem[] = [];
   const dropped: BuildPathDrop[] = [];

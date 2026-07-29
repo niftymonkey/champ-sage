@@ -13,6 +13,7 @@ import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { MatchSession } from "../lib/ai/match-session";
 import type { CoachingFeature } from "../lib/ai/feature";
+import type { Recommendation } from "../lib/ai/types";
 import {
   createGamePlanFeature,
   describeBuildPathDrop,
@@ -29,8 +30,12 @@ import {
 import {
   isItemRecQuestion,
   itemRecFeature,
+  type ItemRecInput,
+  type ItemRecResult,
   type ItemRecTrigger,
 } from "../lib/ai/features/item-rec";
+import { describeRecommendationDrop } from "../lib/ai/features/item-rec/legality";
+import { remediateItemRec } from "../lib/ai/features/item-rec/remediation";
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import {
   postGameTakeawayFeature,
@@ -695,6 +700,58 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     [apiKey]
   );
 
+  /**
+   * #117 legality rail for item recommendations, shared by the voice route
+   * and the proactive shop triggers. The prompt forbids offering an item the
+   * player owns, a sibling of an owned restriction-group item, a second pair
+   * of boots, or anything unbuyable in this mode; `remediateItemRec` filters
+   * deterministically and gives the model ONE corrective turn so the answer
+   * prose still matches the surfaced cards. Owned names come from the SAME
+   * snapshot that rendered the [Game State] Items line, so the prompt and the
+   * validator agree on what the player holds. With no detected mode there is
+   * nothing to judge against, so the response passes through untouched.
+   */
+  const applyItemRecLegality = useCallback(
+    async (
+      session: MatchSession,
+      input: ItemRecInput,
+      response: ItemRecResult,
+      signal?: AbortSignal
+    ): Promise<ItemRecResult> => {
+      const itemRecMode = modeRef.current;
+      if (!itemRecMode) return response;
+
+      const ownedItemNames =
+        input.snapshot?.player.items.map((i) => i.name) ?? [];
+      const { answer, recommendations, dropped, corrected } =
+        await remediateItemRec({
+          session,
+          feature: itemRecFeature,
+          input,
+          response,
+          items: gameDataRef.current.items,
+          mode: itemRecMode,
+          ownedItemNames,
+          signal,
+        });
+
+      if (dropped.length > 0) {
+        proactiveLog.warn(
+          `Item-rec legality (${corrected ? "corrective retry still illegal" : "corrective retry failed"}) dropped: ${dropped
+            .map(describeRecommendationDrop)
+            .join("; ")}`
+        );
+      } else if (corrected) {
+        proactiveLog.info(
+          "Item-rec corrected via retry; final options are legal"
+        );
+      }
+
+      return { answer, recommendations };
+    },
+    []
+  );
+
   const submitQuestion = useCallback(
     async (question: string, options?: { signal?: AbortSignal }) => {
       if (!sessionRef.current || !apiKey || !question.trim()) {
@@ -787,18 +844,30 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         proactiveLog.info(
           `Voice question routing: "${trimmedQuestion}" → ${useItemRec ? "itemRec" : "voiceQuery"}`
         );
-        const askResult = useItemRec
-          ? await sessionRef.current.ask(
-              itemRecFeature,
-              { snapshot, question },
-              { signal: options?.signal }
-            )
-          : await sessionRef.current.ask(
-              voiceQueryFeature,
-              { snapshot, question },
-              { signal: options?.signal }
-            );
-        const { value: response, retried } = askResult;
+        const session = sessionRef.current;
+        let response: { answer: string; recommendations: Recommendation[] };
+        let retried: boolean;
+        if (useItemRec) {
+          const input: ItemRecInput = { snapshot, question };
+          const askResult = await session.ask(itemRecFeature, input, {
+            signal: options?.signal,
+          });
+          retried = askResult.retried;
+          response = await applyItemRecLegality(
+            session,
+            input,
+            askResult.value,
+            options?.signal
+          );
+        } else {
+          const askResult = await session.ask(
+            voiceQueryFeature,
+            { snapshot, question },
+            { signal: options?.signal }
+          );
+          retried = askResult.retried;
+          response = askResult.value;
+        }
 
         const gameTime = liveGameStateRef.current.gameTime;
         pushCoachingExchange(
@@ -844,7 +913,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         }
       }
     },
-    [apiKey, submitGamePlanQuery]
+    [apiKey, submitGamePlanQuery, applyItemRecLegality]
   );
 
   // Subscribe to voice intent
@@ -942,10 +1011,18 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           enemyDirectionsRef.current
         );
         proactiveLog.info(`Item-rec ${trigger} fired`);
-        const { value: response, retried } = await sessionRef.current.ask(
+        const session = sessionRef.current;
+        const input: ItemRecInput = { snapshot, question, trigger };
+        const { value: rawResponse, retried } = await session.ask(
           itemRecFeature,
-          { snapshot, question, trigger },
+          input,
           { signal }
+        );
+        const response = await applyItemRecLegality(
+          session,
+          input,
+          rawResponse,
+          signal
         );
         const gameTime = liveGameStateRef.current.gameTime;
         pushCoachingExchange(
@@ -1013,7 +1090,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       { globalMinGapMs: 30_000 }
     );
     return () => engine.dispose();
-  }, [mode, submitAugmentQuery, apiKey]);
+  }, [mode, submitAugmentQuery, apiKey, applyItemRecLegality]);
 
   // Player-side augment pick tracking — chosen augments + manual input feed.
   // Separate from the trigger's cancel$ because these are app state updates,
