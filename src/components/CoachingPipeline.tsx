@@ -489,6 +489,13 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const submitGamePlanQuery = useCallback(
     async (gameTime: number) => {
       if (!sessionRef.current || !gamePlanFeatureRef.current || !apiKey) return;
+      // The mode the current game's feature/schema was built for. Non-null
+      // whenever a session (and thus the feature) exists: the session-create
+      // effect only runs with a detected mode, and modeRef persists it
+      // through the match. Captured here (not read at use time) so the
+      // legality sweep after the await judges against the same mode.
+      const gamePlanMode = modeRef.current;
+      if (!gamePlanMode) return;
 
       const directionAtSnapshot = playerBuildDirection$.getValue();
       proactiveLog.info(
@@ -548,6 +555,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       const { buildPath, dropped } = enforceBuildPathLegality(
         rawBuildPath,
         gameDataRef.current.items,
+        gamePlanMode,
         ownedItemNames
       );
       if (dropped.length > 0) {

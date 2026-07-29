@@ -9,7 +9,23 @@ import {
 } from "./index";
 import { GAME_PLAN_TASK_PROMPT } from "./prompt";
 import type { BuildPathItem, CoachingResponse } from "../../types";
-import type { Item } from "../../../data-ingest/types";
+import type { Item, ItemMode } from "../../../data-ingest/types";
+import type { GameMode, ModeContext } from "../../../mode/types";
+import { GAME_MODE_ARAM, GAME_MODE_CLASSIC } from "../../../mode/types";
+
+function createStubMode(modeId: string): GameMode {
+  return {
+    id: modeId,
+    displayName: modeId,
+    decisionTypes: ["item-purchase"],
+    augmentSelectionLevels: [],
+    matches: (m: string) => m === modeId,
+    buildContext: () => ({}) as ModeContext,
+  };
+}
+
+const classic = createStubMode(GAME_MODE_CLASSIC);
+const aram = createStubMode(GAME_MODE_ARAM);
 
 describe("buildGamePlanQuestion", () => {
   const q = buildGamePlanQuestion();
@@ -349,6 +365,8 @@ describe("enforceBuildPathLegality", () => {
     mutexGroups?: string[];
     purchasable?: boolean;
     specialRecipe?: number;
+    mode?: ItemMode;
+    maps?: number[];
   }
 
   function makeItem(
@@ -372,8 +390,8 @@ describe("enforceBuildPathLegality", () => {
         tags: [],
         stats: {},
         image: `${id}.png`,
-        mode: "standard",
-        maps: [11, 12],
+        mode: options.mode ?? "standard",
+        maps: options.maps ?? [11, 12],
         mutexGroups: options.mutexGroups,
         specialRecipe: options.specialRecipe,
       },
@@ -414,7 +432,7 @@ describe("enforceBuildPathLegality", () => {
       entry("Infinity Edge"),
     ];
 
-    const result = enforceBuildPathLegality(path, items);
+    const result = enforceBuildPathLegality(path, items, classic);
 
     expect(result.buildPath).toEqual(path);
     expect(result.dropped).toEqual([]);
@@ -427,7 +445,7 @@ describe("enforceBuildPathLegality", () => {
       entry("Mortal Reminder", "counter"),
     ];
 
-    const result = enforceBuildPathLegality(path, items);
+    const result = enforceBuildPathLegality(path, items, classic);
 
     expect(result.buildPath.map((e) => e.name)).toEqual([
       "Lord Dominik's Regards",
@@ -456,7 +474,7 @@ describe("enforceBuildPathLegality", () => {
       entry("Infinity Edge", "damage"),
     ];
 
-    const result = enforceBuildPathLegality(path, items);
+    const result = enforceBuildPathLegality(path, items, classic);
 
     expect(result.buildPath.map((e) => e.name)).toEqual([
       "Ionian Boots of Lucidity",
@@ -477,7 +495,7 @@ describe("enforceBuildPathLegality", () => {
       entry("Mortal Reminder"),
     ];
 
-    const result = enforceBuildPathLegality(path, items);
+    const result = enforceBuildPathLegality(path, items, classic);
 
     expect(result.buildPath.map((e) => e.name)).toEqual(["Serylda's Grudge"]);
     expect(
@@ -490,7 +508,7 @@ describe("enforceBuildPathLegality", () => {
   it("enforces every group a dual-group item belongs to", () => {
     const path = [entry("Terminus"), entry("Void Staff")];
 
-    const result = enforceBuildPathLegality(path, items);
+    const result = enforceBuildPathLegality(path, items, classic);
 
     expect(result.buildPath.map((e) => e.name)).toEqual(["Terminus"]);
     expect(result.dropped).toEqual([
@@ -507,7 +525,7 @@ describe("enforceBuildPathLegality", () => {
   it("drops a dual-group item when either of its groups is taken", () => {
     const path = [entry("Lord Dominik's Regards"), entry("Terminus")];
 
-    const result = enforceBuildPathLegality(path, items);
+    const result = enforceBuildPathLegality(path, items, classic);
 
     expect(result.buildPath.map((e) => e.name)).toEqual([
       "Lord Dominik's Regards",
@@ -530,7 +548,7 @@ describe("enforceBuildPathLegality", () => {
       entry("Infinity Edge"),
     ];
 
-    const result = enforceBuildPathLegality(path, items);
+    const result = enforceBuildPathLegality(path, items, classic);
 
     expect(result.buildPath).toEqual(path);
     expect(result.dropped).toEqual([]);
@@ -544,7 +562,7 @@ describe("enforceBuildPathLegality", () => {
         entry("Infinity Edge", "damage"),
       ];
 
-      const result = enforceBuildPathLegality(path, items);
+      const result = enforceBuildPathLegality(path, items, classic);
 
       expect(result.buildPath.map((e) => e.name)).toEqual([
         "Infinity Edge",
@@ -562,7 +580,7 @@ describe("enforceBuildPathLegality", () => {
         entry("Infinity Edge"),
       ];
 
-      const result = enforceBuildPathLegality(path, items);
+      const result = enforceBuildPathLegality(path, items, classic);
 
       expect(result.buildPath.map((e) => e.name)).toEqual(["Infinity Edge"]);
       expect(result.dropped.map((d) => d.kind)).toEqual([
@@ -579,7 +597,7 @@ describe("enforceBuildPathLegality", () => {
         entry("Lord Dominik's Regards"),
       ];
 
-      const result = enforceBuildPathLegality(path, items);
+      const result = enforceBuildPathLegality(path, items, classic);
 
       expect(result.buildPath.map((e) => e.name)).toEqual([
         "Lord Dominik's Regards",
@@ -595,7 +613,7 @@ describe("enforceBuildPathLegality", () => {
         entry("Totally Made Up Item"),
       ];
 
-      const result = enforceBuildPathLegality(path, items);
+      const result = enforceBuildPathLegality(path, items, classic);
 
       expect(result.buildPath.map((e) => e.name)).toEqual([
         "Totally Made Up Item",
@@ -608,8 +626,8 @@ describe("enforceBuildPathLegality", () => {
     it("behaves identically to the no-inventory sweep when inventory is empty", () => {
       const path = [entry("Lord Dominik's Regards"), entry("Mortal Reminder")];
 
-      const withDefault = enforceBuildPathLegality(path, items);
-      const withEmpty = enforceBuildPathLegality(path, items, []);
+      const withDefault = enforceBuildPathLegality(path, items, classic);
+      const withEmpty = enforceBuildPathLegality(path, items, classic, []);
 
       expect(withEmpty).toEqual(withDefault);
       expect(withEmpty.buildPath.map((e) => e.name)).toEqual([
@@ -622,7 +640,9 @@ describe("enforceBuildPathLegality", () => {
       // items to appear once, so ownership must not drop that appearance.
       const path = [entry("Mortal Reminder"), entry("Infinity Edge")];
 
-      const result = enforceBuildPathLegality(path, items, ["Mortal Reminder"]);
+      const result = enforceBuildPathLegality(path, items, classic, [
+        "Mortal Reminder",
+      ]);
 
       expect(result.buildPath).toEqual(path);
       expect(result.dropped).toEqual([]);
@@ -635,7 +655,9 @@ describe("enforceBuildPathLegality", () => {
         entry("Mortal Reminder"),
       ];
 
-      const result = enforceBuildPathLegality(path, items, ["Mortal Reminder"]);
+      const result = enforceBuildPathLegality(path, items, classic, [
+        "Mortal Reminder",
+      ]);
 
       expect(result.buildPath.map((e) => e.name)).toEqual([
         "Mortal Reminder",
@@ -650,7 +672,9 @@ describe("enforceBuildPathLegality", () => {
       // the path itself has no internal collision.
       const path = [entry("Lord Dominik's Regards"), entry("Infinity Edge")];
 
-      const result = enforceBuildPathLegality(path, items, ["Mortal Reminder"]);
+      const result = enforceBuildPathLegality(path, items, classic, [
+        "Mortal Reminder",
+      ]);
 
       expect(result.buildPath.map((e) => e.name)).toEqual(["Infinity Edge"]);
       expect(result.dropped).toEqual([
@@ -667,7 +691,9 @@ describe("enforceBuildPathLegality", () => {
     it("drops a sibling while keeping the owned item's own echo", () => {
       const path = [entry("Mortal Reminder"), entry("Lord Dominik's Regards")];
 
-      const result = enforceBuildPathLegality(path, items, ["Mortal Reminder"]);
+      const result = enforceBuildPathLegality(path, items, classic, [
+        "Mortal Reminder",
+      ]);
 
       expect(result.buildPath.map((e) => e.name)).toEqual(["Mortal Reminder"]);
       expect(result.dropped.map((d) => d.kind)).toEqual(["mutex-collision"]);
@@ -679,7 +705,9 @@ describe("enforceBuildPathLegality", () => {
       // slot, not a re-buy.
       const path = [entry("Manamune"), entry("Infinity Edge")];
 
-      const result = enforceBuildPathLegality(path, items, ["Muramana"]);
+      const result = enforceBuildPathLegality(path, items, classic, [
+        "Muramana",
+      ]);
 
       expect(result.buildPath).toEqual(path);
       expect(result.dropped).toEqual([]);
@@ -692,7 +720,9 @@ describe("enforceBuildPathLegality", () => {
         entry("Manamune"),
       ];
 
-      const result = enforceBuildPathLegality(path, items, ["Muramana"]);
+      const result = enforceBuildPathLegality(path, items, classic, [
+        "Muramana",
+      ]);
 
       expect(result.buildPath.map((e) => e.name)).toEqual([
         "Manamune",
@@ -704,7 +734,9 @@ describe("enforceBuildPathLegality", () => {
     it("blocks group siblings of an owned evolved item under the owned name", () => {
       const path = [entry("Archangel's Staff")];
 
-      const result = enforceBuildPathLegality(path, items, ["Muramana"]);
+      const result = enforceBuildPathLegality(path, items, classic, [
+        "Muramana",
+      ]);
 
       expect(result.buildPath).toEqual([]);
       expect(result.dropped).toEqual([
@@ -723,7 +755,7 @@ describe("enforceBuildPathLegality", () => {
       // sweep must neither crash nor drop unrelated entries.
       const path = [entry("Lord Dominik's Regards"), entry("Infinity Edge")];
 
-      const result = enforceBuildPathLegality(path, items, [
+      const result = enforceBuildPathLegality(path, items, classic, [
         "Mystery Trophy",
         "Health Potion",
       ]);
@@ -740,7 +772,9 @@ describe("enforceBuildPathLegality", () => {
         entry("Essence Reaver"),
       ];
 
-      const result = enforceBuildPathLegality(path, items, ["Void Staff"]);
+      const result = enforceBuildPathLegality(path, items, classic, [
+        "Void Staff",
+      ]);
 
       expect(result.buildPath.map((e) => e.name)).toEqual([
         "Serylda's Grudge",
@@ -750,6 +784,125 @@ describe("enforceBuildPathLegality", () => {
         "mutex-collision",
         "duplicate-name",
       ]);
+    });
+  });
+
+  describe("mode availability", () => {
+    // Cross-mode leaks (GAP B/D of #117): standard-ID-band items whose maps
+    // record proves them Arena-only or Nexus-Blitz-only. The ineligible
+    // Abyssal Mask variant is inserted BEFORE the eligible one so a naive
+    // "first variant with the name" lookup would false-drop the name.
+    const modedItems = new Map<number, Item>([
+      makeItem(228020, "Abyssal Mask", { mode: "arena", maps: [30] }),
+      makeItem(8020, "Abyssal Mask", { maps: [11, 12] }),
+      makeItem(4015, "Perplexity", { maps: [30] }),
+      makeItem(3128, "Deathfire Grasp", { maps: [21] }),
+      makeItem(3031, "Infinity Edge"),
+    ]);
+
+    it("drops an entry no same-named catalog item can be bought in the mode", () => {
+      const path = [
+        entry("Infinity Edge"),
+        entry("Perplexity", "counter"),
+        entry("Deathfire Grasp"),
+      ];
+
+      const result = enforceBuildPathLegality(path, modedItems, classic);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual(["Infinity Edge"]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "mode-unavailable",
+          entry: entry("Perplexity", "counter"),
+          modeName: "CLASSIC",
+        },
+        {
+          kind: "mode-unavailable",
+          entry: entry("Deathfire Grasp"),
+          modeName: "CLASSIC",
+        },
+      ]);
+    });
+
+    it("keeps a name when ANY same-named variant is eligible in the mode", () => {
+      // Duplicate names exist across ID partitions (Abyssal Mask lives in
+      // both the standard and aram bands); the wrong variant must not cause
+      // a false drop.
+      const path = [entry("Abyssal Mask"), entry("Perplexity")];
+
+      const result = enforceBuildPathLegality(path, modedItems, classic);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual(["Abyssal Mask"]);
+      expect(result.dropped.map((d) => d.kind)).toEqual(["mode-unavailable"]);
+    });
+
+    it("accepts standard and aram-band variants alike in ARAM", () => {
+      const aramItems = new Map<number, Item>([
+        makeItem(328020, "ARAM Rebalance", { mode: "aram", maps: [12] }),
+        makeItem(3031, "Infinity Edge"),
+      ]);
+      const path = [entry("ARAM Rebalance"), entry("Infinity Edge")];
+
+      const result = enforceBuildPathLegality(path, aramItems, aram);
+
+      expect(result.buildPath).toEqual(path);
+      expect(result.dropped).toEqual([]);
+    });
+
+    it("never drops the owned-item echo for mode reasons", () => {
+      // Whatever the player already holds is a fact of the game, not a
+      // recommendation; its single end-state echo must survive the sweep.
+      const path = [entry("Perplexity"), entry("Deathfire Grasp")];
+
+      const result = enforceBuildPathLegality(path, modedItems, classic, [
+        "Perplexity",
+      ]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual(["Perplexity"]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "mode-unavailable",
+          entry: entry("Deathfire Grasp"),
+          modeName: "CLASSIC",
+        },
+      ]);
+    });
+
+    it("exempts the echo of an owned evolved item whose base is mode-restricted", () => {
+      // Synthetic map to isolate the invariant: the owned EVOLVED form
+      // resolves to its purchasable base (slice 3 walk), and that base's
+      // echo is exempt from mode drops even when the base itself would not
+      // pass the eligibility predicate.
+      const localItems = new Map<number, Item>([
+        makeItem(3119, "Winter's Approach", { maps: [21] }),
+        makeItem(3121, "Fimbulwinter", {
+          purchasable: false,
+          specialRecipe: 3119,
+          maps: [21],
+        }),
+        makeItem(4015, "Perplexity", { maps: [30] }),
+      ]);
+      const path = [entry("Winter's Approach"), entry("Perplexity")];
+
+      const result = enforceBuildPathLegality(path, localItems, classic, [
+        "Fimbulwinter",
+      ]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Winter's Approach",
+      ]);
+      expect(result.dropped.map((d) => d.kind)).toEqual(["mode-unavailable"]);
+    });
+
+    it("keeps unknown names: the catalog cannot prove them mode-illegal", () => {
+      const path = [entry("Totally Made Up Item"), entry("Perplexity")];
+
+      const result = enforceBuildPathLegality(path, modedItems, classic);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Totally Made Up Item",
+      ]);
+      expect(result.dropped.map((d) => d.kind)).toEqual(["mode-unavailable"]);
     });
   });
 });
@@ -790,5 +943,15 @@ describe("describeBuildPathDrop", () => {
         entry: entry("Infinity Edge"),
       })
     ).toBe("Infinity Edge (duplicate of an earlier build-path entry)");
+  });
+
+  it("describes a mode-unavailable drop", () => {
+    expect(
+      describeBuildPathDrop({
+        kind: "mode-unavailable",
+        entry: entry("Perplexity"),
+        modeName: "ARAM",
+      })
+    ).toBe("Perplexity (not purchasable in ARAM)");
   });
 });

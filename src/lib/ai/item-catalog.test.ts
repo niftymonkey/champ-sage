@@ -475,6 +475,84 @@ describe("buildItemCatalogSections", () => {
     expect(result.tier1Count).toBe(2);
   });
 
+  it("excludes blocklisted items from tier 1 even when the meta pool holds them", () => {
+    // Real leak: the ARAM meta pools genuinely contain Guardian's Horn and
+    // Guardian's Hammer. Tier 1 must run the same eligibility predicate as
+    // the build-path enum, or the prompt contradicts the schema.
+    const guardiansHorn = createItem({
+      id: 2051,
+      name: "Guardian's Horn",
+      mode: "aram",
+      gold: { base: 950, total: 950, sell: 665, purchasable: true },
+    });
+    const items = new Map(allItems);
+    items.set(guardiansHorn.id, guardiansHorn);
+    const index: MetaBuildIndex = {
+      aram: createMetaFileWithItemPool(jinx.key, "Jinx", [
+        { itemId: kraken.id, presence: 0.6 },
+        { itemId: guardiansHorn.id, presence: 0.4 },
+      ]),
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      items,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).not.toContain("Guardian's Horn");
+    expect(result.tier1Count).toBe(1);
+  });
+
+  it("excludes mode-unavailable items from tier 1", () => {
+    // Tier 1 historically checked only structure (purchasable, gold, into),
+    // never mode availability, so an Arena-only leak in the standard ID band
+    // (Perplexity, maps [30]) and an `other`-partition variant (the ARAM
+    // Hubris rebalance) walked straight into the pool.
+    const perplexity = createItem({
+      id: 4015,
+      name: "Perplexity",
+      mode: "standard",
+      maps: [30],
+      gold: { base: 1000, total: 3000, sell: 2100, purchasable: true },
+    });
+    const hubrisVariant = createItem({
+      id: 126697,
+      name: "Hubris",
+      mode: "other",
+      maps: [12, 35],
+      gold: { base: 1000, total: 3000, sell: 2100, purchasable: true },
+    });
+    const items = new Map(allItems);
+    items.set(perplexity.id, perplexity);
+    items.set(hubrisVariant.id, hubrisVariant);
+    const index: MetaBuildIndex = {
+      aram: createMetaFileWithItemPool(jinx.key, "Jinx", [
+        { itemId: kraken.id, presence: 0.6 },
+        { itemId: perplexity.id, presence: 0.3 },
+        { itemId: hubrisVariant.id, presence: 0.2 },
+      ]),
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      items,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).not.toContain("Perplexity");
+    expect(result.text).not.toContain("Hubris");
+    expect(result.tier1Count).toBe(1);
+  });
+
   it("excludes base boots from tier 1 (gold < 500)", () => {
     const metaFile = createMetaFile(jinx.key, "Jinx", [
       [kraken.id, basicsBoots.id],
@@ -671,6 +749,67 @@ describe("isBuildPathEligible", () => {
     expect(
       isBuildPathEligible(completed({ id: 4403, name: "Golden Spatula" }), aram)
     ).toBe(false);
+  });
+
+  describe("maps-intersection rule (cross-mode leaks)", () => {
+    const mayhem = createStubMode(GAME_MODE_MAYHEM);
+
+    it("rejects a standard-band Arena-only item in Classic, ARAM, and Mayhem", () => {
+      // Real leak: Perplexity 4015 sits in the standard ID band (so the
+      // partition check passes) but carries maps [30], Arena only.
+      const perplexity = completed({
+        id: 4015,
+        name: "Perplexity",
+        maps: [30],
+      });
+      expect(isBuildPathEligible(perplexity, classic)).toBe(false);
+      expect(isBuildPathEligible(perplexity, aram)).toBe(false);
+      expect(isBuildPathEligible(perplexity, mayhem)).toBe(false);
+    });
+
+    it("rejects a Nexus-Blitz-only item in Classic, ARAM, and Mayhem", () => {
+      // Real leaks: Deathfire Grasp 3128 and Ghostcrawlers 3005, maps [21].
+      const dfg = completed({
+        id: 3128,
+        name: "Deathfire Grasp",
+        maps: [21],
+      });
+      expect(isBuildPathEligible(dfg, classic)).toBe(false);
+      expect(isBuildPathEligible(dfg, aram)).toBe(false);
+      expect(isBuildPathEligible(dfg, mayhem)).toBe(false);
+    });
+
+    it("rejects a maps [12, 21] item in Classic but accepts it in ARAM", () => {
+      // Real case: Atma's Reckoning 3039 exists on ARAM and Nexus Blitz,
+      // never on Summoner's Rift.
+      const atmas = completed({
+        id: 3039,
+        name: "Atma's Reckoning",
+        maps: [12, 21],
+      });
+      expect(isBuildPathEligible(atmas, classic)).toBe(false);
+      expect(isBuildPathEligible(atmas, aram)).toBe(true);
+    });
+
+    it("accepts an ARAM staple whose maps record lacks map 12 (via map 11)", () => {
+      // DDragon marks real ARAM staples (Guardian Angel 3026, Mejai's 3041)
+      // map12=false while map11=true, so ARAM's allowed set includes 11 and a
+      // naive maps-includes-12 filter is a regression (#138).
+      const ga = completed({ id: 3026, name: "Guardian Angel", maps: [11] });
+      expect(isBuildPathEligible(ga, aram)).toBe(true);
+      expect(isBuildPathEligible(ga, mayhem)).toBe(true);
+    });
+
+    it("accepts a maps [12, 35] ARAM-flagged item in ARAM", () => {
+      // Map 35 shows up on ARAM-flagged items (the Hubris variant is
+      // [12, 35]); its meaning is unmodeled, so ARAM stays permissive here.
+      const eventItem = completed({
+        id: 60,
+        name: "ARAM Event Item",
+        maps: [12, 35],
+      });
+      expect(isBuildPathEligible(eventItem, aram)).toBe(true);
+    });
   });
 
   it("rejects the Guardian starter items by name in ARAM, Mayhem, and Classic", () => {

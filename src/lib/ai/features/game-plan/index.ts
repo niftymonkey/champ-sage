@@ -235,7 +235,21 @@ export interface DuplicateNameDrop {
   entry: BuildPathItem;
 }
 
-export type BuildPathDrop = MutexCollisionDrop | DuplicateNameDrop;
+/** A build-path entry removed because no catalog item with its name is
+ *  purchasable in the current game mode (e.g. an Arena-only or
+ *  Nexus-Blitz-only item recommended in Classic or ARAM). */
+export interface ModeUnavailableDrop {
+  kind: "mode-unavailable";
+  /** The entry removed from the build path. */
+  entry: BuildPathItem;
+  /** Display name of the mode the item is unavailable in, for logs. */
+  modeName: string;
+}
+
+export type BuildPathDrop =
+  | MutexCollisionDrop
+  | DuplicateNameDrop
+  | ModeUnavailableDrop;
 
 export interface BuildPathLegalityResult {
   /** The build path with every illegal entry removed. */
@@ -266,27 +280,38 @@ type SlotSource = "path" | "inventory";
  *    (Muramana) counts as its purchasable base (Manamune) via the
  *    `specialRecipe` walk, because the base name is the only form the
  *    catalog enum lets the model echo.
- * 3. **One item per restriction group.** Groups occupied by owned items are
+ * 3. **Mode availability.** An entry is mode-legal only when SOME catalog
+ *    item with its name is `isBuildPathEligible` for the current mode. The
+ *    "some" quantifier is essential: duplicate names span ID partitions
+ *    (Abyssal Mask is both standard 8020 and aram-band 328020), and the
+ *    wrong variant must not cause a false drop. Owned echoes are exempt
+ *    (rule 2 keeps them before this check runs): what the player already
+ *    holds is a fact of the game, not a recommendation.
+ * 4. **One item per restriction group.** Groups occupied by owned items are
  *    seeded before the sweep (the shop blocks buying a sibling of an owned
  *    group member); within the path, build order is priority order, so the
  *    earlier of two colliding items keeps the slot.
  *
  * Entries and owned names the catalog cannot prove illegal are never
- * touched: unknown names carry no groups, and an unknown owned name only
- * ever blocks an exact same-name re-buy.
+ * touched: unknown names carry no groups and no mode verdict, and an
+ * unknown owned name only ever blocks an exact same-name re-buy.
  */
 export function enforceBuildPathLegality(
   buildPath: readonly BuildPathItem[],
   items: ReadonlyMap<number, Item>,
+  mode: GameMode,
   ownedItemNames: readonly string[] = []
 ): BuildPathLegalityResult {
   // Union groups across same-named variants (an ARAM rebalance and its
-  // standard item share a name and must carry the same restrictions), and
-  // keep one representative item per name for the specialRecipe walk.
+  // standard item share a name and must carry the same restrictions), keep
+  // one representative item per name for the specialRecipe walk, and record
+  // which names have at least one mode-eligible variant.
   const groupsByName = new Map<string, Set<string>>();
   const itemByName = new Map<string, Item>();
+  const modeLegalNames = new Set<string>();
   for (const item of items.values()) {
     if (!itemByName.has(item.name)) itemByName.set(item.name, item);
+    if (isBuildPathEligible(item, mode)) modeLegalNames.add(item.name);
     if (!item.mutexGroups || item.mutexGroups.length === 0) continue;
     const groups = groupsByName.get(item.name) ?? new Set<string>();
     for (const group of item.mutexGroups) groups.add(group);
@@ -326,9 +351,22 @@ export function enforceBuildPathLegality(
     }
     if (nameSlot === "inventory") {
       // The end-state echo of an owned item: legal exactly once. Its groups
-      // are already seeded by the same owned item, so no group check.
+      // are already seeded by the same owned item, so no group check. Also
+      // deliberately ahead of the mode check: an owned item is a fact of
+      // the game and its echo is never dropped for mode reasons.
       nameSlots.set(entry.name, "path");
       kept.push(entry);
+      continue;
+    }
+
+    // Known name with no mode-eligible variant: not buyable in this mode.
+    // Unknown names fall through untouched (nothing proven).
+    if (itemByName.has(entry.name) && !modeLegalNames.has(entry.name)) {
+      dropped.push({
+        kind: "mode-unavailable",
+        entry,
+        modeName: mode.displayName,
+      });
       continue;
     }
 
@@ -369,5 +407,7 @@ export function describeBuildPathDrop(drop: BuildPathDrop): string {
       return drop.keptSource === "inventory"
         ? `${drop.entry.name} (group ${drop.group}, player owns ${drop.keptName})`
         : `${drop.entry.name} (group ${drop.group}, kept ${drop.keptName})`;
+    case "mode-unavailable":
+      return `${drop.entry.name} (not purchasable in ${drop.modeName})`;
   }
 }
