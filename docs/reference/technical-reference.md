@@ -876,6 +876,14 @@ The eval pipeline (`src/lib/ai/coaching.eval.ts`) supports both OpenAI direct an
 - **API compatibility:** AI SDK 5 (`@ai-sdk/openai` v3+) defaults to the OpenAI Responses API, which OpenRouter doesn't support. Use `.chat()` (e.g., `openrouter.chat(modelId)`) to force the Chat Completions API when routing through OpenRouter.
 - **Model IDs:** OpenRouter requires the `provider/model` format (e.g., `openai/gpt-5.4-mini`), while OpenAI direct uses just the model name (e.g., `gpt-5.4-mini`).
 
+### Cross-model eval traps (verified 2026-07-29)
+
+A five-model comparison run through the coaching eval did not discriminate on quality: every candidate scored 98-100% on the quality columns with zero `Item Legality` gate failures. What separated them was operational, and all three failure modes below read as model quality problems if you only look at the score.
+
+- **The 1024-token output cap kills reasoning-by-default models.** `recommendation-engine.ts` sets `maxOutputTokens: 1024`, and OpenRouter counts reasoning tokens against that cap, so a model that thinks by default spends the budget before emitting the structured response and the call dies with `AI_NoOutputGeneratedError`. Observed: Gemini 3.5 Flash completed 47 of 84 fixtures at defaults and 83 of 84 with `settings: { reasoning: { effort: "minimal" } }`; GLM-5.2 and GPT-5.6 Luna completed roughly 4 of 84 each at defaults. `ModelCandidate.settings` in `coaching.eval.ts` carries per-model `OpenRouterChatSettings` through to `openrouter.chat(id, settings)` so a candidate can be judged on the config production would actually ship, not on a default it would never run with.
+- **Google structured outputs reject nullable type arrays.** `type: ["string", "null"]`, the exact shape OpenAI strict mode requires (see below), returns a 400 from Google models. The game plan's `buildPath[*].targetEnemy` is declared that way, so no Gemini model can run the game-plan fixture without a schema-portability change. The two providers' structured-output subsets disagree on the one construct that schema depends on.
+- **Suite averages silently exclude errored fixtures.** A run where half the fixtures errored still reports a healthy average, because the average is taken over fixtures that produced output. `pnpm inspect-evals` inherits this, and its default view also mixes latest-per-suite across runs. Query `results.status = 'fail'` in `node_modules/.evalite/cache.sqlite` to see what actually failed, and compare completed-fixture counts before comparing scores.
+
 ### Eval scorer patterns
 
 - **Gate scorers** return 0 or 1 (pass/fail). Used for non-negotiable requirements (item awareness, structured output, state awareness, gold-aware format). The augment re-roll accuracy gate scorer was removed when augment coaching switched from prescriptive ranking to independent fit ratings (#101).

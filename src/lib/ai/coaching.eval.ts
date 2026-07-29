@@ -22,7 +22,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, "../../../.env"), override: true });
 
 import { evalite, createScorer } from "evalite";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import {
+  createOpenRouter,
+  type OpenRouterChatSettings,
+} from "@openrouter/ai-sdk-provider";
 import type { LanguageModel } from "ai";
 import { readFileSync, readdirSync } from "fs";
 import { buildBaseContext } from "./base-context";
@@ -170,14 +173,31 @@ const openrouter = createOpenRouter({ apiKey: openrouterKey });
 interface ModelCandidate {
   name: string;
   id: string;
+  /**
+   * Per-model OpenRouter settings. Reasoning-by-default models must run with
+   * minimal reasoning: the production engine caps output at 1024 tokens, and
+   * reasoning tokens count against that cap, so default thinking budgets
+   * leave no room for the structured response (AI_NoOutputGeneratedError).
+   * Minimal reasoning is also the config production would ship for
+   * real-time coaching latency.
+   */
+  settings?: OpenRouterChatSettings;
 }
 
 // Models to evaluate. Comment/uncomment to control which models run.
 const models: ModelCandidate[] = [
   { name: "GPT 5.4 mini", id: "openai/gpt-5.4-mini" },
-  // { name: "GPT 5.4", id: "openai/gpt-5.4" },
-  // { name: "Gemini 2.5 Pro", id: "google/gemini-2.5-pro" },
-  // { name: "Claude Sonnet 4.6", id: "anthropic/claude-sonnet-4.6" },
+  // Candidates from the 2026-07-29 discovery run (full comparison in evalite
+  // runs 3-4). Reasoning-by-default models need minimal reasoning to fit the
+  // engine's 1024-token output cap.
+  // { name: "MiniMax-M3", id: "minimax/minimax-m3" },
+  // { name: "GPT 5.6 Luna", id: "openai/gpt-5.6-luna" },
+  // { name: "GLM-5.2", id: "z-ai/glm-5.2" },
+  // {
+  //   name: "Gemini 3.5 Flash",
+  //   id: "google/gemini-3.5-flash",
+  //   settings: { reasoning: { effort: "minimal" } },
+  // },
 ];
 
 // --- Scorers ---
@@ -709,7 +729,9 @@ for (const modelCandidate of models) {
       data: () => inputs.map((input) => ({ input })),
 
       task: async (input: EvalInput): Promise<EvalOutput> => {
-        const output = await input.runOnce(openrouter.chat(modelCandidate.id));
+        const output = await input.runOnce(
+          openrouter.chat(modelCandidate.id, modelCandidate.settings)
+        );
 
         const fitSummary = output.recommendations
           .map((r) => `${r.name} [${r.fit}]`)
