@@ -76,6 +76,25 @@ export interface MatchSession {
   ): Promise<AskResult<TOutput>>;
 
   /**
+   * One-shot corrective follow-up to the immediately preceding `ask` for the
+   * same feature (throws otherwise). Sends the accumulated history plus a
+   * transient user turn carrying `correction`, composed under the same
+   * system prompt `ask` would build. On success the last assistant turn is
+   * REPLACED with the corrected result's `summarizeForHistory` and the
+   * correction turn is discarded: the corrective exchange must not leak
+   * into later voice-query context, and the corrected answer supersedes
+   * the first. History therefore ends as [user: original question,
+   * assistant: corrected answer]. On failure history is left exactly as it
+   * was, so the caller can safely fall back to the original result.
+   */
+  correctLastAsk<TInput, TOutput>(
+    feature: CoachingFeature<TInput, TOutput>,
+    input: TInput,
+    correction: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<AskResult<TOutput>>;
+
+  /**
    * Move the session to a new lifecycle phase, swapping in a fresh base
    * context (champ-select / in-game / post-game each have different
    * relevant state). `messages[]` is preserved so the LLM still sees the
@@ -129,6 +148,10 @@ export function createMatchSession(
 
   let systemPrompt = initialSystemPrompt;
   let phase: MatchPhase = options.phase ?? "in-game";
+  // Feature id of the last successful `ask`, while its assistant turn is
+  // still the tail of history. `correctLastAsk` may only target that turn;
+  // any manual history mutation invalidates it.
+  let lastAskFeatureId: string | null = null;
 
   logBaseContext(
     `Session created. phase=${phase} personality=${resolvePersonality().id}`,
@@ -194,6 +217,7 @@ export function createMatchSession(
           role: "assistant",
           content: feature.summarizeForHistory(result),
         });
+        lastAskFeatureId = feature.id;
 
         return { value: result, retried };
       } catch (err) {
@@ -205,7 +229,57 @@ export function createMatchSession(
       }
     },
 
+    async correctLastAsk(feature, input, correction, options) {
+      const last = messages[messages.length - 1];
+      if (
+        !last ||
+        last.role !== "assistant" ||
+        lastAskFeatureId !== feature.id
+      ) {
+        throw new Error(
+          `correctLastAsk requires the last history message to be the assistant turn of a prior ask for feature "${feature.id}"`
+        );
+      }
+
+      const personality = resolvePersonality();
+      const taskPrompt = feature.buildTaskPrompt(input);
+      const personalitySuffix = personality.suffix();
+      const suffixSection = personalitySuffix ? `\n\n${personalitySuffix}` : "";
+      const system = systemPrompt + taskPrompt + suffixSection;
+
+      sessionLog.info(
+        `[${feature.id}] correctLastAsk: correction=${correction.length} chars, history=${messages.length} msgs`
+      );
+
+      // The correction turn is transient by design: it rides along for this
+      // one call and is never persisted, so the corrective exchange cannot
+      // leak into later feature calls' context.
+      const transientMessages: ModelMessage[] = [
+        ...messages,
+        { role: "user", content: correction },
+      ];
+
+      const { value: raw, retried } = await runFeatureCall({
+        feature,
+        system,
+        messages: transientMessages,
+        apiKey,
+        signal: options?.signal,
+        model: modelOverride,
+      });
+
+      const result = feature.extractResult(raw);
+
+      messages[messages.length - 1] = {
+        role: "assistant",
+        content: feature.summarizeForHistory(result),
+      };
+
+      return { value: result, retried };
+    },
+
     addUserMessage(stateSnapshot: string, question: string): void {
+      lastAskFeatureId = null;
       messages.push({
         role: "user",
         content: formatUserContent(stateSnapshot, question),
@@ -213,6 +287,7 @@ export function createMatchSession(
     },
 
     addAssistantMessage(responseText: string): void {
+      lastAskFeatureId = null;
       messages.push({
         role: "assistant",
         content: responseText,
@@ -229,10 +304,12 @@ export function createMatchSession(
           `Last message has role "${last.role}", expected "user"`
         );
       }
+      lastAskFeatureId = null;
       messages.pop();
     },
 
     reset(): void {
+      lastAskFeatureId = null;
       messages.length = 0;
     },
   };

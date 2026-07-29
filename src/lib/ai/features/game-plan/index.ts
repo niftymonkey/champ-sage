@@ -180,34 +180,6 @@ export function extractBuildPath(result: GamePlanResultLike): BuildPathItem[] {
   }));
 }
 
-/**
- * Post-hoc validator for the boots-uniqueness rule (#109).
- *
- * Schema enums can't express "at most one Boots-tagged value" — the name
- * enum permits each pair of boots individually, and uniqueness across
- * elements isn't a constraint JSON Schema models. The prompt carries the
- * primary rule; this helper is a belt-and-suspenders detector that lets the
- * pipeline log a warning when the LLM slips up.
- *
- * Returns every build-path entry whose name matches a Boots-tagged item,
- * but only when two or more are present. A single pair is the expected case
- * and returns an empty array. Unknown names (not in the catalog) are
- * ignored — the schema enum already rejects most off-catalog leakage.
- */
-export function findDuplicateBoots(
-  buildPath: readonly BuildPathItem[],
-  items: ReadonlyMap<number, Item>
-): BuildPathItem[] {
-  const bootsNames = new Set<string>();
-  for (const item of items.values()) {
-    if (item.tags.includes("Boots")) {
-      bootsNames.add(item.name);
-    }
-  }
-  const boots = buildPath.filter((entry) => bootsNames.has(entry.name));
-  return boots.length > 1 ? boots : [];
-}
-
 /** A build-path entry removed because its restriction group is already
  *  occupied, either by an earlier path entry or by an item the player
  *  already owns. */
@@ -246,10 +218,25 @@ export interface ModeUnavailableDrop {
   modeName: string;
 }
 
+/** A build-path entry removed because the single boots slot is already
+ *  occupied, either by an earlier path entry or by a Boots item the player
+ *  already owns (the shop refuses a second pair). */
+export interface BootsCollisionDrop {
+  kind: "boots-collision";
+  /** The entry removed from the build path. */
+  entry: BuildPathItem;
+  /** The item name holding the single boots slot. */
+  keptName: string;
+  /** Where the slot-holder lives: an earlier kept path entry, or the
+   *  player's current inventory. */
+  keptSource: "path" | "inventory";
+}
+
 export type BuildPathDrop =
   | MutexCollisionDrop
   | DuplicateNameDrop
-  | ModeUnavailableDrop;
+  | ModeUnavailableDrop
+  | BootsCollisionDrop;
 
 export interface BuildPathLegalityResult {
   /** The build path with every illegal entry removed. */
@@ -263,10 +250,11 @@ type SlotSource = "path" | "inventory";
 
 /**
  * Deterministic post-hoc enforcement of build-path purchase legality
- * (issue #117): mutually exclusive item groups, duplicate item names, and
- * the player's current inventory, in one first-entry-wins sweep. A schema
- * enum cannot express any of these cross-item constraints, so the prompt
- * carries the primary rules and this sweep guarantees them.
+ * (issue #117): mutually exclusive item groups, duplicate item names, boots
+ * uniqueness, mode availability, and the player's current inventory, in one
+ * first-entry-wins sweep. A schema enum cannot express any of these
+ * cross-item constraints, so the prompt carries the primary rules and this
+ * sweep guarantees them.
  *
  * Rules, in the order each entry is checked:
  *
@@ -287,14 +275,21 @@ type SlotSource = "path" | "inventory";
  *    wrong variant must not cause a false drop. Owned echoes are exempt
  *    (rule 2 keeps them before this check runs): what the player already
  *    holds is a fact of the game, not a recommendation.
- * 4. **One item per restriction group.** Groups occupied by owned items are
+ * 4. **At most one Boots item (#109).** Boots are NOT a wiki itemlimit
+ *    group, so this rule is tag-based: a name is a boots item when ANY
+ *    same-named catalog variant carries the "Boots" tag (the same
+ *    any-variant quantifier as rule 3). An owned Boots item occupies the
+ *    slot before the sweep (the shop refuses a second pair); within the
+ *    path, the first boots entry wins. Owned echoes are exempt via rule 2.
+ * 5. **One item per restriction group.** Groups occupied by owned items are
  *    seeded before the sweep (the shop blocks buying a sibling of an owned
  *    group member); within the path, build order is priority order, so the
  *    earlier of two colliding items keeps the slot.
  *
  * Entries and owned names the catalog cannot prove illegal are never
- * touched: unknown names carry no groups and no mode verdict, and an
- * unknown owned name only ever blocks an exact same-name re-buy.
+ * touched: unknown names carry no groups, no boots verdict, and no mode
+ * verdict, and an unknown owned name only ever blocks an exact same-name
+ * re-buy.
  */
 export function enforceBuildPathLegality(
   buildPath: readonly BuildPathItem[],
@@ -309,9 +304,11 @@ export function enforceBuildPathLegality(
   const groupsByName = new Map<string, Set<string>>();
   const itemByName = new Map<string, Item>();
   const modeLegalNames = new Set<string>();
+  const bootsNames = new Set<string>();
   for (const item of items.values()) {
     if (!itemByName.has(item.name)) itemByName.set(item.name, item);
     if (isBuildPathEligible(item, mode)) modeLegalNames.add(item.name);
+    if (item.tags.includes("Boots")) bootsNames.add(item.name);
     if (!item.mutexGroups || item.mutexGroups.length === 0) continue;
     const groups = groupsByName.get(item.name) ?? new Set<string>();
     for (const group of item.mutexGroups) groups.add(group);
@@ -320,6 +317,7 @@ export function enforceBuildPathLegality(
 
   const nameSlots = new Map<string, SlotSource>();
   const groupSlots = new Map<string, { name: string; source: SlotSource }>();
+  let bootsSlot: { name: string; source: SlotSource } | null = null;
 
   // Seed slots from the player's inventory. The owned display name (what the
   // playtest log should show, e.g. "Muramana") holds the group slots; both
@@ -332,6 +330,9 @@ export function enforceBuildPathLegality(
       base && base.name !== ownedName ? [ownedName, base.name] : [ownedName];
     for (const name of ownedNames) {
       if (!nameSlots.has(name)) nameSlots.set(name, "inventory");
+      if (bootsNames.has(name) && bootsSlot === null) {
+        bootsSlot = { name: ownedName, source: "inventory" };
+      }
       for (const group of groupsByName.get(name) ?? []) {
         if (!groupSlots.has(group)) {
           groupSlots.set(group, { name: ownedName, source: "inventory" });
@@ -370,6 +371,16 @@ export function enforceBuildPathLegality(
       continue;
     }
 
+    if (bootsNames.has(entry.name) && bootsSlot !== null) {
+      dropped.push({
+        kind: "boots-collision",
+        entry,
+        keptName: bootsSlot.name,
+        keptSource: bootsSlot.source,
+      });
+      continue;
+    }
+
     const groups = groupsByName.get(entry.name);
     let collision: Omit<MutexCollisionDrop, "kind" | "entry"> | null = null;
     for (const group of groups ?? []) {
@@ -385,6 +396,9 @@ export function enforceBuildPathLegality(
     }
 
     nameSlots.set(entry.name, "path");
+    if (bootsNames.has(entry.name) && bootsSlot === null) {
+      bootsSlot = { name: entry.name, source: "path" };
+    }
     for (const group of groups ?? []) {
       groupSlots.set(group, { name: entry.name, source: "path" });
     }
@@ -409,5 +423,9 @@ export function describeBuildPathDrop(drop: BuildPathDrop): string {
         : `${drop.entry.name} (group ${drop.group}, kept ${drop.keptName})`;
     case "mode-unavailable":
       return `${drop.entry.name} (not purchasable in ${drop.modeName})`;
+    case "boots-collision":
+      return drop.keptSource === "inventory"
+        ? `${drop.entry.name} (second boots, player owns ${drop.keptName})`
+        : `${drop.entry.name} (second boots, kept ${drop.keptName})`;
   }
 }

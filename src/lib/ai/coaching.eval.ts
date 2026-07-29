@@ -45,7 +45,7 @@ import {
 } from "./features/augment-fit";
 import {
   createGamePlanFeature,
-  findDuplicateBoots,
+  enforceBuildPathLegality,
   isUpdatePlanCommand,
   type GamePlanInput,
   type GamePlanResult,
@@ -107,6 +107,18 @@ interface EvalInput {
   expectedReferences?: string[];
   scorerHints?: ScorerHints;
   enemyChampions: string[];
+  /**
+   * The fixture's mode id, resolved to a `GameMode` via `MODE_MAP` at
+   * scoring time so the Item Legality gate judges the build path against
+   * the same mode the session was built for.
+   */
+  gameModeId: "aram-mayhem" | "aram" | "classic";
+  /**
+   * Items the player holds in the fixture (scorerContext.items), threaded
+   * so the Item Legality gate can seed the inventory-aware sweep exactly
+   * like production does.
+   */
+  ownedItemNames: string[];
   /**
    * Runs the production code path against the chosen model. Each candidate
    * model rebuilds a fresh session internally (the session is match-scoped,
@@ -322,20 +334,32 @@ const reasonBrevity = createScorer<EvalInput, EvalOutput>({
   },
 });
 
-// Gate scorer for the boots-uniqueness rule (#109). Schema enums can't
-// express "at most one Boots-tagged item," so this scorer is how we track
-// the violation rate across models and prompt revisions. Binary: 1 if the
-// build path has ≤1 boots, 0 if it has 2+. gameData is loaded at module
+// Gate scorer for build-path purchase legality (#117): duplicate names,
+// boots uniqueness (#109), mode availability, restriction (mutex) groups,
+// and the player's current inventory, judged by the same
+// enforceBuildPathLegality sweep production runs. Binary: 1 iff the sweep
+// drops nothing. Deliberately scores the RAW first-response output, NOT
+// the post-remediation pipeline output: this gate tracks the MODEL's
+// violation rate across models and prompt revisions, while production
+// (remediateGamePlan) guarantees legality regardless; running the
+// corrective retry inside evals would double per-case cost and mask the
+// signal this gate exists to measure. gameData is loaded at module
 // top-level below; the scorer closure reads it at scoring time.
-const bootsUniqueness = createScorer<EvalInput, EvalOutput>({
-  name: "Boots Uniqueness",
+const itemLegality = createScorer<EvalInput, EvalOutput>({
+  name: "Item Legality",
   description:
-    "Game-plan: build path contains at most one Boots-tagged item (#109)",
-  scorer: ({ output }) => {
+    "Game-plan: build path passes the #117 legality sweep (duplicate names, boots uniqueness, mode availability, restriction groups, owned items)",
+  scorer: ({ input, output }) => {
     if (output.buildPath.length === 0) return 1;
-    return findDuplicateBoots(output.buildPath, gameData.items).length === 0
-      ? 1
-      : 0;
+    const mode = MODE_MAP[input.gameModeId];
+    if (!mode) return 0;
+    const { dropped } = enforceBuildPathLegality(
+      output.buildPath,
+      gameData.items,
+      mode,
+      input.ownedItemNames
+    );
+    return dropped.length === 0 ? 1 : 0;
   },
 });
 
@@ -345,7 +369,7 @@ const GATE_SCORERS = [
   stateAwareness,
   goldAwareRecommendations,
   buildPathStructure,
-  bootsUniqueness,
+  itemLegality,
 ];
 const RANKING_SCORERS = [
   brevity,
@@ -660,6 +684,8 @@ function buildEvalInput(f: MultiTurnFixture): EvalInput {
     expectedReferences: f.expectedReferences,
     scorerHints: f.scorerHints,
     enemyChampions,
+    gameModeId: f.gameModeId,
+    ownedItemNames: f.scorerContext.items,
     runOnce,
   };
 }

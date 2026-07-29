@@ -17,8 +17,8 @@ export {
   describeBuildPathDrop,
   enforceBuildPathLegality,
   extractBuildPath,
-  findDuplicateBoots,
   isUpdatePlanCommand,
+  type BootsCollisionDrop,
   type BuildPathDrop,
   type BuildPathLegalityResult,
   type DuplicateNameDrop,
@@ -26,6 +26,12 @@ export {
   type GamePlanResult,
   type MutexCollisionDrop,
 } from "./features/game-plan";
+export {
+  buildCorrectiveMessage,
+  remediateGamePlan,
+  type RemediatedGamePlan,
+  type RemediateGamePlanOptions,
+} from "./features/game-plan/remediation";
 export {
   augmentFitFeature,
   type AugmentFitInput,

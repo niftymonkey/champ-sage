@@ -93,6 +93,16 @@ describe("coaching.eval.ts anti-drift guards", () => {
       });
     }
 
+    // #117 slice 5: the Item Legality gate scorer replaced Boots Uniqueness
+    // and must run the production sweep. findDuplicateBoots is deleted from
+    // the codebase (the sweep owns the boots rule now), so any reference
+    // here means a stale parallel implementation crept back in.
+    it("scores item legality via enforceBuildPathLegality, not findDuplicateBoots", () => {
+      expect(evalSource).toMatch(/"Item Legality"/);
+      expect(evalSource).toMatch(/\benforceBuildPathLegality\s*\(/);
+      expect(evalSource).not.toMatch(/\bfindDuplicateBoots\b/);
+    });
+
     // Call-shape guard: buildBaseContext must be called with the three
     // production inputs (mode, gameData, gameState). If the eval ever wraps
     // or narrows them, this regex fails. behavioral verification of

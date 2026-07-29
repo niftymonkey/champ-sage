@@ -7,12 +7,14 @@
  * `buildPath[].name` field so the LLM doesn't emit augment or set names
  * where item names are required (#109 prompt-level defense; Phase 4 adds
  * the structural enum fix). The boots-uniqueness rule also lives here
- * because schema enums can't express "at most one Boots-tagged value" —
- * it's enforced by prompt and double-checked post-hoc by findDuplicateBoots.
- * The mutex-group rule (#117 slice) follows the same pattern: the item
- * catalog's Purchase restrictions section names the colliding items, the
- * rule here forbids pairing them, and enforceBuildPathLegality guarantees it
- * post-hoc, along with the duplicate-name and owned-item rules below.
+ * because schema enums can't express "at most one Boots-tagged value";
+ * it's enforced by prompt and guaranteed post-hoc by the boots rule inside
+ * enforceBuildPathLegality (#117 slice 5; boots are tag-based, not a wiki
+ * itemlimit group). The mutex-group rule (#117 slice) follows the same
+ * pattern: the item catalog's Purchase restrictions section names the
+ * colliding items, the rule here forbids pairing them, and
+ * enforceBuildPathLegality guarantees it post-hoc, along with the
+ * duplicate-name and owned-item rules below.
  */
 export const GAME_PLAN_TASK_PROMPT = [
   "GAME PLAN BUILD PATH:",

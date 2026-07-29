@@ -16,13 +16,12 @@ import type { CoachingFeature } from "../lib/ai/feature";
 import {
   createGamePlanFeature,
   describeBuildPathDrop,
-  enforceBuildPathLegality,
   extractBuildPath,
-  findDuplicateBoots,
   isUpdatePlanCommand,
   type GamePlanInput,
   type GamePlanResult,
 } from "../lib/ai/features/game-plan";
+import { remediateGamePlan } from "../lib/ai/features/game-plan/remediation";
 import {
   augmentFitFeature,
   type AugmentFitResult,
@@ -512,10 +511,11 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
       proactiveLog.info("Game plan query");
 
-      const { value: response } = await sessionRef.current.ask(
-        gamePlanFeatureRef.current,
-        { snapshot }
-      );
+      const session = sessionRef.current;
+      const gamePlanFeature = gamePlanFeatureRef.current;
+      const { value: response } = await session.ask(gamePlanFeature, {
+        snapshot,
+      });
 
       const rawBuildPath = extractBuildPath(response);
 
@@ -529,53 +529,44 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         );
       }
 
-      // #109: the prompt forbids more than one Boots-tagged item, but the
-      // schema enum can't express uniqueness. Log when the LLM slips so
-      // regressions are visible in playtest logs.
-      const duplicateBoots = findDuplicateBoots(
-        rawBuildPath,
-        gameDataRef.current.items
-      );
-      if (duplicateBoots.length > 0) {
-        proactiveLog.warn(
-          `Game plan build path contains ${duplicateBoots.length} boots items: ${duplicateBoots
-            .map((b) => b.name)
-            .join(", ")}`
-        );
-      }
-
       // #117: the prompt forbids restriction-group pairs, duplicate names,
-      // and re-buying owned items; this deterministic sweep guarantees the
-      // surfaced plan is legal. First entry wins (build order is priority
-      // order); a shorter path with a logged warning beats an illegal 6-item
-      // path. Owned names come from the SAME snapshot that rendered the
-      // [Game State] Items line, so the prompt and the validator agree on
-      // what the player holds.
+      // second boots, mode-unavailable items, and re-buying owned items;
+      // remediateGamePlan sweeps deterministically and gives the model ONE
+      // corrective retry to reclaim dropped slots. The returned path is
+      // always the swept (legal) one: a shorter path with a logged warning
+      // beats an illegal 6-item path. Owned names come from the SAME
+      // snapshot that rendered the [Game State] Items line, so the prompt
+      // and the validator agree on what the player holds.
       const ownedItemNames = snapshot?.player.items.map((i) => i.name) ?? [];
-      const { buildPath, dropped } = enforceBuildPathLegality(
-        rawBuildPath,
-        gameDataRef.current.items,
-        gamePlanMode,
-        ownedItemNames
+      const { answer, buildPath, dropped, corrected } = await remediateGamePlan(
+        {
+          session,
+          feature: gamePlanFeature,
+          input: { snapshot },
+          response,
+          items: gameDataRef.current.items,
+          mode: gamePlanMode,
+          ownedItemNames,
+        }
       );
       if (dropped.length > 0) {
         proactiveLog.warn(
-          `Game plan legality remediation dropped: ${dropped
+          `Game plan legality (${corrected ? "corrective retry still illegal" : "corrective retry failed"}) dropped: ${dropped
             .map(describeBuildPathDrop)
             .join("; ")}`
         );
+      } else if (corrected) {
+        proactiveLog.info("Game plan corrected via retry; final path is legal");
       }
 
-      proactiveLog.info(
-        `Game plan response: ${response.answer.substring(0, 200)}...`
-      );
+      proactiveLog.info(`Game plan response: ${answer.substring(0, 200)}...`);
       proactiveLog.info(
         `Game plan build path: ${buildPath
           .map((i) => `${i.name} [${i.category}]`)
           .join(" → ")}`
       );
 
-      pushGamePlan(response.answer, buildPath, gameTime);
+      pushGamePlan(answer, buildPath, gameTime);
 
       // Relay to overlay. Overlay's CoachingResponse shape wants
       // recommendations + buildPath even when the feature doesn't use
@@ -584,7 +575,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       const rev = gamePlanRevRef.current;
       proactiveLog.info(`Sending game plan response to overlay (rev=${rev})`);
       window.electronAPI?.sendCoachingResponse({
-        answer: response.answer,
+        answer,
         recommendations: [],
         buildPath,
         source: "plan",

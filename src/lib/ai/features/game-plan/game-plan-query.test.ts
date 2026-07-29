@@ -4,7 +4,6 @@ import {
   describeBuildPathDrop,
   enforceBuildPathLegality,
   extractBuildPath,
-  findDuplicateBoots,
   isUpdatePlanCommand,
 } from "./index";
 import { GAME_PLAN_TASK_PROMPT } from "./prompt";
@@ -248,7 +247,7 @@ describe("GAME_PLAN_TASK_PROMPT", () => {
   it("forbids multiple Boots-tagged items in the build path", () => {
     // #109 AC: build path never contains two pairs of boots. The schema enum
     // can't express uniqueness, so the rule lives in the prompt and is
-    // double-checked post-hoc by findDuplicateBoots.
+    // enforced post-hoc by enforceBuildPathLegality's boots rule.
     expect(GAME_PLAN_TASK_PROMPT).toMatch(/\bboots\b/i);
     expect(GAME_PLAN_TASK_PROMPT).toMatch(/at most one/i);
   });
@@ -280,86 +279,6 @@ describe("GAME_PLAN_TASK_PROMPT", () => {
   });
 });
 
-describe("findDuplicateBoots", () => {
-  function makeItem(id: number, name: string, tags: string[]): Item {
-    return {
-      id,
-      name,
-      description: "",
-      plaintext: "",
-      gold: { base: 0, total: 0, sell: 0, purchasable: true },
-      tags,
-      stats: {},
-      image: `${id}.png`,
-      mode: "standard",
-      maps: [11, 12],
-    };
-  }
-
-  const items = new Map<number, Item>([
-    [1001, makeItem(1001, "Boots", ["Boots"])],
-    [3006, makeItem(3006, "Berserker's Greaves", ["Boots"])],
-    [3047, makeItem(3047, "Plated Steelcaps", ["Boots"])],
-    [6655, makeItem(6655, "Luden's Companion", ["SpellDamage"])],
-    [3157, makeItem(3157, "Zhonya's Hourglass", ["SpellDamage", "Armor"])],
-  ]);
-
-  function item(name: string): BuildPathItem {
-    return { name, category: "core", targetEnemy: null, reason: "" };
-  }
-
-  it("returns empty when the build path has no boots", () => {
-    const path = [item("Luden's Companion"), item("Zhonya's Hourglass")];
-    expect(findDuplicateBoots(path, items)).toEqual([]);
-  });
-
-  it("returns empty when the build path has exactly one boots item", () => {
-    const path = [item("Berserker's Greaves"), item("Luden's Companion")];
-    expect(findDuplicateBoots(path, items)).toEqual([]);
-  });
-
-  it("returns all boots items when the build path has two distinct pairs", () => {
-    const path = [
-      item("Luden's Companion"),
-      item("Berserker's Greaves"),
-      item("Plated Steelcaps"),
-      item("Zhonya's Hourglass"),
-    ];
-    const dupes = findDuplicateBoots(path, items);
-    expect(dupes.map((b) => b.name)).toEqual([
-      "Berserker's Greaves",
-      "Plated Steelcaps",
-    ]);
-  });
-
-  it("detects the exact playtest regression (Boots of Swiftness + Mercury's Treads)", () => {
-    const fullItems = new Map(items);
-    fullItems.set(3009, makeItem(3009, "Boots of Swiftness", ["Boots"]));
-    fullItems.set(3111, makeItem(3111, "Mercury's Treads", ["Boots"]));
-    const path = [
-      item("Liandry's Torment"),
-      item("Boots of Swiftness"),
-      item("Rylai's Crystal Scepter"),
-      item("Mercury's Treads"),
-      item("Force of Nature"),
-      item("Jak'Sho, The Protean"),
-    ];
-    const dupes = findDuplicateBoots(path, fullItems);
-    expect(dupes).toHaveLength(2);
-    expect(dupes.map((b) => b.name).sort()).toEqual([
-      "Boots of Swiftness",
-      "Mercury's Treads",
-    ]);
-  });
-
-  it("returns empty when an unknown item name appears in the build path", () => {
-    // Can't classify unknown names as boots; schema enum already rejects
-    // most leakage. Helper should not throw or false-positive.
-    const path = [item("Totally Made Up Item"), item("Luden's Companion")];
-    expect(findDuplicateBoots(path, items)).toEqual([]);
-  });
-});
-
 describe("enforceBuildPathLegality", () => {
   interface MakeItemOptions {
     mutexGroups?: string[];
@@ -367,6 +286,7 @@ describe("enforceBuildPathLegality", () => {
     specialRecipe?: number;
     mode?: ItemMode;
     maps?: number[];
+    tags?: string[];
   }
 
   function makeItem(
@@ -387,7 +307,7 @@ describe("enforceBuildPathLegality", () => {
           sell: 2100,
           purchasable: options.purchasable ?? true,
         },
-        tags: [],
+        tags: options.tags ?? [],
         stats: {},
         image: `${id}.png`,
         mode: options.mode ?? "standard",
@@ -787,6 +707,188 @@ describe("enforceBuildPathLegality", () => {
     });
   });
 
+  describe("boots uniqueness (#109 rule folded into the sweep)", () => {
+    // Boots-ness is tag-based (boots are NOT a wiki itemlimit group): a name
+    // is a boots item when ANY same-named catalog variant carries the
+    // "Boots" tag, the same any-variant quantifier as mode legality.
+    const bootsItems = new Map<number, Item>([
+      makeItem(3009, "Boots of Swiftness", { tags: ["Boots"] }),
+      makeItem(3111, "Mercury's Treads", { tags: ["Boots"] }),
+      makeItem(3006, "Berserker's Greaves", { tags: ["Boots"] }),
+      // Standard variant untagged, ARAM variant tagged: the any-variant
+      // quantifier must still classify the name as boots in Classic.
+      makeItem(3158, "Ionian Boots of Lucidity"),
+      makeItem(223158, "Ionian Boots of Lucidity", {
+        mode: "aram",
+        maps: [12],
+        tags: ["Boots"],
+      }),
+      makeItem(3031, "Infinity Edge"),
+      makeItem(6653, "Liandry's Torment"),
+      makeItem(3116, "Rylai's Crystal Scepter"),
+      makeItem(4401, "Force of Nature"),
+      makeItem(6665, "Jak'Sho, The Protean"),
+    ]);
+
+    it("keeps a path with exactly one boots item", () => {
+      const path = [
+        entry("Boots of Swiftness"),
+        entry("Infinity Edge"),
+        entry("Liandry's Torment"),
+      ];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic);
+
+      expect(result.buildPath).toEqual(path);
+      expect(result.dropped).toEqual([]);
+    });
+
+    it("drops the second boots item and keeps the first", () => {
+      const path = [
+        entry("Boots of Swiftness"),
+        entry("Infinity Edge"),
+        entry("Mercury's Treads", "defensive"),
+      ];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Boots of Swiftness",
+        "Infinity Edge",
+      ]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "boots-collision",
+          entry: entry("Mercury's Treads", "defensive"),
+          keptName: "Boots of Swiftness",
+          keptSource: "path",
+        },
+      ]);
+    });
+
+    it("remediates the exact playtest regression (Swiftness + Mercury's Treads)", () => {
+      const path = [
+        entry("Liandry's Torment"),
+        entry("Boots of Swiftness"),
+        entry("Rylai's Crystal Scepter"),
+        entry("Mercury's Treads"),
+        entry("Force of Nature"),
+        entry("Jak'Sho, The Protean"),
+      ];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Liandry's Torment",
+        "Boots of Swiftness",
+        "Rylai's Crystal Scepter",
+        "Force of Nature",
+        "Jak'Sho, The Protean",
+      ]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "boots-collision",
+          entry: entry("Mercury's Treads"),
+          keptName: "Boots of Swiftness",
+          keptSource: "path",
+        },
+      ]);
+    });
+
+    it("drops every later boots item when three are present", () => {
+      const path = [
+        entry("Boots of Swiftness"),
+        entry("Mercury's Treads"),
+        entry("Berserker's Greaves"),
+      ];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Boots of Swiftness",
+      ]);
+      expect(result.dropped.map((d) => d.kind)).toEqual([
+        "boots-collision",
+        "boots-collision",
+      ]);
+    });
+
+    it("drops a recommended boots item when the player already owns boots", () => {
+      const path = [entry("Berserker's Greaves"), entry("Infinity Edge")];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic, [
+        "Boots of Swiftness",
+      ]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual(["Infinity Edge"]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "boots-collision",
+          entry: entry("Berserker's Greaves"),
+          keptName: "Boots of Swiftness",
+          keptSource: "inventory",
+        },
+      ]);
+    });
+
+    it("keeps the owned boots' end-state echo and drops a second pair", () => {
+      const path = [
+        entry("Mercury's Treads"),
+        entry("Boots of Swiftness"),
+        entry("Infinity Edge"),
+      ];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic, [
+        "Mercury's Treads",
+      ]);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Mercury's Treads",
+        "Infinity Edge",
+      ]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "boots-collision",
+          entry: entry("Boots of Swiftness"),
+          keptName: "Mercury's Treads",
+          keptSource: "inventory",
+        },
+      ]);
+    });
+
+    it("ignores unknown names: the catalog cannot prove them boots", () => {
+      const path = [entry("Totally Made Up Item"), entry("Boots of Swiftness")];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic);
+
+      expect(result.buildPath).toEqual(path);
+      expect(result.dropped).toEqual([]);
+    });
+
+    it("classifies a name as boots when ANY same-named variant carries the tag", () => {
+      // The standard Ionian variant is untagged in this map; only the ARAM
+      // variant carries "Boots". The name must still occupy the boots slot.
+      const path = [
+        entry("Ionian Boots of Lucidity"),
+        entry("Mercury's Treads"),
+      ];
+
+      const result = enforceBuildPathLegality(path, bootsItems, classic);
+
+      expect(result.buildPath.map((e) => e.name)).toEqual([
+        "Ionian Boots of Lucidity",
+      ]);
+      expect(result.dropped).toEqual([
+        {
+          kind: "boots-collision",
+          entry: entry("Mercury's Treads"),
+          keptName: "Ionian Boots of Lucidity",
+          keptSource: "path",
+        },
+      ]);
+    });
+  });
+
   describe("mode availability", () => {
     // Cross-mode leaks (GAP B/D of #117): standard-ID-band items whose maps
     // record proves them Arena-only or Nexus-Blitz-only. The ineligible
@@ -953,5 +1055,27 @@ describe("describeBuildPathDrop", () => {
         modeName: "ARAM",
       })
     ).toBe("Perplexity (not purchasable in ARAM)");
+  });
+
+  it("describes a boots collision with an earlier path entry", () => {
+    expect(
+      describeBuildPathDrop({
+        kind: "boots-collision",
+        entry: entry("Mercury's Treads"),
+        keptName: "Boots of Swiftness",
+        keptSource: "path",
+      })
+    ).toBe("Mercury's Treads (second boots, kept Boots of Swiftness)");
+  });
+
+  it("describes a boots collision with an owned pair", () => {
+    expect(
+      describeBuildPathDrop({
+        kind: "boots-collision",
+        entry: entry("Berserker's Greaves"),
+        keptName: "Plated Steelcaps",
+        keptSource: "inventory",
+      })
+    ).toBe("Berserker's Greaves (second boots, player owns Plated Steelcaps)");
   });
 });
