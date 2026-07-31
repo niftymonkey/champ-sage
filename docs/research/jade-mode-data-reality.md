@@ -4,6 +4,22 @@ Investigated 2026-07-30 against live CommunityDragon (`latest`) and DDragon 16.1
 Every claim below is labelled **VERIFIED** (read directly out of a cited endpoint or
 file) or **INFERRED** (reasoned from verified facts).
 
+> **Provenance and staleness.** This is a point-in-time investigation report, kept as
+> the record of how the 16.15.1 conclusions were reached, not as living documentation.
+> Two things about it do not age well and should be read with that in mind:
+>
+> - **CommunityDragon `latest` is mutable.** Every CDragon URL here was read on
+>   2026-07-30 while `latest` pointed at patch 16.15.1. Re-reading the same URL on a
+>   later patch can return different bytes, so a **VERIFIED** label means verified
+>   then, against that patch, not verifiable forever. Pin `16.15.1` in place of
+>   `latest` to reproduce a specific check.
+> - **The application behavior described here is pre-fix.** Code observations were made
+>   against `d8b634bf52`, before the Jade variant filter landed. The `Jade_*` overwrite
+>   documented below was fixed in PR #148 (`55767c1c0b`), and `KIWI_JADE` now reaches
+>   the unsupported-mode banner rather than resolving to plain ARAM. Where this report
+>   and `docs/reference/technical-reference.md` disagree about current behavior, the
+>   technical reference wins.
+
 ## Verdict
 
 There are two distinct Jade products, and they do NOT share an entity namespace.
@@ -21,10 +37,11 @@ Rift shop but the champions are the modern champions with their modern abilities
 modern base stats. It is modern kits shopping in a 2013 store, with Mayhem-style
 augments layered on top.
 
-Practical consequence for us right now: our app resolved this game to plain ARAM.
-From the live log `/mnt/c/Users/markd/AppData/Roaming/champ-sage/logs/champ-sage-2026-07-30_032030.log:116`:
+Practical consequence at the time of writing: our app resolved this game to plain ARAM.
+From the live log `champ-sage-2026-07-30_032030.log:116` (app log directory, see
+`CONTRIBUTING.md`):
 
-```
+```text
 Game detected: KIWI_JADE (lcu: KIWI_JADE, map: 12) | mode: ARAM | players: 10 | augments in data: 506
 ```
 
@@ -132,6 +149,14 @@ not in the sixty-champion roster and have no shipped Jade variant in
 Ability text, ability scaling, passive data and base stats sourced from the wiki and
 from canonical DDragon remain CORRECT for `KIWI_JADE`. They would be wrong for Classic
 Rift (map 453), which we do not currently support at all.
+
+That statement is about the UPSTREAM data, not about what the app resolved at the time
+this was written. Those were two different things: the sources carry correct modern
+entities for `KIWI_JADE`, while our name-keyed champion map let `Jade_*` entries
+overwrite sixty canonical champions on the way in (documented in the trap list below).
+So "the data is correct for this mode" was true of the sources and false of what
+actually reached the prompt, until the loader stopped admitting the variants. PR #148
+(`55767c1c0b`) is that loader fix, and it is what makes this section true end to end.
 
 ---
 

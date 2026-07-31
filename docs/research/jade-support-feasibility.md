@@ -7,6 +7,23 @@ investigation) or INFERRED (reasoned from verified facts, not observed directly)
 Companion work: a parallel agent is determining which champion kit and which item pool each mode
 actually uses at runtime. This report treats that as a parameter and answers for both branches.
 
+> **Provenance and staleness.** Point-in-time report, kept as the record of how the 16.15.1
+> feasibility call was reached, not as living documentation.
+>
+> - **Code observations were made against `d8b634bf52`**, and file:line citations should be read
+>   against that revision. Some cite paths under `.claude/worktrees/...`, which was where the work
+>   happened; the same files live at the repo root.
+> - **The parameter this report defers on is now settled.** The companion report
+>   (`jade-mode-data-reality.md`) verified that `KIWI_JADE` runs modern champion kits in the legacy
+>   `77xxxx` shop, so read the slice plan below with that branch selected.
+> - **The runtime verdict has moved.** This report describes `KIWI_JADE` resolving to plain ARAM.
+>   PR #148 (`55767c1c0b`) changed that: the mode now reaches the unsupported-mode banner, and the
+>   `Jade_*` champion overwrite it depended on is fixed. Where this report and
+>   `docs/reference/technical-reference.md` disagree about current behavior, the technical
+>   reference wins.
+> - **CommunityDragon `latest` is mutable**, so live endpoint reads here reproduce only against
+>   patch 16.15.1; pin that version in the URL to re-run a check.
+
 ---
 
 ## Verdict and headline cost
@@ -132,7 +149,7 @@ This is the same class of unreliability already documented for ARAM in
 restrictive, here it is too permissive. The practical consequence is that the **id namespace is the
 only usable discriminator**, exactly as `classifyItemMode` already does for arena and aram. So:
 
-```
+```ts
 if (id >= 770000 && id < 780000) return "jade";
 ```
 
@@ -149,7 +166,7 @@ modern item** (VERIFIED by set intersection: Guardian Angel, Banshee's Veil, Wit
 Whisper, Infinity Edge, Trinity Force, Zhonya's Hourglass, and 40 more). The legacy versions are
 genuinely different:
 
-```
+```text
 3035  Last Whisper  1450g  20 AD, 18% armor pen
 773035 Last Whisper 2300g  40 AD, "Piercing Volley: ignore 35% of opponent's armor"
 ```
@@ -250,7 +267,7 @@ VERIFIED, live DDragon 16.15.1 `champion.json`:
 
 VERIFIED, live CommunityDragon queue metadata (`viableChampionRoster` per queue):
 
-```
+```text
 2450  ARAM: Mayhem Classic-ish   roster 60, keys [81, 27, 86]        <- canonical
 3280  ARAM: Mayhem Classic-ish   roster 60, keys [81, 27, 86]        <- canonical
 3260  Classic Rift (blind)       roster 60, keys [60081,60027,60086] <- Jade
