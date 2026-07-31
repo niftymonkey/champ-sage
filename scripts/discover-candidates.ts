@@ -110,10 +110,12 @@ if (benchmarkSource === "lmarena") {
         quality: evals.artificial_analysis_intelligence_index ?? 0,
         ifScore: evals.ifbench ?? undefined,
         gpqa: evals.gpqa ?? undefined,
+        // AA reports 0 for models it no longer speed-tests; 0 means "no
+        // data", not "slowest model", so coerce it to undefined.
         outputTokensPerSecond:
-          (m.median_output_tokens_per_second as number) ?? undefined,
+          (m.median_output_tokens_per_second as number) || undefined,
         timeToFirstToken:
-          (m.median_time_to_first_token_seconds as number) ?? undefined,
+          (m.median_time_to_first_token_seconds as number) || undefined,
       };
     });
   benchmarkLabel = `Artificial Analysis (${benchmarks.length} models)`;
