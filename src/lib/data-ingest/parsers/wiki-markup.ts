@@ -149,9 +149,9 @@ function resolveTemplate(
     case "pp": {
       const valueParam = parts[1] ?? "";
       if (valueParam.includes("=") && parts.length > 2) {
-        return parts[2] ?? "";
+        return stripGrowthSteps(parts[2] ?? "");
       }
-      return valueParam;
+      return stripGrowthSteps(valueParam);
     }
 
     // Formatted decimal: {{fd|number}}
@@ -275,6 +275,20 @@ function resolveTemplate(
       // No params — drop entirely
       return "";
   }
+}
+
+/**
+ * Drop the growth-step count a `{{pp}}` value may carry.
+ *
+ * The wiki writes a value that grows across a level range as "1.25 to 1.75 for
+ * 3", where the trailing count is how many steps it grows in, not part of the
+ * value. The template renders it as presentation; kept verbatim it lands in the
+ * middle of a sentence, and Braum's passive read "stun them for 1.25 to 1.75
+ * for 3 seconds". Only a trailing count is dropped, so an ordinary range or a
+ * value that merely ends in a number survives untouched.
+ */
+function stripGrowthSteps(value: string): string {
+  return value.replace(/\s+for\s+\d+(?:\.\d+)?\s*$/, "");
 }
 
 /**

@@ -15,6 +15,7 @@
     "check-buildpath-enum": "tsx scripts/check-buildpath-enum.ts",
     "check-game": "tsx scripts/check-game.ts",
     "dump-champion-prompt": "tsx scripts/dump-champion-prompt.ts",
+    "dump-wiki-innate": "tsx scripts/dump-wiki-innate.ts",
     "spike-ability-scaling": "tsx scripts/spike-ability-scaling.ts",
     "measure-cache": "tsx scripts/measure-cache.ts",
     "convert-fixtures": "tsx scripts/convert-fixtures-multiturn.ts",

@@ -50,6 +50,26 @@ describe("stripWikiMarkup", () => {
     );
   });
 
+  it("drops the growth-step count from a {{pp}} value", () => {
+    // Braum's Concussive Blows writes the stun duration as
+    // "1.25 to 1.75 for 3": the trailing count is how many steps the value
+    // grows in, not part of the value. Kept verbatim it produced
+    // "stun them for 1.25 to 1.75 for 3 seconds" in the rendered passive.
+    expect(
+      stripWikiMarkup(
+        "stun them for {{pp|changedisplay=true|1.25 to 1.75 for 3|1 to 13|type=his level|label1=level}} seconds"
+      )
+    ).toBe("stun them for 1.25 to 1.75 seconds");
+  });
+
+  it("drops the growth-step count without a leading named param", () => {
+    expect(stripWikiMarkup("{{pp|20 to 40 for 5|1 to 11}}")).toBe("20 to 40");
+  });
+
+  it("keeps a {{pp}} value that merely ends in a number", () => {
+    expect(stripWikiMarkup("{{pp|1.25 to 1.75}}")).toBe("1.25 to 1.75");
+  });
+
   it("strips [[link]] wiki links, keeping display text", () => {
     expect(stripWikiMarkup("[[Attack damage|AD]]")).toBe("AD");
   });
