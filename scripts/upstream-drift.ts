@@ -49,6 +49,26 @@ export interface DriftFinding {
 }
 
 /**
+ * Read the `--version` pin out of a command line.
+ *
+ * Lives in this module rather than next to `main` so it can be tested without
+ * the audit's network reads. Throws rather than returning undefined on a
+ * malformed flag: silently auditing the latest patch when the caller asked for
+ * a specific one produces a clean report about the wrong data, which is the
+ * failure mode this whole script exists to prevent.
+ */
+export function parsePinnedVersion(argv: string[]): string | undefined {
+  const flag = argv.indexOf("--version");
+  if (flag === -1) return undefined;
+
+  const version = argv[flag + 1];
+  if (!version || version.startsWith("--")) {
+    throw new Error("--version requires a Data Dragon version, e.g. 16.14.1.");
+  }
+  return version;
+}
+
+/**
  * Diff an observed upstream shape against the committed baseline.
  *
  * Counts are compared exactly rather than with a tolerance. A tolerance would
@@ -115,6 +135,17 @@ export function compareUpstreamShape(
     findings.push({
       kind: "count",
       detail: `champion.json entries ${baseline.championEntries} -> ${observed.championEntries}.`,
+    });
+  }
+
+  // Checked separately from the entry count because a variant can REPLACE a
+  // canonical champion instead of joining the roster: entries hold steady, the
+  // prefix is already known, and the only thing that moves is the count of
+  // champions ingest will actually keep.
+  if (baseline.canonicalChampions !== observed.canonicalChampions) {
+    findings.push({
+      kind: "count",
+      detail: `canonical champions ${baseline.canonicalChampions} -> ${observed.canonicalChampions}.`,
     });
   }
 

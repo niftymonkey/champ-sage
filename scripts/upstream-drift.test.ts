@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   compareUpstreamShape,
+  parsePinnedVersion,
   summarizeChampions,
   summarizeItems,
   type UpstreamShape,
@@ -122,6 +123,29 @@ describe("compareUpstreamShape", () => {
     expect(findings[0].detail).toContain("30");
   });
 
+  // The subtlest form of the 16.15.1 incident: a variant does not have to be
+  // ADDED to do damage, it only has to replace a canonical champion. Total
+  // entries hold steady, the prefix is already known and therefore silent, and
+  // the roster the app actually keeps shrinks with nothing to show for it.
+  it("flags a canonical roster that shrank behind a steady entry count", () => {
+    const findings = compareUpstreamShape(
+      baselineShape({ variantPrefixes: ["Jade"] }),
+      baselineShape({ variantPrefixes: ["Jade"], canonicalChampions: 172 })
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].kind).toBe("count");
+    expect(findings[0].detail).toContain("172");
+  });
+
+  it("flags a canonical roster that grew", () => {
+    const findings = compareUpstreamShape(
+      baselineShape(),
+      baselineShape({ championEntries: 174, canonicalChampions: 174 })
+    );
+    expect(findings.map((f) => f.kind)).toEqual(["count", "count"]);
+    expect(findings.some((f) => f.detail.includes("canonical"))).toBe(true);
+  });
+
   it("reports every independent change rather than stopping at the first", () => {
     const findings = compareUpstreamShape(
       baselineShape(),
@@ -136,6 +160,32 @@ describe("compareUpstreamShape", () => {
       "count",
       "map-id",
     ]);
+  });
+});
+
+describe("parsePinnedVersion", () => {
+  it("returns undefined when no pin is requested", () => {
+    expect(parsePinnedVersion(["node", "audit-upstream-drift.ts"])).toBe(
+      undefined
+    );
+  });
+
+  it("reads the version that follows the flag", () => {
+    expect(parsePinnedVersion(["--version", "16.14.1"])).toBe("16.14.1");
+  });
+
+  // Auditing the latest patch while the caller believes they pinned an old one
+  // produces a confident report about the wrong data. Fail instead.
+  it("rejects a trailing --version with no value", () => {
+    expect(() => parsePinnedVersion(["--update", "--version"])).toThrow(
+      /--version/
+    );
+  });
+
+  it("rejects a --version followed by another flag", () => {
+    expect(() => parsePinnedVersion(["--version", "--update"])).toThrow(
+      /--version/
+    );
   });
 });
 

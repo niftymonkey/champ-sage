@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   compareUpstreamShape,
+  parsePinnedVersion,
   summarizeChampions,
   summarizeItems,
   type UpstreamShape,
@@ -84,14 +85,9 @@ function byId(entries: { id: number; name: string }[]): Record<string, string> {
   return out;
 }
 
-function pinnedVersion(argv: string[]): string | undefined {
-  const flag = argv.indexOf("--version");
-  return flag === -1 ? undefined : argv[flag + 1];
-}
-
 async function main(): Promise<void> {
   const update = process.argv.includes("--update");
-  const observed = await observeUpstreamShape(pinnedVersion(process.argv));
+  const observed = await observeUpstreamShape(parsePinnedVersion(process.argv));
 
   if (update) {
     writeFileSync(BASELINE_PATH, `${JSON.stringify(observed, null, 2)}\n`);
