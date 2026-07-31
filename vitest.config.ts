@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { defineConfig } from "vitest/config";
+import { defineConfig, configDefaults } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
@@ -8,6 +8,12 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // Side worktrees live at `.claude/worktrees/<name>`, inside the repo, and
+    // each holds a full checkout. Without this, a run from the main checkout
+    // collects every worktree's tests too (386 files instead of 127) and fails
+    // them against this checkout's config, which also takes the pre-commit
+    // hook down with it.
+    exclude: [...configDefaults.exclude, "**/.claude/**"],
   },
   resolve: {
     // Test + eval (vitest, evalite) run in Node. electron-log/renderer's IPC

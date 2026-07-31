@@ -54,3 +54,12 @@ CONTINUE.md
 
 # ow-package-guard run log (persisted per-launch for after-the-fact diagnosis)
 .ow-guard.log
+
+# Agent working directory. Holds side worktrees (`.claude/worktrees/<name>`),
+# each a full checkout with its own node_modules, so this is hundreds of
+# megabytes of things git already tracks elsewhere.
+.claude/
+
+# Generated codebase wiki. Regenerable from the source it describes, and it
+# goes stale the moment the code moves.
+wiki/
