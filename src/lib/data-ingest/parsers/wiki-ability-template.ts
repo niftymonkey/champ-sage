@@ -65,7 +65,7 @@ export function parseAbilityTemplate(
   const stats: AbilityScalingStat[] = [];
   const quarantined: QuarantinedStat[] = [];
 
-  for (const leveling of collectLevelingParams(params)) {
+  for (const leveling of collectNumberedParams(params, "leveling")) {
     const tables = extractStatTables(leveling);
     if (tables.length === 0) {
       quarantined.push({ label: "", reason: { kind: "malformed-leveling" } });
@@ -84,6 +84,117 @@ export function parseAbilityTemplate(
   };
 }
 
+export interface ParsedInnateTemplate {
+  /** Champion name as the wiki page declares it, or null when absent. */
+  champion: string | null;
+  /** "I" when the page declares the innate skill slot, null otherwise. */
+  slot: "I" | null;
+  /** Plain-text rendering of the description params, or null when the page has none or the rendering cannot be trusted. */
+  description: string | null;
+  /**
+   * Why a rendering was discarded, or null when it succeeded or the page
+   * simply had no description. Feeds the audit's teach-the-renderer-next
+   * breakdown exactly like quarantined spell stats do.
+   */
+  quarantine: QuarantineReason | null;
+}
+
+/**
+ * Parse a League Wiki `Template:Data <Champion>/I` innate page.
+ *
+ * Innates scale with champion level rather than ability rank, so these pages
+ * carry no `leveling` params: their numbers live inside the `description`
+ * params as `{{pplevel}}` templates or plain prose. The description params are
+ * therefore rendered to plain text instead of going through the rank-based
+ * stat parser, under the same quarantine-on-doubt rule: anything the renderer
+ * would have to guess at discards the whole rendering, and the caller keeps
+ * the DDragon passive text.
+ */
+export function parseInnateTemplate(rawWikitext: string): ParsedInnateTemplate {
+  const wikitext = stripWikitextComments(rawWikitext);
+  const variables = extractPageVariables(wikitext);
+  const params = extractNamedParams(wikitext);
+  const rendered = renderInnateDescription(
+    collectNumberedParams(params, "description"),
+    variables
+  );
+
+  return {
+    champion: params.get("champion")?.trim() || null,
+    slot: params.get("skill")?.trim().toUpperCase() === "I" ? "I" : null,
+    ...rendered,
+  };
+}
+
+/**
+ * Render an innate page's description params as one plain-text paragraph, or
+ * null when nothing trustworthy remains. Parser functions are refused up front
+ * because stripWikiMarkup deletes them silently, which would drop exactly the
+ * numbers the innate exists to supply; unknown templates are refused for the
+ * same reason lenient stripping is refused on stats: plausible-but-wrong text
+ * in a coaching prompt is worse than the DDragon fallback.
+ */
+type InnateRender = Pick<ParsedInnateTemplate, "description" | "quarantine">;
+
+/**
+ * Staged like resolvePart, and for the same reasons: variables first
+ * (arithmetic depends on their values), then arithmetic, then the check for
+ * leftover parser functions (which stripWikiMarkup would delete silently,
+ * dropping exactly the numbers the innate exists to supply), then prose
+ * stripping under unknown-template watch.
+ */
+function renderInnateDescription(
+  descriptions: string[],
+  variables: Map<string, string>
+): InnateRender {
+  if (descriptions.length === 0) return { description: null, quarantine: null };
+
+  const rendered: string[] = [];
+  for (const raw of descriptions) {
+    const substituted = substituteVariables(raw, variables);
+    if (!substituted.ok) {
+      return { description: null, quarantine: substituted.reason };
+    }
+
+    const evaluated = resolveArithmetic(substituted.text);
+    if (!evaluated.ok) {
+      return { description: null, quarantine: evaluated.reason };
+    }
+
+    const parserFunction = /\{\{(#\w+)/.exec(evaluated.text);
+    if (parserFunction) {
+      return {
+        description: null,
+        quarantine: { kind: "unknown-template", template: parserFunction[1] },
+      };
+    }
+
+    const unknown: string[] = [];
+    const text = stripWikiMarkup(evaluated.text, {
+      onUnknownTemplate: (name) => unknown.push(name),
+    });
+    if (unknown.length > 0) {
+      return {
+        description: null,
+        quarantine: { kind: "unknown-template", template: unknown[0] },
+      };
+    }
+    rendered.push(text);
+  }
+
+  const joined = rendered.join(" ").replace(/\s+/g, " ").trim();
+  if (joined === "") return { description: null, quarantine: null };
+
+  // Surviving quote runs or brackets mean the page used markup the renderer
+  // did not fully resolve (an unclosed bold marker, a malformed template);
+  // mangled prose in a coaching prompt is worse than the DDragon fallback.
+  if (/''|[{}[\]]/.test(joined)) {
+    return { description: null, quarantine: { kind: "residual-markup" } };
+  }
+
+  return { description: joined, quarantine: null };
+}
+
 /**
  * Remove `<!-- ... -->` comments, including unterminated ones. An unclosed
  * comment blanks the rest of the page rather than being ignored, matching how
@@ -100,15 +211,20 @@ function parseSlot(raw: string | undefined): SpellSlot | null {
 }
 
 /**
- * Collect `leveling`, `leveling2`, `leveling3`... in the page's own numeric
- * order. Sorted numerically rather than lexically so `leveling10` follows
- * `leveling2`, and so stats read in the same order the ability describes them.
+ * Collect a numbered param family (`leveling`, `leveling2`, `leveling3`... or
+ * `description`, `description2`...) in the page's own numeric order. Sorted
+ * numerically rather than lexically so `leveling10` follows `leveling2`, and
+ * so values read in the same order the ability describes them.
  */
-function collectLevelingParams(params: Map<string, string>): string[] {
+function collectNumberedParams(
+  params: Map<string, string>,
+  base: string
+): string[] {
+  const pattern = new RegExp(`^${base}(\\d*)$`);
   const numbered: Array<{ order: number; value: string }> = [];
 
   for (const [name, value] of params) {
-    const match = /^leveling(\d*)$/.exec(name);
+    const match = pattern.exec(name);
     if (!match || !value.trim()) continue;
     numbered.push({ order: match[1] === "" ? 1 : Number(match[1]), value });
   }

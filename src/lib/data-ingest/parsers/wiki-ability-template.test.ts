@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { parseAbilityTemplate } from "./wiki-ability-template";
+import {
+  parseAbilityTemplate,
+  parseInnateTemplate,
+} from "./wiki-ability-template";
 
 /**
  * Build a Data template page. Mirrors the real wiki shape: a template
@@ -464,5 +467,124 @@ describe("parseAbilityTemplate", () => {
       expect(result.quarantined).toHaveLength(1);
       expect(result.quarantined[0].reason.kind).toBe("residual-markup");
     });
+  });
+});
+
+describe("parseInnateTemplate", () => {
+  it("reads the declared champion and innate slot", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Morgana
+|skill        = I
+|description  = '''Innate:''' {{as|Morgana}} heals.`)
+    );
+    expect(result.champion).toBe("Morgana");
+    expect(result.slot).toBe("I");
+  });
+
+  it("returns a null slot for a page that is not an innate", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Ahri
+|skill        = Q
+|description  = an ability`)
+    );
+    expect(result.slot).toBeNull();
+  });
+
+  it("renders the description params to plain text", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Morgana
+|skill        = I
+|description  = '''Innate:''' {{as|Morgana}} heals herself for {{as|18%}} of the [[post-mitigation]] damage dealt by her abilities.`)
+    );
+    expect(result.description).toBe(
+      "Innate: Morgana heals herself for 18% of the post-mitigation damage dealt by her abilities."
+    );
+  });
+
+  it("renders pplevel level-scaled numbers with their level marker", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Braum
+|skill        = I
+|description  = Deals {{pplevel|26 to 196|type=his level}} bonus magic damage.`)
+    );
+    expect(result.description).toBe(
+      "Deals 26 to 196 (based on level) bonus magic damage."
+    );
+  });
+
+  it("joins numbered description params in page order", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Braum
+|skill        = I
+|description  = First part.
+|description2 = Second part.`)
+    );
+    expect(result.description).toBe("First part. Second part.");
+  });
+
+  it("returns a null description when an unknown template appears anywhere, naming it", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Yasuo
+|skill        = I
+|description  = Gains {{ccd|Yasuo|crit_base}} critical damage.`)
+    );
+    expect(result.description).toBeNull();
+    expect(result.quarantine).toEqual({
+      kind: "unknown-template",
+      template: "ccd",
+    });
+  });
+
+  it("resolves page variables inside descriptions, as spell stats do", () => {
+    const result = parseInnateTemplate(
+      page(
+        `|champion     = Aatrox
+|skill        = I
+|description  = Heals for {{#var:heal_percent}}% of the damage dealt.`,
+        "{{#vardefine:heal_percent|18}}\n"
+      )
+    );
+    expect(result.description).toBe("Heals for 18% of the damage dealt.");
+  });
+
+  it("evaluates arithmetic parser functions inside descriptions", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Garen
+|skill        = I
+|description  = Deals {{#expr:10*4}} bonus damage.`)
+    );
+    expect(result.description).toBe("Deals 40 bonus damage.");
+  });
+
+  it("quarantines a description referencing an undefined variable", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Fiddlesticks
+|skill        = I
+|description  = Fears for {{#var:fear_duration}} seconds.`)
+    );
+    expect(result.description).toBeNull();
+    expect(result.quarantine).toEqual({
+      kind: "unresolved-variable",
+      variable: "fear_duration",
+    });
+  });
+
+  it("returns a null description when the page carries none, which is absence rather than quarantine", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Morgana
+|skill        = I`)
+    );
+    expect(result.description).toBeNull();
+    expect(result.quarantine).toBeNull();
+  });
+
+  it("returns a null description when markup survives rendering", () => {
+    const result = parseInnateTemplate(
+      page(`|champion     = Braum
+|skill        = I
+|description  = '''Braum's basic attacks stack.`)
+    );
+    expect(result.description).toBeNull();
+    expect(result.quarantine).toEqual({ kind: "residual-markup" });
   });
 });

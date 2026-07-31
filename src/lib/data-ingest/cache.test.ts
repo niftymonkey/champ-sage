@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { mapToObject, objectToMap } from "./cache";
+import { mapToObject, objectToMap, writeCache } from "./cache";
+
+describe("cache version", () => {
+  it("writes under the v12 prefix (passives now carry wiki innate text)", async () => {
+    // The bump is the only thing that evicts a payload holding DDragon's
+    // numberless passive prose, since nothing about the payload's shape says
+    // which source filled it. Landing on a key someone already holds would
+    // serve that stale text for a whole patch, so the number is asserted here
+    // rather than left to review.
+    localStorage.clear();
+    await writeCache("version-probe", { ok: true });
+    expect(localStorage.getItem("champ-sage:v12:version-probe")).toBe(
+      JSON.stringify({ ok: true })
+    );
+  });
+});
 
 describe("mapToObject", () => {
   it("converts a string-keyed Map to a plain object", () => {

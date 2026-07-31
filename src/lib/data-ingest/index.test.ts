@@ -963,4 +963,26 @@ describe("mergeAbilityScaling", () => {
 
     expect(mergeAbilityScaling(champions, scaling)).toBe(0);
   });
+
+  it("replaces the DDragon passive with the wiki innate and keeps it when no innate came back", () => {
+    const champions = new Map([
+      ...makeChampionWithAbilities("ahri", "Ahri"),
+      ...makeChampionWithAbilities("zed", "Zed"),
+    ]);
+    const scaling = new Map<string, ChampionAbilityScaling>([
+      ["ahri", { slots: {}, innate: "Ahri heals for 18% of ability damage." }],
+      ["zed", { slots: { Q: [{ label: "Damage", value: "10 to 20" }] } }],
+    ]);
+
+    const merged = mergeAbilityScaling(champions, scaling);
+
+    expect(champions.get("ahri")!.abilities!.passive.description).toBe(
+      "Ahri heals for 18% of ability damage."
+    );
+    expect(champions.get("zed")!.abilities!.passive.description).toBe(
+      "passive text"
+    );
+    // The innate is prose on the passive, not a scaled spell: only Zed's Q counts.
+    expect(merged).toBe(1);
+  });
 });

@@ -1,7 +1,7 @@
 # Ability Scaling Context for Augment and Item Reasoning
 
 **Date:** 2026-07-18
-**Status:** Approved design, not yet implemented
+**Status:** Implemented 2026-07-18. During implementation the innate renderer additionally learned the icon-template family (sti/stil/ci/cci/cis/ais/ccs/rutngt/times/bug), variable substitution, and arithmetic evaluation, lifting innate coverage from 45/173 to 155/173; see `docs/reference/technical-reference.md` for the details.
 **Motivation:** Live-game observation that augment fit grades run low: augments the player knows benefit the champion get rated "weak" or "situational". Suspected cause is missing champion information (passive effects, damage scaling) rather than model capability. No single confirmed misgrade exists; this design fills the identified information gaps and makes the model's use of scaling auditable, while deliberately leaving the fit-tier calibration untouched so any improvement is attributable to information.
 
 ## What the model sees today

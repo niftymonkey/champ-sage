@@ -1,6 +1,7 @@
 import type { AbilityScalingStat } from "../types";
 import {
   parseAbilityTemplate,
+  parseInnateTemplate,
   type QuarantineReason,
   type SpellSlot,
 } from "../parsers/wiki-ability-template";
@@ -20,7 +21,28 @@ const TITLES_PER_REQUEST = 50;
 const USER_AGENT =
   "champ-sage/1.0 (https://github.com/niftymonkey/champ-sage) ability-scaling-ingest";
 
+/**
+ * How long a single wiki request may run before it is abandoned.
+ *
+ * Batches run one after another, so a community wiki that accepts the
+ * connection and then stalls would hold the whole ingest open for as long as
+ * the socket stays alive. Timing out converts that hang into the rejection the
+ * caller already degrades on (warn, and ship the session without scaling).
+ * Generous relative to a healthy response (well under a second) because slow is
+ * still useful here and a false abort costs the roster its scaling.
+ */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 const SPELL_SLOTS: readonly SpellSlot[] = ["Q", "W", "E", "R"];
+
+/**
+ * The innate (passive) page slot. Requested alongside the spell slots but
+ * parsed as prose rather than rank-based stats, because innate pages scale
+ * with champion level and carry no `leveling` params.
+ */
+const INNATE_SLOT = "I";
+
+type RequestedSlot = SpellSlot | typeof INNATE_SLOT;
 
 /** Keep a couple of offenders per reason: enough to debug, not a wall of text. */
 const MAX_EXAMPLES_PER_REASON = 3;
@@ -28,6 +50,12 @@ const MAX_EXAMPLES_PER_REASON = 3;
 export interface ChampionAbilityScaling {
   /** Clean scaling per spell slot. A slot is absent when nothing survived. */
   slots: Partial<Record<SpellSlot, AbilityScalingStat[]>>;
+  /**
+   * Plain-text innate (passive) description rendered from the wiki `/I` page.
+   * Absent when the page is missing or its rendering could not be trusted, in
+   * which case the DDragon passive text stays in place.
+   */
+  innate?: string;
 }
 
 export interface ScalingDiagnostics {
@@ -39,6 +67,11 @@ export interface ScalingDiagnostics {
   quarantineReasons: Map<string, number>;
   /** Up to a few example offenders per reason, for the audit report. */
   quarantineExamples: Map<string, string[]>;
+}
+
+export interface WikiAbilityScalingOptions {
+  /** Per-request timeout. Defaults to `REQUEST_TIMEOUT_MS`. */
+  timeoutMs?: number;
 }
 
 export interface WikiAbilityScalingResult {
@@ -86,28 +119,42 @@ interface WikiPage {
  * is the only source that has them. Ability pages live at
  * `Template:Data <Champion>/<Slot>`, where the slot form is a redirect to the
  * ability's real name ("Data Ahri/Q" to "Data Ahri/Orb of Deception"), so
- * `redirects=1` is load-bearing rather than a convenience.
+ * `redirects=1` is load-bearing rather than a convenience. The innate page
+ * (`/I`) rides along in the same batches and supplies the passive's prose
+ * description, replacing DDragon's numberless flavor text.
  *
  * Titles are batched to the API's 50-title cap and fetched sequentially: this
- * runs at ingest for the full roster (~14 requests), and a burst of parallel
+ * runs at ingest for the full roster (~18 requests), and a burst of parallel
  * requests to a community wiki is not worth the couple of seconds it saves.
  */
 export async function fetchChampionAbilityScaling(
-  championNames: string[]
+  championNames: string[],
+  options: WikiAbilityScalingOptions = {}
 ): Promise<WikiAbilityScalingResult> {
+  const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
   const titleToChampion = new Map<
     string,
-    { champion: string; slot: SpellSlot }
+    { champion: string; slot: RequestedSlot }
   >();
   for (const champion of championNames) {
+    titleToChampion.set(abilityTitle(champion, INNATE_SLOT), {
+      champion,
+      slot: INNATE_SLOT,
+    });
     for (const slot of SPELL_SLOTS) {
       titleToChampion.set(abilityTitle(champion, slot), { champion, slot });
     }
   }
 
+  // Diagnostics count spell abilities only: the innate has no stat parse to
+  // measure, and folding it in would skew the coverage denominator.
+  const spellTitlesRequested = [...titleToChampion.values()].filter(
+    (requested) => requested.slot !== INNATE_SLOT
+  ).length;
+
   const byChampion = new Map<string, ChampionAbilityScaling>();
   const diagnostics: ScalingDiagnostics = {
-    abilitiesRequested: titleToChampion.size,
+    abilitiesRequested: spellTitlesRequested,
     abilitiesWithScaling: 0,
     statsAccepted: 0,
     statsQuarantined: 0,
@@ -116,7 +163,7 @@ export async function fetchChampionAbilityScaling(
   };
 
   for (const batch of chunk([...titleToChampion.keys()], TITLES_PER_REQUEST)) {
-    const body = await fetchBatch(batch);
+    const body = await fetchBatch(batch, timeoutMs);
     const resolve = buildTitleResolver(body);
 
     for (const page of body.query?.pages ?? []) {
@@ -128,6 +175,37 @@ export async function fetchChampionAbilityScaling(
         ? titleToChampion.get(requestedTitle)
         : undefined;
       if (!requested) continue;
+
+      if (requested.slot === INNATE_SLOT) {
+        // Innate pages carry the same identity risks as spell pages (the /I
+        // form is a redirect too), so champion and slot are verified the same
+        // way. A null description means the page was untrustworthy or empty;
+        // either way the DDragon passive text stays in place.
+        const innate = parseInnateTemplate(content);
+        if (
+          innate.slot !== INNATE_SLOT ||
+          !championMatches(requested.champion, innate.champion)
+        ) {
+          continue;
+        }
+        if (innate.description === null) {
+          // Reason histogram only: statsQuarantined stays a spell-stat count.
+          if (innate.quarantine) {
+            recordQuarantine(
+              diagnostics,
+              requested,
+              "innate",
+              innate.quarantine
+            );
+          }
+          continue;
+        }
+        const key = requested.champion.toLowerCase();
+        const entry = byChampion.get(key) ?? { slots: {} };
+        entry.innate = innate.description;
+        byChampion.set(key, entry);
+        continue;
+      }
 
       const parsed = parseAbilityTemplate(content);
 
@@ -164,7 +242,7 @@ export async function fetchChampionAbilityScaling(
   return { byChampion, diagnostics };
 }
 
-function abilityTitle(champion: string, slot: SpellSlot): string {
+function abilityTitle(champion: string, slot: RequestedSlot): string {
   return `Template:Data ${champion}/${slot}`;
 }
 
@@ -199,7 +277,10 @@ function championMatches(requested: string, declared: string | null): boolean {
   return accepted.has(normalizedDeclared);
 }
 
-async function fetchBatch(titles: string[]): Promise<WikiQueryResponse> {
+async function fetchBatch(
+  titles: string[],
+  timeoutMs: number
+): Promise<WikiQueryResponse> {
   const params = new URLSearchParams({
     action: "query",
     titles: titles.join("|"),
@@ -213,6 +294,7 @@ async function fetchBatch(titles: string[]): Promise<WikiQueryResponse> {
 
   const res = await fetch(`${WIKI_API}?${params}`, {
     headers: { "User-Agent": USER_AGENT },
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch champion ability scaling: ${res.status}`);
@@ -250,7 +332,7 @@ function buildTitleResolver(
 
 function recordQuarantine(
   diagnostics: ScalingDiagnostics,
-  requested: { champion: string; slot: SpellSlot },
+  requested: { champion: string; slot: RequestedSlot },
   label: string,
   reason: QuarantineReason
 ): void {

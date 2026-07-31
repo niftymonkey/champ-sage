@@ -16,11 +16,16 @@ interface PageSpec {
   champion: string;
   slot: string;
   leveling?: string;
+  description?: string;
 }
 
 function makePage(spec: PageSpec) {
   const leveling =
     spec.leveling === undefined ? "" : `\n|leveling     = ${spec.leveling}`;
+  const description =
+    spec.description === undefined
+      ? ""
+      : `\n|description  = ${spec.description}`;
   return {
     pageid: 1,
     title: spec.title,
@@ -30,7 +35,7 @@ function makePage(spec: PageSpec) {
           main: {
             content: `{{{{{1<noinclude>|Ability data</noinclude>}}}|An Ability|{{{2|}}}
 |champion     = ${spec.champion}
-|skill        = ${spec.slot}${leveling}
+|skill        = ${spec.slot}${description}${leveling}
 |targeting    = Unit`,
           },
         },
@@ -82,12 +87,13 @@ describe("fetchChampionAbilityScaling", () => {
     ]);
   });
 
-  it("requests every spell slot for each champion", async () => {
+  it("requests the innate page and every spell slot for each champion", async () => {
     respondWith([]);
     await fetchChampionAbilityScaling(["Ahri"]);
 
     const titles = new URL(requestedUrls()[0]).searchParams.get("titles");
     expect(titles?.split("|")).toEqual([
+      "Template:Data Ahri/I",
       "Template:Data Ahri/Q",
       "Template:Data Ahri/W",
       "Template:Data Ahri/E",
@@ -110,7 +116,7 @@ describe("fetchChampionAbilityScaling", () => {
   });
 
   it("batches titles so no request exceeds the 50-title API cap", async () => {
-    // 13 champions * 4 slots = 52 titles, which must split across two requests.
+    // 13 champions * 5 titles (innate + 4 spells) = 65, splitting across two.
     const champions = Array.from({ length: 13 }, (_, i) => `Champ${i}`);
     respondWith([]);
     respondWith([]);
@@ -146,6 +152,85 @@ describe("fetchChampionAbilityScaling", () => {
     expect(result.byChampion.get("nasus")?.slots.Q).toEqual([
       { label: "Bonus Physical Damage", value: "40 to 120" },
     ]);
+  });
+
+  it("stores a cleanly rendered innate and omits one that cannot be trusted", async () => {
+    respondWith(
+      [
+        {
+          title: "Template:Data Morgana/Soul Siphon",
+          champion: "Morgana",
+          slot: "I",
+          description:
+            "'''Innate:''' {{as|Morgana}} heals herself for {{as|18%}} of the damage dealt by her abilities.",
+        },
+        {
+          title: "Template:Data Yasuo/Way of the Wanderer",
+          champion: "Yasuo",
+          slot: "I",
+          description: "Gains {{ccd|Yasuo|crit_base}} critical strike damage.",
+        },
+        {
+          title: "Template:Data Yasuo/Q",
+          champion: "Yasuo",
+          slot: "Q",
+          leveling: "{{st|Physical Damage|{{ap|20 to 120}}}}",
+        },
+      ],
+      [
+        {
+          from: "Template:Data Morgana/I",
+          to: "Template:Data Morgana/Soul Siphon",
+        },
+        {
+          from: "Template:Data Yasuo/I",
+          to: "Template:Data Yasuo/Way of the Wanderer",
+        },
+      ]
+    );
+
+    const result = await fetchChampionAbilityScaling(["Morgana", "Yasuo"]);
+
+    expect(result.byChampion.get("morgana")?.innate).toBe(
+      "Innate: Morgana heals herself for 18% of the damage dealt by her abilities."
+    );
+    expect(result.byChampion.get("morgana")?.slots).toEqual({});
+    expect(result.byChampion.get("yasuo")?.innate).toBeUndefined();
+    expect(result.byChampion.get("yasuo")?.slots.Q).toHaveLength(1);
+  });
+
+  it("rejects an innate redirect that lands on another champion's page", async () => {
+    respondWith(
+      [
+        {
+          title: "Template:Data Zed/Contempt for the Weak",
+          champion: "Zed",
+          slot: "I",
+          description: "Zed's passive text.",
+        },
+        {
+          title: "Template:Data Morgana/Soul Siphon",
+          champion: "Morgana",
+          slot: "I",
+          description: "Morgana heals.",
+        },
+      ],
+      [
+        {
+          from: "Template:Data Ahri/I",
+          to: "Template:Data Zed/Contempt for the Weak",
+        },
+        {
+          from: "Template:Data Morgana/I",
+          to: "Template:Data Morgana/Soul Siphon",
+        },
+      ]
+    );
+
+    const result = await fetchChampionAbilityScaling(["Ahri", "Morgana"]);
+
+    expect(result.byChampion.get("morgana")?.innate).toBe("Morgana heals.");
+    expect(result.byChampion.has("ahri")).toBe(false);
   });
 
   it("omits a champion whose abilities all lack scaling", async () => {
@@ -200,6 +285,36 @@ describe("fetchChampionAbilityScaling", () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 503 });
 
     await expect(fetchChampionAbilityScaling(["Ahri"])).rejects.toThrow("503");
+  });
+
+  it("carries an abort signal on every wiki request", async () => {
+    respondWith([]);
+
+    await fetchChampionAbilityScaling(["Ahri"]);
+
+    const init = mockFetch.mock.calls[0][1];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.signal.aborted).toBe(false);
+  });
+
+  it("abandons a request that outlives the timeout", async () => {
+    // A community wiki that accepts the connection and then stalls would
+    // otherwise hold ingest open for as long as the socket stays alive, since
+    // batches run one after another. Timing out drops into the same degrade
+    // path as any other fetch rejection: warn, and ship the session without
+    // ability scaling.
+    mockFetch.mockImplementationOnce(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener("abort", () =>
+            reject(init.signal.reason)
+          );
+        })
+    );
+
+    await expect(
+      fetchChampionAbilityScaling(["Ahri"], { timeoutMs: 5 })
+    ).rejects.toThrow(/abort|timeout/i);
   });
 
   it("ignores a page whose declared slot contradicts the requested one", async () => {
