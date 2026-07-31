@@ -3,7 +3,7 @@ import { createModeRegistry } from "./registry";
 import { aramMayhemMode } from "./aram-mayhem";
 import { aramMode } from "./aram";
 import { classicMode } from "./classic";
-import { detectMode } from "./detect";
+import { detectMode, describeModeDetection } from "./detect";
 import type { ModeRegistry } from "./types";
 
 function buildRegistry(): ModeRegistry {
@@ -82,5 +82,70 @@ describe("detectMode", () => {
     expect(
       detectMode(registry, "PRACTICETOOL", "PRACTICETOOL", 999)
     ).toBeNull();
+  });
+
+  // Patch 16.15.1 added "ARAM: Mayhem Classic-ish" (queues 2450/3280), which
+  // reports gameMode KIWI_JADE and is played on map 12 with the legacy 77xxxx
+  // item shop and the legacy Jade ability kits. The map fallback exists only
+  // to disambiguate Practice Tool, but it applied to every unmatched mode
+  // string, so KIWI_JADE silently resolved to plain ARAM and the player got a
+  // full game of confident advice about items that were not in their shop.
+  it("does not use the mapNumber fallback for an unrecognized queued mode", () => {
+    expect(detectMode(registry, "KIWI_JADE", "KIWI_JADE", 12)).toBeNull();
+  });
+});
+
+describe("describeModeDetection", () => {
+  let registry: ModeRegistry;
+
+  beforeEach(() => {
+    registry = buildRegistry();
+  });
+
+  it("reports no unrecognized mode when detection succeeds", () => {
+    const detection = describeModeDetection(registry, "KIWI", "KIWI", 12);
+    expect(detection.mode?.id).toBe("aram-mayhem");
+    expect(detection.unrecognizedGameMode).toBeNull();
+  });
+
+  it("names the unrecognized mode string when nothing matches", () => {
+    const detection = describeModeDetection(
+      registry,
+      "KIWI_JADE",
+      "KIWI_JADE",
+      12
+    );
+    expect(detection.mode).toBeNull();
+    expect(detection.unrecognizedGameMode).toBe("KIWI_JADE");
+  });
+
+  it("falls through to the LCU string when the live value is PRACTICETOOL", () => {
+    const detection = describeModeDetection(
+      registry,
+      "PRACTICETOOL",
+      "KIWI_JADE",
+      12
+    );
+    expect(detection.unrecognizedGameMode).toBe("KIWI_JADE");
+  });
+
+  it("treats a bare Practice Tool session as recognized-but-unmapped, not drift", () => {
+    // PRACTICETOOL with no usable map is an ordinary "we cannot tell which
+    // board" case, not an upstream change. Reporting it as drift would train
+    // the reader to ignore the signal.
+    const detection = describeModeDetection(
+      registry,
+      "PRACTICETOOL",
+      "PRACTICETOOL",
+      0
+    );
+    expect(detection.mode).toBeNull();
+    expect(detection.unrecognizedGameMode).toBeNull();
+  });
+
+  it("reports nothing while the mode string is still empty", () => {
+    const detection = describeModeDetection(registry, "", "", 0);
+    expect(detection.mode).toBeNull();
+    expect(detection.unrecognizedGameMode).toBeNull();
   });
 });

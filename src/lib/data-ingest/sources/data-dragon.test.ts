@@ -108,6 +108,80 @@ describe("fetchChampions", () => {
     expect(champions.has("aurelion sol")).toBe(true);
     expect(champions.get("aurelion sol")!.id).toBe("AurelionSol");
   });
+
+  describe("mode variant entries (patch 16.15.1 Jade roster)", () => {
+    function championEntry(id: string, key: string, name: string) {
+      return {
+        id,
+        key,
+        name,
+        title: `the ${name}`,
+        tags: ["Marksman"],
+        partype: "Mana",
+        stats: {
+          hp: id.includes("_") ? 474 : 610,
+          hpperlevel: 79,
+          mp: 280,
+          mpperlevel: 35,
+          movespeed: 325,
+          armor: 26,
+          armorperlevel: 4.6,
+          spellblock: 30,
+          spellblockperlevel: 1.3,
+          attackrange: 600,
+          hpregen: 3.5,
+          hpregenperlevel: 0.55,
+          mpregen: 7,
+          mpregenperlevel: 0.65,
+          attackdamage: 59,
+          attackdamageperlevel: 0,
+          attackspeed: 0.658,
+          attackspeedperlevel: 3,
+        },
+        image: { full: `${id}.png` },
+      };
+    }
+
+    // DDragon 16.15.1 ships a "Jade_" entry per Classic Rift champion whose
+    // `name` is byte-identical to the canonical champion. Keying the map by
+    // name let the variant, which sorts later in the payload, overwrite its
+    // canonical twin: `champions.get("ashe")` came back carrying key 60022,
+    // id "Jade_Ashe", legacy base stats, and (via the id-keyed ability merge)
+    // the legacy 2013 ability kit, in every game mode.
+    it("keeps the canonical champion when a variant shares its name", async () => {
+      mockFetch.mockResolvedValue(
+        jsonResponse({
+          data: {
+            Ashe: championEntry("Ashe", "22", "Ashe"),
+            Jade_Ashe: championEntry("Jade_Ashe", "60022", "Ashe"),
+          },
+        })
+      );
+
+      const champions = await fetchChampions("15.6.1");
+      const ashe = champions.get("ashe");
+      expect(ashe).toBeDefined();
+      expect(ashe!.id).toBe("Ashe");
+      expect(ashe!.key).toBe(22);
+      expect(ashe!.stats.hp).toBe(610);
+    });
+
+    it("excludes variant entries from the champion map", async () => {
+      mockFetch.mockResolvedValue(
+        jsonResponse({
+          data: {
+            Ashe: championEntry("Ashe", "22", "Ashe"),
+            Jade_Ashe: championEntry("Jade_Ashe", "60022", "Ashe"),
+            Jade_Ryze: championEntry("Jade_Ryze", "60013", "Ryze"),
+          },
+        })
+      );
+
+      const champions = await fetchChampions("15.6.1");
+      expect(champions.size).toBe(1);
+      expect([...champions.values()].map((c) => c.id)).toEqual(["Ashe"]);
+    });
+  });
 });
 
 describe("fetchItems", () => {

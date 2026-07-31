@@ -22,6 +22,25 @@ export async function fetchLatestVersion(): Promise<string> {
   return versions[0];
 }
 
+/**
+ * Whether a DDragon champion id names a mode-specific variant rather than the
+ * canonical champion.
+ *
+ * Patch 16.15.1 introduced the Classic Rift ("Jade") roster: sixty entries with
+ * ids like `Jade_Ashe`, keys at `60000 + canonicalKey`, legacy base stats, and
+ * legacy ability kits, but a `name` byte-identical to the canonical champion.
+ * Riot has never used `_` in a canonical champion id (`MonkeyKing`, `Nunu`,
+ * `AurelionSol` are all bare CamelCase), so the separator is the discriminator.
+ *
+ * Variants are excluded rather than merged: the rest of the pipeline assumes
+ * one champion per name, and serving a Classic Rift game correctly needs more
+ * than a name key (its own item shop and ability kits). Until that mode is
+ * supported, the only correct answer for these entries is to leave them out.
+ */
+function isVariantChampionId(id: string): boolean {
+  return id.includes("_");
+}
+
 export async function fetchChampions(
   version: string
 ): Promise<Map<string, Champion>> {
@@ -32,8 +51,20 @@ export async function fetchChampions(
   const json = await res.json();
   const champions = new Map<string, Champion>();
 
+  let skippedVariants = 0;
+  const collisions: string[] = [];
+
   for (const [, raw] of Object.entries<RawChampion>(json.data)) {
-    champions.set(raw.name.toLowerCase(), {
+    if (isVariantChampionId(raw.id)) {
+      skippedVariants++;
+      continue;
+    }
+
+    const key = raw.name.toLowerCase();
+    const existing = champions.get(key);
+    if (existing) collisions.push(`${existing.id}/${raw.id}`);
+
+    champions.set(key, {
       id: raw.id,
       key: Number(raw.key),
       name: raw.name,
@@ -43,6 +74,24 @@ export async function fetchChampions(
       stats: raw.stats,
       image: `${BASE_URL}/cdn/${version}/img/champion/${raw.image.full}`,
     });
+  }
+
+  if (skippedVariants > 0) {
+    log.info(
+      `Skipped ${skippedVariants} mode-variant champion entries (e.g. Jade_*); ${champions.size} canonical champions kept.`
+    );
+  }
+
+  // A surviving collision means Riot started shipping duplicate-named entries
+  // under a scheme `isVariantChampionId` does not recognize. Silence here is
+  // what let the Jade roster overwrite sixty canonical champions unnoticed for
+  // a full patch: the map still had exactly 173 entries, so every count-based
+  // check passed while the contents were wrong.
+  if (collisions.length > 0) {
+    log.warn(
+      `Champion name collisions after variant filtering (${collisions.length}): ${collisions.join(", ")}. ` +
+        `An unrecognized variant scheme is overwriting canonical champions.`
+    );
   }
 
   return champions;
