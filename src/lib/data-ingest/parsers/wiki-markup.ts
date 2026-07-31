@@ -224,7 +224,14 @@ function resolveTemplate(
         .slice(1)
         .find((part) => !part.includes("="))
         ?.trim();
-      if (!value) return "";
+      // No positional means there is no number to render. Returning empty
+      // silently would delete a figure from the middle of a passive while the
+      // page still counted as a clean render, so report it and let the caller
+      // quarantine back to DDragon text.
+      if (!value) {
+        options.onUnknownTemplate?.(templateName);
+        return "";
+      }
       const percent = parts.some((part) => /^key\s*=\s*%$/.test(part.trim()))
         ? "%"
         : "";

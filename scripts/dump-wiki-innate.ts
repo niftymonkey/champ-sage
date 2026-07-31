@@ -45,11 +45,32 @@ async function fetchInnateWikitext(champion: string): Promise<string | null> {
   return body.query?.pages?.[0]?.revisions?.[0]?.slots?.main?.content ?? null;
 }
 
-/** The description params are the only ones the innate renderer reads. */
-function descriptionLines(wikitext: string): string[] {
-  return wikitext
-    .split("\n")
-    .filter((line) => /^\|\s*description\d*\s*=/.test(line));
+/**
+ * The description params are the only ones the innate renderer reads.
+ *
+ * A param's value runs until the next line that opens one, so a multi-line
+ * description has to be collected as a block. Printing only the declaration
+ * line would hide exactly the continuation text a rendering bug tends to hide
+ * in, which would defeat the purpose of this script.
+ */
+function descriptionBlocks(wikitext: string): string[] {
+  const blocks: string[] = [];
+  let current: string[] | null = null;
+
+  for (const line of wikitext.split("\n")) {
+    if (/^\|\s*description\d*\s*=/.test(line)) {
+      if (current) blocks.push(current.join("\n"));
+      current = [line];
+    } else if (current && !/^\s*\|/.test(line)) {
+      current.push(line);
+    } else if (current) {
+      blocks.push(current.join("\n"));
+      current = null;
+    }
+  }
+  if (current) blocks.push(current.join("\n"));
+
+  return blocks;
 }
 
 const champions = process.argv.slice(2);
@@ -67,7 +88,7 @@ for (const champion of champions) {
   }
 
   console.log("\n--- raw description params ---");
-  for (const line of descriptionLines(wikitext)) console.log(line);
+  for (const block of descriptionBlocks(wikitext)) console.log(block);
 
   const parsed = parseInnateTemplate(wikitext);
   console.log("\n--- rendered ---");

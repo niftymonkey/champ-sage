@@ -368,6 +368,23 @@ describe("stripWikiMarkup", () => {
       expect(seen).toEqual(["mysterytemplate"]);
     });
 
+    it("reports a pplevel that carries no value to render", () => {
+      // A pplevel with only named params has no number in it, and returning
+      // empty silently would delete a damage or duration figure from the middle
+      // of a passive while every coverage metric still counted the page as a
+      // clean render. Reporting it quarantines the passive back to DDragon text
+      // instead, which is the same bargain the parser makes everywhere else.
+      const seen: string[] = [];
+      const rendered = stripWikiMarkup(
+        "deals {{pplevel|type=his level}} damage",
+        {
+          onUnknownTemplate: (name) => seen.push(name),
+        }
+      );
+      expect(seen).toEqual(["pplevel"]);
+      expect(rendered).toBe("deals damage");
+    });
+
     it("stays silent for recognized templates", () => {
       const seen: string[] = [];
       stripWikiMarkup("{{as|100% bonus AD}} and {{ap|35 to 135}}", {
