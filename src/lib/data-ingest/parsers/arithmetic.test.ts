@@ -74,17 +74,27 @@ describe("evaluateExpression", () => {
     // The wiki is user-editable third-party content parsed at ingest, so a
     // pathological expression must fail like any other bad input rather than
     // exhaust the stack and take the whole parse down with it.
-    it("returns null for pathologically nested parentheses", () => {
-      const expression = "(".repeat(50_000) + "5" + ")".repeat(50_000);
+    //
+    // Every input here stays under the 512-character length bound, so the depth
+    // guard is the only thing that can reject them. Inputs long enough to trip
+    // the length bound first belong in the "expression size bound" suite: they
+    // pass whether or not the parser bounds its recursion at all.
+    it("returns null for parentheses nested past the depth bound", () => {
+      const expression = "(".repeat(40) + "5" + ")".repeat(40);
+      expect(expression.length).toBeLessThan(512);
       expect(evaluateExpression(expression)).toBeNull();
     });
 
-    it("returns null for a pathological run of unary minus", () => {
-      expect(evaluateExpression("-".repeat(50_000) + "5")).toBeNull();
+    it("returns null for a run of unary minus past the depth bound", () => {
+      const expression = "-".repeat(40) + "5";
+      expect(expression.length).toBeLessThan(512);
+      expect(evaluateExpression(expression)).toBeNull();
     });
 
-    it("returns null for pathologically unbalanced open parentheses", () => {
-      expect(evaluateExpression("(".repeat(50_000) + "5")).toBeNull();
+    it("returns null for unbalanced open parentheses past the depth bound", () => {
+      const expression = "(".repeat(40) + "5";
+      expect(expression.length).toBeLessThan(512);
+      expect(evaluateExpression(expression)).toBeNull();
     });
 
     it("still evaluates the deepest nesting real wiki data contains", () => {
@@ -94,6 +104,17 @@ describe("evaluateExpression", () => {
 
     it("still evaluates nesting well beyond real data but within the bound", () => {
       expect(evaluateExpression("((((((((((5))))))))))")).toBe(5);
+    });
+
+    it("brackets the cutoff between accepted and rejected nesting", () => {
+      // Both inputs are far shorter than the length bound, so the only thing
+      // that can tell them apart is the depth bound. Rejecting the deeper one
+      // while accepting the shallower one is what proves the guard is live.
+      const withinBound = "(".repeat(31) + "5" + ")".repeat(31);
+      const pastBound = "(".repeat(40) + "5" + ")".repeat(40);
+
+      expect(evaluateExpression(withinBound)).toBe(5);
+      expect(evaluateExpression(pastBound)).toBeNull();
     });
 
     it("still evaluates a short run of unary minus", () => {

@@ -39,8 +39,15 @@ async function main() {
     `  Abilities with scaling:  ${diagnostics.abilitiesWithScaling} ` +
       `(${percent(diagnostics.abilitiesWithScaling, diagnostics.abilitiesRequested)})`
   );
+  // Coverage means spell scaling: an entry carrying only an innate must not
+  // count, or innate-only champions would vanish from the gap reports below.
+  const hasSpellScaling = (name: string) => {
+    const entry = byChampion.get(name.toLowerCase());
+    return entry !== undefined && Object.keys(entry.slots).length > 0;
+  };
+
   console.log(
-    `  Champions covered:       ${byChampion.size} / ${names.length}`
+    `  Champions covered:       ${names.filter(hasSpellScaling).length} / ${names.length}`
   );
 
   const totalStats = diagnostics.statsAccepted + diagnostics.statsQuarantined;
@@ -66,7 +73,7 @@ async function main() {
     }
   }
 
-  const uncovered = names.filter((n) => !byChampion.has(n.toLowerCase()));
+  const uncovered = names.filter((n) => !hasSpellScaling(n));
   console.log(
     `\n=== Champions with no scaling at all (${uncovered.length}) ===`
   );
@@ -80,7 +87,26 @@ async function main() {
     console.log(`  ${slot}: ${missing.length} / ${names.length} missing`);
   }
 
+  const withInnate = names.filter(
+    (n) => byChampion.get(n.toLowerCase())?.innate !== undefined
+  );
+  const withoutInnate = names.filter(
+    (n) => byChampion.get(n.toLowerCase())?.innate === undefined
+  );
+  console.log(
+    `\n=== Innate descriptions (${withInnate.length} / ${names.length} rendered) ===`
+  );
+  console.log(
+    withoutInnate.length === 0
+      ? "  Full coverage."
+      : `  Falling back to DDragon text: ${withoutInnate.join(", ")}`
+  );
+
   console.log("\n=== Sample renderings ===");
+  for (const name of ["Morgana", "Braum"]) {
+    const innate = byChampion.get(name.toLowerCase())?.innate;
+    console.log(`  ${name} innate: ${innate ?? "(fallback)"}`);
+  }
   for (const name of ["Ahri", "Nasus", "Yasuo", "Aatrox"]) {
     const entry = byChampion.get(name.toLowerCase());
     if (!entry) {

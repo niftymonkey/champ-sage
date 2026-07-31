@@ -36,6 +36,7 @@ export interface StripWikiMarkupOptions {
  * - {{ft|simple|detailed}} → simple (footnote, keeps first param)
  * - {{st|L1|v1|L2|v2}} → "L1: v1, L2: v2" (stat table)
  * - {{tt|display|hover}} → display (tooltip)
+ * - {{pplevel|value|opts}} → "value (based on level)" (level-scaled number)
  * - {{other|...|display}} → display (last param fallback, reported via
  *   StripWikiMarkupOptions.onUnknownTemplate)
  * - [[Page|display]] → display
@@ -94,11 +95,13 @@ export function stripWikiMarkup(
   // Strip [[Page]] → Page
   result = result.replace(/\[\[([^\]]*)\]\]/g, "$1");
 
-  // Strip bold '''text''' → text
-  result = result.replace(/'''([^']*?)'''/g, "$1");
+  // Strip bold '''text''' → text. Content is matched lazily up to the nearest
+  // closing marker rather than excluding quotes, because bolded possessives
+  // ('''Braum's''') legitimately carry apostrophes inside.
+  result = result.replace(/'''([\s\S]*?)'''/g, "$1");
 
   // Strip italic ''text'' → italic
-  result = result.replace(/''([^']*?)''/g, "$1");
+  result = result.replace(/''([\s\S]*?)''/g, "$1");
 
   // Strip bare pipe annotations from Lua data: "25%|heal" → "25% heal"
   result = result.replace(/\|/g, " ");
@@ -199,13 +202,69 @@ function resolveTemplate(
     case "ap":
       return parts[1] ?? "";
 
-    // Footnotes: {{ft|simple version|detailed version}} → simple version
+    // Footnotes: {{ft|simple version|detailed version}} → simple version.
+    // Space-padded because the wiki writes it attached to adjacent words
+    // (the real template supplies its own spacing); the final whitespace
+    // collapse absorbs any doubles this creates.
     case "ft":
-      return parts[1] ?? "";
+      return parts[1] ? ` ${parts[1]} ` : "";
 
     // Recurring: {{recurring|number}} → number (used inside fd)
     case "recurring":
       return parts[1] ?? "";
+
+    // Level-scaled values on innate pages: {{pplevel|26 to 196|type=his level}}
+    // keeps the first positional value verbatim (arithmetic expressions
+    // included, since this renderer has no evaluator and the unevaluated form
+    // is still unambiguous) and marks it as level-based. Named params are
+    // presentation hints and are dropped, except key=% which declares the
+    // value's unit and must survive.
+    case "pplevel": {
+      const value = parts
+        .slice(1)
+        .find((part) => !part.includes("="))
+        ?.trim();
+      if (!value) return "";
+      const percent = parts.some((part) => /^key\s*=\s*%$/.test(part.trim()))
+        ? "%"
+        : "";
+      return `${value}${percent} (based on level)`;
+    }
+
+    // Stat icons: {{sti|{{as|health}}}} or {{sti|armor|display}}, and the
+    // champion-icon variants {{ci|Champion}} / {{ci|Champion|display}} /
+    // {{cci|icon|category|display}}. The last param is the display text;
+    // earlier params are icon or link keys.
+    case "sti":
+    case "stil":
+    case "ci":
+    case "cci":
+      return parts.length > 1 ? parts[parts.length - 1] : "";
+
+    // Possessive champion icon: {{cis|Mega Gnar}} → "Mega Gnar's"
+    case "cis":
+      return parts.length > 1 ? `${parts[parts.length - 1]}'s` : "";
+
+    // Possessive ability icon: {{ais|Despair|Amumu}} → "Despair's"
+    // (mirrors {{ai}}, which keeps the ability name in parts[1])
+    case "ais":
+      return parts[1] ? `${parts[1]}'s` : "";
+
+    // Crit-colored span: {{ccs|display|damage type}} → display
+    case "ccs":
+      return parts[1] ?? "";
+
+    // Rounded up to the nearest game tick: {{rutngt|0.01}} → 0.01
+    case "rutngt":
+      return parts[1] ?? "";
+
+    // Multiplication sign, written bare: 2{{times}} → 2×
+    case "times":
+      return "×";
+
+    // Editorial bug annotations carry no gameplay text
+    case "bug":
+      return "";
 
     default:
       options.onUnknownTemplate?.(templateName);

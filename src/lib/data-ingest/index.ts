@@ -93,6 +93,13 @@ export function mergeAbilityScaling(
     const resolved = scaling.get(key);
     if (!resolved || !champion.abilities) continue;
 
+    // A trusted wiki innate replaces DDragon's numberless passive flavor text.
+    // It is prose on the passive, not a scaled spell, so it stays out of the
+    // merged count that feeds the scaling-coverage report.
+    if (resolved.innate) {
+      champion.abilities.passive.description = resolved.innate;
+    }
+
     champion.abilities.spells.forEach((spell, index) => {
       const stats = resolved.slots[slots[index]];
       if (!stats || stats.length === 0) return;

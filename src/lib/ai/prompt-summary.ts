@@ -13,8 +13,12 @@
 export interface BaseContextSummary {
   /** Whether the "### Abilities" section rendered at all. */
   hasAbilities: boolean;
-  /** Count of "(+ ... )" scaling-ratio fragments (e.g. "(+ 50% AP)"). */
-  scalingRatios: number;
+  /**
+   * Count of "(+ ... )" ratio tokens rendered in the prompt (e.g. "(+ 50% AP)").
+   * A verification count scanned from the text, NOT the scaling data itself:
+   * the model sees the full per-ability scaling values, this only tallies them.
+   */
+  scalingRatioTokens: number;
   /** Count of tier-2 "Other available items" reference lines. */
   catalogItems: number;
   /** Compact one-line rendering for the log. */
@@ -28,14 +32,14 @@ export function summarizeBaseContext(text: string): BaseContextSummary {
   // Flat scaling ("Bonus Health: 300 to 600") has no ratio and is not counted,
   // so this is a lower bound: a great regression tell (0 means scaling broke),
   // not a total.
-  const scalingRatios = (text.match(/\(\+ /g) ?? []).length;
+  const scalingRatioTokens = (text.match(/\(\+ /g) ?? []).length;
 
   // Tier-2 reference items are the only lines rendered as "- Name ...". Tier-1
   // items use "**Name**" and ability lines use "Q - Name:", so neither is
   // caught by an anchored "- " match.
   const catalogItems = (text.match(/^- /gm) ?? []).length;
 
-  const line = `abilities=${hasAbilities ? "yes" : "no"} scalingRatios=${scalingRatios} catalogItems=${catalogItems}`;
+  const line = `abilities=${hasAbilities ? "yes" : "no"} scalingRatioTokens=${scalingRatioTokens} catalogItems=${catalogItems}`;
 
-  return { hasAbilities, scalingRatios, catalogItems, line };
+  return { hasAbilities, scalingRatioTokens, catalogItems, line };
 }

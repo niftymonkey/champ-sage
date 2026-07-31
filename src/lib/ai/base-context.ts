@@ -9,6 +9,7 @@ import type { GameState } from "../game-state/types";
 import { formatModifier } from "../format";
 import { GAME_MODE_MAYHEM, GAME_MODE_ARAM } from "../mode/types";
 import { buildItemCatalogSections } from "./item-catalog";
+import { deriveScalingProfile } from "./scaling-profile";
 
 export interface BaseContextInputs {
   readonly mode: GameMode;
@@ -206,6 +207,11 @@ function formatAbilitiesForPrompt(
       `${slot} - ${spell.name}: ${spell.description}${formatSpellNumbers(spell)}`
     );
   });
+
+  // Closes the block so it reads as the takeaway of the detail above it.
+  const profile = deriveScalingProfile(abilities.spells);
+  if (profile) parts.push(profile);
+
   return parts.join("\n");
 }
 

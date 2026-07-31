@@ -268,6 +268,41 @@ describe("buildBaseContext", () => {
     );
   });
 
+  it("appends the scaling profile as the last line of the Abilities block", () => {
+    const context = buildBaseContext({
+      mode: createStubMode(),
+      gameData: createStubGameData(),
+      gameState: createGameState(),
+    });
+
+    const lines = context.split("\n");
+    const spellLine = lines.findIndex((line) =>
+      line.startsWith("Q - Orb of Deception")
+    );
+    expect(spellLine).toBeGreaterThan(-1);
+    expect(lines[spellLine + 1]).toBe(
+      "Scaling profile: AP - Q up to 100%. No AD ratios."
+    );
+  });
+
+  it("omits the scaling profile when the wiki supplied no ratios", () => {
+    const withScaling = buildBaseContext({
+      mode: createStubMode(),
+      gameData: createStubGameData(),
+      gameState: createGameState(),
+    });
+    expect(withScaling).toContain("Scaling profile:");
+
+    const gameData = createStubGameData();
+    delete gameData.champions.get("ahri")!.abilities!.spells[0].scaling;
+    const context = buildBaseContext({
+      mode: createStubMode(),
+      gameData,
+      gameState: createGameState(),
+    });
+    expect(context).not.toContain("Scaling profile:");
+  });
+
   it("omits scaling for a spell the wiki could not supply it for", () => {
     const gameData = createStubGameData();
     delete gameData.champions.get("ahri")!.abilities!.spells[0].scaling;

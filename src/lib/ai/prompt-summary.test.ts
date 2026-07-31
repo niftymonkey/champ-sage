@@ -38,7 +38,9 @@ describe("summarizeBaseContext", () => {
 
   it("counts scaling-ratio markers so a scaling regression shows as zero", () => {
     // Two "(+ ... AP)" ratios above. A drop to 0 is the regression signal.
-    expect(summarizeBaseContext(REAL_SHAPED_CONTEXT).scalingRatios).toBe(2);
+    expect(summarizeBaseContext(REAL_SHAPED_CONTEXT).scalingRatioTokens).toBe(
+      2
+    );
   });
 
   it("counts the tier-2 reference item lines", () => {
@@ -50,13 +52,13 @@ describe("summarizeBaseContext", () => {
   it("reports absence rather than throwing on a champion-less context", () => {
     const summary = summarizeBaseContext("GAME MODE: ARAM\n\n## Match Roster");
     expect(summary.hasAbilities).toBe(false);
-    expect(summary.scalingRatios).toBe(0);
+    expect(summary.scalingRatioTokens).toBe(0);
     expect(summary.catalogItems).toBe(0);
   });
 
   it("renders a compact one-line form for the log", () => {
     expect(summarizeBaseContext(REAL_SHAPED_CONTEXT).line).toBe(
-      "abilities=yes scalingRatios=2 catalogItems=3"
+      "abilities=yes scalingRatioTokens=2 catalogItems=3"
     );
   });
 });

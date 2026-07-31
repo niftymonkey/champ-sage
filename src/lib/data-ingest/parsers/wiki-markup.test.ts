@@ -12,6 +12,26 @@ describe("stripWikiMarkup", () => {
     expect(stripWikiMarkup("''italic'' text")).toBe("italic text");
   });
 
+  it("strips bold markers around possessives", () => {
+    expect(stripWikiMarkup("'''Braum's''' basic attacks")).toBe(
+      "Braum's basic attacks"
+    );
+  });
+
+  it("strips italic markers around possessives", () => {
+    expect(stripWikiMarkup("''Winter's Bite'' applies a stack")).toBe(
+      "Winter's Bite applies a stack"
+    );
+  });
+
+  it("pads {{ft|...}} output so words the wiki writes attached do not merge", () => {
+    expect(
+      stripWikiMarkup(
+        "targets take{{ft|bonus damage|the detailed form}}from attacks"
+      )
+    ).toBe("targets take bonus damage from attacks");
+  });
+
   it("strips {{as|...}} templates (stat references)", () => {
     expect(stripWikiMarkup("{{as|'''bonus''' attack damage}}")).toBe(
       "bonus attack damage"
@@ -322,10 +342,10 @@ describe("stripWikiMarkup", () => {
 
     it("reports a paramless unknown template", () => {
       const seen: string[] = [];
-      stripWikiMarkup("{{times}}", {
+      stripWikiMarkup("{{mysterytemplate}}", {
         onUnknownTemplate: (name) => seen.push(name),
       });
-      expect(seen).toEqual(["times"]);
+      expect(seen).toEqual(["mysterytemplate"]);
     });
 
     it("stays silent for recognized templates", () => {
@@ -340,6 +360,100 @@ describe("stripWikiMarkup", () => {
       expect(stripWikiMarkup("deals {{ccd|Yasuo|crit_base}} damage")).toBe(
         "deals crit_base damage"
       );
+    });
+  });
+
+  describe("icon and annotation templates on innate pages", () => {
+    it("renders stat icons via their display param, as known templates", () => {
+      const seen: string[] = [];
+      const options = { onUnknownTemplate: (name: string) => seen.push(name) };
+      expect(
+        stripWikiMarkup("restores her {{sti|{{as|health}}}}", options)
+      ).toBe("restores her health");
+      expect(
+        stripWikiMarkup("gains {{sti|armor|{{as|'''bonus''' armor}}}}", options)
+      ).toBe("gains bonus armor");
+      expect(
+        stripWikiMarkup("from {{stil|experience|level}} 6 onward", options)
+      ).toBe("from level 6 onward");
+      expect(seen).toEqual([]);
+    });
+
+    it("renders champion icons via their display param, as known templates", () => {
+      const seen: string[] = [];
+      const options = { onUnknownTemplate: (name: string) => seen.push(name) };
+      expect(stripWikiMarkup("{{ci|Mega Gnar}} transforms", options)).toBe(
+        "Mega Gnar transforms"
+      );
+      expect(
+        stripWikiMarkup("{{ci|Gnar|Mini Gnar}} generates Rage", options)
+      ).toBe("Mini Gnar generates Rage");
+      expect(
+        stripWikiMarkup(
+          "casting his {{cci|Q.png|champion ability|primary abilities}}",
+          options
+        )
+      ).toBe("casting his primary abilities");
+      expect(seen).toEqual([]);
+    });
+
+    it("renders possessive champion and ability icons", () => {
+      expect(stripWikiMarkup("switch to {{cis|Mega Gnar}} abilities")).toBe(
+        "switch to Mega Gnar's abilities"
+      );
+      expect(stripWikiMarkup("{{ais|Despair|Amumu}} per-tick damage")).toBe(
+        "Despair's per-tick damage"
+      );
+    });
+
+    it("renders crit-color spans, tick rounding, and the times sign", () => {
+      expect(
+        stripWikiMarkup("deals {{ccs|{{as|'''bonus''' magic damage}}|magic}}")
+      ).toBe("deals bonus magic damage");
+      expect(stripWikiMarkup("after a {{rutngt|0.01}} delay")).toBe(
+        "after a 0.01 delay"
+      );
+      expect(stripWikiMarkup("2{{times}} the amount")).toBe("2× the amount");
+    });
+
+    it("drops editorial bug annotations", () => {
+      expect(stripWikiMarkup("stacks twice.{{bug|Does not refresh.}}")).toBe(
+        "stacks twice."
+      );
+    });
+  });
+
+  describe("pplevel templates (level-scaled values on innate pages)", () => {
+    it("keeps the value and marks it as level-based, dropping presentation params", () => {
+      expect(
+        stripWikiMarkup("{{pplevel|26 to 196|type=his level|label1=level}}")
+      ).toBe("26 to 196 (based on level)");
+    });
+
+    it("carries the percent unit declared by key=%", () => {
+      expect(stripWikiMarkup("slows by {{pplevel|key=%|20 to 30}}")).toBe(
+        "slows by 20 to 30% (based on level)"
+      );
+    });
+
+    it("recognizes key=% regardless of spacing around the equals sign", () => {
+      expect(stripWikiMarkup("slows by {{pplevel|key = %|20 to 30}}")).toBe(
+        "slows by 20 to 30% (based on level)"
+      );
+    });
+
+    it("preserves arithmetic expressions verbatim instead of evaluating them", () => {
+      expect(stripWikiMarkup("{{pplevel|26*0.4 to 196*0.4}}")).toBe(
+        "26*0.4 to 196*0.4 (based on level)"
+      );
+    });
+
+    it("is a recognized template and never fires the unknown-template report", () => {
+      const seen: string[] = [];
+      stripWikiMarkup("heals for {{pplevel|26 to 196|type=his level}} health", {
+        onUnknownTemplate: (name) => seen.push(name),
+      });
+      expect(seen).toEqual([]);
     });
   });
 });

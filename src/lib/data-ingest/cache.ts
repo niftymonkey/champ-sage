@@ -4,6 +4,13 @@
  */
 
 // Bump this version when the cache schema changes to invalidate stale data.
+// v12: champion passives now carry the wiki's innate (`/I`) description in
+// place of DDragon's numberless flavor text, and abilities carry the parsed
+// scaling those profiles are built from. An earlier payload holds the flavor
+// text, which reads as valid data, so only a bump replaces it. Numbered above
+// v10 rather than reusing this branch's original v8: v10 shipped while this
+// work sat uncommitted, and issue #117 holds v11, so a key nobody is using is
+// the only safe one to take.
 // v10: patch 16.15.1's Jade champion variants overwrote sixty canonical
 // champions in the name-keyed map, so a payload written before the variant
 // filter holds Jade ids, legacy base stats, and legacy ability kits under
@@ -26,7 +33,7 @@
 // v4: the 26.12 Mayhem rework removed augment sets/traits; a v3 payload still
 // holds set data (populated augmentSets + per-augment sets), so invalidate it
 // to force one refetch that drops sets from the coaching context.
-const CACHE_VERSION = 10;
+const CACHE_VERSION = 12;
 const CACHE_PREFIX = `champ-sage:v${CACHE_VERSION}:`;
 
 export async function readCache<T>(key: string): Promise<T | null> {
