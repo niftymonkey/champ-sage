@@ -471,13 +471,73 @@ The app should use the Live Client Data API for real-time game state during play
 
 **Item ID ranges encode game mode:**
 
-| Range         | Mode                       |
-| ------------- | -------------------------- |
-| 1000-8999     | Standard (Summoner's Rift) |
-| 9000-9999     | Swarm                      |
-| 220000-229999 | Arena variants             |
-| 320000-329999 | ARAM variants              |
-| 660000+       | Other mode variants        |
+| Range         | Mode                                       |
+| ------------- | ------------------------------------------ |
+| 1000-8999     | Standard (Summoner's Rift)                 |
+| 9000-9999     | Swarm                                      |
+| 220000-229999 | Arena variants                             |
+| 320000-329999 | ARAM variants                              |
+| 660000+       | Other mode variants                        |
+| 770000-779999 | Classic Rift ("Jade") legacy shop, 16.15.1 |
+
+`classifyItemMode` returns `"other"` for any namespace it does not recognize,
+and `"other"` is invisible to every catalog. That is a safe default but a silent
+one: a whole new shop can appear and no catalog will mention it. `pnpm audit-upstream-drift`
+exists to make new namespaces loud. See `docs/reference/upstream-changes.md`.
+
+### Champion variant entries (patch 16.15.1, "Jade")
+
+`champion.json` contains mode-specific champion variants alongside canonical
+champions. Since 16.15.1 there are sixty `Jade_*` entries (Classic Rift):
+
+- ids are `Jade_<CanonicalId>`; **no canonical champion id has ever contained `_`**,
+  which is the only reliable discriminator (keys are `60000 + canonicalKey`, but
+  a key range is a weaker promise than the id scheme).
+- `name` is **byte-identical** to the canonical champion, so keying a map by
+  lowercased name silently overwrites the canonical entry.
+- stats and ability kits are the **legacy 2013-era** ones, not reskins. Jade Ashe's
+  Q is the old toggled Frost Shot; Jade Ryze's R is Desperate Power.
+
+Two traps worth remembering:
+
+1. **Counts do not reveal the collision.** 233 entries collapse to exactly 173
+   unique names, and 173 is also the correct canonical count. Every count-based
+   check passes while the contents are wrong.
+2. **Ability merge follows the poisoned id.** `mergeChampionAbilities` resolves by
+   `champion.id`, so an overwritten entry looks up `jade_ashe` and attaches the
+   legacy kit. Coverage rates stay at 100% because every champion resolved
+   something. `pnpm dump-champion-prompt <Champ>` is the fastest way to check what
+   a prompt actually says.
+
+`fetchChampions` now skips variant ids and warns on any surviving name collision.
+
+### Game modes, maps and queues (as of 16.15.1)
+
+Riot's static `gameModes.json` is stale (no CHERRY, no KIWI). CommunityDragon is
+authoritative: `raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/{maps,queues}.json`.
+
+| Map | Name                 | Note                                                                                                                                             |
+| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 11  | Summoner's Rift      |                                                                                                                                                  |
+| 12  | **Random Map**       | Renamed from "Howling Abyss". Hosts ARAM, Mayhem (`KIWI`) **and** Mayhem Classic-ish (`KIWI_JADE`), so the map id no longer identifies the mode. |
+| 21  | Nexus Blitz          |                                                                                                                                                  |
+| 30  | Arena                |                                                                                                                                                  |
+| 33  | Swarm (`Strawberry`) |                                                                                                                                                  |
+| 35  | The Bandlewood       | This is **Brawl**, not Mayhem. Brawl data is off-limits per Riot policy.                                                                         |
+| 453 | Classic Rift (`JD`)  | The Jade roster and the `77xxxx` shop.                                                                                                           |
+
+Mode strings seen live: `CLASSIC`, `ARAM`, `KIWI` (Mayhem), `CHERRY` (Arena),
+`KIWI_JADE` (ARAM: Mayhem Classic-ish, queues 2450/3280), `PRACTICETOOL`.
+
+**The `mapNumber` fallback in `detectMode` is Practice Tool only.** It was
+ungated, so `KIWI_JADE` on map 12 resolved to plain ARAM for a full patch and
+coached against the wrong shop with no warning. `describeModeDetection` now
+returns an `unrecognizedGameMode` for any unknown non-`PRACTICETOOL` string;
+it is logged once per game and shown to the player as a banner.
+
+Queue names are the most human-readable early warning that a mode exists:
+"ARAM: Mayhem Classic-ish" (2450/3280) carries a 60-champion roster, which is
+exactly the canonical keys of the sixty Jade variants.
 
 Arena/ARAM variant items are **overrides on standard items**, not separate items. Same item, different gold cost or stats for that mode. The Mode Module should start with standard items and overlay the mode-specific variant data.
 

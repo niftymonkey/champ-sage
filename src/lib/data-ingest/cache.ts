@@ -4,6 +4,14 @@
  */
 
 // Bump this version when the cache schema changes to invalidate stale data.
+// v10: patch 16.15.1's Jade champion variants overwrote sixty canonical
+// champions in the name-keyed map, so a payload written before the variant
+// filter holds Jade ids, legacy base stats, and legacy ability kits under
+// canonical names. Nothing about the payload's shape reveals this, and the
+// version string does not change, so only an explicit bump evicts it. Numbered
+// 10 rather than 8 to clear both branches in flight at the time (the
+// ability-scaling work sits on 8, issue #117 on 9); when either merges, keep
+// the highest number rather than the incoming one.
 // v7: items now carry a `maps` field (DDragon map availability) that filters
 // the coaching item catalog. A v6 payload has no `maps`, so every item reads
 // as available-nowhere and the ARAM/Mayhem catalog empties out. Invalidate it.
@@ -18,7 +26,7 @@
 // v4: the 26.12 Mayhem rework removed augment sets/traits; a v3 payload still
 // holds set data (populated augmentSets + per-augment sets), so invalidate it
 // to force one refetch that drops sets from the coaching context.
-const CACHE_VERSION = 7;
+const CACHE_VERSION = 10;
 const CACHE_PREFIX = `champ-sage:v${CACHE_VERSION}:`;
 
 export async function readCache<T>(key: string): Promise<T | null> {

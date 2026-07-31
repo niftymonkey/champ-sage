@@ -20,6 +20,7 @@ export { aramMayhemMode } from "./aram-mayhem";
 export { aramMode } from "./aram";
 export { classicMode } from "./classic";
 export { buildEffectiveGameState } from "./effective-state";
-export { detectMode } from "./detect";
+export { detectMode, describeModeDetection } from "./detect";
+export type { ModeDetection } from "./detect";
 export { checkAugmentAvailability } from "./augment-availability";
 export type { AugmentAvailability } from "./augment-availability";

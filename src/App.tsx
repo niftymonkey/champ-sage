@@ -57,6 +57,7 @@ import {
 import { InGameView } from "./components/InGameView";
 import { CoachingPipeline } from "./components/CoachingPipeline";
 import { GepHealthBanner } from "./components/GepHealthBanner";
+import { UnsupportedModeBanner } from "./components/UnsupportedModeBanner";
 import { useGepHealth } from "./hooks/useGepHealth";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
 import { WindowChrome } from "./surfaces/WindowChrome";
@@ -72,7 +73,7 @@ import {
   aramMode,
   classicMode,
   buildEffectiveGameState,
-  detectMode,
+  describeModeDetection,
 } from "./lib/mode";
 import { addSelectedAugment } from "./lib/mode/augment-selection";
 import type { Augment } from "./lib/data-ingest/types";
@@ -169,15 +170,23 @@ function App() {
     gameDetectedLoggedRef.current = true;
     const championNames = liveGame.players.map((p) => p.championName);
 
-    const detectedMode = detectMode(
+    const detection = describeModeDetection(
       registry,
       liveGame.gameMode,
       liveGame.lcuGameMode,
       liveGame.mapNumber
     );
     appLog.info(
-      `Game detected: ${liveGame.gameMode} (lcu: ${liveGame.lcuGameMode || "n/a"}, map: ${liveGame.mapNumber || "n/a"}) | mode: ${detectedMode?.displayName ?? "none"} | players: ${championNames.length} | augments in data: ${data.augments.size}`
+      `Game detected: ${liveGame.gameMode} (lcu: ${liveGame.lcuGameMode || "n/a"}, map: ${liveGame.mapNumber || "n/a"}) | mode: ${detection.mode?.displayName ?? "none"} | players: ${championNames.length} | augments in data: ${data.augments.size}`
     );
+    // One line per game, and the only alarm that fires when Riot ships a mode
+    // we do not model. This effect runs exactly once per detected game, so the
+    // warning cannot be lost in poll spam.
+    if (detection.unrecognizedGameMode) {
+      appLog.warn(
+        `Unrecognized game mode "${detection.unrecognizedGameMode}" (map ${liveGame.mapNumber || "n/a"}). No mode matched, so coaching is disabled for this game. This is upstream drift: a new mode needs modelling.`
+      );
+    }
   }, [data, liveGame.players]);
 
   const prevPhaseRef = useRef<string | null>(null);
@@ -221,9 +230,11 @@ function App() {
     gameTime: liveGame.gameTime,
   };
 
-  const detectedMode = useMemo(() => {
-    if (!data || gameState.status !== "connected") return null;
-    return detectMode(
+  const modeDetection = useMemo(() => {
+    if (!data || gameState.status !== "connected") {
+      return { mode: null, unrecognizedGameMode: null };
+    }
+    return describeModeDetection(
       registry,
       gameState.gameMode,
       liveGame.lcuGameMode,
@@ -236,6 +247,7 @@ function App() {
     liveGame.lcuGameMode,
     liveGame.mapNumber,
   ]);
+  const detectedMode = modeDetection.mode;
 
   const effectiveState = useMemo(() => {
     if (!data || gameState.status !== "connected") {
@@ -373,6 +385,9 @@ function App() {
             }
           />
           <GepHealthBanner verdict={gepHealth} onRestart={handleGepRestart} />
+          <UnsupportedModeBanner
+            gameMode={modeDetection.unrecognizedGameMode}
+          />
           <div className="app-body">
             {surface === "in-game" ? (
               <InGameView state={effectiveState} gameData={data} />
