@@ -235,6 +235,50 @@ describe("resolveGepVersion", () => {
     expect(version).toBe("307.4.3");
   });
 
+  it("rejects an unparseable advertised build when the floor is known", async () => {
+    // "clears the floor" has to mean "compared against the floor and won". An
+    // unparseable version cannot be compared at all, so treating it as passing
+    // would let exactly the malformed manifest data this guard exists for walk
+    // straight past League's minimum.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 2 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["not-a-version", "307.4.2", "307.4.3"]),
+      manifest: manifestWithGep("not-a-version"),
+      floorLookup: lookup,
+    });
+    expect(version).toBe("307.4.3");
+  });
+
+  it("never serves an unparseable advertised build as the last-resort fallback", async () => {
+    // The below-floor fallback is a deliberate "something beats nothing", but
+    // it is only sound for a version we could actually compare. Serving an
+    // unparseable one is serving a URL nobody has reason to believe in.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 2 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["not-a-version"]),
+      manifest: manifestWithGep("not-a-version"),
+      floorLookup: lookup,
+    });
+    expect(version).toBeNull();
+  });
+
+  it("discovers a floor-clearing build when the floor patch is past the scan cap", async () => {
+    // The scan bound is a span from where discovery starts, not an absolute
+    // patch number. Seeding from the floor means the start can be any patch
+    // League has reached, and an absolute cap would silently probe nothing at
+    // all once the floor passed it.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 49 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.3", "307.4.49", "307.4.50"]),
+      manifest: null,
+      floorLookup: lookup,
+    });
+    expect(version).toBe("307.4.50");
+  });
+
   it("serves a below-floor advertised build when discovery finds nothing better", async () => {
     // Last resort: a below-floor override still beats no override, which lets
     // OWEPM re-stub the cache and lose the overlay too.

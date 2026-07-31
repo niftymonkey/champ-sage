@@ -128,7 +128,7 @@ export interface DiscoverOptions {
   probe: VersionProbe;
   /** Consecutive misses tolerated before a version line is abandoned. */
   gapTolerance?: number;
-  /** Highest patch probed within a single (major, minor) line. */
+  /** How many patches above a line's starting patch are probed. */
   patchCap?: number;
   /** How many minor lines above the baseline to also scan. */
   minorLookahead?: number;
@@ -258,9 +258,14 @@ async function maxLiveInLine(
 ): Promise<Version | null> {
   let best: Version | null = null;
   let misses = 0;
+  // The cap is a span from where this line starts, not an absolute patch
+  // number. Discovery now seeds from League's published floor, which can sit at
+  // any patch the game has reached, and an absolute cap would silently probe
+  // nothing at all once the floor passed it.
+  const lastPatch = line.startPatch + patchCap;
   for (
     let patch = line.startPatch;
-    patch <= patchCap && misses <= gapTolerance;
+    patch <= lastPatch && misses <= gapTolerance;
     patch++
   ) {
     const candidate = { major: line.major, minor: line.minor, patch };
@@ -385,10 +390,19 @@ export async function resolveGepVersion(args: {
     )?.version;
     if (advertised && (await probe(advertised))) {
       if (clearsFloor(advertised, floor)) return advertised;
-      liveButBelowFloor = advertised;
-      log(
-        `Overwolf manifest advertises gep ${advertised}, below League's floor ${floor ? formatVersion(floor) : "unknown"}; discovering a floor-clearing build via CDN`
-      );
+      // Only a version we could actually compare earns the fallback slot. An
+      // unparseable one failed the floor check by being uncomparable, not by
+      // being old, so there is no reason to believe serving it helps.
+      if (parseVersion(advertised)) {
+        liveButBelowFloor = advertised;
+        log(
+          `Overwolf manifest advertises gep ${advertised}, below League's floor ${floor ? formatVersion(floor) : "unknown"}; discovering a floor-clearing build via CDN`
+        );
+      } else {
+        log(
+          `Overwolf manifest advertises unparseable gep version ${advertised}; discovering via CDN`
+        );
+      }
     } else if (advertised) {
       log(
         `Overwolf manifest advertises gep ${advertised} but the CDN has no such build; discovering via CDN`
@@ -415,7 +429,10 @@ export async function resolveGepVersion(args: {
 function clearsFloor(version: string, floor: Version | null): boolean {
   if (!floor) return true;
   const v = parseVersion(version);
-  return v === null || compareVersions(v, floor) >= 0;
+  // An unparseable version cannot be compared, so it cannot have cleared the
+  // floor. Reading "uncomparable" as "passing" would let the malformed manifest
+  // data this guard exists for walk straight past League's minimum.
+  return v !== null && compareVersions(v, floor) >= 0;
 }
 
 /**
