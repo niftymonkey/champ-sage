@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import {
   manifestIndicatesOutage,
   discoverLatestVersion,
+  discoveryBaseline,
   resolveGepVersion,
   buildOverrideManifest,
   planCacheReconciliation,
@@ -12,10 +13,24 @@ import {
   OVERLAY_UID,
   type OverwolfPackagesManifest,
   type InstalledPackage,
+  type Version,
 } from "./ow-package-guard";
 
 /** A fetcher standing in for an unreachable manifest, forcing CDN discovery. */
 const noManifest = () => Promise.resolve<OverwolfPackagesManifest | null>(null);
+
+/** A floor lookup standing in for an unreachable status endpoint. */
+const noFloor = () => Promise.resolve<Version | null>(null);
+
+/** A floor lookup returning a fixed published floor, plus a call counter. */
+function floorLookupOf(floor: Version | null) {
+  const calls = { count: 0 };
+  const lookup = () => {
+    calls.count++;
+    return Promise.resolve(floor);
+  };
+  return { lookup, calls };
+}
 
 function manifestWithGep(gepVersion: string): OverwolfPackagesManifest {
   return {
@@ -100,6 +115,28 @@ describe("discoverLatestVersion", () => {
   });
 });
 
+describe("discoveryBaseline", () => {
+  const anchor = { major: 306, minor: 0, patch: 0 };
+
+  it("probes from League's floor when it is above the maintained anchor", () => {
+    // The anchor goes stale as Overwolf rotates old lines off the CDN; the
+    // published floor is the live, self-updating lower bound.
+    expect(
+      discoveryBaseline(anchor, { major: 307, minor: 4, patch: 2 })
+    ).toEqual({ major: 307, minor: 4, patch: 2 });
+  });
+
+  it("keeps the anchor when the floor sits below it", () => {
+    expect(
+      discoveryBaseline(anchor, { major: 305, minor: 1, patch: 3 })
+    ).toEqual(anchor);
+  });
+
+  it("keeps the anchor when the floor is unknown", () => {
+    expect(discoveryBaseline(anchor, null)).toEqual(anchor);
+  });
+});
+
 describe("resolveGepVersion", () => {
   const baseline = { major: 306, minor: 0, patch: 0 };
 
@@ -115,6 +152,7 @@ describe("resolveGepVersion", () => {
       baseline,
       probe: liveProbe(["306.0.10", "307.4.6"]),
       manifest: manifestWithGep("307.4.6"),
+      floorLookup: noFloor,
     });
     expect(version).toBe("307.4.6");
   });
@@ -125,6 +163,7 @@ describe("resolveGepVersion", () => {
       baseline,
       probe: liveProbe(["306.0.2", "306.0.3"]),
       manifest: manifestWithGep("307.9.9"),
+      floorLookup: noFloor,
     });
     expect(version).toBe("306.0.3");
   });
@@ -134,6 +173,7 @@ describe("resolveGepVersion", () => {
       baseline,
       probe: liveProbe(["306.0.2", "306.0.3"]),
       manifest: manifestWithGep("0.0.0"),
+      floorLookup: noFloor,
     });
     expect(version).toBe("306.0.3");
   });
@@ -143,6 +183,7 @@ describe("resolveGepVersion", () => {
       baseline,
       probe: liveProbe(["306.0.2", "306.0.3"]),
       manifest: null,
+      floorLookup: noFloor,
     });
     expect(version).toBe("306.0.3");
   });
@@ -152,8 +193,103 @@ describe("resolveGepVersion", () => {
       baseline,
       probe: liveProbe([]),
       manifest: null,
+      floorLookup: noFloor,
     });
     expect(version).toBeNull();
+  });
+
+  it("seeds CDN discovery from the published floor when the manifest fails", async () => {
+    // The stale-anchor scenario: 307.0.x is rotated off, so discovery from
+    // 306.0.0 tops out below the floor and would serve a build League rejects.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 2 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.3", "307.4.2", "307.4.3"]),
+      manifest: null,
+      floorLookup: lookup,
+    });
+    expect(version).toBe("307.4.3");
+  });
+
+  it("reads the floor once per resolve", async () => {
+    const { lookup, calls } = floorLookupOf({ major: 307, minor: 4, patch: 2 });
+    await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.10", "307.4.6"]),
+      manifest: manifestWithGep("307.4.6"),
+      floorLookup: lookup,
+    });
+    expect(calls.count).toBe(1);
+  });
+
+  it("rejects a manifest build below the floor and discovers one that clears it", async () => {
+    // A downloadable but stale advertised build is still rejected at
+    // game-attach, so serving it is knowingly serving a dead GEP.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 2 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.10", "307.4.2", "307.4.3"]),
+      manifest: manifestWithGep("306.0.10"),
+      floorLookup: lookup,
+    });
+    expect(version).toBe("307.4.3");
+  });
+
+  it("rejects an unparseable advertised build when the floor is known", async () => {
+    // "clears the floor" has to mean "compared against the floor and won". An
+    // unparseable version cannot be compared at all, so treating it as passing
+    // would let exactly the malformed manifest data this guard exists for walk
+    // straight past League's minimum.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 2 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["not-a-version", "307.4.2", "307.4.3"]),
+      manifest: manifestWithGep("not-a-version"),
+      floorLookup: lookup,
+    });
+    expect(version).toBe("307.4.3");
+  });
+
+  it("never serves an unparseable advertised build as the last-resort fallback", async () => {
+    // The below-floor fallback is a deliberate "something beats nothing", but
+    // it is only sound for a version we could actually compare. Serving an
+    // unparseable one is serving a URL nobody has reason to believe in.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 2 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["not-a-version"]),
+      manifest: manifestWithGep("not-a-version"),
+      floorLookup: lookup,
+    });
+    expect(version).toBeNull();
+  });
+
+  it("discovers a floor-clearing build when the floor patch is past the scan cap", async () => {
+    // The scan bound is a span from where discovery starts, not an absolute
+    // patch number. Seeding from the floor means the start can be any patch
+    // League has reached, and an absolute cap would silently probe nothing at
+    // all once the floor passed it.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 49 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.3", "307.4.49", "307.4.50"]),
+      manifest: null,
+      floorLookup: lookup,
+    });
+    expect(version).toBe("307.4.50");
+  });
+
+  it("serves a below-floor advertised build when discovery finds nothing better", async () => {
+    // Last resort: a below-floor override still beats no override, which lets
+    // OWEPM re-stub the cache and lose the overlay too.
+    const { lookup } = floorLookupOf({ major: 307, minor: 4, patch: 2 });
+    const version = await resolveGepVersion({
+      baseline,
+      probe: liveProbe(["306.0.10"]),
+      manifest: manifestWithGep("306.0.10"),
+      floorLookup: lookup,
+    });
+    expect(version).toBe("306.0.10");
   });
 
   it("serves GEP_FORCE_VERSION when that build is downloadable (test hook)", async () => {
@@ -162,6 +298,7 @@ describe("resolveGepVersion", () => {
       baseline,
       probe: liveProbe(["306.0.10", "307.4.6"]),
       manifest: manifestWithGep("307.4.6"),
+      floorLookup: noFloor,
     });
     expect(version).toBe("306.0.10");
   });
@@ -172,6 +309,7 @@ describe("resolveGepVersion", () => {
       baseline,
       probe: liveProbe(["306.0.2", "306.0.3"]),
       manifest: null,
+      floorLookup: noFloor,
     });
     expect(version).toBe("306.0.3");
   });
@@ -188,13 +326,29 @@ describe("buildOverrideManifest", () => {
     };
     const manifest = await buildOverrideManifest(
       (channel) => liveProbe(live[channel] ?? []),
-      () => Promise.resolve(manifestWithGep("307.4.6"))
+      () => Promise.resolve(manifestWithGep("307.4.6")),
+      noFloor
     );
     const gep = manifest!.packages.find((p) => p.name === "gep");
     expect(gep!.version).toBe("307.4.6");
     expect(gep!.url).toBe(
       "https://electrondl.overwolf.com/1/307.4.6/module.owepk"
     );
+  });
+
+  it("seeds gep discovery from the floor when the manifest is unreachable", async () => {
+    const live: Record<number, string[]> = {
+      1: ["306.0.3", "307.4.2"],
+      2: ["2.7.5"],
+      3: ["1.12.5"],
+    };
+    const manifest = await buildOverrideManifest(
+      (channel) => liveProbe(live[channel] ?? []),
+      noManifest,
+      () => Promise.resolve({ major: 307, minor: 4, patch: 2 })
+    );
+    const gep = manifest!.packages.find((p) => p.name === "gep");
+    expect(gep!.version).toBe("307.4.2");
   });
 
   it("discovers gep and keeps utility/overlay on their live pins", async () => {
@@ -205,7 +359,8 @@ describe("buildOverrideManifest", () => {
     };
     const manifest = await buildOverrideManifest(
       (channel) => liveProbe(live[channel] ?? []),
-      noManifest
+      noManifest,
+      noFloor
     );
     expect(manifest).not.toBeNull();
 
@@ -236,7 +391,8 @@ describe("buildOverrideManifest", () => {
     };
     const manifest = await buildOverrideManifest(
       (channel) => liveProbe(live[channel] ?? []),
-      noManifest
+      noManifest,
+      noFloor
     );
     const overlay = manifest!.packages.find((p) => p.name === "overlay");
     expect(overlay!.version).toBe("1.12.6");
@@ -245,7 +401,8 @@ describe("buildOverrideManifest", () => {
   it("returns null when gep cannot be resolved (override would be useless)", async () => {
     const manifest = await buildOverrideManifest(
       () => liveProbe([]),
-      noManifest
+      noManifest,
+      noFloor
     );
     expect(manifest).toBeNull();
   });
