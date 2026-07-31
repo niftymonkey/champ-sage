@@ -142,7 +142,11 @@ interface PackageSpec {
   channel: number;
   /** Preferred known-good version. Omitted for gep (always newest-live). */
   pin?: string;
-  /** Anchor for discovery and pin-healing. */
+  /**
+   * Anchor for discovery and pin-healing. For gep this is only the floor-less
+   * fallback: discovery normally starts from League's published floor instead
+   * (see {@link discoveryBaseline}), so the anchor going stale is not fatal.
+   */
   baseline: Version;
   /**
    * "always": resolve to the newest live build every launch (gep, so it keeps
@@ -270,6 +274,38 @@ async function maxLiveInLine(
   return best;
 }
 
+/**
+ * Reads League's published GEP floor as a {@link Version}, or null when the
+ * status endpoint is unreachable or the value is unparseable.
+ */
+export type FloorLookup = () => Promise<Version | null>;
+
+const defaultFloorLookup: FloorLookup = async () => {
+  const floor = await fetchGepFloor(LOL_GAME_ID);
+  return floor ? parseVersion(floor.minGepVersionElectron) : null;
+};
+
+/**
+ * The version CDN discovery should probe upward from: the higher of the
+ * hand-maintained anchor in {@link PACKAGE_SPECS} and League's published floor.
+ *
+ * The anchor cannot be trusted to stay useful. Overwolf rotates whole version
+ * lines off the CDN, and discovery's lookahead window only reaches a couple of
+ * lines above where it starts, so an anchor left behind by a few patches tops
+ * out below the floor and hands OWEPM a build League rejects at game-attach
+ * (observed 2026-07-20: anchor 306.0.0 could reach no higher than 306.2.x while
+ * the floor was 307.4.2, because the entire 307.0.x line was a 403 gap). The
+ * floor is published live and rises with the game, so seeding from it keeps
+ * discovery landing on a build that clears it without a code change. The anchor
+ * remains the fallback for when the status endpoint is unreachable.
+ */
+export function discoveryBaseline(
+  anchor: Version,
+  floor: Version | null
+): Version {
+  return floor && compareVersions(floor, anchor) > 0 ? floor : anchor;
+}
+
 /** Fetches the live Overwolf package manifest, or null when it cannot be reached. */
 export type ManifestFetcher = () => Promise<OverwolfPackagesManifest | null>;
 
@@ -292,25 +328,34 @@ const defaultManifestFetcher: ManifestFetcher = () =>
  * truth for both `--check` and `--serve`, so the version the guard reports and
  * the one it actually serves never diverge.
  *
- * Prefers the version the recovered Overwolf manifest advertises, but only when
- * that exact build is downloadable on the CDN. The manifest can advertise a
- * build whose binary has not yet propagated, and during the 0.0.0 outage it
- * advertises a stub; in those cases, and when the manifest is unreachable, this
- * falls back to CDN baseline discovery so the guard still lands on a live build.
- * Returns null only when neither source yields one.
+ * League's published floor governs BOTH sources, so every launch that can reach
+ * the status endpoint resolves a build the game will actually accept:
  *
- * Seeding from the manifest is what lets the override track League's rising
- * minimum-version floor without a hand-maintained baseline: CDN discovery alone
- * cannot reach a new (major, minor) line beyond its lookahead window once the
- * intervening line is a 403 gap (baseline 306.0.0 cannot see 307.4.x when the
- * whole 307.0.x line is rotated off).
+ * 1. The recovered manifest's advertised version wins when that exact build is
+ *    downloadable AND clears the floor. The manifest can advertise a build whose
+ *    binary has not propagated, a 0.0.0 stub during the outage, or a build that
+ *    has fallen behind the floor; none of those are served.
+ * 2. Otherwise CDN discovery runs from {@link discoveryBaseline}, which starts at
+ *    the floor whenever that is above the spec's anchor. Bare discovery from a
+ *    stale anchor cannot reach a new (major, minor) line beyond its lookahead
+ *    window once the intervening line is a 403 gap (anchor 306.0.0 cannot see
+ *    307.4.x when the whole 307.0.x line is rotated off); the floor seed closes
+ *    exactly that gap.
+ * 3. Only if discovery comes up empty does a live-but-below-floor advertised
+ *    build get served, loudly: an override League rejects still beats no
+ *    override, which lets OWEPM re-stub the cache and take the overlay with it.
+ *
+ * An unreachable status endpoint degrades to the old behavior (anchor-based
+ * discovery, no floor gate) rather than blocking the launch. Returns null only
+ * when no source yields a live build.
  */
 export async function resolveGepVersion(args: {
   baseline: Version;
   probe: VersionProbe;
   manifest: OverwolfPackagesManifest | null;
+  floorLookup?: FloorLookup;
 }): Promise<string | null> {
-  const { baseline, probe, manifest } = args;
+  const { baseline, probe, manifest, floorLookup = defaultFloorLookup } = args;
   // Test hook: GEP_FORCE_VERSION pins the override to a specific (CDN-live)
   // build so a stale-GEP restart can be exercised on demand, e.g. launching
   // with GEP_FORCE_VERSION=306.0.10 loads a below-floor build that the
@@ -327,14 +372,24 @@ export async function resolveGepVersion(args: {
     }
     log(`GEP_FORCE_VERSION=${forced} is not downloadable on the CDN; ignoring`);
   }
+  const floor = await floorLookup();
+
+  // A downloadable advertised build that still clears the floor, kept aside as
+  // the last resort when discovery finds nothing above the floor: a below-floor
+  // override beats no override at all, which lets OWEPM re-stub the cache.
+  let liveButBelowFloor: string | null = null;
+
   if (manifest && !manifestIndicatesOutage(manifest)) {
     const advertised = manifest.packages?.find(
       (p) => p.name === "gep"
     )?.version;
     if (advertised && (await probe(advertised))) {
-      return advertised;
-    }
-    if (advertised) {
+      if (clearsFloor(advertised, floor)) return advertised;
+      liveButBelowFloor = advertised;
+      log(
+        `Overwolf manifest advertises gep ${advertised}, below League's floor ${floor ? formatVersion(floor) : "unknown"}; discovering a floor-clearing build via CDN`
+      );
+    } else if (advertised) {
       log(
         `Overwolf manifest advertises gep ${advertised} but the CDN has no such build; discovering via CDN`
       );
@@ -342,7 +397,25 @@ export async function resolveGepVersion(args: {
   } else if (manifest) {
     log("Overwolf manifest is serving 0.0.0 stubs; discovering GEP via CDN");
   }
-  return discoverLatestVersion({ baseline, probe });
+
+  const discovered = await discoverLatestVersion({
+    baseline: discoveryBaseline(baseline, floor),
+    probe,
+  });
+  if (discovered) return discovered;
+  if (liveButBelowFloor) {
+    log(
+      `no floor-clearing GEP build found; falling back to ${liveButBelowFloor}, which League will reject at game-attach`
+    );
+  }
+  return liveButBelowFloor;
+}
+
+/** Whether `version` is at or above League's floor (true when the floor is unknown). */
+function clearsFloor(version: string, floor: Version | null): boolean {
+  if (!floor) return true;
+  const v = parseVersion(version);
+  return v === null || compareVersions(v, floor) >= 0;
 }
 
 /**
@@ -354,13 +427,19 @@ export async function resolveGepVersion(args: {
  */
 export async function buildOverrideManifest(
   probeFactory: ProbeFactory = makeCdnProbeFactory(),
-  fetchManifest: ManifestFetcher = defaultManifestFetcher
+  fetchManifest: ManifestFetcher = defaultManifestFetcher,
+  floorLookup: FloorLookup = defaultFloorLookup
 ): Promise<OverwolfPackagesManifest | null> {
   const manifest = await fetchManifest();
   const packages: OverwolfPackage[] = [];
   for (const spec of PACKAGE_SPECS) {
     const probe = probeFactory(spec.channel);
-    const version = await resolvePackageVersion(spec, probe, manifest);
+    const version = await resolvePackageVersion(
+      spec,
+      probe,
+      manifest,
+      floorLookup
+    );
     if (!version) {
       log(`could not resolve a live version for ${spec.name}`);
       if (spec.name === "gep") return null;
@@ -380,13 +459,19 @@ export async function buildOverrideManifest(
 async function resolvePackageVersion(
   spec: PackageSpec,
   probe: VersionProbe,
-  manifest: OverwolfPackagesManifest | null
+  manifest: OverwolfPackagesManifest | null,
+  floorLookup: FloorLookup
 ): Promise<string | null> {
   if (spec.resolve === "if-pin-dead" && spec.pin && (await probe(spec.pin))) {
     return spec.pin;
   }
   if (spec.resolve === "always") {
-    return resolveGepVersion({ baseline: spec.baseline, probe, manifest });
+    return resolveGepVersion({
+      baseline: spec.baseline,
+      probe,
+      manifest,
+      floorLookup,
+    });
   }
   return discoverLatestVersion({ baseline: spec.baseline, probe });
 }
@@ -673,7 +758,7 @@ async function serveOverrideManifest(port: number): Promise<void> {
   const initial = await getBody();
   if (!initial) {
     log(
-      "no live GEP build found near baseline; not serving override (bump the gep baseline in PACKAGE_SPECS)"
+      "no live GEP build found near the discovery baseline (League's published floor, or the gep anchor in PACKAGE_SPECS when the status endpoint is unreachable); not serving override"
     );
     process.exit(EXIT_ERROR);
   }
