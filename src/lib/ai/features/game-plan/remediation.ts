@@ -25,6 +25,7 @@ import {
   type GamePlanInput,
 } from "./index";
 import { getLogger } from "../../../logger";
+import { isAbortError } from "../../race-with-retry";
 
 const remediationLog = getLogger("coaching:remediation");
 
@@ -141,6 +142,9 @@ export async function remediateGamePlan(
       corrected: true,
     };
   } catch (err) {
+    // Same policy as the item-rec remediation: a cancellation is not a model
+    // failure, so it must not be converted into a shipped game plan.
+    if (isAbortError(err)) throw err;
     remediationLog.warn(
       `Corrective retry failed (${err}); shipping the first response's swept path`
     );

@@ -24,6 +24,7 @@ import {
   type RecommendationDrop,
 } from "./legality";
 import { getLogger } from "../../../logger";
+import { isAbortError } from "../../race-with-retry";
 
 const remediationLog = getLogger("coaching:remediation");
 
@@ -156,6 +157,10 @@ export async function remediateItemRec(
       corrected: true,
     };
   } catch (err) {
+    // A cancelled request must stay cancelled: CoachingPipeline's callers
+    // publish whatever this returns, and only an AbortError reaching them
+    // keeps a cancelled answer off the feed and the overlay.
+    if (isAbortError(err) || signal?.aborted) throw err;
     remediationLog.warn(
       `Item-rec corrective retry failed (${err}); shipping the first response's filtered options`
     );

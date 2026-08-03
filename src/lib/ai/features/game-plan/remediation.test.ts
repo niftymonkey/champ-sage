@@ -381,6 +381,34 @@ describe("remediateGamePlan", () => {
     expect(result.dropped.map((d) => d.kind)).toEqual(["boots-collision"]);
   });
 
+  it("rethrows when the corrective call is aborted", async () => {
+    // A cancelled request must not surface a game plan. Same policy as the
+    // item-rec remediation: only a genuine model failure falls back.
+    const abortError = new Error("The operation was aborted");
+    abortError.name = "AbortError";
+    const fake = createFakeSession({ correctiveError: abortError });
+    const response = plan("Boots twice.", [
+      "Boots of Swiftness",
+      "Mercury's Treads",
+      "Infinity Edge",
+      "Bloodthirster",
+      "Essence Reaver",
+      "Navori Flickerblade",
+    ]);
+
+    await expect(
+      remediateGamePlan({
+        session: fake.session,
+        feature: gamePlanFeature,
+        input: { snapshot: null },
+        response,
+        items,
+        mode: classic,
+        ownedItemNames: [],
+      })
+    ).rejects.toThrow(/aborted/i);
+  });
+
   it("seeds the sweep with owned items on both passes", async () => {
     // Player owns Mortal Reminder: recommending LDR is illegal in BOTH the
     // first response and the retry. The retry here repeats the mistake, so

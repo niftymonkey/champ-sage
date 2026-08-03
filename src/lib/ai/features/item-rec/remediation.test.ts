@@ -375,6 +375,56 @@ describe("remediateItemRec", () => {
     ]);
   });
 
+  it("rethrows when the corrective call is aborted", async () => {
+    // CoachingPipeline's callers treat an AbortError as "publish nothing".
+    // Absorbing it here would put a cancelled request's answer on the feed
+    // and the overlay.
+    const abortError = new Error("The operation was aborted");
+    abortError.name = "AbortError";
+    const fake = createFakeSession({ correctiveError: abortError });
+    const response = result("Mortal Reminder first.", [
+      "Mortal Reminder",
+      "Infinity Edge",
+    ]);
+
+    await expect(
+      remediateItemRec({
+        session: fake.session,
+        feature,
+        input: { snapshot: null, question: "what next?" },
+        response,
+        items,
+        mode: classic,
+        ownedItemNames: ["Lord Dominik's Regards"],
+      })
+    ).rejects.toThrow(/aborted/i);
+  });
+
+  it("rethrows when the caller's signal aborted, whatever the error", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fake = createFakeSession({
+      correctiveError: new Error("model unavailable"),
+    });
+    const response = result("Mortal Reminder first.", [
+      "Mortal Reminder",
+      "Infinity Edge",
+    ]);
+
+    await expect(
+      remediateItemRec({
+        session: fake.session,
+        feature,
+        input: { snapshot: null, question: "what next?" },
+        response,
+        items,
+        mode: classic,
+        ownedItemNames: ["Lord Dominik's Regards"],
+        signal: controller.signal,
+      })
+    ).rejects.toThrow(/model unavailable/);
+  });
+
   it("keeps same-group alternatives when the inventory holds neither", async () => {
     const fake = createFakeSession({});
     const response = result("Compare the two Last Whispers.", [

@@ -117,8 +117,9 @@ export function mergeAbilityScaling(
  * Matching is by lowercase item name (not id) so every same-named variant
  * (e.g. an ARAM rebalance of a standard item) inherits the restriction at
  * once. Returns the number of items that received groups. A null `groups`
- * (wiki fetch failed) is a no-op: mutex enforcement degrades for the session
- * rather than blocking ingest.
+ * (wiki fetch failed) is a no-op: mutex enforcement degrades for this run
+ * rather than blocking ingest, and the caller skips the cache write so the
+ * next start refetches instead of inheriting group-less items.
  */
 export function mergeItemMutexGroups(
   items: Map<number, Item>,
@@ -435,13 +436,24 @@ export async function fetchAndCache(
   // champion would refetch the whole catalog on every start.
   const coverageRate =
     champions.size === 0 ? 0 : abilityCoverage / champions.size;
-  if (coverageRate >= ABILITY_MIN_COVERAGE_RATE) {
-    await writeCache(patchlineCacheKey(patchline), data);
-  } else {
+  if (coverageRate < ABILITY_MIN_COVERAGE_RATE) {
     log.warn(
       `Skipping cache write: only ${abilityCoverage}/${champions.size} champions resolved abilities ` +
         `(below ${ABILITY_MIN_COVERAGE_RATE * 100}%). Game data is degraded for this session and will be refetched on next start.`
     );
+  } else if (itemMutexGroups === null) {
+    // Same rule as the ability guard, for the same reason: loadGameData
+    // prefers the cache, so persisting a group-less payload would leave mutex
+    // enforcement off on every later start, not just this one. A failed fetch
+    // is transient, so refetching next start is the cheap recovery. Drift (a
+    // fetch that succeeds and matches nothing) is NOT treated this way: it
+    // would refetch the whole catalog forever without ever recovering.
+    log.warn(
+      "Skipping cache write: the item mutex-group fetch failed, so build-path " +
+        "mutex enforcement is off this session and will be refetched on next start."
+    );
+  } else {
+    await writeCache(patchlineCacheKey(patchline), data);
   }
 
   const loaded = fromCached(data);

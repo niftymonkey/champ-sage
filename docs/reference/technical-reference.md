@@ -864,6 +864,18 @@ The `MatchSession` (`src/lib/ai/match-session.ts`) is the dispatch boundary. Pro
 - **API key is via Vite env var** — `VITE_OPENAI_API_KEY` in `.env` for production, `EVAL_OPENROUTER_API_KEY` for eval (separate billing).
 - **`recommendation-engine.ts` accepts an injected `model`** — production uses `createCoachingModel(apiKey)`; the eval harness injects an OpenRouter-backed model. Same code path, different provider — the eval and the app exercise identical wiring.
 
+### Cancellation must survive the corrective retry
+
+Both remediation modules (`features/game-plan/remediation.ts`, `features/item-rec/remediation.ts`) fall back to the first swept response when the corrective call throws, which is right for a model failure and wrong for a cancellation. `CoachingPipeline`'s handlers publish whatever remediation returns and rely on an `AbortError` reaching their own catch to stay silent, so absorbing one puts a cancelled request's answer on the feed and the overlay. Both now rethrow via the shared `isAbortError` from `race-with-retry.ts`. Note the game-plan query path passes no signal at all today, so its corrective call is not cancellable in the first place; the guard there is policy, not an active rail.
+
+### `correctLastAsk` pins the turn it replaces
+
+The `MatchSession` is shared by independent handlers (voice, game-plan, augment, proactive item-rec) with no serialization, and each gets its signal from its own trigger. `correctLastAsk` therefore cannot write to `messages[messages.length - 1]` after its await: an ask that landed meanwhile has already appended a user and assistant turn, and the correction would overwrite that answer. It now pins the target index and message identity before the call and throws if either moved, which the remediation fallback treats as an ordinary corrective failure. `transitionTo` also clears `lastAskFeatureId`, so a correction cannot reach back across a phase change into a feature the new phase may not support. The broader hazard is unfixed: `ask` itself pushes a user turn, awaits, then pushes an assistant turn, so concurrent asks still interleave.
+
+### Cache-write guards: distinguish a transient failure from persistent drift
+
+`loadGameData` prefers the cache outside dev mode, so any degraded payload it persists stays degraded on every later start until `CACHE_VERSION` rotates. That makes "skip the cache write" the right response to a **failed** fetch (transient, recovers next start) and the wrong response to a fetch that **succeeds and matches nothing** (upstream format drift, persistent). Refusing to cache on drift refetches the entire catalog on every start forever and never recovers. Ability coverage and item mutex groups both follow this rule: skip on failure, warn and cache on drift.
+
 ### Model selection
 
 GPT-5.4 Mini was selected via PickAI discovery (see `scripts/discover-candidates.ts`). Selected for cost/speed balance suitable for real-time coaching during gameplay.

@@ -275,6 +275,73 @@ describe("session.correctLastAsk", () => {
     });
   });
 
+  it("refuses to overwrite a turn a concurrent ask appended while it waited", async () => {
+    // The session is shared by independent handlers (voice, game-plan,
+    // augment, proactive item-rec), so an ask can land between the
+    // corrective call starting and its result arriving. Writing to the tail
+    // blindly would clobber that ask's answer.
+    const session = createMatchSession("BASE", "test-key");
+    const feature = createTestFeature();
+
+    mockAnswerOnce("first");
+    await session.ask(feature, { stateSnapshot: "snap", question: "q" });
+
+    let releaseCorrection: () => void = () => {};
+    mockGenerateText.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseCorrection = () =>
+            resolve({
+              output: { answer: "corrected" },
+              usage: { inputTokens: 10, outputTokens: 5 },
+            } as never);
+        }) as never
+    );
+
+    const correcting = session.correctLastAsk(
+      feature,
+      { stateSnapshot: "snap", question: "q" },
+      "fix it"
+    );
+
+    mockAnswerOnce("concurrent answer");
+    await session.ask(feature, {
+      stateSnapshot: "snap2",
+      question: "concurrent question",
+    });
+
+    releaseCorrection();
+
+    await expect(correcting).rejects.toThrow(/history|changed|concurrent/i);
+    expect(session.messages).toHaveLength(4);
+    expect(session.messages[1]).toEqual({
+      role: "assistant",
+      content: "first",
+    });
+    expect(session.messages[3]).toEqual({
+      role: "assistant",
+      content: "concurrent answer",
+    });
+  });
+
+  it("throws after a phase transition invalidates the last ask", async () => {
+    const session = createMatchSession("BASE", "test-key");
+    const feature = createTestFeature();
+
+    mockAnswerOnce("first");
+    await session.ask(feature, { stateSnapshot: "snap", question: "q" });
+    session.transitionTo("post-game", "POST-GAME BASE");
+
+    await expect(
+      session.correctLastAsk(
+        feature,
+        { stateSnapshot: "snap", question: "q" },
+        "fix it"
+      )
+    ).rejects.toThrow(/prior ask|assistant/i);
+    expect(mockGenerateText).toHaveBeenCalledTimes(1);
+  });
+
   it("propagates the caller's abort signal to the engine", async () => {
     const session = createMatchSession("BASE", "test-key");
     const feature = createTestFeature();

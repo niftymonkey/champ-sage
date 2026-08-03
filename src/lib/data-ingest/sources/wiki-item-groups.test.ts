@@ -95,4 +95,15 @@ describe("fetchItemMutexGroups", () => {
 
     await expect(fetchItemMutexGroups()).rejects.toThrow(/503/);
   });
+
+  it("bounds the request with an abort signal", async () => {
+    // This runs inside the ingest Promise.all, so an unbounded request holds
+    // up every other source and delays app start.
+    mockFetch.mockResolvedValue(textResponse(SAMPLE_LUA));
+
+    await fetchItemMutexGroups();
+
+    const [, init] = mockFetch.mock.calls[0];
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
 });

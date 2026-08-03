@@ -57,7 +57,11 @@ export interface RaceWithRetryOptions {
 
 const DEFAULT_SLOW_AFTER_MS = 10_000;
 
-function isAbortError(err: unknown): boolean {
+/**
+ * True for a cancellation rejection. Callers that fall back on a failed model
+ * call must let this one through: a cancelled request has no answer to ship.
+ */
+export function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === "AbortError";
 }
 

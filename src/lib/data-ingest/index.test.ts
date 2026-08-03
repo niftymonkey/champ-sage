@@ -1109,4 +1109,30 @@ describe("loadGameData mutex-group ingestion", () => {
       expect(item.mutexGroups).toBeUndefined();
     }
   });
+
+  it("does NOT cache the payload when the mutex fetch REJECTS", async () => {
+    // Caching a group-less payload would disable mutex enforcement on every
+    // later start, not just this session: loadGameData prefers the cache, so
+    // nothing refetches the wiki until the cache key rotates.
+    vi.mocked(wikiItemGroups.fetchItemMutexGroups).mockRejectedValue(
+      new Error("wiki down")
+    );
+
+    await loadGameData();
+
+    expect(cache.writeCache).not.toHaveBeenCalled();
+  });
+
+  it("still caches when the wiki responds but matches no items", async () => {
+    // A successful fetch that matches nothing means the wiki module drifted.
+    // That is persistent, so refusing the cache would refetch the whole
+    // catalog on every start and never recover. Warn instead.
+    vi.mocked(wikiItemGroups.fetchItemMutexGroups).mockResolvedValue(
+      new Map([["an item we do not carry", ["Fatality"]]])
+    );
+
+    await loadGameData();
+
+    expect(cache.writeCache).toHaveBeenCalled();
+  });
 });

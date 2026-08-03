@@ -175,6 +175,10 @@ export function createMatchSession(
       const previousPhase = phase;
       phase = nextPhase;
       systemPrompt = nextSystemPrompt;
+      // The prior ask belongs to the phase that just ended. Correcting it now
+      // would compose the new phase's system prompt around a feature the new
+      // phase may not even support.
+      lastAskFeatureId = null;
       logBaseContext(
         `Session phase ${previousPhase} > ${nextPhase}. history preserved (${messages.length} msgs)`,
         systemPrompt
@@ -259,6 +263,13 @@ export function createMatchSession(
         { role: "user", content: correction },
       ];
 
+      // The session is shared by independent handlers, so an ask can land
+      // while this call is in flight. Pin the turn being corrected and check
+      // it is still the tail before writing, or the replacement would clobber
+      // that other ask's answer.
+      const targetIndex = messages.length - 1;
+      const targetMessage = last;
+
       const { value: raw, retried } = await runFeatureCall({
         feature,
         system,
@@ -268,9 +279,18 @@ export function createMatchSession(
         model: modelOverride,
       });
 
+      if (
+        messages.length - 1 !== targetIndex ||
+        messages[targetIndex] !== targetMessage
+      ) {
+        throw new Error(
+          `correctLastAsk for feature "${feature.id}" was abandoned: the session history changed while the corrective call was in flight (a concurrent ask appended turns)`
+        );
+      }
+
       const result = feature.extractResult(raw);
 
-      messages[messages.length - 1] = {
+      messages[targetIndex] = {
         role: "assistant",
         content: feature.summarizeForHistory(result),
       };

@@ -6,6 +6,9 @@ const ITEM_DATA_URL =
 /** Scalar fields named itemlimit, itemlimit2, itemlimit3, ... */
 const ITEM_LIMIT_FIELD = /^itemlimit\d*$/;
 
+/** Matches the other wiki sources; this fetch shares the ingest Promise.all. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 /**
  * Fetch mutually exclusive item-group membership from the League Wiki
  * ItemData Lua module.
@@ -21,7 +24,9 @@ const ITEM_LIMIT_FIELD = /^itemlimit\d*$/;
  * names (the live module carries stray trailing whitespace on some values).
  */
 export async function fetchItemMutexGroups(): Promise<Map<string, string[]>> {
-  const res = await fetch(ITEM_DATA_URL);
+  const res = await fetch(ITEM_DATA_URL, {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
   if (!res.ok) throw new Error(`Failed to fetch ItemData: ${res.status}`);
 
   const entries = parseLuaTable(await res.text());
