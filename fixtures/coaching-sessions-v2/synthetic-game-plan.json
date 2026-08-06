@@ -1,0 +1,216 @@
+[
+  {
+    "label": "SYNTHETIC: mid-game update-plan command (game-plan routing)",
+    "index": 0,
+    "timestamp": "2026-07-28T00:00:00Z",
+    "model": "synthetic",
+    "category": "sr",
+    "gameState": {
+      "status": "connected",
+      "activePlayer": {
+        "championName": "Ahri",
+        "level": 11,
+        "currentGold": 1350,
+        "runes": {
+          "keystone": "Unknown",
+          "primaryTree": "Unknown",
+          "secondaryTree": "Unknown"
+        },
+        "stats": {
+          "attackDamage": 57,
+          "abilityPower": 118,
+          "armor": 52,
+          "magicResist": 42,
+          "maxHealth": 1571,
+          "currentHealth": 1420,
+          "moveSpeed": 375,
+          "abilityHaste": 20,
+          "attackSpeed": 0.802,
+          "critChance": 0
+        }
+      },
+      "players": [
+        {
+          "championName": "Ahri",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 4,
+          "deaths": 2,
+          "assists": 5,
+          "items": [
+            {
+              "id": 6655,
+              "name": "Luden's Companion"
+            },
+            {
+              "id": 3020,
+              "name": "Sorcerer's Shoes"
+            }
+          ],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Player1",
+          "position": "",
+          "isActivePlayer": true
+        },
+        {
+          "championName": "Vi",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 2,
+          "deaths": 1,
+          "assists": 6,
+          "items": [],
+          "summonerSpells": ["Flash", "Smite"],
+          "riotIdGameName": "Ally1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Kai'Sa",
+          "team": "ORDER",
+          "level": 10,
+          "kills": 3,
+          "deaths": 2,
+          "assists": 2,
+          "items": [],
+          "summonerSpells": ["Flash", "Heal"],
+          "riotIdGameName": "Ally2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Thresh",
+          "team": "ORDER",
+          "level": 9,
+          "kills": 0,
+          "deaths": 3,
+          "assists": 9,
+          "items": [],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Ally3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Garen",
+          "team": "ORDER",
+          "level": 11,
+          "kills": 1,
+          "deaths": 2,
+          "assists": 1,
+          "items": [],
+          "summonerSpells": ["Flash", "Ghost"],
+          "riotIdGameName": "Ally4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Zed",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 5,
+          "deaths": 3,
+          "assists": 2,
+          "items": [
+            {
+              "id": 6692,
+              "name": "Eclipse"
+            },
+            {
+              "id": 3158,
+              "name": "Ionian Boots of Lucidity"
+            }
+          ],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Enemy1",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Lee Sin",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 2,
+          "deaths": 3,
+          "assists": 5,
+          "items": [
+            {
+              "id": 6698,
+              "name": "Profane Hydra"
+            }
+          ],
+          "summonerSpells": ["Flash", "Smite"],
+          "riotIdGameName": "Enemy2",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Jinx",
+          "team": "CHAOS",
+          "level": 10,
+          "kills": 3,
+          "deaths": 2,
+          "assists": 3,
+          "items": [
+            {
+              "id": 3031,
+              "name": "Infinity Edge"
+            }
+          ],
+          "summonerSpells": ["Flash", "Heal"],
+          "riotIdGameName": "Enemy3",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Nautilus",
+          "team": "CHAOS",
+          "level": 9,
+          "kills": 0,
+          "deaths": 2,
+          "assists": 8,
+          "items": [],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Enemy4",
+          "position": "",
+          "isActivePlayer": false
+        },
+        {
+          "championName": "Yone",
+          "team": "CHAOS",
+          "level": 11,
+          "kills": 4,
+          "deaths": 3,
+          "assists": 1,
+          "items": [
+            {
+              "id": 3006,
+              "name": "Berserker's Greaves"
+            }
+          ],
+          "summonerSpells": ["Flash", "Ignite"],
+          "riotIdGameName": "Enemy5",
+          "position": "",
+          "isActivePlayer": false
+        }
+      ],
+      "gameMode": "CLASSIC",
+      "gameTime": 900
+    },
+    "gameModeId": "classic",
+    "chosenAugments": [],
+    "query": {
+      "question": "update the game plan",
+      "history": [],
+      "augmentOptions": []
+    },
+    "response": null,
+    "error": null,
+    "scorerContext": {
+      "items": ["Luden's Companion", "Sorcerer's Shoes"],
+      "gold": 1350,
+      "champion": "Ahri",
+      "gameTime": "15:00"
+    }
+  }
+]

@@ -30,6 +30,18 @@ const ARAM_ONHIT_CANARIES = [
   "Wit's End",
 ];
 
+// Standard-ID-band items that are actually Arena-only (maps [30]) or
+// Nexus-Blitz-only (maps [21]). None may appear in the Classic, ARAM, or
+// Mayhem enum: if one does, the maps-intersection rule in
+// `isBuildPathEligible` has regressed and cross-mode leaks are back
+// (issue #117, mode-availability slice).
+const CROSS_MODE_LEAK_CANARIES = [
+  "Perplexity",
+  "Hellfire Hatchet",
+  "Deathfire Grasp",
+  "Ghostcrawlers",
+];
+
 function eligibleNames(items: Map<number, Item>, mode: GameMode): string[] {
   // Unique names, matching the enum the feature actually builds: in ARAM a
   // standard item and its same-named variant both pass, but the enum dedupes.
@@ -89,6 +101,16 @@ async function main(): Promise<void> {
         );
         failed = true;
       }
+    }
+    const leaks = CROSS_MODE_LEAK_CANARIES.filter((c) => names.includes(c));
+    console.log(
+      `  cross-mode leak canaries present: ${leaks.length > 0 ? leaks.join(", ") : "none"}`
+    );
+    if (leaks.length > 0) {
+      console.log(
+        "  FAIL: off-map items leaked into the enum (maps-intersection rule regressed)"
+      );
+      failed = true;
     }
     console.log(
       `  sample: ${names.slice(0, 14).join(", ")}${count > 14 ? ", ..." : ""}\n`

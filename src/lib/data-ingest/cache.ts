@@ -4,21 +4,25 @@
  */
 
 // Bump this version when the cache schema changes to invalidate stale data.
+// v13: items now carry DDragon's `specialRecipe` (the transform-to-base pointer
+// for transformation-only items like Muramana) alongside wiki-sourced
+// `mutexGroups` (mutually exclusive purchase groups, e.g. the Last Whisper
+// "Fatality" family). A v12 payload has neither, so the tier-1 pool could not
+// substitute purchasable bases, and mutex-group prompt warnings and build-path
+// enforcement would silently stay disabled until the next patch bumped the
+// version. Invalidate it. Numbered 13 because v12 shipped while this branch was
+// in flight: a bump has to land on a key nobody is holding, so a branch takes
+// the next number above whatever main carries, never the higher of the two
+// sides of a merge.
 // v12: champion passives now carry the wiki's innate (`/I`) description in
 // place of DDragon's numberless flavor text, and abilities carry the parsed
 // scaling those profiles are built from. An earlier payload holds the flavor
-// text, which reads as valid data, so only a bump replaces it. Numbered above
-// v10 rather than reusing this branch's original v8: v10 shipped while this
-// work sat uncommitted, and issue #117 holds v11, so a key nobody is using is
-// the only safe one to take.
+// text, which reads as valid data, so only a bump replaces it.
 // v10: patch 16.15.1's Jade champion variants overwrote sixty canonical
 // champions in the name-keyed map, so a payload written before the variant
 // filter holds Jade ids, legacy base stats, and legacy ability kits under
 // canonical names. Nothing about the payload's shape reveals this, and the
-// version string does not change, so only an explicit bump evicts it. Numbered
-// 10 rather than 8 to clear both branches in flight at the time (the
-// ability-scaling work sits on 8, issue #117 on 9); when either merges, keep
-// the highest number rather than the incoming one.
+// version string does not change, so only an explicit bump evicts it.
 // v7: items now carry a `maps` field (DDragon map availability) that filters
 // the coaching item catalog. A v6 payload has no `maps`, so every item reads
 // as available-nowhere and the ARAM/Mayhem catalog empties out. Invalidate it.
@@ -33,7 +37,7 @@
 // v4: the 26.12 Mayhem rework removed augment sets/traits; a v3 payload still
 // holds set data (populated augmentSets + per-augment sets), so invalidate it
 // to force one refetch that drops sets from the coaching context.
-const CACHE_VERSION = 12;
+const CACHE_VERSION = 13;
 const CACHE_PREFIX = `champ-sage:v${CACHE_VERSION}:`;
 
 export async function readCache<T>(key: string): Promise<T | null> {

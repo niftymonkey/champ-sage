@@ -2,15 +2,15 @@ import { describe, it, expect } from "vitest";
 import { mapToObject, objectToMap, writeCache } from "./cache";
 
 describe("cache version", () => {
-  it("writes under the v12 prefix (passives now carry wiki innate text)", async () => {
-    // The bump is the only thing that evicts a payload holding DDragon's
-    // numberless passive prose, since nothing about the payload's shape says
-    // which source filled it. Landing on a key someone already holds would
-    // serve that stale text for a whole patch, so the number is asserted here
+  it("writes under the v13 prefix (items now carry mutexGroups and specialRecipe)", async () => {
+    // The bump is the only thing that evicts a payload predating these fields,
+    // since nothing about the payload's shape says which ingest wrote it.
+    // Landing on a key someone already holds would leave the new legality rails
+    // silently disabled for a whole patch, so the number is asserted here
     // rather than left to review.
     localStorage.clear();
     await writeCache("version-probe", { ok: true });
-    expect(localStorage.getItem("champ-sage:v12:version-probe")).toBe(
+    expect(localStorage.getItem("champ-sage:v13:version-probe")).toBe(
       JSON.stringify({ ok: true })
     );
   });

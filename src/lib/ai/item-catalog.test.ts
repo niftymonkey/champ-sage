@@ -475,6 +475,84 @@ describe("buildItemCatalogSections", () => {
     expect(result.tier1Count).toBe(2);
   });
 
+  it("excludes blocklisted items from tier 1 even when the meta pool holds them", () => {
+    // Real leak: the ARAM meta pools genuinely contain Guardian's Horn and
+    // Guardian's Hammer. Tier 1 must run the same eligibility predicate as
+    // the build-path enum, or the prompt contradicts the schema.
+    const guardiansHorn = createItem({
+      id: 2051,
+      name: "Guardian's Horn",
+      mode: "aram",
+      gold: { base: 950, total: 950, sell: 665, purchasable: true },
+    });
+    const items = new Map(allItems);
+    items.set(guardiansHorn.id, guardiansHorn);
+    const index: MetaBuildIndex = {
+      aram: createMetaFileWithItemPool(jinx.key, "Jinx", [
+        { itemId: kraken.id, presence: 0.6 },
+        { itemId: guardiansHorn.id, presence: 0.4 },
+      ]),
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      items,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).not.toContain("Guardian's Horn");
+    expect(result.tier1Count).toBe(1);
+  });
+
+  it("excludes mode-unavailable items from tier 1", () => {
+    // Tier 1 historically checked only structure (purchasable, gold, into),
+    // never mode availability, so an Arena-only leak in the standard ID band
+    // (Perplexity, maps [30]) and an `other`-partition variant (the ARAM
+    // Hubris rebalance) walked straight into the pool.
+    const perplexity = createItem({
+      id: 4015,
+      name: "Perplexity",
+      mode: "standard",
+      maps: [30],
+      gold: { base: 1000, total: 3000, sell: 2100, purchasable: true },
+    });
+    const hubrisVariant = createItem({
+      id: 126697,
+      name: "Hubris",
+      mode: "other",
+      maps: [12, 35],
+      gold: { base: 1000, total: 3000, sell: 2100, purchasable: true },
+    });
+    const items = new Map(allItems);
+    items.set(perplexity.id, perplexity);
+    items.set(hubrisVariant.id, hubrisVariant);
+    const index: MetaBuildIndex = {
+      aram: createMetaFileWithItemPool(jinx.key, "Jinx", [
+        { itemId: kraken.id, presence: 0.6 },
+        { itemId: perplexity.id, presence: 0.3 },
+        { itemId: hubrisVariant.id, presence: 0.2 },
+      ]),
+      rankedSolo: null,
+      arena: null,
+    };
+
+    const result = buildItemCatalogSections(
+      createStubMode(GAME_MODE_ARAM),
+      jinx,
+      items,
+      index
+    );
+
+    expect(result.text).toContain("Kraken Slayer");
+    expect(result.text).not.toContain("Perplexity");
+    expect(result.text).not.toContain("Hubris");
+    expect(result.tier1Count).toBe(1);
+  });
+
   it("excludes base boots from tier 1 (gold < 500)", () => {
     const metaFile = createMetaFile(jinx.key, "Jinx", [
       [kraken.id, basicsBoots.id],
@@ -673,6 +751,67 @@ describe("isBuildPathEligible", () => {
     ).toBe(false);
   });
 
+  describe("maps-intersection rule (cross-mode leaks)", () => {
+    const mayhem = createStubMode(GAME_MODE_MAYHEM);
+
+    it("rejects a standard-band Arena-only item in Classic, ARAM, and Mayhem", () => {
+      // Real leak: Perplexity 4015 sits in the standard ID band (so the
+      // partition check passes) but carries maps [30], Arena only.
+      const perplexity = completed({
+        id: 4015,
+        name: "Perplexity",
+        maps: [30],
+      });
+      expect(isBuildPathEligible(perplexity, classic)).toBe(false);
+      expect(isBuildPathEligible(perplexity, aram)).toBe(false);
+      expect(isBuildPathEligible(perplexity, mayhem)).toBe(false);
+    });
+
+    it("rejects a Nexus-Blitz-only item in Classic, ARAM, and Mayhem", () => {
+      // Real leaks: Deathfire Grasp 3128 and Ghostcrawlers 3005, maps [21].
+      const dfg = completed({
+        id: 3128,
+        name: "Deathfire Grasp",
+        maps: [21],
+      });
+      expect(isBuildPathEligible(dfg, classic)).toBe(false);
+      expect(isBuildPathEligible(dfg, aram)).toBe(false);
+      expect(isBuildPathEligible(dfg, mayhem)).toBe(false);
+    });
+
+    it("rejects a maps [12, 21] item in Classic but accepts it in ARAM", () => {
+      // Real case: Atma's Reckoning 3039 exists on ARAM and Nexus Blitz,
+      // never on Summoner's Rift.
+      const atmas = completed({
+        id: 3039,
+        name: "Atma's Reckoning",
+        maps: [12, 21],
+      });
+      expect(isBuildPathEligible(atmas, classic)).toBe(false);
+      expect(isBuildPathEligible(atmas, aram)).toBe(true);
+    });
+
+    it("accepts an ARAM staple whose maps record lacks map 12 (via map 11)", () => {
+      // DDragon marks real ARAM staples (Guardian Angel 3026, Mejai's 3041)
+      // map12=false while map11=true, so ARAM's allowed set includes 11 and a
+      // naive maps-includes-12 filter is a regression (#138).
+      const ga = completed({ id: 3026, name: "Guardian Angel", maps: [11] });
+      expect(isBuildPathEligible(ga, aram)).toBe(true);
+      expect(isBuildPathEligible(ga, mayhem)).toBe(true);
+    });
+
+    it("accepts a maps [12, 35] ARAM-flagged item in ARAM", () => {
+      // Map 35 shows up on ARAM-flagged items (the Hubris variant is
+      // [12, 35]); its meaning is unmodeled, so ARAM stays permissive here.
+      const eventItem = completed({
+        id: 60,
+        name: "ARAM Event Item",
+        maps: [12, 35],
+      });
+      expect(isBuildPathEligible(eventItem, aram)).toBe(true);
+    });
+  });
+
   it("rejects the Guardian starter items by name in ARAM, Mayhem, and Classic", () => {
     const mayhem = createStubMode(GAME_MODE_MAYHEM);
     const starters = [
@@ -828,5 +967,317 @@ describe("tier 2 catalog: dedupe and junk exclusion", () => {
       ).text ?? "";
     expect(text).toContain("Abyssal Mask");
     expect(text).not.toContain("Rabadon's Deathcap");
+  });
+});
+
+describe("transformation-only items in the tier-1 pool", () => {
+  const jinx = createChampion(222, "Jinx", ["Marksman"]);
+  const mode = createStubMode(GAME_MODE_ARAM);
+
+  // The mana line: community pools hold ONLY the evolved forms, so keeping
+  // the line in tier 1 requires substituting the purchasable base.
+  const manamune = createItem({
+    id: 3004,
+    name: "Manamune",
+    description: "Grants mana. Transforms into Muramana at 360 max Mana.",
+    gold: { base: 900, total: 2900, sell: 2030, purchasable: true },
+  });
+  const muramana = createItem({
+    id: 3042,
+    name: "Muramana",
+    description: "Evolved form. Deals bonus damage from mana.",
+    gold: { base: 0, total: 2900, sell: 2030, purchasable: false },
+    specialRecipe: 3004,
+  });
+  const archangels = createItem({
+    id: 3003,
+    name: "Archangel's Staff",
+    description: "Grants AP. Transforms into Seraph's Embrace at 360 max Mana.",
+    gold: { base: 1000, total: 2900, sell: 2030, purchasable: true },
+  });
+  const seraphs = createItem({
+    id: 3040,
+    name: "Seraph's Embrace",
+    description: "Evolved form. Grants a shield.",
+    gold: { base: 0, total: 2900, sell: 2030, purchasable: false },
+    specialRecipe: 3003,
+  });
+  const wintersApproach = createItem({
+    id: 3119,
+    name: "Winter's Approach",
+    description: "Grants HP and mana. Transforms into Fimbulwinter.",
+    gold: { base: 900, total: 2400, sell: 1680, purchasable: true },
+  });
+  const fimbulwinter = createItem({
+    id: 3121,
+    name: "Fimbulwinter",
+    description: "Evolved form. Shields on immobilize.",
+    gold: { base: 0, total: 2400, sell: 1680, purchasable: false },
+    specialRecipe: 3119,
+  });
+  // The support line, modeled with synthetic gold values above the tier-1
+  // price floor so these fixtures isolate the pointer WALK (two hops for
+  // Bounty of Worlds), not the floor rule. World Atlas's empty description
+  // mirrors the real DDragon data quirk.
+  const worldAtlas = createItem({
+    id: 3865,
+    name: "World Atlas",
+    description: "",
+    gold: { base: 800, total: 800, sell: 320, purchasable: true },
+    stats: { FlatHPPoolMod: 30 },
+  });
+  const runicCompass = createItem({
+    id: 3866,
+    name: "Runic Compass",
+    description: "Earn 0 gold from this item's quest.",
+    gold: { base: 0, total: 800, sell: 320, purchasable: false },
+    specialRecipe: 3865,
+  });
+  const bountyOfWorlds = createItem({
+    id: 3867,
+    name: "Bounty of Worlds",
+    description: "Quest complete.",
+    gold: { base: 0, total: 800, sell: 320, purchasable: false },
+    specialRecipe: 3866,
+  });
+  // A purchasable item that ALSO carries specialRecipe (real case: Arena
+  // Prowler's Claw 446693 points at an Anvil Voucher). `purchasable` is the
+  // gate; the pointer alone must not trigger substitution.
+  const anvilVoucher = createItem({
+    id: 447117,
+    name: "Gold Anvil Voucher",
+    gold: { base: 0, total: 0, sell: 0, purchasable: false },
+  });
+  const prowlersClaw = createItem({
+    id: 446693,
+    name: "Prowler's Claw",
+    description: "Grants lethality and a dash.",
+    gold: { base: 0, total: 3200, sell: 2240, purchasable: true },
+    specialRecipe: 447117,
+  });
+  // A transform whose pointer dead-ends (base id missing from the catalog).
+  const orphanTransform = createItem({
+    id: 9999,
+    name: "Orphan Transform",
+    gold: { base: 0, total: 2900, sell: 2030, purchasable: false },
+    specialRecipe: 8888,
+  });
+
+  const allItems = new Map<number, Item>(
+    [
+      manamune,
+      muramana,
+      archangels,
+      seraphs,
+      wintersApproach,
+      fimbulwinter,
+      worldAtlas,
+      runicCompass,
+      bountyOfWorlds,
+      anvilVoucher,
+      prowlersClaw,
+      orphanTransform,
+    ].map((item) => [item.id, item])
+  );
+
+  function catalogText(pool: Array<{ itemId: number; presence: number }>): {
+    text: string;
+    tier1Count: number;
+  } {
+    const index: MetaBuildIndex = {
+      aram: createMetaFileWithItemPool(jinx.key, "Jinx", pool),
+      rankedSolo: null,
+      arena: null,
+    };
+    const result = buildItemCatalogSections(mode, jinx, allItems, index);
+    return { text: result.text ?? "", tier1Count: result.tier1Count };
+  }
+
+  it("substitutes the purchasable base when the pool holds only the evolved form, and drops a dead-end pointer", () => {
+    const { text, tier1Count } = catalogText([
+      { itemId: muramana.id, presence: 0.3 },
+      { itemId: orphanTransform.id, presence: 0.2 },
+    ]);
+
+    expect(text).toContain("**Manamune**");
+    expect(text).toContain("used in 30% of games");
+    // The evolved form is never a tier-1 entry ...
+    expect(text).not.toContain("**Muramana**");
+    // ... nor a tier-2 line: it cannot be bought anywhere.
+    expect(
+      text.split("\n").filter((l) => l.startsWith("- Muramana"))
+    ).toHaveLength(0);
+    // A transform whose base is missing from the catalog is dropped, not shown.
+    expect(text).not.toContain("Orphan Transform");
+    expect(tier1Count).toBe(1);
+  });
+
+  it("sums presences when base and evolved form both clear the pool floor", () => {
+    // Each game's end inventory holds exactly one of the two, so the summed
+    // rate is the true share of games that bought the base.
+    const { text, tier1Count } = catalogText([
+      { itemId: manamune.id, presence: 0.4 },
+      { itemId: muramana.id, presence: 0.25 },
+    ]);
+
+    expect(tier1Count).toBe(1);
+    expect(text).toContain("used in 65% of games");
+    expect((text.match(/\*\*Manamune\*\*/g) ?? []).length).toBe(1);
+  });
+
+  it("excludes all five transformation-only items from tier 1, substituting their bases", () => {
+    const { text } = catalogText([
+      { itemId: muramana.id, presence: 0.2 },
+      { itemId: seraphs.id, presence: 0.2 },
+      { itemId: fimbulwinter.id, presence: 0.2 },
+      { itemId: runicCompass.id, presence: 0.2 },
+      { itemId: bountyOfWorlds.id, presence: 0.2 },
+    ]);
+
+    expect(text).not.toContain("**Muramana**");
+    expect(text).not.toContain("**Seraph's Embrace**");
+    expect(text).not.toContain("**Fimbulwinter**");
+    expect(text).not.toContain("**Runic Compass**");
+    expect(text).not.toContain("**Bounty of Worlds**");
+    expect(text).toContain("**Manamune**");
+    expect(text).toContain("**Archangel's Staff**");
+    expect(text).toContain("**Winter's Approach**");
+    expect(text).toContain("**World Atlas**");
+  });
+
+  it("walks two hops to the purchasable base (Bounty of Worlds to World Atlas)", () => {
+    const { text, tier1Count } = catalogText([
+      { itemId: bountyOfWorlds.id, presence: 0.22 },
+    ]);
+
+    expect(text).toContain("**World Atlas**");
+    expect(text).toContain("used in 22% of games");
+    expect(text).not.toContain("**Bounty of Worlds**");
+    expect(text).not.toContain("**Runic Compass**");
+    expect(tier1Count).toBe(1);
+  });
+
+  it("tolerates a specialRecipe pointer that crosses ID partitions", () => {
+    // Real case: Arena Fimbulwinter 223121 points at standard 3119, not
+    // 223119. The walk resolves by id in the full catalog, whatever the
+    // partition of either end.
+    const arenaFimbulwinter = createItem({
+      id: 223121,
+      name: "Fimbulwinter",
+      mode: "arena",
+      gold: { base: 0, total: 2400, sell: 1680, purchasable: false },
+      specialRecipe: 3119,
+    });
+    const items = new Map(allItems);
+    items.set(arenaFimbulwinter.id, arenaFimbulwinter);
+    const index: MetaBuildIndex = {
+      aram: createMetaFileWithItemPool(jinx.key, "Jinx", [
+        { itemId: arenaFimbulwinter.id, presence: 0.3 },
+      ]),
+      rankedSolo: null,
+      arena: null,
+    };
+    const result = buildItemCatalogSections(mode, jinx, items, index);
+    const text = result.text ?? "";
+
+    expect(text).toContain("**Winter's Approach**");
+    expect(text).not.toContain("**Fimbulwinter**");
+  });
+
+  it("keeps a purchasable item that carries specialRecipe (Prowler's Claw) untouched", () => {
+    const { text, tier1Count } = catalogText([
+      { itemId: prowlersClaw.id, presence: 0.5 },
+    ]);
+
+    expect(text).toContain("**Prowler's Claw**");
+    expect(text).toContain("used in 50% of games");
+    expect(text).not.toContain("Gold Anvil Voucher");
+    expect(tier1Count).toBe(1);
+  });
+});
+
+describe("purchase restrictions section", () => {
+  const mode = createStubMode(GAME_MODE_ARAM);
+  const gold = { base: 0, total: 3000, sell: 2100, purchasable: true };
+
+  function eligibleItem(
+    id: number,
+    name: string,
+    mutexGroups?: string[]
+  ): [number, Item] {
+    return [id, createItem({ id, name, gold, mutexGroups })];
+  }
+
+  it("lists each group with two or more catalog members", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(3033, "Mortal Reminder", ["Fatality"]),
+      eligibleItem(3157, "Zhonya's Hourglass"),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).toContain("## Purchase restrictions");
+    expect(text).toContain("ONE");
+    expect(text).toContain(
+      "- Fatality: at most ONE of Lord Dominik's Regards, Mortal Reminder"
+    );
+  });
+
+  it("omits groups with only one catalog member", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(3157, "Zhonya's Hourglass"),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).not.toContain("Fatality");
+    expect(text).not.toContain("## Purchase restrictions");
+  });
+
+  it("omits the section when no item carries mutex groups", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3036, "Lord Dominik's Regards"),
+      eligibleItem(3157, "Zhonya's Hourglass"),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).not.toContain("## Purchase restrictions");
+  });
+
+  it("lists a dual-group item under each of its colliding groups", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3302, "Terminus", ["Fatality", "Blight"]),
+      eligibleItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(3135, "Void Staff", ["Blight"]),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).toContain("- Blight: at most ONE of Terminus, Void Staff");
+    expect(text).toContain(
+      "- Fatality: at most ONE of Lord Dominik's Regards, Terminus"
+    );
+  });
+
+  it("counts distinct names once even when same-named variants both qualify", () => {
+    const items = new Map<number, Item>([
+      eligibleItem(3036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(223036, "Lord Dominik's Regards", ["Fatality"]),
+      eligibleItem(3033, "Mortal Reminder", ["Fatality"]),
+    ]);
+
+    const text =
+      buildItemCatalogSections(mode, undefined, items, undefined).text ?? "";
+
+    expect(text).toContain(
+      "- Fatality: at most ONE of Lord Dominik's Regards, Mortal Reminder"
+    );
   });
 });

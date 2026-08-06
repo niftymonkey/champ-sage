@@ -30,6 +30,7 @@ export type LogModule =
   | "coaching:reactive"
   | "coaching:proactive"
   | "coaching:session"
+  | "coaching:remediation"
   | "gep"
   | "voice"
   | "data-ingest"

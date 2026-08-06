@@ -258,6 +258,39 @@ describe("fetchItems", () => {
     expect(potion!.into).toBeUndefined();
   });
 
+  it("keeps non-purchasable transformation items in the catalog and carries specialRecipe through", async () => {
+    mockFetch.mockResolvedValue(
+      jsonResponse({
+        data: {
+          "3004": {
+            name: "Manamune",
+            description:
+              "<mainText>Transforms into Muramana at 360 max Mana.</mainText>",
+            gold: { base: 900, total: 2900, sell: 2030, purchasable: true },
+            image: { full: "3004.png" },
+          },
+          "3042": {
+            name: "Muramana",
+            description: "<mainText>Evolved form.</mainText>",
+            gold: { base: 0, total: 2900, sell: 2030, purchasable: false },
+            specialRecipe: 3004,
+            image: { full: "3042.png" },
+          },
+        },
+      })
+    );
+
+    const items = await fetchItems("15.6.1");
+
+    // The transform stays ingested: it resolves inventory display when the
+    // player holds the evolved form. Only recommendations exclude it.
+    const muramana = items.get(3042);
+    expect(muramana).toBeDefined();
+    expect(muramana!.specialRecipe).toBe(3004);
+    // Ordinary items carry no pointer.
+    expect(items.get(3004)!.specialRecipe).toBeUndefined();
+  });
+
   it("classifies standard items (1000-8999) as standard", async () => {
     mockFetch.mockResolvedValue(
       jsonResponse({

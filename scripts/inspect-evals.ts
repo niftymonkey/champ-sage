@@ -25,10 +25,10 @@ import { mkdirSync, writeFileSync } from "fs";
 const GATE_SCORERS = [
   "Item Awareness",
   "Structured Output",
-  "Augment Re-Roll Accuracy",
   "State Awareness",
   "Gold-Aware Recommendations",
   "Build Path Structure",
+  "Item Legality",
 ];
 const RANKING_SCORERS = [
   "Brevity",
@@ -193,7 +193,7 @@ function getFixtureCount(evalId: number): number {
 const SCORER_LABELS: Record<string, string> = {
   "Item Awareness": "Items",
   "Structured Output": "StrOut",
-  "Augment Re-Roll Accuracy": "ReRoll",
+  "Item Legality": "ItmLgl",
   Brevity: "Brief",
   Decisiveness: "Decisv",
   "Conversational Continuity": "Contin",

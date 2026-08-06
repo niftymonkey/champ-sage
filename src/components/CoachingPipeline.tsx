@@ -13,14 +13,16 @@ import type { LoadedGameData } from "../lib/data-ingest";
 import type { GameState } from "../lib/game-state/types";
 import type { MatchSession } from "../lib/ai/match-session";
 import type { CoachingFeature } from "../lib/ai/feature";
+import type { Recommendation } from "../lib/ai/types";
 import {
   createGamePlanFeature,
+  describeBuildPathDrop,
   extractBuildPath,
-  findDuplicateBoots,
   isUpdatePlanCommand,
   type GamePlanInput,
   type GamePlanResult,
 } from "../lib/ai/features/game-plan";
+import { remediateGamePlan } from "../lib/ai/features/game-plan/remediation";
 import {
   augmentFitFeature,
   type AugmentFitResult,
@@ -28,8 +30,12 @@ import {
 import {
   isItemRecQuestion,
   itemRecFeature,
+  type ItemRecInput,
+  type ItemRecResult,
   type ItemRecTrigger,
 } from "../lib/ai/features/item-rec";
+import { describeRecommendationDrop } from "../lib/ai/features/item-rec/legality";
+import { remediateItemRec } from "../lib/ai/features/item-rec/remediation";
 import { voiceQueryFeature } from "../lib/ai/features/voice-query";
 import {
   postGameTakeawayFeature,
@@ -487,6 +493,13 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
   const submitGamePlanQuery = useCallback(
     async (gameTime: number) => {
       if (!sessionRef.current || !gamePlanFeatureRef.current || !apiKey) return;
+      // The mode the current game's feature/schema was built for. Non-null
+      // whenever a session (and thus the feature) exists: the session-create
+      // effect only runs with a detected mode, and modeRef persists it
+      // through the match. Captured here (not read at use time) so the
+      // legality sweep after the await judges against the same mode.
+      const gamePlanMode = modeRef.current;
+      if (!gamePlanMode) return;
 
       const directionAtSnapshot = playerBuildDirection$.getValue();
       proactiveLog.info(
@@ -503,48 +516,62 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
 
       proactiveLog.info("Game plan query");
 
-      const { value: response } = await sessionRef.current.ask(
-        gamePlanFeatureRef.current,
-        { snapshot }
-      );
+      const session = sessionRef.current;
+      const gamePlanFeature = gamePlanFeatureRef.current;
+      const { value: response } = await session.ask(gamePlanFeature, {
+        snapshot,
+      });
 
-      const buildPath = extractBuildPath(response);
+      const rawBuildPath = extractBuildPath(response);
 
       // Smoke check: the schema requires 6 items. Fewer indicates a
       // degraded-mode path (item-catalog exceeded the enum size limit and
       // the schema fell back to free-string names) — still useful to the
       // player but worth a warn log.
-      if (buildPath.length !== 6) {
+      if (rawBuildPath.length !== 6) {
         proactiveLog.warn(
-          `Game plan build path has ${buildPath.length} items (expected 6)`
+          `Game plan build path has ${rawBuildPath.length} items (expected 6)`
         );
       }
 
-      // #109: the prompt forbids more than one Boots-tagged item, but the
-      // schema enum can't express uniqueness. Log when the LLM slips so
-      // regressions are visible in playtest logs.
-      const duplicateBoots = findDuplicateBoots(
-        buildPath,
-        gameDataRef.current.items
+      // #117: the prompt forbids restriction-group pairs, duplicate names,
+      // second boots, mode-unavailable items, and re-buying owned items;
+      // remediateGamePlan sweeps deterministically and gives the model ONE
+      // corrective retry to reclaim dropped slots. The returned path is
+      // always the swept (legal) one: a shorter path with a logged warning
+      // beats an illegal 6-item path. Owned names come from the SAME
+      // snapshot that rendered the [Game State] Items line, so the prompt
+      // and the validator agree on what the player holds.
+      const ownedItemNames = snapshot?.player.items.map((i) => i.name) ?? [];
+      const { answer, buildPath, dropped, corrected } = await remediateGamePlan(
+        {
+          session,
+          feature: gamePlanFeature,
+          input: { snapshot },
+          response,
+          items: gameDataRef.current.items,
+          mode: gamePlanMode,
+          ownedItemNames,
+        }
       );
-      if (duplicateBoots.length > 0) {
+      if (dropped.length > 0) {
         proactiveLog.warn(
-          `Game plan build path contains ${duplicateBoots.length} boots items: ${duplicateBoots
-            .map((b) => b.name)
-            .join(", ")}`
+          `Game plan legality (${corrected ? "corrective retry still illegal" : "corrective retry failed"}) dropped: ${dropped
+            .map(describeBuildPathDrop)
+            .join("; ")}`
         );
+      } else if (corrected) {
+        proactiveLog.info("Game plan corrected via retry; final path is legal");
       }
 
-      proactiveLog.info(
-        `Game plan response: ${response.answer.substring(0, 200)}...`
-      );
+      proactiveLog.info(`Game plan response: ${answer.substring(0, 200)}...`);
       proactiveLog.info(
         `Game plan build path: ${buildPath
           .map((i) => `${i.name} [${i.category}]`)
           .join(" → ")}`
       );
 
-      pushGamePlan(response.answer, buildPath, gameTime);
+      pushGamePlan(answer, buildPath, gameTime);
 
       // Relay to overlay. Overlay's CoachingResponse shape wants
       // recommendations + buildPath even when the feature doesn't use
@@ -553,7 +580,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       const rev = gamePlanRevRef.current;
       proactiveLog.info(`Sending game plan response to overlay (rev=${rev})`);
       window.electronAPI?.sendCoachingResponse({
-        answer: response.answer,
+        answer,
         recommendations: [],
         buildPath,
         source: "plan",
@@ -673,6 +700,58 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
     [apiKey]
   );
 
+  /**
+   * #117 legality rail for item recommendations, shared by the voice route
+   * and the proactive shop triggers. The prompt forbids offering an item the
+   * player owns, a sibling of an owned restriction-group item, a second pair
+   * of boots, or anything unbuyable in this mode; `remediateItemRec` filters
+   * deterministically and gives the model ONE corrective turn so the answer
+   * prose still matches the surfaced cards. Owned names come from the SAME
+   * snapshot that rendered the [Game State] Items line, so the prompt and the
+   * validator agree on what the player holds. With no detected mode there is
+   * nothing to judge against, so the response passes through untouched.
+   */
+  const applyItemRecLegality = useCallback(
+    async (
+      session: MatchSession,
+      input: ItemRecInput,
+      response: ItemRecResult,
+      signal?: AbortSignal
+    ): Promise<ItemRecResult> => {
+      const itemRecMode = modeRef.current;
+      if (!itemRecMode) return response;
+
+      const ownedItemNames =
+        input.snapshot?.player.items.map((i) => i.name) ?? [];
+      const { answer, recommendations, dropped, corrected } =
+        await remediateItemRec({
+          session,
+          feature: itemRecFeature,
+          input,
+          response,
+          items: gameDataRef.current.items,
+          mode: itemRecMode,
+          ownedItemNames,
+          signal,
+        });
+
+      if (dropped.length > 0) {
+        proactiveLog.warn(
+          `Item-rec legality (${corrected ? "corrective retry still illegal" : "corrective retry failed"}) dropped: ${dropped
+            .map(describeRecommendationDrop)
+            .join("; ")}`
+        );
+      } else if (corrected) {
+        proactiveLog.info(
+          "Item-rec corrected via retry; final options are legal"
+        );
+      }
+
+      return { answer, recommendations };
+    },
+    []
+  );
+
   const submitQuestion = useCallback(
     async (question: string, options?: { signal?: AbortSignal }) => {
       if (!sessionRef.current || !apiKey || !question.trim()) {
@@ -765,18 +844,30 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         proactiveLog.info(
           `Voice question routing: "${trimmedQuestion}" → ${useItemRec ? "itemRec" : "voiceQuery"}`
         );
-        const askResult = useItemRec
-          ? await sessionRef.current.ask(
-              itemRecFeature,
-              { snapshot, question },
-              { signal: options?.signal }
-            )
-          : await sessionRef.current.ask(
-              voiceQueryFeature,
-              { snapshot, question },
-              { signal: options?.signal }
-            );
-        const { value: response, retried } = askResult;
+        const session = sessionRef.current;
+        let response: { answer: string; recommendations: Recommendation[] };
+        let retried: boolean;
+        if (useItemRec) {
+          const input: ItemRecInput = { snapshot, question };
+          const askResult = await session.ask(itemRecFeature, input, {
+            signal: options?.signal,
+          });
+          retried = askResult.retried;
+          response = await applyItemRecLegality(
+            session,
+            input,
+            askResult.value,
+            options?.signal
+          );
+        } else {
+          const askResult = await session.ask(
+            voiceQueryFeature,
+            { snapshot, question },
+            { signal: options?.signal }
+          );
+          retried = askResult.retried;
+          response = askResult.value;
+        }
 
         const gameTime = liveGameStateRef.current.gameTime;
         pushCoachingExchange(
@@ -822,7 +913,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
         }
       }
     },
-    [apiKey, submitGamePlanQuery]
+    [apiKey, submitGamePlanQuery, applyItemRecLegality]
   );
 
   // Subscribe to voice intent
@@ -920,10 +1011,18 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
           enemyDirectionsRef.current
         );
         proactiveLog.info(`Item-rec ${trigger} fired`);
-        const { value: response, retried } = await sessionRef.current.ask(
+        const session = sessionRef.current;
+        const input: ItemRecInput = { snapshot, question, trigger };
+        const { value: rawResponse, retried } = await session.ask(
           itemRecFeature,
-          { snapshot, question, trigger },
+          input,
           { signal }
+        );
+        const response = await applyItemRecLegality(
+          session,
+          input,
+          rawResponse,
+          signal
         );
         const gameTime = liveGameStateRef.current.gameTime;
         pushCoachingExchange(
@@ -991,7 +1090,7 @@ export function CoachingPipeline({ gameData }: CoachingPipelineProps) {
       { globalMinGapMs: 30_000 }
     );
     return () => engine.dispose();
-  }, [mode, submitAugmentQuery, apiKey]);
+  }, [mode, submitAugmentQuery, apiKey, applyItemRecLegality]);
 
   // Player-side augment pick tracking — chosen augments + manual input feed.
   // Separate from the trigger's cancel$ because these are app state updates,

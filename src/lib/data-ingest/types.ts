@@ -99,12 +99,35 @@ export interface Item {
   mode: ItemMode;
   /**
    * DDragon map IDs this item is actually available on (11 = Summoner's Rift,
-   * 12/14 = ARAM, 30 = Arena). This is the durable "purchasable in this mode"
+   * 12 = ARAM, 30 = Arena). This is the durable "purchasable in this mode"
    * signal, unlike the ID-range `mode` partition which mislabels items (an
    * `aram`-range id can be SR-only). Empty means available nowhere (deprecated
    * or internal items), which excludes it from every catalog.
    */
   maps: number[];
+  /**
+   * Mutually exclusive purchase groups this item belongs to, sourced from the
+   * League Wiki ItemData `itemlimit`/`itemlimit2` fields (e.g. "Fatality" for
+   * the Last Whisper family). The game caps ownership at ONE item per group,
+   * so a build path must never contain two items sharing a group. Riot's own
+   * feeds cannot supply this: DDragon's top-level `groups` array names the
+   * groups (with MaxGroupOwnable) but no item carries a membership field, and
+   * CommunityDragon mirrors the same gap. Absent when the wiki fetch failed or
+   * the item has no group restriction.
+   */
+  mutexGroups?: string[];
+  /**
+   * For transformation-only items (Muramana, Seraph's Embrace, Fimbulwinter,
+   * Runic Compass, Bounty of Worlds), the DDragon id of the item they
+   * transform FROM: the purchasable base the player actually buys. These
+   * items carry `gold.purchasable: false` (that flag, not this pointer, is
+   * what marks them un-buyable: one purchasable item, Arena Prowler's Claw,
+   * also carries `specialRecipe`). The pointer may cross ID partitions (Arena
+   * Fimbulwinter 223121 points at standard 3119), and Bounty of Worlds needs
+   * two hops (via Runic Compass) to reach purchasable World Atlas. Absent on
+   * ordinary items.
+   */
+  specialRecipe?: number;
 }
 
 export interface ItemGold {

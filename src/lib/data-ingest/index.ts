@@ -25,6 +25,7 @@ import {
   MISSING_DESCRIPTION_PLACEHOLDER,
 } from "./sources/community-dragon";
 import { fetchAramOverrides } from "./sources/wiki-aram-overrides";
+import { fetchItemMutexGroups } from "./sources/wiki-item-groups";
 import {
   fetchChampionAbilityScaling,
   type ChampionAbilityScaling,
@@ -108,6 +109,32 @@ export function mergeAbilityScaling(
     });
   }
 
+  return merged;
+}
+
+/**
+ * Attach wiki-sourced mutex-group membership to items before the cache write.
+ * Matching is by lowercase item name (not id) so every same-named variant
+ * (e.g. an ARAM rebalance of a standard item) inherits the restriction at
+ * once. Returns the number of items that received groups. A null `groups`
+ * (wiki fetch failed) is a no-op: mutex enforcement degrades for this run
+ * rather than blocking ingest, and the caller skips the cache write so the
+ * next start refetches instead of inheriting group-less items.
+ */
+export function mergeItemMutexGroups(
+  items: Map<number, Item>,
+  groups: Map<string, string[]> | null
+): number {
+  if (!groups || groups.size === 0) return 0;
+
+  let merged = 0;
+  for (const item of items.values()) {
+    const itemGroups = groups.get(item.name.toLowerCase());
+    if (itemGroups && itemGroups.length > 0) {
+      item.mutexGroups = [...itemGroups];
+      merged++;
+    }
+  }
   return merged;
 }
 
@@ -307,6 +334,7 @@ export async function fetchAndCache(
     wikiMayhemAugments,
     arenaAugments,
     aramOverrideMap,
+    itemMutexGroups,
   ] = await Promise.all([
     championsPromise,
     fetchItems(version),
@@ -332,6 +360,12 @@ export async function fetchAndCache(
     }),
     fetchArenaAugments(),
     fetchAramOverrides(),
+    fetchItemMutexGroups().catch((err) => {
+      log.warn(
+        `Item mutex-group fetch failed; build paths lose mutex-group enforcement this session: ${errMessage(err)}`
+      );
+      return null;
+    }),
   ]);
 
   // ARAM Mayhem (KIWI) descriptions now come from CommunityDragon raw game
@@ -367,6 +401,15 @@ export async function fetchAndCache(
   await mergeAugmentIds(augments, patchline);
   enrichQuestAugments(augments, items);
   mergeAramOverrides(champions, aramOverrideMap);
+  const mutexMerged = mergeItemMutexGroups(items, itemMutexGroups);
+  if (itemMutexGroups && mutexMerged === 0) {
+    // A successful fetch that matches zero items means the wiki module's
+    // field names or item names drifted; the enforcement silently disabling
+    // is exactly what should be visible in logs.
+    log.warn(
+      "Item mutex-group data matched no items; wiki ItemData format may have drifted"
+    );
+  }
   const abilityCoverage = mergeChampionAbilities(champions, championAbilities);
   reportScalingCoverage(
     champions,
@@ -393,13 +436,24 @@ export async function fetchAndCache(
   // champion would refetch the whole catalog on every start.
   const coverageRate =
     champions.size === 0 ? 0 : abilityCoverage / champions.size;
-  if (coverageRate >= ABILITY_MIN_COVERAGE_RATE) {
-    await writeCache(patchlineCacheKey(patchline), data);
-  } else {
+  if (coverageRate < ABILITY_MIN_COVERAGE_RATE) {
     log.warn(
       `Skipping cache write: only ${abilityCoverage}/${champions.size} champions resolved abilities ` +
         `(below ${ABILITY_MIN_COVERAGE_RATE * 100}%). Game data is degraded for this session and will be refetched on next start.`
     );
+  } else if (itemMutexGroups === null) {
+    // Same rule as the ability guard, for the same reason: loadGameData
+    // prefers the cache, so persisting a group-less payload would leave mutex
+    // enforcement off on every later start, not just this one. A failed fetch
+    // is transient, so refetching next start is the cheap recovery. Drift (a
+    // fetch that succeeds and matches nothing) is NOT treated this way: it
+    // would refetch the whole catalog forever without ever recovering.
+    log.warn(
+      "Skipping cache write: the item mutex-group fetch failed, so build-path " +
+        "mutex enforcement is off this session and will be refetched on next start."
+    );
+  } else {
+    await writeCache(patchlineCacheKey(patchline), data);
   }
 
   const loaded = fromCached(data);

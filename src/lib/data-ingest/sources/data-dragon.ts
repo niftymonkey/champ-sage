@@ -114,7 +114,7 @@ export async function fetchItems(version: string): Promise<Map<number, Item>> {
     // Skip non-purchasable zero-gold items (system/internal: turret buffs, quest trackers, etc.)
     if (raw.gold.total === 0 && !raw.gold.purchasable) continue;
 
-    items.set(id, {
+    const item: Item = {
       id,
       name,
       description: stripHtml(raw.description),
@@ -127,7 +127,11 @@ export async function fetchItems(version: string): Promise<Map<number, Item>> {
       image: `${BASE_URL}/cdn/${version}/img/item/${raw.image.full}`,
       mode: classifyItemMode(id),
       maps: parseAvailableMaps(raw.maps),
-    });
+    };
+    if (raw.specialRecipe !== undefined) {
+      item.specialRecipe = raw.specialRecipe;
+    }
+    items.set(id, item);
   }
 
   return items;
@@ -366,6 +370,7 @@ interface RawItem {
   stats?: Record<string, number>;
   from?: string[];
   into?: string[];
+  specialRecipe?: number;
   image: { full: string };
   maps?: Record<string, boolean>;
 }

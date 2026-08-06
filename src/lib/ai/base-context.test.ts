@@ -177,6 +177,11 @@ describe("buildBaseContext", () => {
     expect(context).toContain("ITEM AWARENESS");
     expect(context).toContain("GOLD AWARENESS");
     expect(context).toContain("[Game State]");
+    // Transformed items (Muramana etc.) appear in inventory under a name the
+    // catalog never lists; the rule must make an owned evolved form count as
+    // the base item being bought.
+    expect(context).toContain("transform");
+    expect(context).toContain("Manamune becomes Muramana");
     // Voice/tone rules moved to `briefPersonality` (Phase 6) so new
     // personalities replace them cleanly instead of fighting embedded
     // brevity instructions in the base context.

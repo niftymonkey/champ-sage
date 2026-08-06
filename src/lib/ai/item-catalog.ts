@@ -57,27 +57,6 @@ export function selectMetaFile(
 }
 
 /**
- * Whether a build-path slot may contain this item in the given mode. The shared
- * "build-path content rules" predicate (issue #127): a recommendable item is
- * purchasable, durable (not a consumable or trinket), completed (components and
- * basic boots are not end-state slots), and available in the current mode.
- *
- * This is the structural floor the game-plan name enum stands on. It cannot
- * express cross-item legality (one boots, no duplicate Legendary, mutex item
- * groups) or "already owned": those need the full set plus inventory and are
- * enforced post-hoc (issue #117).
- *
- * Mode availability uses the ID-range `item.mode` partition (ARAM is played
- * with standard items plus the ARAM variant overlay, so it accepts both). This
- * is deliberately permissive: DDragon's per-map `maps` flags are INCOMPLETE for
- * ARAM (they mark real staples like Guardian Angel and Mejai's as map-12-absent),
- * so filtering on a specific map would drop items that are genuinely buildable.
- * The one thing `maps` IS reliable for is "available on NO map at all", which is
- * how deprecated and internal entries (Deprecated item, Quest markers) are
- * excluded here without touching real items (issue #138 remains the tracked
- * home for a fully map-accurate availability model).
- */
-/**
  * Curated name blocklist for items that pass every structural rule but should
  * never be recommended. Name-based (not id) so it survives id churn and catches
  * every same-named variant at once:
@@ -97,6 +76,27 @@ const NEVER_RECOMMEND_ITEM_NAMES = new Set([
   "Guardian's Orb",
 ]);
 
+/**
+ * Whether a build-path slot may contain this item in the given mode. The shared
+ * "build-path content rules" predicate (issue #127): a recommendable item is
+ * purchasable, durable (not a consumable or trinket), completed (components and
+ * basic boots are not end-state slots), and available in the current mode.
+ *
+ * This is the structural floor the game-plan name enum, the item catalog's
+ * tiers, and the post-hoc legality sweep all stand on. It cannot express
+ * cross-item legality (one boots, no duplicate Legendary, mutex item groups)
+ * or "already owned": those need the full set plus inventory and are enforced
+ * post-hoc (issue #117).
+ *
+ * Mode availability is two checks ANDed: the ID-range `item.mode` partition
+ * (`modeAcceptsItemMode`; ARAM is played with standard items plus the ARAM
+ * variant overlay, so it accepts both bands) and a maps-intersection rule
+ * (the item's `maps` record must share a map with the mode's allowed set).
+ * The intersection closes leaks the partition cannot see: standard-ID-band
+ * items that are really Arena-only (maps [30]) or Nexus-Blitz-only (maps
+ * [21]). See the allowed-set docblock for why ARAM's set stays permissive.
+ * An empty `maps` record means deprecated or internal, recommendable nowhere.
+ */
 export function isBuildPathEligible(item: Item, mode: GameMode): boolean {
   if (NEVER_RECOMMEND_ITEM_NAMES.has(item.name)) return false;
   if (!item.gold.purchasable) return false;
@@ -109,8 +109,8 @@ export function isBuildPathEligible(item: Item, mode: GameMode): boolean {
   const isBoots = item.tags.includes("Boots");
   if (item.into && item.into.length > 0 && !isBoots) return false;
   if (item.gold.total < 500) return false;
-  // Available on no map = deprecated or internal, recommendable nowhere.
-  if (item.maps.length === 0) return false;
+  const allowedMaps = allowedMapsForMode(mode);
+  if (!item.maps.some((mapId) => allowedMaps.has(mapId))) return false;
   return modeAcceptsItemMode(mode, item.mode);
 }
 
@@ -126,6 +126,36 @@ function modeAcceptsItemMode(mode: GameMode, itemMode: ItemMode): boolean {
   }
   if (mode.matches(GAME_MODE_ARENA)) return itemMode === "arena";
   return itemMode === "standard";
+}
+
+/**
+ * Per-mode allowed map sets for the maps-intersection availability rule: an
+ * item is mode-available only when its `maps` record (DDragon map IDs the
+ * item is flagged available on) intersects the mode's set. This runs ON TOP
+ * of the ID-range partition check in `modeAcceptsItemMode`; the partition
+ * handles the aram/arena ID bands, the intersection catches standard-band
+ * items whose maps prove them Arena-only (30) or Nexus-Blitz-only (21).
+ *
+ * ARAM and Mayhem include map 11 deliberately: DDragon's map-12 flag is
+ * INCOMPLETE, marking real ARAM staples (Guardian Angel 3026, Mejai's 3041,
+ * Bastionbreaker) map12=false while map11=true, so requiring 12 would drop
+ * genuinely buildable items. Map 35 appears on ARAM-flagged items (the
+ * Hubris variant carries [12, 35]) and its meaning is not modeled yet, so it
+ * stays allowed. A fully map-accurate availability model remains issue #138.
+ *
+ * Arena's set is unreachable at runtime today (no arena mode is registered)
+ * but is defined so every mode branch states its availability the same way.
+ */
+const CLASSIC_ALLOWED_MAPS: ReadonlySet<number> = new Set([11]);
+const ARAM_ALLOWED_MAPS: ReadonlySet<number> = new Set([11, 12, 35]);
+const ARENA_ALLOWED_MAPS: ReadonlySet<number> = new Set([30]);
+
+function allowedMapsForMode(mode: GameMode): ReadonlySet<number> {
+  if (mode.matches(GAME_MODE_ARAM) || mode.matches(GAME_MODE_MAYHEM)) {
+    return ARAM_ALLOWED_MAPS;
+  }
+  if (mode.matches(GAME_MODE_ARENA)) return ARENA_ALLOWED_MAPS;
+  return CLASSIC_ALLOWED_MAPS;
 }
 
 /**
@@ -245,6 +275,39 @@ function formatReferenceItem(item: Item): string {
     : `- ${item.name} — ${formatGold(item.gold.total)}`;
 }
 
+/**
+ * Resolve an item to its purchasable form for recommendation purposes.
+ *
+ * Transformation-only items (Muramana, Seraph's Embrace, Fimbulwinter, Runic
+ * Compass, Bounty of Worlds) carry `gold.purchasable: false` and point at the
+ * item they transform FROM via `specialRecipe`. `purchasable` is the gate and
+ * `specialRecipe` only the pointer: a purchasable item that happens to carry
+ * `specialRecipe` (Arena Prowler's Claw pointing at an Anvil Voucher) is
+ * returned unchanged. The walk iterates because Bounty of Worlds needs two
+ * hops (via Runic Compass) to reach purchasable World Atlas, and it may land
+ * in a different ID partition (Arena Fimbulwinter 223121 points at standard
+ * 3119). Returns null when the walk dead-ends on a missing pointer, an
+ * unknown id, or a cycle: no buyable form exists to recommend.
+ *
+ * Exported because build-path legality (issue #117) needs the same walk in
+ * the opposite direction: an owned EVOLVED item must count as its purchasable
+ * base when deciding whether a path entry re-buys something the player has.
+ */
+export function resolveToPurchasable(
+  item: Item,
+  allItems: ReadonlyMap<number, Item>
+): Item | null {
+  const visited = new Set<number>();
+  let current: Item | undefined = item;
+  while (current && !current.gold.purchasable) {
+    visited.add(current.id);
+    if (current.specialRecipe === undefined) return null;
+    if (visited.has(current.specialRecipe)) return null;
+    current = allItems.get(current.specialRecipe);
+  }
+  return current ?? null;
+}
+
 export interface ItemCatalogSections {
   /** The full block of text ready to drop into the system prompt, or null
    *  if no item data could be assembled (e.g. unknown champion, no meta file). */
@@ -296,19 +359,39 @@ export function buildItemCatalogSections(
 
   const tier1Entries = deriveMetaItemPoolEntries(championMeta);
   const tier1Items: Array<{ item: Item; presence: number | null }> = [];
+  const tier1IndexById = new Map<number, number>();
   for (const entry of tier1Entries) {
-    const item = allItems.get(entry.itemId);
+    const poolItem = allItems.get(entry.itemId);
+    if (!poolItem) continue;
+    // Community pools hold end-of-game inventories, so transformation-only
+    // items (Muramana, Seraph's Embrace, ...) appear as the EVOLVED form: the
+    // only form players ever finish with. Those cannot be bought; resolve to
+    // the purchasable base and recommend that instead. Dropping without
+    // substituting would delete the whole item line from the pool.
+    const item = resolveToPurchasable(poolItem, allItems);
     if (!item) continue;
-    // Skip components and consumables. These show up in meta builds when
-    // players finish games with leftover inventory (Refillable Potion, Ruby
-    // Crystal, Long Sword, etc.). They pollute the tier 1 pool.
-    //
-    // A completed item either doesn't build into anything, or is boots
-    // (upgraded boots have `into` pointing at further upgrades but are
-    // still "completed" items — identified by the "Boots" tag).
-    if (item.gold.total < 500) continue;
-    const isBoots = item.tags.includes("Boots");
-    if (item.into && item.into.length > 0 && !isBoots) continue;
+    // Meta pools hold end-of-game inventories, so they carry leftovers the
+    // enum would never offer: components, consumables (Refillable Potion,
+    // Long Sword), blocklisted starters (Guardian's Horn), and cross-mode
+    // leaks. Gate tier 1 on the SAME predicate as tier 2 and the game-plan
+    // name enum, making the shown pool a subset of the recommendable set by
+    // construction.
+    if (!isBuildPathEligible(item, mode)) continue;
+    // When the base and its transform independently clear the presence floor,
+    // both resolve to the same base id. Each game's end inventory holds
+    // exactly ONE of the two, so summing the presences is the true share of
+    // games that bought the base, not a double count. A null presence (legacy
+    // build-cluster pools) stays null: no true rate exists to sum.
+    const existingIndex = tier1IndexById.get(item.id);
+    if (existingIndex !== undefined) {
+      const existing = tier1Items[existingIndex];
+      existing.presence =
+        existing.presence != null && entry.presence != null
+          ? existing.presence + entry.presence
+          : null;
+      continue;
+    }
+    tier1IndexById.set(item.id, tier1Items.length);
     tier1Items.push({ item, presence: entry.presence });
   }
 
@@ -354,9 +437,56 @@ export function buildItemCatalogSections(
     }
   }
 
+  const restrictions = formatPurchaseRestrictions([
+    ...tier1Items.map(({ item }) => item),
+    ...tier2Items,
+  ]);
+  if (restrictions.length > 0) {
+    if (lines.length > 0) lines.push("");
+    lines.push(...restrictions);
+  }
+
   return {
     text: lines.join("\n"),
     tier1Count: tier1Items.length,
     tier2Count: tier2Items.length,
   };
+}
+
+/**
+ * Render the "Purchase restrictions" block: one line per mutex group with two
+ * or more distinct item names in the shown catalog (#117 mutex slice). The
+ * game caps each group (Last Whisper family "Fatality", Spellblade, Hydra,
+ * Lifeline, ...) at one owned item, so listing colliding names next to the
+ * pool is the prompt-level defense that keeps the model from recommending,
+ * say, Lord Dominik's Regards and Mortal Reminder together. Groups and names
+ * are sorted alphabetically so the output is deterministic. Returns [] when
+ * no shown group has a possible collision (including when mutex data is
+ * absent because the wiki fetch failed).
+ */
+function formatPurchaseRestrictions(catalogItems: Item[]): string[] {
+  const namesByGroup = new Map<string, Set<string>>();
+  for (const item of catalogItems) {
+    for (const group of item.mutexGroups ?? []) {
+      const names = namesByGroup.get(group) ?? new Set<string>();
+      names.add(item.name);
+      namesByGroup.set(group, names);
+    }
+  }
+
+  const collidingGroups = [...namesByGroup.entries()]
+    .filter(([, names]) => names.size >= 2)
+    .sort(([a], [b]) => a.localeCompare(b));
+  if (collidingGroups.length === 0) return [];
+
+  const lines = [
+    "## Purchase restrictions",
+    "The game only allows owning ONE item from each group below at a time. Never put two items from the same group in a build path, and never recommend one while the player already owns another from that group.",
+    "",
+  ];
+  for (const [group, names] of collidingGroups) {
+    const sorted = [...names].sort((a, b) => a.localeCompare(b));
+    lines.push(`- ${group}: at most ONE of ${sorted.join(", ")}`);
+  }
+  return lines;
 }
