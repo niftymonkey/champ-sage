@@ -1570,6 +1570,29 @@ function buildAppMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+// Dev-only fault injection for the launcher's exit-code handling
+// (scripts/launch-electron.sh): CS_SIMULATE_EXIT=<code> makes the app exit with
+// that code CS_SIMULATE_EXIT_DELAY_MS after startup. The relaunch caps and the
+// crash-after-long-uptime retry are otherwise only exercisable by waiting for a
+// real crash. Gated on the dev server URL so a packaged build ignores it.
+function maybeSimulateExit(): void {
+  if (!process.env.VITE_DEV_SERVER_URL) return;
+  const requested = process.env.CS_SIMULATE_EXIT;
+  if (!requested) return;
+  const code = Number(requested);
+  if (!Number.isInteger(code)) {
+    appLog.warn(`Ignoring non-numeric CS_SIMULATE_EXIT=${requested}`);
+    return;
+  }
+  const requestedDelay = Number(process.env.CS_SIMULATE_EXIT_DELAY_MS ?? 0);
+  const delayMs =
+    Number.isFinite(requestedDelay) && requestedDelay > 0 ? requestedDelay : 0;
+  appLog.warn(
+    `CS_SIMULATE_EXIT=${code}: exiting in ${delayMs}ms (dev fault injection)`
+  );
+  setTimeout(() => app.exit(code), delayMs);
+}
+
 // ---------------------------------------------------------------------------
 // App lifecycle
 // ---------------------------------------------------------------------------
@@ -1589,6 +1612,7 @@ app.whenReady().then(async () => {
   );
 
   initOverwolfFeatures();
+  maybeSimulateExit();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
