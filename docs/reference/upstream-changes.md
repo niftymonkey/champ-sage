@@ -171,6 +171,62 @@ directly.
 
 ---
 
+## Startup failures
+
+Riot data is not the only upstream that moves. The app also sits on a host
+environment (the Windows-side ow-electron install, WSL interop, Overwolf's
+package manager) that rots on its own schedule, and a failure there costs more
+than a data failure: the app does not start at all, so nothing in it can warn
+anybody. Those incidents get rows here too, in the same format, because the
+lesson is identical: the check that would have caught it earlier is the point.
+
+### 2026-08-17: the Windows global ow-electron lost its Electron runtime
+
+**What changed upstream**
+
+`@overwolf/ow-electron` installs as a small package whose `install.js`
+downloads and extracts the actual ~327 MB Electron runtime into `dist/`. The
+`dist/` tree under the Windows pnpm global install
+(`AppData\Local\pnpm\global\5\.pnpm\@overwolf+ow-electron@39.6.1\...`)
+was gone, along with `path.txt`.
+
+**How we found out**
+
+`pnpm dev:electron` died on "Electron failed to install correctly", a stack
+trace with no window, no banner, and nothing in the app logs.
+
+**What it cost**
+
+An evening of launches that produced nothing, and an investigation to establish
+that the package itself was intact and only its runtime was missing.
+
+**What we changed**
+
+`scripts/ow-runtime-preflight.ts` (`pnpm repair-electron`) checks the same
+three things `install.js` checks and re-runs it when they disagree;
+`launch-electron.sh` calls it before every launch. The repair is extract-only
+when the source zip is still in the Electron download cache (~11 s observed).
+The launcher also propagates ow-electron's exit code now: it used to fall out
+of the relaunch loop and exit 0, which laundered a crash into a clean-looking
+shutdown.
+
+**The check that would have caught it earlier**
+
+The preflight itself. Note the recurrence risk is structural, not a one-off
+deletion: the pnpm global store has `ignoredBuilds` active, so a future
+`pnpm add -g @overwolf/ow-electron` upgrade can legitimately skip `install.js`
+and leave exactly this dist-less state.
+
+**Cause, honestly stated**
+
+Not established. Defender history was clean, two larger sibling `dist/` trees
+survived untouched, and pnpm's global metadata had not been written since
+March, which points at a targeted delete of that one tree (~70-75% confidence)
+rather than a sweep. The USN journal could name the actor but needs an elevated
+shell.
+
+---
+
 ## Known and deliberately unmodelled
 
 Recorded so the drift audit's clean run is not mistaken for full coverage.

@@ -1015,3 +1015,48 @@ The main desktop window (`createMainWindow` in `electron/main.ts`) persists its 
 - **Fix:** construct the window, then call `win.setBounds(saved)`. setBounds runs after the window is placed on its target display, so position and size both resolve in that display's DPI. Pair it with `show: false` plus show on `ready-to-show` so the corrected bounds apply before first paint (no flash, no monitor jump).
 - **Off-screen safety:** on restore, `boundsAreVisible` (`electron/window-placement.ts`) requires a connected display's work area to cover at least 64px of horizontal overlap and at least 64px of the window's _top strip_ (the title bar, not its full height), each clamped to the window's own size when it is smaller; otherwise it falls back to the default centered placement, so a window saved on a now-absent monitor never opens unreachable.
 - **Do not persist the restore:** the programmatic `setBounds` fires a resize event. Attach the move/resize persistence listeners only inside the `ready-to-show` handler so the restore is not written back as a user action. At fractional scale (1.75) the save/restore round trip can drift the stored size by ~1px before it stabilizes; that is rounding, not a leak.
+
+## Dev launch chain (WSL to the Windows ow-electron)
+
+### The Windows global ow-electron carries no runtime of its own
+
+`pnpm dev:electron` does not run Electron from this repo. `scripts/launch-electron.sh` shells out through PowerShell to the Windows-side **global** `ow-electron`. That global package is small; its `install.js` downloads a ~327 MB runtime zip and extracts it into the package's `dist/`. Three files decide whether the runtime is usable, and they are exactly what `install.js`'s own `isInstalled()` checks:
+
+| File              | Meaning                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------- |
+| `dist/version`    | which runtime is extracted; must equal `package.json`'s `owElectronVersion` (a leading `v` is stripped) |
+| `path.txt`        | which binary inside `dist/` to launch (`electron.exe` on Windows)                                       |
+| `dist/<path.txt>` | the binary itself must exist                                                                            |
+
+- If any of those disagree, ow-electron dies on "Electron failed to install correctly" **before any window exists**, so no in-app surface can report it. `scripts/ow-runtime-preflight.ts` checks the same three things before every launch and re-runs `install.js` when they disagree.
+- `install.js` is idempotent (`isInstalled()` exits 0 early), so re-running it is always safe.
+- Repairs are normally extract-only, not a download: the source zip stays in the Electron download cache at `%LOCALAPPDATA%\electron\Cache\<hash>\ow-electron-v<version>-win32-x64.zip`. Observed repair: ~11 s offline.
+
+### Finding the global package without pnpm
+
+The package directory is parsed out of the `ow-electron` **command shim**, not from `pnpm root -g`. Windows-side `pnpm` fell off the PATH after an `nvm install 24` (2026-08-17) while its global store kept working, so anything that shells to Windows pnpm is unreliable here.
+
+- Every shim generator writes the absolute path of `@overwolf/ow-electron/cli.js` relative to a base-dir variable that resolves to the shim's own directory: `$basedir` in the `.ps1` shims, `%~dp0` (trailing separator included) in the `.CMD` one.
+- pnpm's shim also embeds a `NODE_PATH` pointing at the same package plus a `node_modules` suffix. Anchor on the `cli.js` reference, not on `NODE_PATH`, or the parsed directory is one level too deep.
+- pnpm's global store resolves the package's own dependencies (`extract-zip`, `@electron/get`) from the virtual-store directory two levels up, so `node install.js` works from the package directory even though its own `node_modules` holds only `.bin`.
+
+### WSL interop fails transiently, and helpers must not read that as a verdict
+
+Running any Windows binary from WSL can fail with `WSL (<pid>) ERROR: UtilAcceptVsock:271: accept4 failed 110` (ETIMEDOUT on the interop socket). Observed twice in a row during `pnpm dev:electron` startup and then not at all across dozens of identical calls, including the `ow-electron` launch itself, which is untouched code. It is environmental and transient.
+
+- **Consequence for helper scripts:** a failed `powershell.exe` call must be reported as "could not determine", never as the answer. The runtime preflight's first draft turned an interop timeout into "ow-electron is not on the Windows PATH" and refused to launch, which is worse than the crash it exists to prevent. It now retries once and, if Windows stays unreachable, exits 1 so the launcher warns and launches anyway.
+- `sweep_orphans` in the launcher sends PowerShell's stderr to `/dev/null`, so its interop failures are invisible. It is best-effort by design, but that also means a silent no-op sweep looks identical to a clean one.
+
+### Launcher exit-code contract
+
+| Code  | Meaning                                                                      |
+| ----- | ---------------------------------------------------------------------------- |
+| 0     | clean quit                                                                   |
+| 3     | the Windows ow-electron runtime is unusable; nothing was launched            |
+| 70    | three restart requests (exit 42) inside 10 s each; the relaunch loop gave up |
+| other | ow-electron's own exit code, propagated                                      |
+
+- The loop used to `break` and let the script exit 0, which laundered a crash into a clean-looking shutdown. `exit "${APP_EXIT}"` now ends the script.
+- Uptime is measured from just before the PowerShell launch, not from the top of the loop: the orphan sweep, the guard resolution, and the Vite wait together run ~5 s, enough to make an app that dies instantly look like it stayed up.
+- A crash (non-zero, non-42) after at least 60 s of uptime buys exactly one silent relaunch; a second crash exits and says so.
+- `CS_SIMULATE_EXIT=<code>` plus optional `CS_SIMULATE_EXIT_DELAY_MS` makes the app exit on cue (`maybeSimulateExit` in `electron/main.ts`, gated on `VITE_DEV_SERVER_URL`). The launcher passes both through to PowerShell only when they are digits, since they land on a command line. Without the hook none of these paths can be exercised without waiting for a real crash.

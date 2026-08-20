@@ -13,7 +13,12 @@
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-PROJECT_WIN="$(wslpath -w "${PROJECT_ROOT}")"
+# wslpath fails outside WSL and on paths Windows cannot see. Unchecked, the
+# empty result launches ow-electron against "" and it loads the wrong app.
+if ! PROJECT_WIN="$(wslpath -w "${PROJECT_ROOT}")" || [ -z "${PROJECT_WIN}" ]; then
+  echo "[launch-electron] Error: wslpath could not map ${PROJECT_ROOT} to a Windows path; this launcher has to run inside WSL." >&2
+  exit 1
+fi
 
 # Change to a Windows-compatible directory before running powershell.exe to avoid UNC path warnings
 cd /mnt/c || { echo "[launch-electron] Error: Cannot change to /mnt/c"; exit 1; }
@@ -110,6 +115,62 @@ start_guard() {
   esac
 }
 
+# ow-electron's Windows global install carries no Electron runtime until its
+# postinstall extracts one into dist/, and that tree can go missing (observed
+# 2026-08-17; a pnpm global upgrade with ignoredBuilds active can also skip
+# install.js and leave the same state). Without this check the launch dies on
+# "Electron failed to install correctly" before any window exists. The
+# preflight repairs in place when it can, and refuses the launch only when the
+# runtime is genuinely unusable; if the preflight itself breaks, launch anyway
+# rather than let a broken helper stop the app.
+ensure_ow_electron_runtime() {
+  ( cd "${PROJECT_ROOT}" && pnpm exec tsx scripts/ow-runtime-preflight.ts )
+  preflight_status=$?
+  # The preflight prints its own verdict, including what it repaired, so this
+  # only has to decide whether launching is still on.
+  case "${preflight_status}" in
+    0) ;;
+    3)
+      echo "[launch-electron] ERROR: the Windows ow-electron runtime is unusable (see above). Not launching." >&2
+      exit 3
+      ;;
+    *)
+      echo "[launch-electron] WARNING: runtime preflight exited ${preflight_status} (it could not decide); launching anyway." >&2
+      ;;
+  esac
+}
+
+# Dev-only fault injection so the loop below can actually be exercised: makes
+# the app exit with a chosen code after a chosen delay (see electron/main.ts).
+# Digits only, since the value is interpolated into a PowerShell command line.
+sim_env_prefix() {
+  local prefix=""
+  case "${CS_SIMULATE_EXIT}" in
+    "") ;;
+    *[!0-9]*) echo "[launch-electron] WARNING: ignoring non-numeric CS_SIMULATE_EXIT" >&2 ;;
+    *) prefix="\$env:CS_SIMULATE_EXIT='${CS_SIMULATE_EXIT}'; " ;;
+  esac
+  case "${CS_SIMULATE_EXIT_DELAY_MS}" in
+    "") ;;
+    *[!0-9]*) echo "[launch-electron] WARNING: ignoring non-numeric CS_SIMULATE_EXIT_DELAY_MS" >&2 ;;
+    *) prefix="${prefix}\$env:CS_SIMULATE_EXIT_DELAY_MS='${CS_SIMULATE_EXIT_DELAY_MS}'; " ;;
+  esac
+  printf '%s' "${prefix}"
+}
+
+ensure_ow_electron_runtime
+SIM_ENV="$(sim_env_prefix)"
+
+# Loop bounds. A relaunch that dies before the app is ever usable would spin
+# forever without a cap, while a crash after a long healthy session is worth
+# exactly one silent retry.
+FAST_EXIT_SECONDS=10
+MAX_FAST_RELAUNCHES=3
+MIN_UPTIME_FOR_AUTO_RELAUNCH=60
+EXIT_RELAUNCH_LOOP=70
+fast_relaunches=0
+auto_relaunched=0
+
 # Launch loop. The in-app "Restart now" calls app.exit(RELAUNCH_EXIT_CODE); the
 # loop then re-runs the guard (re-resolving the floor-clearing GEP) and restarts
 # ow-electron in place. The launcher never exits on a relaunch, so the Vite dev
@@ -123,6 +184,10 @@ while true; do
 
   if [ "$1" = "--prod" ]; then
     echo "[launch-electron] Production mode: loading bundled HTML from dist/"
+    # Timed from here, not from the top of the loop: the orphan sweep, the
+    # guard, and the Vite wait are not app uptime, and counting them would let
+    # an app that dies instantly look like it stayed up.
+    launch_started=${SECONDS}
     powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\"; exit \$LASTEXITCODE"
     APP_EXIT=$?
   else
@@ -131,19 +196,44 @@ while true; do
       sleep 0.5
     done
     echo "[launch-electron] Vite is ready. Launching Electron..."
-    powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; \$env:VITE_DEV_SERVER_URL='http://localhost:1420'; ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\"; exit \$LASTEXITCODE"
+    launch_started=${SECONDS}
+    powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ${SIM_ENV}\$env:VITE_DEV_SERVER_URL='http://localhost:1420'; ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\"; exit \$LASTEXITCODE"
     APP_EXIT=$?
   fi
 
+  app_uptime=$((SECONDS - launch_started))
   cleanup_guard
-  echo "[launch-electron] ow-electron exited with code ${APP_EXIT}"
+  echo "[launch-electron] ow-electron exited with code ${APP_EXIT} after ${app_uptime}s"
 
   if [ "${APP_EXIT}" = "${RELAUNCH_EXIT_CODE}" ]; then
+    if [ "${app_uptime}" -lt "${FAST_EXIT_SECONDS}" ]; then
+      fast_relaunches=$((fast_relaunches + 1))
+      if [ "${fast_relaunches}" -ge "${MAX_FAST_RELAUNCHES}" ]; then
+        echo "[launch-electron] ERROR: ${fast_relaunches} restart requests in under ${FAST_EXIT_SECONDS}s each; the app is not staying up. Stopping." >&2
+        APP_EXIT="${EXIT_RELAUNCH_LOOP}"
+        break
+      fi
+    else
+      fast_relaunches=0
+    fi
     echo "[launch-electron] Restart requested; re-resolving GEP and relaunching..."
     # A forced test build (GEP_FORCE_VERSION) applies to the first launch only;
     # the relaunch resolves the real latest so the upgrade is observable.
     unset GEP_FORCE_VERSION
     continue
   fi
+
+  # A crash after a long healthy session buys one silent relaunch, so a
+  # mid-session fault costs a reload rather than the app. A second crash is not
+  # a fluke, so it exits and says so.
+  if [ "${APP_EXIT}" -ne 0 ] && [ "${app_uptime}" -ge "${MIN_UPTIME_FOR_AUTO_RELAUNCH}" ] && [ "${auto_relaunched}" -eq 0 ]; then
+    auto_relaunched=1
+    echo "[launch-electron] Crashed after ${app_uptime}s of uptime; relaunching once."
+    continue
+  fi
   break
 done
+
+# The loop used to fall out here and let the script exit 0, which laundered an
+# ow-electron crash into a clean-looking shutdown.
+exit "${APP_EXIT}"
