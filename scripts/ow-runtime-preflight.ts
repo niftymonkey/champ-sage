@@ -30,9 +30,9 @@
  *   2  `--check` only: a repair is needed and was not attempted
  *   3  runtime unusable and not repairable here; the exact manual command is
  *      printed. The launcher must not launch.
- *   1  preflight could not determine anything (no shim, unparseable shim, its
- *      own crash). The launcher warns and launches anyway rather than refusing
- *      to start because its helper broke.
+ *   1  preflight could not determine anything (Windows unreachable, unparseable
+ *      shim, its own crash). The launcher warns and launches anyway rather than
+ *      refusing to start because its helper broke.
  */
 
 import { execFileSync } from "node:child_process";
@@ -302,7 +302,7 @@ function readProjectPin(repoRoot: string): string | null {
   }
 }
 
-function inspectRuntime(
+export function inspectRuntime(
   packageDirWsl: string,
   projectPinnedVersion: string | null
 ): RuntimeInspection {
@@ -310,9 +310,15 @@ function inspectRuntime(
   let declaredVersion: string | null = null;
   if (packageJson) {
     try {
-      const parsed: { owElectronVersion?: string; version?: string } =
-        JSON.parse(packageJson);
-      declaredVersion = parsed.owElectronVersion ?? parsed.version ?? null;
+      // Only `owElectronVersion`: that is the single field install.js reads,
+      // and npm's own `version` would let a package with no runtime version to
+      // install pass as healthy whenever dist/version happened to match it.
+      const parsed: { owElectronVersion?: unknown } = JSON.parse(packageJson);
+      declaredVersion =
+        typeof parsed.owElectronVersion === "string" &&
+        parsed.owElectronVersion.trim()
+          ? parsed.owElectronVersion
+          : null;
     } catch {
       declaredVersion = null;
     }

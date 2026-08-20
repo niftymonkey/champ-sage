@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   parseShimPackageDir,
+  inspectRuntime,
   evaluateRuntimeState,
   buildRepairCommand,
   buildInstallCommand,
@@ -214,5 +218,52 @@ describe("buildInstallCommand", () => {
     expect(buildInstallCommand("39.6.1")).toBe(
       "npm install -g @overwolf/ow-electron@39.6.1"
     );
+  });
+});
+
+describe("inspectRuntime", () => {
+  // install.js reads `owElectronVersion` and nothing else (see its
+  // isInstalled()), so an npm `version` field must not stand in for it: a
+  // package that carries only `version` has no runtime version to install.
+  function writePackage(
+    manifest: Record<string, string>,
+    extras: { installer?: boolean; distVersion?: string } = {}
+  ): string {
+    const dir = mkdtempSync(join(tmpdir(), "ow-runtime-preflight-"));
+    writeFileSync(join(dir, "package.json"), JSON.stringify(manifest));
+    if (extras.installer !== false) writeFileSync(join(dir, "install.js"), "");
+    writeFileSync(join(dir, "path.txt"), "electron.exe");
+    mkdirSync(join(dir, "dist"));
+    writeFileSync(join(dir, "dist", "version"), extras.distVersion ?? "39.6.1");
+    writeFileSync(join(dir, "dist", "electron.exe"), "");
+    return dir;
+  }
+
+  it("reads owElectronVersion as the runtime version to install", () => {
+    const dir = writePackage({
+      version: "39.6.1",
+      owElectronVersion: "39.6.1",
+    });
+    expect(inspectRuntime(dir, "39.6.1").declaredVersion).toBe("39.6.1");
+  });
+
+  it("finds no runtime version when the manifest carries only npm's version", () => {
+    const dir = writePackage({ version: "39.6.1" });
+    expect(inspectRuntime(dir, "39.6.1").declaredVersion).toBeNull();
+  });
+
+  it("treats a blank owElectronVersion as no version at all", () => {
+    const dir = writePackage({ owElectronVersion: "   ", version: "39.6.1" });
+    expect(inspectRuntime(dir, "39.6.1").declaredVersion).toBeNull();
+  });
+
+  // The whole point of the two tests above: a version-only manifest must reach
+  // the unrecoverable verdict (exit 3) rather than passing as healthy because
+  // dist/version happens to match the npm package version.
+  it("ends in unrecoverable for a version-only manifest whose dist matches it", () => {
+    const dir = writePackage({ version: "39.6.1" });
+    const state = evaluateRuntimeState(inspectRuntime(dir, "39.6.1"));
+    expect(state.level).toBe("unrecoverable");
+    expect(state.reason).toContain("owElectronVersion");
   });
 });

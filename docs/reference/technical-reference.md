@@ -1030,6 +1030,7 @@ The main desktop window (`createMainWindow` in `electron/main.ts`) persists its 
 
 - If any of those disagree, ow-electron dies on "Electron failed to install correctly" **before any window exists**, so no in-app surface can report it. `scripts/ow-runtime-preflight.ts` checks the same three things before every launch and re-runs `install.js` when they disagree.
 - `install.js` is idempotent (`isInstalled()` exits 0 early), so re-running it is always safe.
+- **`owElectronVersion` is the only version field that counts.** The package manifest also carries npm's own `version`, and in a healthy install the two are identical (`39.6.1` both), so treating `version` as a fallback looks harmless and passes every real-world check. It is not: a package with no `owElectronVersion` has no runtime to install at all, and the fallback reports it healthy whenever `dist/version` matches the npm version. `install.js` reads `owElectronVersion` and nothing else.
 - Repairs are normally extract-only, not a download: the source zip stays in the Electron download cache at `%LOCALAPPDATA%\electron\Cache\<hash>\ow-electron-v<version>-win32-x64.zip`. Observed repair: ~11 s offline.
 
 ### Finding the global package without pnpm
