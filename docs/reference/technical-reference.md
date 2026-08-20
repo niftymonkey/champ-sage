@@ -1028,7 +1028,7 @@ The main desktop window (`createMainWindow` in `electron/main.ts`) persists its 
 | `path.txt`        | which binary inside `dist/` to launch (`electron.exe` on Windows)                                       |
 | `dist/<path.txt>` | the binary itself must exist                                                                            |
 
-- If any of those disagree, ow-electron dies on "Electron failed to install correctly" **before any window exists**, so no in-app surface can report it. `scripts/ow-runtime-preflight.ts` checks the same three things before every launch and re-runs `install.js` when they disagree.
+- If any of those disagree, ow-electron dies on "Electron failed to install correctly" **before any window exists**, so no in-app surface can report it. `scripts/ow-runtime-preflight.ts` checks the same three things before every launch and re-runs `install.js` when the state is repairable. A missing global package, a missing `install.js`, or a missing `owElectronVersion` is unrecoverable: there is nothing to re-run or nothing to install, so it is reported with the manual command and no repair is attempted.
 - `install.js` is idempotent (`isInstalled()` exits 0 early), so re-running it is always safe.
 - **`owElectronVersion` is the only version field that counts.** The package manifest also carries npm's own `version`, and in a healthy install the two are identical (`39.6.1` both), so treating `version` as a fallback looks harmless and passes every real-world check. It is not: a package with no `owElectronVersion` has no runtime to install at all, and the fallback reports it healthy whenever `dist/version` matches the npm version. `install.js` reads `owElectronVersion` and nothing else.
 - Repairs are normally extract-only, not a download: the source zip stays in the Electron download cache at `%LOCALAPPDATA%\electron\Cache\<hash>\ow-electron-v<version>-win32-x64.zip`. Observed repair: ~11 s offline.
@@ -1056,6 +1056,8 @@ Running any Windows binary from WSL can fail with `WSL (<pid>) ERROR: UtilAccept
 | 3     | the Windows ow-electron runtime is unusable; nothing was launched            |
 | 70    | three restart requests (exit 42) inside 10 s each; the relaunch loop gave up |
 | other | ow-electron's own exit code, propagated                                      |
+
+These are the launcher's own final exit codes. The preflight's codes are separate and only code `3` becomes one of them: `1` (preflight could not determine anything) is consumed as a warning and the launch continues, so it never reaches the caller. A final `1` therefore comes from ow-electron itself, via the `other` row.
 
 - The loop used to `break` and let the script exit 0, which laundered a crash into a clean-looking shutdown. `exit "${APP_EXIT}"` now ends the script.
 - Uptime is measured from just before the PowerShell launch, not from the top of the loop: the orphan sweep, the guard resolution, and the Vite wait together run ~5 s, enough to make an app that dies instantly look like it stayed up.
