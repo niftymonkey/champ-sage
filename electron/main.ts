@@ -66,6 +66,13 @@ import {
   drainWithTimeout,
   preserveFileCopy,
 } from "./boot-hardening";
+import {
+  createStatusRegistry,
+  parseLaunchStatus,
+  launchStatusToSubsystem,
+  type SubsystemStatus,
+} from "../src/lib/app-status";
+import { createReadinessTracker } from "./package-readiness";
 
 const app = electronApp;
 
@@ -230,6 +237,18 @@ function sendToAllWindows(channel: string, data: unknown): void {
 }
 
 /**
+ * Everything the app knows about its own health, in one place.
+ *
+ * Push and pull both matter: the push covers a status that changes while the
+ * renderer is up, and the pull covers the far more common case of a status set
+ * during boot, before any renderer existed to hear it. This mirrors the
+ * gep-health transport, which needed the same two halves for the same reason.
+ */
+const appStatus = createStatusRegistry();
+
+appStatus.subscribe((all) => sendToAllWindows("app-status", all));
+
+/**
  * Force a compositor paint flush on a transparent Overwolf passthrough
  * overlay window. `webContents.invalidate()` is asynchronous and unreliable
  * on this window type — it often gets coalesced away. This stacks three
@@ -319,6 +338,20 @@ function readSettings(): Record<string, unknown> {
       );
     }
     settingsWriteBlocked = true;
+    // The honest half of the refusal. `writeSettingsFile` already declines to
+    // overwrite a file it could not read, but declining is silent: without this
+    // the player changes a setting, sees it change on screen, and finds it gone
+    // next launch. The renderer store updates in memory before it awaits the
+    // write, so rejecting the write would not fix that on its own; saying so is
+    // what fixes it.
+    appStatus.set({
+      id: "settings",
+      level: "degraded",
+      message:
+        "Your settings will not be saved this session. Changes apply now but will be gone next launch.",
+      detail: `settings.json is ${outcome.status}, so Champ Sage will not overwrite it. The original was preserved next to it.`,
+      action: "open-logs",
+    });
     preserveUnreadableSettings(path, outcome.status);
   }
 
@@ -428,6 +461,16 @@ function registerIpcHandlers(): void {
   // Renderer pulls the GEP health verdict on mount, since the GEP `ready`
   // event that produces it can fire before the renderer subscribes.
   ipcMain.handle("gep:get-health", () => lastGepHealth);
+
+  // Same reason, for every other subsystem: most statuses are set during boot,
+  // which is over before the first renderer mounts.
+  ipcMain.handle("app-status:get", () => appStatus.list());
+
+  // The `open-logs` banner action. Every launch and package problem is
+  // diagnosed from the log directory, and nothing in the app can fix them.
+  ipcMain.on("app-status:open-logs", () => {
+    void shell.openPath(getLogsDir());
+  });
 
   // "Restart now" from the update banner. GEP cannot be hot-reloaded, so a
   // floor-clearing build only loads on a fresh launch. Exiting with this
@@ -932,8 +975,38 @@ function initOverwolfFeatures(): void {
 
   const packages = owApp.overwolf.packages;
 
+  // OWEPM has no event for "this package is never coming", so silence is the
+  // failure mode: a total GEP loss leaves `lastGepHealth` null and every banner
+  // empty, which is indistinguishable from a healthy app. The tracker turns
+  // that silence into a deadline.
+  const readiness = createReadinessTracker({
+    onStatus: (status) => appStatus.set(status),
+  });
+  app.once("before-quit", () => readiness.dispose());
+
+  packages.on(
+    "failed-to-initialize",
+    (_e: unknown, packageName: string, reason: unknown) => {
+      appLog.error(
+        `Overwolf package failed to initialize: ${packageName}: ${formatErrorForLog(reason)}`
+      );
+      readiness.markFailed(packageName, String(reason));
+    }
+  );
+
+  packages.on(
+    "crashed",
+    (_e: unknown, packageName: string, canRecover: boolean) => {
+      appLog.error(
+        `Overwolf package crashed: ${packageName} (canRecover=${canRecover})`
+      );
+      readiness.markCrashed(packageName, canRecover);
+    }
+  );
+
   packages.on("ready", (e: unknown, packageName: string, version: string) => {
     appLog.info(`Overwolf package ready: ${packageName} v${version}`);
+    readiness.markReady(packageName);
 
     if (packageName === "overlay" && !overlayInitialized) {
       overlayInitialized = true;
@@ -976,6 +1049,38 @@ function startGepHealthPolling(): void {
  * Fire-and-forget: a failed fetch degrades to a "floor unknown" green rather
  * than blocking package init.
  */
+/**
+ * Translates a GEP verdict into the shared status vocabulary.
+ *
+ * `red` is the only level offering a relaunch, because it is the only one a
+ * newer build can fix. `unknown` says so plainly rather than borrowing `warn`'s
+ * wording: "we could not check" and "Overwolf says it is degraded" are
+ * different facts, and flattening them is what made `unknown` necessary.
+ */
+function gepVerdictToStatus(verdict: GepHealthVerdict): SubsystemStatus {
+  if (verdict.level === "green") {
+    return { id: "gep", level: "ok", message: verdict.reason };
+  }
+  if (verdict.level === "red") {
+    return {
+      id: "gep",
+      level: "broken",
+      message: "Augment coaching is out of date and needs a restart.",
+      detail: verdict.reason,
+      action: "relaunch",
+    };
+  }
+  return {
+    id: "gep",
+    level: "degraded",
+    message:
+      verdict.level === "unknown"
+        ? "Could not check whether augment coaching is up to date. Build and item coaching are unaffected."
+        : "Augment coaching may be unreliable this game. Build and item coaching are unaffected.",
+    detail: verdict.reason,
+  };
+}
+
 /**
  * Whether the cached GEP `.owepk` is a sub-megabyte stub, or undefined when it
  * cannot be located. Lets the in-app verdict catch a stub that reports a real
@@ -1021,6 +1126,7 @@ async function reportGepHealth(loadedVersion: string): Promise<void> {
     }
     lastGepHealth = verdict;
     sendToAllWindows("gep-health", verdict);
+    appStatus.set(gepVerdictToStatus(verdict));
   } catch (err) {
     gepLog.warn("GEP health check failed", err);
   }
@@ -1881,16 +1987,40 @@ async function boot(): Promise<void> {
       `CS_SIMULATE_BOOT_ERROR=${simulateFailureFor}: that boot step will be failed deliberately (dev fault injection)`
     );
   }
+  // What the launcher could not do for us. Read before any step runs, so an
+  // early boot failure cannot bury it.
+  const launchStatus = launchStatusToSubsystem(
+    parseLaunchStatus(process.env.CHAMP_SAGE_LAUNCH_STATUS)
+  );
+  if (launchStatus) {
+    bootLog.warn(`Launch was degraded: ${launchStatus.detail}`);
+    appStatus.set(launchStatus);
+  }
+
+  // Every failed step names itself in the banner. One banner covers all of
+  // them: a boot where three things broke is one broken boot, and three stacked
+  // banners would say less than one that lists three names.
+  const failedSteps: string[] = [];
   const step = (
     name: string,
     run: () => unknown | Promise<unknown>
   ): Promise<{ step: string; ok: boolean }> =>
     guardInit(name, run, {
       simulateFailureFor,
-      onError: (failed, err) =>
+      onError: (failed, err) => {
         bootLog.error(
           `boot step '${failed}' failed; continuing without it:\n${formatErrorForLog(err)}`
-        ),
+        );
+        failedSteps.push(failed);
+        appStatus.set({
+          id: "boot",
+          level: "degraded",
+          message:
+            "Champ Sage started with part of itself switched off. Some features may not work.",
+          detail: `These startup steps failed: ${failedSteps.join(", ")}.`,
+          action: "open-logs",
+        });
+      },
     });
 
   await step("logger", () => initLogger());

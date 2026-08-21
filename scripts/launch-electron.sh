@@ -52,6 +52,25 @@ sweep_orphans() {
 OWEPM_OVERRIDE_PORT="${OWEPM_OVERRIDE_PORT:-17865}"
 OWEPM_FLAG=""
 GUARD_PID=""
+
+# Comma-separated tokens telling the app how its own launch went, read by
+# parseLaunchStatus() in src/lib/app-status.ts. Without this the launcher's
+# degrades were terminal-only: the warnings scrolled past in a terminal the
+# player is not looking at, and the app came up with no idea it had been
+# launched with its package checks skipped.
+#
+# Two tokens have producers here. `guard-crash` is reserved for A-M5, which
+# stops the launcher aborting on an unexpected guard exit. `runtime-repaired`
+# is reserved too: the preflight exits 0 whether it repaired anything or not,
+# so the launcher cannot tell, and a completed repair raises no banner anyway.
+LAUNCH_STATUS=""
+add_launch_status() {
+  if [ -z "${LAUNCH_STATUS}" ]; then
+    LAUNCH_STATUS="$1"
+  else
+    LAUNCH_STATUS="${LAUNCH_STATUS},$1"
+  fi
+}
 # The in-app "Restart now" button exits with this code to ask for a relaunch.
 RELAUNCH_EXIT_CODE=42
 
@@ -101,12 +120,14 @@ start_guard() {
       done
       if [ "${tries}" -ge 50 ]; then
         echo "[launch-electron] WARNING: override server did not become ready; launching WITHOUT override. Augment coaching may be unavailable; the in-app 'Update required' banner will flag it." >&2
+        add_launch_status "override-timeout"
       else
         OWEPM_FLAG="'--owepm-packages-url=http://127.0.0.1:${OWEPM_OVERRIDE_PORT}/packages'"
       fi
       ;;
     1)
       echo "[launch-electron] WARNING: no live GEP build resolvable (guard --check exit 1); launching WITHOUT override. Augment coaching may be unavailable; the in-app 'Update required' banner will flag it." >&2
+      add_launch_status "unguarded"
       ;;
     *)
       echo "[launch-electron] ERROR: ow-package-guard --check exited ${guard_status} (unexpected); the guard itself failed. Refusing to launch silently unguarded, fix the guard and retry." >&2
@@ -166,6 +187,21 @@ sim_env_prefix() {
   printf '%s' "${prefix}"
 }
 
+# Kept separate from sim_env_prefix, and built inside the launch loop, because
+# LAUNCH_STATUS is not known until start_guard has run. Building it with the
+# simulation prefix (which is computed once, before the loop) would have shipped
+# an env var that was always empty.
+launch_status_prefix() {
+  # Restricted to the token alphabet since the value lands inside a
+  # single-quoted PowerShell string; the app drops anything it does not
+  # recognise anyway.
+  case "${LAUNCH_STATUS}" in
+    "") ;;
+    *[!a-z,-]*) echo "[launch-electron] WARNING: ignoring malformed LAUNCH_STATUS '${LAUNCH_STATUS}'" >&2 ;;
+    *) printf '%s' "\$env:CHAMP_SAGE_LAUNCH_STATUS='${LAUNCH_STATUS}'; " ;;
+  esac
+}
+
 ensure_ow_electron_runtime
 SIM_ENV="$(sim_env_prefix)"
 
@@ -188,7 +224,11 @@ auto_relaunched=0
 # of powershell.exe so the loop can read it.
 while true; do
   sweep_orphans
+  # Reset per iteration: a relaunch can guard cleanly after a launch that did
+  # not, and a stale token would keep the banner up for a fixed problem.
+  LAUNCH_STATUS=""
   start_guard
+  LAUNCH_ENV="$(launch_status_prefix)"
 
   if [ "$1" = "--prod" ]; then
     echo "[launch-electron] Production mode: loading bundled HTML from dist/"
@@ -196,7 +236,7 @@ while true; do
     # guard, and the Vite wait are not app uptime, and counting them would let
     # an app that dies instantly look like it stayed up.
     launch_started=${SECONDS}
-    powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\"; exit \$LASTEXITCODE"
+    powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ${LAUNCH_ENV}ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\"; exit \$LASTEXITCODE"
     APP_EXIT=$?
   else
     echo "[launch-electron] Waiting for Vite dev server on localhost:1420..."
@@ -205,7 +245,7 @@ while true; do
     done
     echo "[launch-electron] Vite is ready. Launching Electron..."
     launch_started=${SECONDS}
-    powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ${SIM_ENV}\$env:VITE_DEV_SERVER_URL='http://localhost:1420'; ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\"; exit \$LASTEXITCODE"
+    powershell.exe -ExecutionPolicy Bypass -Command "${UTF8}; ${SIM_ENV}${LAUNCH_ENV}\$env:VITE_DEV_SERVER_URL='http://localhost:1420'; ow-electron ${OWEPM_FLAG} \"${PROJECT_WIN}\"; exit \$LASTEXITCODE"
     APP_EXIT=$?
   fi
 

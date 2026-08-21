@@ -56,9 +56,10 @@ import {
 } from "./lib/voice/stt-provider";
 import { InGameView } from "./components/InGameView";
 import { CoachingPipeline } from "./components/CoachingPipeline";
-import { GepHealthBanner } from "./components/GepHealthBanner";
+import { StatusBanners } from "./components/StatusBanners";
 import { UnsupportedModeBanner } from "./components/UnsupportedModeBanner";
-import { useGepHealth } from "./hooks/useGepHealth";
+import { useAppStatus, useMainStatusBridge } from "./hooks/useAppStatus";
+import type { StatusAction } from "./lib/app-status";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
 import { WindowChrome } from "./surfaces/WindowChrome";
 import { ChromeStatus } from "./surfaces/ChromeStatus";
@@ -130,9 +131,14 @@ function App() {
   const liveGame = useLiveGameState();
   useUserInput();
   useZoom();
-  const gepHealth = useGepHealth();
-  const handleGepRestart = useCallback(() => {
-    window.electronAPI?.restartToUpdate?.();
+  useMainStatusBridge();
+  const statuses = useAppStatus();
+  const handleStatusAction = useCallback((action: StatusAction) => {
+    const api = window.electronAPI;
+    if (action === "relaunch") api?.restartToUpdate?.();
+    if (action === "open-logs") api?.openLogs?.();
+    // `retry` has no main-process half: the only producer today is the renderer
+    // itself, and A-M4 gives it the retry callback.
   }, []);
 
   useEffect(() => {
@@ -319,6 +325,7 @@ function App() {
             />
           }
         />
+        <StatusBanners statuses={statuses} onAction={handleStatusAction} />
         <div className="app-loading">Loading game data...</div>
       </main>
     );
@@ -337,6 +344,7 @@ function App() {
             />
           }
         />
+        <StatusBanners statuses={statuses} onAction={handleStatusAction} />
         <div className="app-error">Error: {error}</div>
       </main>
     );
@@ -384,7 +392,7 @@ function App() {
               />
             }
           />
-          <GepHealthBanner verdict={gepHealth} onRestart={handleGepRestart} />
+          <StatusBanners statuses={statuses} onAction={handleStatusAction} />
           <UnsupportedModeBanner
             gameMode={modeDetection.unrecognizedGameMode}
           />

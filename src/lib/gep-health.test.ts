@@ -116,10 +116,46 @@ describe("evaluateGepHealth", () => {
     expect(verdict.level).toBe("red");
   });
 
-  it("degrades to green when the floor is unknown (fetch failed)", () => {
+  // An unknown floor used to read as green, so a failed status fetch was
+  // indistinguishable from a verified-healthy GEP. Green is a claim we cannot
+  // make without the floor, so the honest answer is its own level.
+  it("is unknown when the floor could not be fetched", () => {
+    const verdict = evaluateGepHealth({
+      loadedVersion: "307.4.7",
+      floor: null,
+    });
+    expect(verdict.level).toBe("unknown");
+    expect(verdict.reason.toLowerCase()).toContain("could not");
+  });
+
+  it("is unknown when the loaded version cannot be parsed", () => {
     expect(
-      evaluateGepHealth({ loadedVersion: "307.4.7", floor: null }).level
-    ).toBe("green");
+      evaluateGepHealth({ loadedVersion: "not-a-version", floor: "307.4.2" })
+        .level
+    ).toBe("unknown");
+  });
+
+  // The floor and the augments feature come from the same endpoint, but they
+  // are separate inputs here. A feature Overwolf actively reports as degraded
+  // is a real signal, and outranks not knowing the floor.
+  it("prefers a reported augments outage over an unknown floor", () => {
+    expect(
+      evaluateGepHealth({
+        loadedVersion: "307.4.7",
+        floor: null,
+        augmentsState: 2,
+      }).level
+    ).toBe("warn");
+  });
+
+  it("still calls a stub red when the floor is unknown", () => {
+    expect(
+      evaluateGepHealth({
+        loadedVersion: "307.4.7",
+        floor: null,
+        isStub: true,
+      }).level
+    ).toBe("red");
   });
 
   it("is green for a healthy version with augments green", () => {

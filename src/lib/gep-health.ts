@@ -40,13 +40,14 @@ export const STUB_OWEPK_MAX_BYTES = 1_000_000;
 /** Bounds the floor lookup so a hung status endpoint cannot hang the check. */
 const FLOOR_FETCH_TIMEOUT_MS = 10_000;
 
-export type GepHealthLevel = "green" | "warn" | "red";
+export type GepHealthLevel = "green" | "unknown" | "warn" | "red";
 
 /**
  * A pre-queue verdict on whether GEP will attach and augment events will flow.
  * `red` means augments will be silently unavailable this game; `warn` means
  * Overwolf reports the augments feature itself is degraded platform-side;
- * `green` means no problem was detected (which is a prediction, not a proof).
+ * `unknown` means the check could not be made at all; `green` means no problem
+ * was detected (which is a prediction, not a proof).
  */
 export interface GepHealthVerdict {
   level: GepHealthLevel;
@@ -92,12 +93,19 @@ export function compareVersions(a: Version, b: Version): number {
 
 /**
  * Predicts whether GEP will attach and augment events will flow, from signals
- * available before a game is queued. Order matters: a stub or below-floor build
- * is `red` (augments will be silently rejected) regardless of feature health; a
- * cleared floor with a platform-degraded augments feature is `warn`; otherwise
- * `green`. A `green` verdict is a prediction, not a proof: an unknown floor
- * (the fetch failed) or an unparseable version degrades to `green` rather than
- * crying wolf, since the runtime non-attach detector is the loud backstop.
+ * available before a game is queued.
+ *
+ * Order matters, weakest claim last: a stub or below-floor build is `red`
+ * (augments will be silently rejected) regardless of feature health; an
+ * Overwolf-reported augments outage is `warn`, and outranks a missing floor
+ * because it is a signal we actually received; a floor we could not fetch, or a
+ * version we could not parse, is `unknown`; only a version checked against a
+ * known floor earns `green`.
+ *
+ * `unknown` exists because it used to be `green`. A failed status fetch and a
+ * verified-healthy GEP produced the same silent verdict, so the one case where
+ * the app cannot see a problem looked exactly like the case where there is
+ * none. `green` is a claim, and it needs the floor to make it.
  */
 export function evaluateGepHealth(args: {
   loadedVersion: string;
@@ -146,6 +154,15 @@ export function evaluateGepHealth(args: {
       level: "warn",
       reason:
         "Overwolf reports the augments feature is degraded: augment coaching may be unreliable this game.",
+    };
+  }
+
+  if (!loaded || !floorVersion) {
+    return {
+      ...base,
+      level: "unknown",
+      reason:
+        "Could not check GEP against League's required version: augment coaching may or may not work this game.",
     };
   }
 

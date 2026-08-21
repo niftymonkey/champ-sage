@@ -959,7 +959,7 @@ The guard (`scripts/ow-package-guard.ts`, fed to ow-electron via the supported `
 
 A loaded GEP can be silently rejected at game-attach when it is below League's version floor (or a 0.0.0 stub), and no GEP/OWEPM event fires for that rejection. Health is therefore PREDICTED before a game from two signals: the loaded GEP version (the `packages.on("ready")` event in `electron/main.ts`) and the floor, which Overwolf publishes on a public, no-auth endpoint SEPARATE from the package manifest: `https://game-events-status.overwolf.com/<gameId>_prod.json` (League = 5426), field `min_gep_version_electron` (prefer it over the native `min_gep_version`; they can differ, e.g. Dota). Because it is a separate service it stays readable during a manifest outage. The pure logic lives in `src/lib/gep-health.ts` (`fetchGepFloor`, `evaluateGepHealth`, `parseVersion`), shared by the guard CLI, main, and the renderer.
 
-- **Verdict + banner:** `evaluateGepHealth` returns red (loaded `0.0.0`, a stub, or below floor), warn (Overwolf reports the augments feature degraded), or green. Main emits it on the `gep-health` IPC, caches it for a `gep:get-health` pull (the `ready` event can fire before the renderer subscribes), and re-checks every 5 minutes so a patch that raises the floor mid-session surfaces. The desktop window renders a red verdict as an "Update required" banner with a "Restart now" button (`src/components/GepHealthBanner.tsx`, `useGepHealth`); warn is an informational note; green renders nothing. Settings > About shows the live loaded GEP version.
+- **Verdict + banner:** `evaluateGepHealth` returns red (loaded `0.0.0`, a stub, or below floor), warn (Overwolf reports the augments feature degraded), unknown (the floor could not be fetched, or the version could not be parsed), or green. Main emits it on the `gep-health` IPC, caches it for a `gep:get-health` pull (the `ready` event can fire before the renderer subscribes), and re-checks every 5 minutes so a patch that raises the floor mid-session surfaces. It also mirrors the verdict into the AppStatus registry as the `gep` subsystem, which is what actually renders: red becomes a "Restart now" banner, warn and unknown become quiet notes with different wording, green clears the subsystem. See "AppStatus: one place for 'something is wrong'" below. Settings > About shows the live loaded GEP version.
 - **Restart-to-update (works under `pnpm dev:electron`):** GEP cannot be hot-reloaded, so a floor-clearing build only loads on a fresh launch. "Restart now" calls `app.exit(42)`. `scripts/launch-electron.sh` runs a relaunch LOOP: on exit code 42 it re-runs the guard (re-resolving the latest, purging the stale cache) and restarts ow-electron in place. A plain `app.relaunch()` cannot be used: it would exit the launcher and let `concurrently -k` tear Vite down, leaving the relaunched app with no renderer. `exit $LASTEXITCODE` propagates ow-electron's code out of powershell.exe so the loop can read it. Verified live 2026-06-28: a forced 306.0.10 upgraded to 307.4.7 across one button press.
 - **TTL re-resolve:** the override server (`createCachedResolver`, 15s TTL) re-resolves per request rather than once at startup, so a relaunch fetches a build newer than the one resolved at the first launch.
 - **Test hooks (inert unless set):** `GEP_FORCE_VERSION=<ver>` pins the override to a specific CDN-live build so a stale-GEP restart can be exercised on demand (the launcher unsets it after the first launch so the relaunch resolves the real latest); `pnpm ow-guard --healthcheck` prints the pre-game verdict and exit code; `OWEPM_OVERRIDE_DISABLE=1` skips the guard for the native-resolution live test.
@@ -1076,6 +1076,52 @@ The old order awaited `initCoachDecisionLog()` before `createMainWindow()`, so a
 - `whenReady` has a terminal `.catch` that creates a bare window. Reaching it means the guarding itself broke, and a visible broken app still beats an invisible one.
 - `unhandledRejection` and `uncaughtException` are registered at module top, not inside `whenReady`, because the failures they exist to catch can happen during module evaluation. Both log through `formatErrorForLog`, which prints the stack and follows the `cause` chain; the previous handler logged `err.message` alone, which is how a fatal boot left one context-free line.
 - `CS_SIMULATE_BOOT_ERROR=<step>` fails a named step on purpose (`logger`, `ipc`, `main-window`, `menu`, `decision-log`, `overwolf`, `simulate-exit`). Gated on `VITE_DEV_SERVER_URL` like `CS_SIMULATE_EXIT`, and the launcher only forwards values matching `[a-z0-9-]` since the value lands in a PowerShell command line.
+
+### AppStatus: one place for "something is wrong"
+
+Before this, the only visible health channel was `GepHealthBanner`, and it covered one subsystem. A failed boot step, a launcher that skipped its package checks, an Overwolf package that never loaded, settings that refuse to save: all of them reported to the log and nowhere else, which for anyone actually using the app is the same as not reporting at all.
+
+`src/lib/app-status.ts` holds the vocabulary and the registry. It lives in `src/lib`, not `electron/`, for the same reason `gep-health.ts` does: both processes need it, and `tsconfig.json` only includes `src`, so a renderer importing from `electron/` would be reaching outside the project's own boundary.
+
+- **`SubsystemStatus`** is `{id, level, message, detail?, action?}`. `id` is a closed union (`gep`, `boot`, `settings`, `package`, `launch`, `data`, `app-update`) rather than a string, because an open string invites two spellings of one subsystem and therefore two banners for one problem. `app-update` is a reserved seam for the B track and has no producer yet.
+- **`level`** is `ok` / `degraded` / `broken` / `updating`. `updating` is a mood rather than a severity: it is good news the player may want to act on, and it exists now so the B track's update banner does not need a second vocabulary.
+- **`createStatusRegistry()`** keeps at most one status per subsystem, sorts worst-first, and emits the whole list on change. Two behaviours are load-bearing: an `ok` report is treated as a **clear** (a subsystem saying "I am fine" is the same as having nothing to show, and keeping it in the list would make every consumer filter it out, until one forgot), and a listener that throws cannot stop the other listeners, because the registry runs during boot when the consumer is often the thing that just broke.
+
+**Transport mirrors gep-health, and needs both halves for the same reason.** `sendToAllWindows("app-status", …)` on every change, plus an `app-status:get` pull. The pull is not a nicety: nearly every status is set during boot, which is over before the first renderer mounts, so without it the common case delivers nothing. `useMainStatusBridge()` subscribes before it pulls and lets a push win, so a slow pull cannot overwrite a newer verdict.
+
+**The renderer has its own half.** `mainStatus$` carries what the main process reported; `localStatus$` carries what only the renderer can know (a data-ingest failure or a missing preload bridge never reaches main). `mergeStatuses` folds them worst-first, letting the renderer's entry win for a subsystem both reported, since it is the side closer to what the player is looking at. It also drops `ok` on the way out, which is how a renderer-side report clears something main raised: the main registry refuses `ok` on the way in, but `localStatus$` has no registry in front of it.
+
+**`StatusBanners` knows nothing about GEP.** It renders whatever the list holds, which is what keeps a new subsystem from meaning a new banner component. `broken` gets `role="alert"` and everything else gets `role="status"`, so a screen reader interrupts for a missing feature and not for a note. It absorbed `GepHealthBanner` entirely (that file is gone), and the CSS moved from `.gep-health-banner*` to `.status-banner*`; `UnsupportedModeBanner` was borrowing those classes and moved with them.
+
+**App.tsx renders it in the loading and error branches too.** Every banner used to live inside the data-gated subtree, so no banner could render while data was missing, which is precisely when the app most needs to explain itself.
+
+### `CHAMP_SAGE_LAUNCH_STATUS`: the launcher's only way to talk to the app
+
+The launcher's degrades used to be terminal-only. It printed a warning about launching without package checks into a terminal nobody is looking at, and the app came up with no idea anything had happened.
+
+`scripts/launch-electron.sh` accumulates comma-separated tokens and passes them beside `VITE_DEV_SERVER_URL`; `parseLaunchStatus` reads them, dropping anything unrecognised (the value crosses a PowerShell command line, so a mangled string is at least as likely as a newer launcher).
+
+- `unguarded` and `override-timeout` have producers today.
+- `guard-crash` is reserved for A-M5, which is what stops the launcher aborting on an unexpected guard exit.
+- `runtime-repaired` is reserved and will probably stay unused: the preflight exits 0 whether or not it repaired anything, so the launcher cannot tell, and `launchStatusToSubsystem` deliberately raises **no banner** for it anyway. Announcing a repair that already succeeded is how you teach someone to ignore banners.
+
+**The token has to be built inside the launch loop.** `SIM_ENV` is computed once before the loop, but `start_guard` runs inside it, so folding the launch status into `sim_env_prefix` shipped an env var that was always empty. It is its own `launch_status_prefix` function, called after `start_guard`, and `LAUNCH_STATUS` resets each iteration so a relaunch that guards cleanly does not inherit the previous attempt's banner.
+
+### Silence was the Overwolf failure mode
+
+OWEPM announces each package with a `ready` event and has no event for "this package is never coming". A total GEP loss therefore produced nothing at all: `lastGepHealth` stayed null, the banner had nothing to render, and the app looked exactly like a healthy one with no warnings.
+
+`electron/package-readiness.ts` turns that silence into a 60-second deadline. The timeout is generous on purpose, since a cold OWEPM cache downloads ~19 MB of GEP and a false "augment coaching is unavailable" during a normal first launch is worse than a minute of quiet. A package that arrives late still clears the banner. It also wires the two events that do exist: `failed-to-initialize` reports immediately, and `crashed` distinguishes `canRecover` (degraded, since OWEPM intends to restart it itself and a banner the player cannot act on would clear itself seconds later) from unrecoverable (broken, with a relaunch offered).
+
+### An unknown GEP floor is not the same as a healthy one
+
+`evaluateGepHealth` used to return `green` when the floor fetch failed, so "verified healthy" and "could not check" were the same silent verdict, and the one case where the app cannot see a problem looked exactly like the case where there is none. `unknown` is now its own level. Precedence, weakest claim last: red (stub or below floor) beats warn (an Overwolf-reported augments outage, which outranks a missing floor because it is a signal we actually received) beats unknown beats green.
+
+**Adding the level broke three consumers and the compiler caught none of them**, because every one of them was a ternary chain or an `if/else` with a catch-all branch:
+
+- `pnpm ow-guard --healthcheck` mapped it to exit **2**, which means "augments are broken", via a trailing `: 2`. It is now a named, tested `healthcheckExitCode()`, and `unknown` exits **1**, matching the runtime preflight's "could not decide, proceed with a warning".
+- The banner fell through to the red **"Update required" + Restart now** treatment, offering a restart nothing suggests would help.
+- `electron/main.ts` was already correct.
 
 ### The overlay windows' handlers only log; the main window's recover
 

@@ -1,4 +1,4 @@
-import { BehaviorSubject, Subject } from "rxjs";
+import { BehaviorSubject, Subject, combineLatest, map } from "rxjs";
 import type {
   GameLifecycleEvent,
   LiveGameState,
@@ -6,6 +6,7 @@ import type {
   CoachingMessage,
   AppNotification,
 } from "./types";
+import type { SubsystemStatus } from "../app-status";
 
 function createDefaultLiveGameState(): LiveGameState {
   return {
@@ -89,5 +90,63 @@ export interface DebugInputEvent {
 }
 
 export const debugInput$ = new Subject<DebugInputEvent>();
+
+/**
+ * Subsystem health as the main process sees it: boot, launch, GEP, Overwolf
+ * packages, settings.
+ */
+export const mainStatus$ = new BehaviorSubject<SubsystemStatus[]>([]);
+
+/**
+ * Subsystem health only the renderer can know.
+ *
+ * A data-ingest failure or a missing preload bridge never reaches the main
+ * process, so it has no way to report them. Without this stream those failures
+ * would be the one class of problem the status surface cannot show, which is
+ * the gap the surface exists to close.
+ */
+export const localStatus$ = new BehaviorSubject<SubsystemStatus[]>([]);
+
+/**
+ * Everything wrong with the app right now, worst first.
+ *
+ * Both sides can report the same subsystem (`data` is renderer-only today, but
+ * nothing structurally stops an overlap), so the renderer's view wins for a
+ * given id: it is the side closer to what the player is actually looking at.
+ */
+/** Display order. `ok` is filtered out before this is consulted. */
+const STATUS_ORDER: Record<SubsystemStatus["level"], number> = {
+  broken: 0,
+  degraded: 1,
+  updating: 2,
+  ok: 3,
+};
+
+/**
+ * Folds both processes' views into one worst-first list.
+ *
+ * The renderer's entry wins for a subsystem both reported: it is the side
+ * closer to what the player is looking at. `ok` is dropped rather than
+ * rendered, which is also how a renderer-side report clears something the main
+ * process raised. The main-process registry already refuses `ok` on the way in,
+ * but `localStatus$` has no registry in front of it, so this is the last place
+ * an "I am fine" can be stopped from becoming a banner.
+ */
+export function mergeStatuses(
+  fromMain: SubsystemStatus[],
+  fromRenderer: SubsystemStatus[]
+): SubsystemStatus[] {
+  const byId = new Map<SubsystemStatus["id"], SubsystemStatus>();
+  for (const status of [...fromMain, ...fromRenderer]) {
+    byId.set(status.id, status);
+  }
+  return [...byId.values()]
+    .filter((s) => s.level !== "ok")
+    .sort((a, b) => STATUS_ORDER[a.level] - STATUS_ORDER[b.level]);
+}
+
+export const appStatus$ = combineLatest([mainStatus$, localStatus$]).pipe(
+  map(([fromMain, fromRenderer]) => mergeStatuses(fromMain, fromRenderer))
+);
 
 export { createDefaultLiveGameState };
