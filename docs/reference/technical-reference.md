@@ -1063,3 +1063,39 @@ These are the launcher's own final exit codes. The preflight's codes are separat
 - Uptime is measured from just before the PowerShell launch, not from the top of the loop: the orphan sweep, the guard resolution, and the Vite wait together run ~5 s, enough to make an app that dies instantly look like it stayed up.
 - A crash (non-zero, non-42) after at least 60 s of uptime buys exactly one silent relaunch; a second crash exits and says so.
 - `CS_SIMULATE_EXIT=<code>` plus optional `CS_SIMULATE_EXIT_DELAY_MS` makes the app exit on cue (`maybeSimulateExit` in `electron/main.ts`, gated on `VITE_DEV_SERVER_URL`). The launcher passes both through to PowerShell only when they are digits, since they land on a command line. Without the hook none of these paths can be exercised without waiting for a real crash.
+
+## Main process boot (window-first)
+
+`app.whenReady()` runs `boot()` in `electron/main.ts`, and the pure decisions behind it live in `electron/boot-hardening.ts` so they are testable without a running Electron.
+
+### The window is created before anything that can fail
+
+The old order awaited `initCoachDecisionLog()` before `createMainWindow()`, so a throw or a hang anywhere upstream produced a live process with no window at all: no surface could report the failure, and to the user it was indistinguishable from a hang. Now only the steps the window itself depends on run first (the logger, and the IPC handlers the renderer calls on mount), then the window, then everything else.
+
+- Every step runs through `guardInit(name, fn, deps)`, which contains both throws and rejections and reports them per step. A failed step costs that feature, never the window.
+- `whenReady` has a terminal `.catch` that creates a bare window. Reaching it means the guarding itself broke, and a visible broken app still beats an invisible one.
+- `unhandledRejection` and `uncaughtException` are registered at module top, not inside `whenReady`, because the failures they exist to catch can happen during module evaluation. Both log through `formatErrorForLog`, which prints the stack and follows the `cause` chain; the previous handler logged `err.message` alone, which is how a fatal boot left one context-free line.
+- `CS_SIMULATE_BOOT_ERROR=<step>` fails a named step on purpose (`logger`, `ipc`, `main-window`, `menu`, `decision-log`, `overwolf`, `simulate-exit`). Gated on `VITE_DEV_SERVER_URL` like `CS_SIMULATE_EXIT`, and the launcher only forwards values matching `[a-z0-9-]` since the value lands in a PowerShell command line.
+
+### The overlay windows' handlers only log; the main window's recover
+
+A natural misreading of `createOverlayWindows`: it wires `did-fail-load` and `render-process-gone` on every overlay, but those handlers **only write a log line**. There was no recovery anywhere to copy. `attachMainWindowResilience` adds the recovery the main window needs:
+
+- `did-fail-load` retries `loadRendererContent` with exponential backoff (300 ms doubling to a 5 s cap, 12 attempts). Sub-frame failures and code `-3` (aborted navigation, which a reload racing an in-flight load produces) are ignored, or a healthy reload would count as a failure.
+- `render-process-gone` reloads once, except when shutting down or when `reason === "killed"`, which is what a deliberate teardown looks like.
+- An 8 s timer shows the window even if `ready-to-show` never fires.
+
+### `requestSingleInstanceLock` depends on the bounded quit
+
+Two mains fight over the LCU websocket, the overlay registration, and settings.json, so a second instance exits immediately and focuses the first. That is only safe because `before-quit` now bounds its decision-log drain with `drainWithTimeout(3s)`: an instance whose drain hung would stay alive, invisible, holding the lock, and every future launch would exit on sight.
+
+**`app.quit()` is not enough, and the failure looks like success.** The first implementation logged "already running" and called `app.quit()`. The log line appeared exactly as intended, and then the losing instance went right on booting: `quit()` is asynchronous and does not stop `whenReady` from firing, so it built a second main window, hydrated the decision log, and took Chromium's shared cache lock away from the real instance, which is the documented `Unable to move the cache: Access is denied. (0x5)` class. Verified live on 2026-08-20 by starting a second ow-electron against a running one. The fix is both halves: `app.exit(0)` for an immediate exit, and a `hasSingleInstanceLock` guard on the `whenReady` handler so the boot cannot run even if the exit is not instant. After the fix the second instance emits one line and nothing else.
+
+### settings.json: missing and corrupt are not the same thing
+
+`readSettingsFile` used to collapse both into `{}`, and because `settings:set` is a read-modify-write, the next setting the user changed wrote that `{}` back over the file. One unparseable read silently destroyed every stored setting.
+
+- `classifySettingsRead` returns `ok` / `missing` / `corrupt` / `unreadable` plus `safeToOverwrite`. Only a genuinely absent or empty file is safe to write over. A permission error is `unreadable`, not `missing`: the user's real settings are still in there.
+- The refusal lives in `writeSettingsFile`, not in `updateSettings`, because the IPC path is not the only writer: the main-window and strip bounds stores are handed `writeSettingsFile` directly through `SettingsIO`, so a window drag would otherwise write a fresh object over the file. Verified live 2026-08-20 by dragging the main window across monitors with a corrupt file: three writes, three refusals, file untouched.
+- **A silent refusal needs an honest caller.** The first version had `writeSettingsFile` return quietly, and `persistMainWindowBounds` logged `Persisted bounds (...)` on the very next line, announcing a save that never happened. That is the same laundering as the launcher's old `break`-then-exit-0. `settingsWritesBlocked()` exists so that caller can say `Bounds ... not persisted` instead. Any future caller that logs a successful save must check it too.
+- The bad file is copied aside once per session as `settings.json.corrupt-<stamp>` before defaults take over. The stamp replaces `:` and `.` with `-`, because userData sits on `C:` and Windows rejects `:` in a filename, so a raw `toISOString()` would throw and lose the evidence it was preserving. The copy uses the `wx` flag and never renames: if preservation is the thing that fails, destroying the original too would turn a recoverable problem into a total loss.

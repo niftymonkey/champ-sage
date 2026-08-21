@@ -53,6 +53,17 @@ import {
   STUB_OWEPK_MAX_BYTES,
   type GepHealthVerdict,
 } from "../src/lib/gep-health";
+import {
+  classifySettingsRead,
+  corruptBackupPath,
+  formatErrorForLog,
+  shouldSuppressUncaught,
+  nextRetryDelayMs,
+  guardInit,
+  parseSimulatedBootError,
+  drainWithTimeout,
+  preserveFileCopy,
+} from "./boot-hardening";
 
 const app = electronApp;
 
@@ -70,6 +81,34 @@ console.log = (...args: unknown[]) => {
   }
   originalConsoleLog.apply(console, args);
 };
+
+// ---------------------------------------------------------------------------
+// Crash handling (installed at module top, before anything can throw)
+//
+// These have to be registered here rather than inside `whenReady`, because the
+// failures they exist to catch can happen during module evaluation itself. Any
+// throw before `createMainWindow()` used to leave the process alive with no
+// window and a single message-only log line, which is indistinguishable from a
+// hang. `log` works before `initLogger()` configures its transports; early
+// messages still reach the console transport.
+// ---------------------------------------------------------------------------
+
+let shuttingDown = false;
+
+const bootLog = log.scope("boot");
+const settingsLog = log.scope("settings");
+
+process.on("uncaughtException", (err) => {
+  if (shouldSuppressUncaught(err, shuttingDown)) return;
+  bootLog.error(`Uncaught exception:\n${formatErrorForLog(err)}`);
+});
+
+// Previously absent entirely: a rejected promise in any boot step vanished
+// without a log line, which is exactly how a dead boot looked calm.
+process.on("unhandledRejection", (reason) => {
+  if (shuttingDown) return;
+  bootLog.error(`Unhandled rejection:\n${formatErrorForLog(reason)}`);
+});
 
 // ow-electron detection — when running under ow-electron, the app object
 // has an `overwolf` property with packages (overlay, gep). We don't need
@@ -132,7 +171,6 @@ function lcuBasicAuth(token: string): string {
 
 let activeWs: WebSocket | null = null;
 let activeWsReject: ((err: Error) => void) | null = null;
-let shuttingDown = false;
 
 function cleanupWebSocket(): void {
   if (!activeWs) return;
@@ -247,22 +285,114 @@ function getSettingsPath(): string {
   return join(app.getPath("userData"), "settings.json");
 }
 
-function readSettingsFile(): Record<string, unknown> {
+/**
+ * Reads settings.json, distinguishing "no settings yet" from "settings we
+ * could not read".
+ *
+ * Both used to collapse into `{}`. Since `settings:set` is a read-modify-write,
+ * that meant one unparseable read silently discarded every setting the user
+ * had, on their next change. Now an unreadable file is preserved before
+ * anything overwrites it, and the in-memory store falls back to defaults either
+ * way so the app still starts.
+ */
+function readSettings(): Record<string, unknown> {
+  const path = getSettingsPath();
+  let outcome;
   try {
-    const raw = readFileSync(getSettingsPath(), "utf-8");
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : {};
-  } catch {
-    // Missing file or parse error → empty store; caller falls back to
-    // defaults. Log nothing — first-launch is the common case.
-    return {};
+    outcome = classifySettingsRead({
+      kind: "read",
+      raw: readFileSync(path, "utf-8"),
+    });
+  } catch (err) {
+    outcome = classifySettingsRead({
+      kind: "error",
+      error: err as NodeJS.ErrnoException,
+    });
+  }
+
+  if (outcome.status === "corrupt" || outcome.status === "unreadable") {
+    if (!settingsWriteBlocked) {
+      settingsLog.error(
+        `settings.json is ${outcome.status} (${outcome.detail ?? "no detail"}); starting from defaults`
+      );
+    }
+    settingsWriteBlocked = true;
+    preserveUnreadableSettings(path, outcome.status);
+  }
+
+  return outcome.data;
+}
+
+/**
+ * Moves an unreadable settings file aside once, so the next write has somewhere
+ * safe to land and the original is still on disk to look at.
+ *
+ * Copy-then-write rather than rename: if the copy fails there is nothing to
+ * gain by also destroying the original, so a failed preservation leaves the
+ * file untouched and writes stay blocked for the session.
+ */
+let preservedSettingsThisSession = false;
+function preserveUnreadableSettings(path: string, status: string): void {
+  if (preservedSettingsThisSession) return;
+  preservedSettingsThisSession = true;
+  const outcome = preserveFileCopy(path, corruptBackupPath(path, new Date()));
+  if (outcome.preserved) {
+    settingsLog.warn(
+      `preserved the ${status} settings file at ${outcome.backupPath}`
+    );
+  } else {
+    settingsLog.warn(
+      `could not preserve the ${status} settings file: ${formatErrorForLog(outcome.error)}`
+    );
   }
 }
 
+function readSettingsFile(): Record<string, unknown> {
+  return readSettings();
+}
+
+/**
+ * Set for the rest of the session when a read finds settings.json corrupt or
+ * unreadable. Every write is blocked while it is true.
+ */
+let settingsWriteBlocked = false;
+
+/**
+ * Whether settings writes are being refused this session. Callers that log a
+ * successful save need this: `writeSettingsFile` returning quietly would
+ * otherwise let them report a save that did not happen.
+ */
+function settingsWritesBlocked(): boolean {
+  return settingsWriteBlocked;
+}
+
+/**
+ * The single chokepoint for writing settings.json.
+ *
+ * The guard lives here rather than in `updateSettings` because the IPC path is
+ * not the only writer: the main-window and strip bounds stores are handed
+ * `writeSettingsFile` directly, so a window drag would otherwise write a fresh
+ * object over a file we had just refused to parse.
+ */
 function writeSettingsFile(data: Record<string, unknown>): void {
+  if (settingsWriteBlocked) {
+    settingsLog.error(
+      "refusing to write settings.json: it holds data this session could not read, and writing would destroy it"
+    );
+    return;
+  }
   writeFileSync(getSettingsPath(), JSON.stringify(data, null, 2), "utf-8");
+}
+
+/**
+ * Write path for settings changes. Refuses to write over a file we could not
+ * read, since that write is what would destroy the user's real settings.
+ */
+function updateSettings(mutate: (data: Record<string, unknown>) => void): void {
+  const data = readSettings();
+  mutate(data);
+  // `writeSettingsFile` refuses if this session could not read the file.
+  writeSettingsFile(data);
 }
 
 function registerSettingsIpc(): void {
@@ -278,13 +408,13 @@ function registerSettingsIpc(): void {
     "settings:set",
     quietHandler(
       async (_event: unknown, key: string, value: unknown): Promise<void> => {
-        const data = readSettingsFile();
-        if (value === null || value === undefined) {
-          delete data[key];
-        } else {
-          data[key] = value;
-        }
-        writeSettingsFile(data);
+        updateSettings((data) => {
+          if (value === null || value === undefined) {
+            delete data[key];
+          } else {
+            data[key] = value;
+          }
+        });
       }
     )
   );
@@ -515,11 +645,16 @@ function registerIpcHandlers(): void {
 let mainWindow: BrowserWindow | null = null;
 
 function loadRendererContent(win: BrowserWindow): void {
-  if (process.env.VITE_DEV_SERVER_URL) {
-    win.loadURL(process.env.VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(join(__dirname, "../dist/index.html"));
-  }
+  // Both loaders reject on failure. `did-fail-load` is where the retry lives,
+  // so this rejection is a duplicate of a signal already being handled; without
+  // the catch it would surface again through the process-level
+  // `unhandledRejection` handler and report every retry twice.
+  const load = process.env.VITE_DEV_SERVER_URL
+    ? win.loadURL(process.env.VITE_DEV_SERVER_URL)
+    : win.loadFile(join(__dirname, "../dist/index.html"));
+  load.catch((err) => {
+    windowLog.debug(`renderer load rejected: ${formatErrorForLog(err)}`);
+  });
 }
 
 const MAIN_WINDOW_BOUNDS_KEY = "mainWindowBounds";
@@ -588,9 +723,15 @@ function persistMainWindowBounds(win: BrowserWindow): void {
     }
     if (!pending) return;
     mainWindowBoundsStore.set(pending);
-    windowLog.info(
-      `Persisted bounds (${pending.x},${pending.y} ${pending.width}x${pending.height})`
-    );
+    const where = `(${pending.x},${pending.y} ${pending.width}x${pending.height})`;
+    if (settingsWritesBlocked()) {
+      windowLog.warn(
+        `Bounds ${where} not persisted: settings.json is unreadable this session`
+      );
+      pending = null;
+      return;
+    }
+    windowLog.info(`Persisted bounds ${where}`);
     pending = null;
   };
 
@@ -646,6 +787,7 @@ function createMainWindow(): BrowserWindow {
 
   loadRendererContent(win);
   mainWindow = win;
+  attachMainWindowResilience(win);
   // Attach move/resize persistence only after the window is shown, so the
   // programmatic restore above is not recorded back as a user-driven change.
   win.once("ready-to-show", () => {
@@ -657,6 +799,87 @@ function createMainWindow(): BrowserWindow {
   });
 
   return win;
+}
+
+/** How long to wait for `ready-to-show` before showing the window regardless. */
+const FORCE_SHOW_MS = 8_000;
+
+/**
+ * Keeps the main window visible and recoverable.
+ *
+ * Three separate ways the window could exist but never appear, all of which the
+ * overlay windows already log (main.ts overlay creation) but none of which
+ * anything recovered from:
+ *
+ *  - the renderer fails to load (Vite not up yet, or restarting) — retry with
+ *    backoff instead of sitting on a blank window
+ *  - the renderer process dies — reload once rather than leave an empty frame
+ *  - `ready-to-show` never fires — show anyway, because a visible broken window
+ *    can report its own state and an invisible one cannot
+ */
+function attachMainWindowResilience(win: BrowserWindow): void {
+  let loadAttempt = 0;
+  let shown = false;
+
+  const markShown = (): void => {
+    shown = true;
+  };
+  win.once("ready-to-show", markShown);
+  win.once("show", markShown);
+
+  const forceShowTimer = setTimeout(() => {
+    if (shown || win.isDestroyed()) return;
+    windowLog.warn(
+      `Main window did not reach ready-to-show in ${FORCE_SHOW_MS}ms; showing it anyway`
+    );
+    win.show();
+  }, FORCE_SHOW_MS);
+
+  win.on("closed", () => clearTimeout(forceShowTimer));
+
+  win.webContents.on("did-finish-load", () => {
+    if (loadAttempt > 0) {
+      windowLog.info(
+        `Main window renderer recovered after ${loadAttempt} retries`
+      );
+    }
+    loadAttempt = 0;
+  });
+
+  win.webContents.on(
+    "did-fail-load",
+    (_event, code, desc, url, isMainFrame) => {
+      // Sub-frame failures and navigation aborts (-3, e.g. a reload racing an
+      // in-flight load) are not the window being unreachable.
+      if (!isMainFrame || code === -3) return;
+      loadAttempt += 1;
+      const delay = nextRetryDelayMs(loadAttempt);
+      if (delay === null) {
+        windowLog.error(
+          `Main window failed to load (${code}: ${desc}) and retries are exhausted; leaving the window up`
+        );
+        return;
+      }
+      windowLog.warn(
+        `Main window failed to load ${url} (${code}: ${desc}); retry ${loadAttempt} in ${delay}ms`
+      );
+      setTimeout(() => {
+        if (win.isDestroyed()) return;
+        loadRendererContent(win);
+      }, delay);
+    }
+  );
+
+  win.webContents.on("render-process-gone", (_event, details) => {
+    windowLog.error(
+      `Main window renderer gone (${details.reason}, exitCode=${details.exitCode}); reloading`
+    );
+    if (win.isDestroyed()) return;
+    // `killed` is what a deliberate teardown looks like; reloading then would
+    // fight the shutdown.
+    if (shuttingDown || details.reason === "killed") return;
+    loadRendererContent(win);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1597,13 +1820,68 @@ function maybeSimulateExit(): void {
 // App lifecycle
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(async () => {
-  initLogger();
-  registerIpcHandlers();
-  registerOverlayIpc();
-  await initCoachDecisionLog();
-  buildAppMenu();
-  createMainWindow();
+// A second instance is never what the user wanted: two mains fight over the
+// LCU websocket, the overlay registration, and settings.json. The 2026-06-13
+// double-instance incident is this gap. The lock also depends on the bounded
+// `before-quit` drain above: an instance that never finishes quitting would
+// keep the lock and lock out every future launch.
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  bootLog.warn("another Champ Sage instance is already running; exiting");
+  // `app.exit`, not `app.quit`: quit is asynchronous and does not stop
+  // `whenReady` from firing, so a losing instance went on to build a second
+  // window and take Chromium's shared cache lock away from the real one
+  // ("Unable to move the cache: Access is denied") before it got around to
+  // quitting. The `hasSingleInstanceLock` guard on boot below is the second
+  // half of the same fix.
+  app.exit(0);
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  });
+}
+
+/**
+ * Boots the app window-first.
+ *
+ * The previous order awaited the decision-log hydrate before
+ * `createMainWindow()`, so anything that threw or hung upstream of step 6 meant
+ * no window at all. The window is now the first thing that exists, and every
+ * remaining step runs inside `guardInit` so its failure costs that feature
+ * alone. Steps the window itself depends on (the logger, the IPC handlers the
+ * renderer calls on mount) still run first, since a window with no IPC would
+ * come up blank.
+ */
+async function boot(): Promise<void> {
+  const simulateFailureFor = parseSimulatedBootError(
+    process.env.CS_SIMULATE_BOOT_ERROR,
+    process.env.VITE_DEV_SERVER_URL
+  );
+  if (simulateFailureFor) {
+    bootLog.warn(
+      `CS_SIMULATE_BOOT_ERROR=${simulateFailureFor}: that boot step will be failed deliberately (dev fault injection)`
+    );
+  }
+  const step = (
+    name: string,
+    run: () => unknown | Promise<unknown>
+  ): Promise<{ step: string; ok: boolean }> =>
+    guardInit(name, run, {
+      simulateFailureFor,
+      onError: (failed, err) =>
+        bootLog.error(
+          `boot step '${failed}' failed; continuing without it:\n${formatErrorForLog(err)}`
+        ),
+    });
+
+  await step("logger", () => initLogger());
+  await step("ipc", () => {
+    registerIpcHandlers();
+    registerOverlayIpc();
+  });
+  await step("main-window", () => createMainWindow());
 
   appLog.info(
     owApp
@@ -1611,12 +1889,33 @@ app.whenReady().then(async () => {
       : "Running as vanilla Electron (no Overwolf features)"
   );
 
-  initOverwolfFeatures();
-  maybeSimulateExit();
+  await step("menu", () => buildAppMenu());
+  await step("decision-log", () => initCoachDecisionLog());
+  await step("overwolf", () => initOverwolfFeatures());
+  await step("simulate-exit", () => maybeSimulateExit());
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow();
+    }
+  });
+}
+
+app.whenReady().then(() => {
+  if (!hasSingleInstanceLock) return undefined;
+  return boot().catch((err) => {
+    // Last line of defence: `boot` guards every step, so reaching here means
+    // the guarding itself broke. A bare window still beats no window, since a
+    // visible app can say something went wrong.
+    bootLog.error(
+      `Boot failed outside every guard:\n${formatErrorForLog(err)}`
+    );
+    try {
+      if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+    } catch (windowErr) {
+      bootLog.error(
+        `Could not create a window after boot failure:\n${formatErrorForLog(windowErr)}`
+      );
     }
   });
 });
@@ -1635,30 +1934,34 @@ app.on("window-all-closed", () => {
 // reached their callback yet are lost on a hard exit. Defer the quit
 // until the chain drains via `close()`.
 let drainedDecisionLog = false;
+/**
+ * How long the decision-log drain may hold the quit open. A hung drain used to
+ * be able to hold it forever, leaving an invisible process that still owned the
+ * single-instance lock the next launch needs (G17).
+ */
+const DECISION_LOG_DRAIN_MS = 3_000;
 app.on("before-quit", (event) => {
   shuttingDown = true;
   cleanupWebSocket();
   if (drainedDecisionLog || !coachDecisionLog) return;
   event.preventDefault();
-  const log = coachDecisionLog;
+  const pending = coachDecisionLog;
   coachDecisionLog = null;
-  log
-    .close()
-    .catch((err) => decisionLog.warn("close failed", err))
+  drainWithTimeout(() => pending.close(), DECISION_LOG_DRAIN_MS)
+    .then((result) => {
+      if (result === "timeout") {
+        decisionLog.warn(
+          `close did not finish within ${DECISION_LOG_DRAIN_MS}ms; quitting anyway (the tail of this session's log may be short)`
+        );
+      } else if (result === "failed") {
+        decisionLog.warn("close failed; quitting anyway");
+      }
+    })
     .finally(() => {
       drainedDecisionLog = true;
       app.quit();
     });
 });
 
-// Suppress EPIPE and other pipe errors during shutdown.
-// ow-electron may show an error dialog for uncaught exceptions —
-// this handler prevents EPIPE from reaching that dialog.
-process.on("uncaughtException", (err) => {
-  if (shuttingDown) return;
-  if (err.message?.includes("EPIPE")) return;
-  if (err.message?.includes("broken pipe")) return;
-  appLog.error("Uncaught exception:", err.message);
-});
 process.stdout?.on?.("error", () => {});
 process.stderr?.on?.("error", () => {});

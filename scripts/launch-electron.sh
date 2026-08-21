@@ -155,6 +155,14 @@ sim_env_prefix() {
     *[!0-9]*) echo "[launch-electron] WARNING: ignoring non-numeric CS_SIMULATE_EXIT_DELAY_MS" >&2 ;;
     *) prefix="${prefix}\$env:CS_SIMULATE_EXIT_DELAY_MS='${CS_SIMULATE_EXIT_DELAY_MS}'; " ;;
   esac
+  # A boot-step name (see boot() in electron/main.ts). Restricted to the
+  # characters real step names use, since the value lands inside a
+  # single-quoted PowerShell string.
+  case "${CS_SIMULATE_BOOT_ERROR}" in
+    "") ;;
+    *[!a-z0-9-]*) echo "[launch-electron] WARNING: ignoring CS_SIMULATE_BOOT_ERROR (expected a step name like 'decision-log')" >&2 ;;
+    *) prefix="${prefix}\$env:CS_SIMULATE_BOOT_ERROR='${CS_SIMULATE_BOOT_ERROR}'; " ;;
+  esac
   printf '%s' "${prefix}"
 }
 
