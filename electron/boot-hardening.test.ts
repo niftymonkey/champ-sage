@@ -8,6 +8,8 @@ import {
   formatErrorForLog,
   shouldSuppressUncaught,
   nextRetryDelayMs,
+  shouldReloadAfterCrash,
+  MAX_RENDERER_CRASH_RELOADS,
   guardInit,
   parseSimulatedBootError,
   drainWithTimeout,
@@ -172,6 +174,35 @@ describe("nextRetryDelayMs", () => {
   });
 });
 
+describe("shouldReloadAfterCrash", () => {
+  it("reloads the first time a renderer dies unexpectedly", () => {
+    expect(shouldReloadAfterCrash(1, "crashed", false)).toBe(true);
+  });
+
+  // A renderer that dies during its own load reloads into the same crash, so
+  // an unbounded handler burns CPU forever instead of leaving a dead window up.
+  it("stops once the reload budget is spent", () => {
+    expect(
+      shouldReloadAfterCrash(MAX_RENDERER_CRASH_RELOADS + 1, "crashed", false)
+    ).toBe(false);
+  });
+
+  it("reloads on the last attempt inside the budget", () => {
+    expect(
+      shouldReloadAfterCrash(MAX_RENDERER_CRASH_RELOADS, "crashed", false)
+    ).toBe(true);
+  });
+
+  it("does not fight a deliberate teardown", () => {
+    expect(shouldReloadAfterCrash(1, "killed", false)).toBe(false);
+    expect(shouldReloadAfterCrash(1, "crashed", true)).toBe(false);
+  });
+
+  it("budgets more than one reload", () => {
+    expect(MAX_RENDERER_CRASH_RELOADS).toBeGreaterThan(1);
+  });
+});
+
 describe("guardInit", () => {
   it("reports success and leaves the return value alone", async () => {
     const outcome = await guardInit("decision-log", async () => "done", {
@@ -218,6 +249,29 @@ describe("guardInit", () => {
     });
     expect(outcome.ok).toBe(false);
     expect(run).not.toHaveBeenCalled();
+  });
+
+  // The reporter is the thing that runs on the worst boot; if it throws, the
+  // guard must still return rather than reject into whenReady.
+  it("survives an onError that throws, on both failure paths", async () => {
+    const onError = vi.fn(() => {
+      throw new Error("reporter exploded");
+    });
+    const thrown = await guardInit(
+      "overwolf",
+      () => {
+        throw new Error("GEP exploded");
+      },
+      { onError }
+    );
+    expect(thrown.ok).toBe(false);
+
+    const injected = await guardInit("decision-log", () => {}, {
+      onError,
+      simulateFailureFor: "decision-log",
+    });
+    expect(injected.ok).toBe(false);
+    expect(onError).toHaveBeenCalledTimes(2);
   });
 
   it("runs steps that fault injection did not name", async () => {

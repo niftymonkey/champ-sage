@@ -1072,7 +1072,7 @@ These are the launcher's own final exit codes. The preflight's codes are separat
 
 The old order awaited `initCoachDecisionLog()` before `createMainWindow()`, so a throw or a hang anywhere upstream produced a live process with no window at all: no surface could report the failure, and to the user it was indistinguishable from a hang. Now only the steps the window itself depends on run first (the logger, and the IPC handlers the renderer calls on mount), then the window, then everything else.
 
-- Every step runs through `guardInit(name, fn, deps)`, which contains both throws and rejections and reports them per step. A failed step costs that feature, never the window.
+- Every step runs through `guardInit(name, fn, deps)`, which contains both throws and rejections and reports them per step. A failed step costs that feature, never the window. The `onError` reporter is itself wrapped: it runs on the worst boots there are, and a throw from it would reject out of the guard and abandon exactly the steps the guard exists to save.
 - `whenReady` has a terminal `.catch` that creates a bare window. Reaching it means the guarding itself broke, and a visible broken app still beats an invisible one.
 - `unhandledRejection` and `uncaughtException` are registered at module top, not inside `whenReady`, because the failures they exist to catch can happen during module evaluation. Both log through `formatErrorForLog`, which prints the stack and follows the `cause` chain; the previous handler logged `err.message` alone, which is how a fatal boot left one context-free line.
 - `CS_SIMULATE_BOOT_ERROR=<step>` fails a named step on purpose (`logger`, `ipc`, `main-window`, `menu`, `decision-log`, `overwolf`, `simulate-exit`). Gated on `VITE_DEV_SERVER_URL` like `CS_SIMULATE_EXIT`, and the launcher only forwards values matching `[a-z0-9-]` since the value lands in a PowerShell command line.
@@ -1082,7 +1082,7 @@ The old order awaited `initCoachDecisionLog()` before `createMainWindow()`, so a
 A natural misreading of `createOverlayWindows`: it wires `did-fail-load` and `render-process-gone` on every overlay, but those handlers **only write a log line**. There was no recovery anywhere to copy. `attachMainWindowResilience` adds the recovery the main window needs:
 
 - `did-fail-load` retries `loadRendererContent` with exponential backoff (300 ms doubling to a 5 s cap, 12 attempts). Sub-frame failures and code `-3` (aborted navigation, which a reload racing an in-flight load produces) are ignored, or a healthy reload would count as a failure.
-- `render-process-gone` reloads once, except when shutting down or when `reason === "killed"`, which is what a deliberate teardown looks like.
+- `render-process-gone` reloads at most `MAX_RENDERER_CRASH_RELOADS` (3) times, then leaves the window up. The bound matters because a renderer that dies _during_ its own load reloads straight back into the same crash, so an unbounded handler spins forever; three covers the one-off GPU or out-of-memory kill a reload actually fixes. `shouldReloadAfterCrash` also refuses while shutting down and on `reason === "killed"`, which is what a deliberate teardown looks like.
 - An 8 s timer shows the window even if `ready-to-show` never fires.
 
 ### `requestSingleInstanceLock` depends on the bounded quit

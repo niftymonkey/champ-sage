@@ -221,6 +221,29 @@ export function nextRetryDelayMs(
   return Math.min(policy.baseMs * 2 ** (attempt - 1), policy.maxMs);
 }
 
+/**
+ * How many times a crashed renderer may be reloaded before the window is left
+ * as-is. A renderer that dies during its own load reloads straight back into
+ * the same crash, so an unbounded handler spins forever; a small budget covers
+ * the one-off GPU or out-of-memory kill that a reload actually fixes.
+ */
+export const MAX_RENDERER_CRASH_RELOADS = 3;
+
+/**
+ * Whether a renderer that died should be reloaded.
+ *
+ * `killed` is what a deliberate teardown looks like, and reloading during
+ * shutdown fights the quit, so both stop the recovery regardless of budget.
+ */
+export function shouldReloadAfterCrash(
+  attempt: number,
+  reason: string,
+  shuttingDown: boolean
+): boolean {
+  if (shuttingDown || reason === "killed") return false;
+  return attempt >= 1 && attempt <= MAX_RENDERER_CRASH_RELOADS;
+}
+
 // ---------------------------------------------------------------------------
 // Boot step guarding
 // ---------------------------------------------------------------------------
@@ -250,18 +273,28 @@ export async function guardInit(
   run: () => unknown | Promise<unknown>,
   deps: GuardInitDeps
 ): Promise<BootStepOutcome> {
+  // The reporter runs on the worst boots there are; a throw from it would
+  // reject out of the guard and abandon the steps this function exists to save.
+  const report = (error: unknown): void => {
+    try {
+      deps.onError(step, error);
+    } catch {
+      // Nothing to report it to: reporting is what just failed.
+    }
+  };
+
   if (deps.simulateFailureFor === step) {
     const error = new Error(
       `CS_SIMULATE_BOOT_ERROR: forced failure of '${step}'`
     );
-    deps.onError(step, error);
+    report(error);
     return { step, ok: false, error };
   }
   try {
     await run();
     return { step, ok: true };
   } catch (error) {
-    deps.onError(step, error);
+    report(error);
     return { step, ok: false, error };
   }
 }

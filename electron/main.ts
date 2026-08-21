@@ -59,6 +59,8 @@ import {
   formatErrorForLog,
   shouldSuppressUncaught,
   nextRetryDelayMs,
+  shouldReloadAfterCrash,
+  MAX_RENDERER_CRASH_RELOADS,
   guardInit,
   parseSimulatedBootError,
   drainWithTimeout,
@@ -813,12 +815,14 @@ const FORCE_SHOW_MS = 8_000;
  *
  *  - the renderer fails to load (Vite not up yet, or restarting) — retry with
  *    backoff instead of sitting on a blank window
- *  - the renderer process dies — reload once rather than leave an empty frame
+ *  - the renderer process dies — reload a bounded number of times rather than
+ *    leave an empty frame
  *  - `ready-to-show` never fires — show anyway, because a visible broken window
  *    can report its own state and an invisible one cannot
  */
 function attachMainWindowResilience(win: BrowserWindow): void {
   let loadAttempt = 0;
+  let crashReloads = 0;
   let shown = false;
 
   const markShown = (): void => {
@@ -871,13 +875,22 @@ function attachMainWindowResilience(win: BrowserWindow): void {
   );
 
   win.webContents.on("render-process-gone", (_event, details) => {
-    windowLog.error(
-      `Main window renderer gone (${details.reason}, exitCode=${details.exitCode}); reloading`
-    );
     if (win.isDestroyed()) return;
-    // `killed` is what a deliberate teardown looks like; reloading then would
-    // fight the shutdown.
-    if (shuttingDown || details.reason === "killed") return;
+    crashReloads += 1;
+    if (!shouldReloadAfterCrash(crashReloads, details.reason, shuttingDown)) {
+      // Only worth a line when the crash is not the shutdown we asked for.
+      if (!shuttingDown && details.reason !== "killed") {
+        windowLog.error(
+          `Main window renderer gone (${details.reason}, exitCode=${details.exitCode}); ` +
+            `${MAX_RENDERER_CRASH_RELOADS} reloads spent, leaving the window up`
+        );
+      }
+      return;
+    }
+    windowLog.error(
+      `Main window renderer gone (${details.reason}, exitCode=${details.exitCode}); ` +
+        `reload ${crashReloads} of ${MAX_RENDERER_CRASH_RELOADS}`
+    );
     loadRendererContent(win);
   });
 }
