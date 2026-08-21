@@ -222,10 +222,13 @@ export function nextRetryDelayMs(
 }
 
 /**
- * How many times a crashed renderer may be reloaded before the window is left
- * as-is. A renderer that dies during its own load reloads straight back into
- * the same crash, so an unbounded handler spins forever; a small budget covers
- * the one-off GPU or out-of-memory kill that a reload actually fixes.
+ * How many times in a row a crashed renderer may be reloaded before the window
+ * is left as-is. A renderer that dies during its own load reloads straight back
+ * into the same crash, so an unbounded handler spins forever; a small budget
+ * covers the one-off GPU or out-of-memory kill that a reload actually fixes.
+ *
+ * The count is consecutive, not lifetime: the caller resets it once a load
+ * finishes, so an unrelated crash hours later starts from a full budget.
  */
 export const MAX_RENDERER_CRASH_RELOADS = 3;
 

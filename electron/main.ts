@@ -848,6 +848,10 @@ function attachMainWindowResilience(win: BrowserWindow): void {
       );
     }
     loadAttempt = 0;
+    // Both budgets are for a renderer stuck in a loop, not for a long session.
+    // A load that succeeded proves the loop broke, so an unrelated crash hours
+    // later still gets its own full budget.
+    crashReloads = 0;
   });
 
   win.webContents.on(
@@ -882,7 +886,7 @@ function attachMainWindowResilience(win: BrowserWindow): void {
       if (!shuttingDown && details.reason !== "killed") {
         windowLog.error(
           `Main window renderer gone (${details.reason}, exitCode=${details.exitCode}); ` +
-            `${MAX_RENDERER_CRASH_RELOADS} reloads spent, leaving the window up`
+            `${MAX_RENDERER_CRASH_RELOADS} consecutive reloads spent, leaving the window up`
         );
       }
       return;
