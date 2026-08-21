@@ -93,6 +93,14 @@ describe("localStatusRegistry -> localStatus$", () => {
     expect(await firstValueFrom(appStatus$)).toEqual([]);
   });
 
+  // The happy path clears without ever having set: a first load that just works
+  // calls `clear("data")` on a registry that has no `data` entry.
+  it("lets a renderer clear win even when nothing was set first", async () => {
+    mainStatus$.next([status({ id: "data", level: "broken" })]);
+    localStatusRegistry.clear("data");
+    expect(await firstValueFrom(appStatus$)).toEqual([]);
+  });
+
   it("does not invent an opinion about a subsystem the renderer never reported", async () => {
     mainStatus$.next([status({ id: "gep", level: "broken" })]);
     localStatusRegistry.set(status({ id: "data", level: "broken" }));

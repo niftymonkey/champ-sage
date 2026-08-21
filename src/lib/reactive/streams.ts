@@ -7,7 +7,11 @@ import type {
   AppNotification,
 } from "./types";
 import { createStatusRegistry } from "../app-status";
-import type { SubsystemId, SubsystemStatus } from "../app-status";
+import type {
+  StatusRegistry,
+  SubsystemId,
+  SubsystemStatus,
+} from "../app-status";
 
 function createDefaultLiveGameState(): LiveGameState {
   return {
@@ -108,37 +112,56 @@ export const mainStatus$ = new BehaviorSubject<SubsystemStatus[]>([]);
  */
 export const localStatus$ = new BehaviorSubject<SubsystemStatus[]>([]);
 
+const rendererRegistry = createStatusRegistry();
+
+/**
+ * Every subsystem the renderer has ever had an opinion about, including the
+ * opinion "this one is fine".
+ *
+ * The registry turns `ok` into a deletion and stays silent when a clear finds
+ * nothing to delete, so on its own it leaves nothing on `localStatus$` for
+ * `mergeStatuses` to act on, and the merge falls back to whatever the main
+ * process last said. A main-process report the renderer has since disproved
+ * would then keep its banner up forever, with nothing left in the app able to
+ * take it down. Clearing without a prior set is the ordinary case, not an edge
+ * one: a first load that simply works clears `data` having never set it.
+ */
+const rendererReported = new Set<SubsystemId>();
+
+function publishLocalStatus(): void {
+  const live = rendererRegistry.list();
+  const liveIds = new Set(live.map((s) => s.id));
+  // An explicit "the renderer looked, and this one is fine", which the merge
+  // lets win for the id and then drops rather than rendering.
+  const cleared: SubsystemStatus[] = [...rendererReported]
+    .filter((id) => !liveIds.has(id))
+    .map((id) => ({ id, level: "ok", message: "" }));
+  localStatus$.next([...live, ...cleared]);
+}
+
 /**
  * The renderer's own registry, feeding `localStatus$`.
  *
  * The same `createStatusRegistry` the main process uses, so renderer-side
  * reporting gets the one-entry-per-subsystem rule, the `ok`-is-a-clear rule,
  * and the copy-on-the-boundary guarantee for free rather than each hook doing
- * its own array surgery on the subject.
+ * its own array surgery on the subject. The wrapper around it exists only to
+ * remember what has been cleared; see `rendererReported`.
  */
-export const localStatusRegistry = createStatusRegistry();
-
-/**
- * Every subsystem the renderer has ever had an opinion about.
- *
- * The registry turns `ok` into a deletion, so a clear would otherwise leave
- * nothing on `localStatus$` for the merge to act on, and the merge would fall
- * back to whatever the main process last said. A main-process report the
- * renderer has since disproved would then keep its banner up forever, with
- * nothing left in the app able to take it down.
- */
-const rendererReported = new Set<SubsystemId>();
-
-localStatusRegistry.subscribe((all) => {
-  for (const s of all) rendererReported.add(s.id);
-  const live = new Set(all.map((s) => s.id));
-  // An explicit "the renderer looked, and this one is fine", which the merge
-  // lets win for the id and then drops rather than rendering.
-  const cleared: SubsystemStatus[] = [...rendererReported]
-    .filter((id) => !live.has(id))
-    .map((id) => ({ id, level: "ok", message: "" }));
-  localStatus$.next([...all, ...cleared]);
-});
+export const localStatusRegistry: StatusRegistry = {
+  set(status) {
+    rendererReported.add(status.id);
+    rendererRegistry.set(status);
+    publishLocalStatus();
+  },
+  clear(id) {
+    rendererReported.add(id);
+    rendererRegistry.clear(id);
+    publishLocalStatus();
+  },
+  list: () => rendererRegistry.list(),
+  subscribe: (listener) => rendererRegistry.subscribe(listener),
+};
 
 /**
  * Everything wrong with the app right now, worst first.
