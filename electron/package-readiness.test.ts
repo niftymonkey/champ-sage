@@ -4,7 +4,7 @@ import {
   PACKAGE_READY_TIMEOUT_MS,
   REQUIRED_PACKAGES,
 } from "./package-readiness";
-import type { SubsystemStatus } from "./app-status";
+import type { SubsystemStatus } from "../src/lib/app-status";
 
 function setup(
   over: { required?: readonly string[]; timeoutMs?: number } = {}
@@ -79,6 +79,29 @@ describe("createReadinessTracker", () => {
     vi.advanceTimersByTime(PACKAGE_READY_TIMEOUT_MS);
     tracker.markReady("gep");
     expect(last().level).toBe("broken");
+  });
+
+  // main.ts forwards lifecycle events for EVERY Overwolf package, so a package
+  // we do not depend on could otherwise raise a banner claiming augment
+  // coaching and the overlay are down.
+  it("ignores a failure in a package it was not asked to watch", () => {
+    const { tracker, seen } = setup({ required: ["gep"] });
+    tracker.markFailed("some-other-package", "boom");
+    expect(seen).toEqual([]);
+  });
+
+  it("ignores a crash in a package it was not asked to watch", () => {
+    const { tracker, seen } = setup({ required: ["gep"] });
+    tracker.markCrashed("some-other-package", false);
+    expect(seen).toEqual([]);
+  });
+
+  it("still watches the deadline after an unwatched package fails", () => {
+    const { tracker, seen } = setup({ required: ["gep"] });
+    tracker.markFailed("some-other-package", "boom");
+    vi.advanceTimersByTime(PACKAGE_READY_TIMEOUT_MS);
+    expect(seen).toHaveLength(1);
+    expect(seen[0].detail ?? "").toContain("gep");
   });
 
   it("reports a failure the moment OWEPM announces it, without waiting", () => {

@@ -138,6 +138,36 @@ describe("createStatusRegistry", () => {
     expect(good).toHaveBeenCalledOnce();
   });
 
+  // The registry is read by both processes and by every banner. A consumer
+  // that edits what it was handed would silently rewrite the source of truth.
+  it("does not let a caller edit a status it was handed", () => {
+    const reg = createStatusRegistry();
+    reg.set(status({ id: "gep", message: "original" }));
+    reg.list()[0].message = "tampered";
+    expect(reg.list()[0].message).toBe("original");
+  });
+
+  it("does not let the caller edit a status after handing it in", () => {
+    const reg = createStatusRegistry();
+    const mine = status({ id: "gep", message: "original" });
+    reg.set(mine);
+    mine.message = "tampered";
+    expect(reg.list()[0].message).toBe("original");
+  });
+
+  it("gives each listener its own copy, so one cannot rewrite another's", () => {
+    const reg = createStatusRegistry();
+    reg.subscribe((all) => {
+      if (all[0]) all[0].message = "tampered by the first listener";
+    });
+    let secondSaw = "";
+    reg.subscribe((all) => {
+      secondSaw = all[0]?.message ?? "";
+    });
+    reg.set(status({ id: "gep", message: "original" }));
+    expect(secondSaw).toBe("original");
+  });
+
   it("hands out a list that cannot mutate its own state", () => {
     const reg = createStatusRegistry();
     reg.set(status({ id: "gep" }));

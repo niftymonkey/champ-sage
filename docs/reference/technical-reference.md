@@ -1085,7 +1085,7 @@ Before this, the only visible health channel was `GepHealthBanner`, and it cover
 
 - **`SubsystemStatus`** is `{id, level, message, detail?, action?}`. `id` is a closed union (`gep`, `boot`, `settings`, `package`, `launch`, `data`, `app-update`) rather than a string, because an open string invites two spellings of one subsystem and therefore two banners for one problem. `app-update` is a reserved seam for the B track and has no producer yet.
 - **`level`** is `ok` / `degraded` / `broken` / `updating`. `updating` is a mood rather than a severity: it is good news the player may want to act on, and it exists now so the B track's update banner does not need a second vocabulary.
-- **`createStatusRegistry()`** keeps at most one status per subsystem, sorts worst-first, and emits the whole list on change. Two behaviours are load-bearing: an `ok` report is treated as a **clear** (a subsystem saying "I am fine" is the same as having nothing to show, and keeping it in the list would make every consumer filter it out, until one forgot), and a listener that throws cannot stop the other listeners, because the registry runs during boot when the consumer is often the thing that just broke.
+- **`createStatusRegistry()`** keeps at most one status per subsystem, sorts worst-first, and emits the whole list on change. Three behaviours are load-bearing: an `ok` report is treated as a **clear** (a subsystem saying "I am fine" is the same as having nothing to show, and keeping it in the list would make every consumer filter it out, until one forgot); a listener that throws cannot stop the other listeners, because the registry runs during boot when the consumer is often the thing that just broke; and statuses are **copied on the way in and on the way out**, with each listener getting its own snapshot, since both processes and every banner read this registry and handing out the stored object would let any consumer rewrite the source of truth without going through `set`.
 
 **Transport mirrors gep-health, and needs both halves for the same reason.** `sendToAllWindows("app-status", …)` on every change, plus an `app-status:get` pull. The pull is not a nicety: nearly every status is set during boot, which is over before the first renderer mounts, so without it the common case delivers nothing. `useMainStatusBridge()` subscribes before it pulls and lets a push win, so a slow pull cannot overwrite a newer verdict.
 
@@ -1111,7 +1111,7 @@ The launcher's degrades used to be terminal-only. It printed a warning about lau
 
 OWEPM announces each package with a `ready` event and has no event for "this package is never coming". A total GEP loss therefore produced nothing at all: `lastGepHealth` stayed null, the banner had nothing to render, and the app looked exactly like a healthy one with no warnings.
 
-`electron/package-readiness.ts` turns that silence into a 60-second deadline. The timeout is generous on purpose, since a cold OWEPM cache downloads ~19 MB of GEP and a false "augment coaching is unavailable" during a normal first launch is worse than a minute of quiet. A package that arrives late still clears the banner. It also wires the two events that do exist: `failed-to-initialize` reports immediately, and `crashed` distinguishes `canRecover` (degraded, since OWEPM intends to restart it itself and a banner the player cannot act on would clear itself seconds later) from unrecoverable (broken, with a relaunch offered).
+`electron/package-readiness.ts` turns that silence into a 60-second deadline. It filters on a `watched` set built from `required`, because `main.ts` forwards lifecycle events for **every** Overwolf package: without the filter an unrelated package's crash raises a banner claiming augment coaching and the overlay are down. `pending` cannot serve as that check, since it empties as packages arrive. The timeout is generous on purpose, since a cold OWEPM cache downloads ~19 MB of GEP and a false "augment coaching is unavailable" during a normal first launch is worse than a minute of quiet. A package that arrives late still clears the banner. It also wires the two events that do exist: `failed-to-initialize` reports immediately, and `crashed` distinguishes `canRecover` (degraded, since OWEPM intends to restart it itself and a banner the player cannot act on would clear itself seconds later) from unrecoverable (broken, with a relaunch offered).
 
 ### An unknown GEP floor is not the same as a healthy one
 
@@ -1121,7 +1121,9 @@ OWEPM announces each package with a `ready` event and has no event for "this pac
 
 - `pnpm ow-guard --healthcheck` mapped it to exit **2**, which means "augments are broken", via a trailing `: 2`. It is now a named, tested `healthcheckExitCode()`, and `unknown` exits **1**, matching the runtime preflight's "could not decide, proceed with a warning".
 - The banner fell through to the red **"Update required" + Restart now** treatment, offering a restart nothing suggests would help.
-- `electron/main.ts` was already correct.
+- `electron/main.ts` was already correct for a _resolved_ null floor, but its `catch` only logged. A rejected `fetchGepFloor()` is the same "could not check" case, and logging alone left the renderer with no GEP status at all on a first run, or holding a stale green that no longer meant anything. The catch now publishes an `unknown` verdict.
+
+**The pull applies an empty result.** `useMainStatusBridge` treats `[]` from `getAppStatus()` as an answer ("nothing is wrong"), not a non-answer. Skipping it would leave a stale banner up across a bridge remount that a healthy main process could never clear.
 
 ### The overlay windows' handlers only log; the main window's recover
 

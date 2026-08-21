@@ -135,10 +135,21 @@ function App() {
   const statuses = useAppStatus();
   const handleStatusAction = useCallback((action: StatusAction) => {
     const api = window.electronAPI;
-    if (action === "relaunch") api?.restartToUpdate?.();
-    if (action === "open-logs") api?.openLogs?.();
-    // `retry` has no main-process half: the only producer today is the renderer
-    // itself, and A-M4 gives it the retry callback.
+    switch (action) {
+      case "relaunch":
+        return api?.restartToUpdate?.();
+      case "open-logs":
+        return api?.openLogs?.();
+      case "retry":
+        // No producer emits `retry` yet: its only source will be the renderer's
+        // own data recovery, which A-M4 adds. A button that does nothing is
+        // worse than no button, so complain loudly rather than no-op quietly if
+        // a producer ever lands before the handler does.
+        console.warn(
+          "A status offered a retry action, but no retry handler is wired yet (A-M4)."
+        );
+        return;
+    }
   }, []);
 
   useEffect(() => {

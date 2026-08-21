@@ -27,7 +27,10 @@ export function useMainStatusBridge(): void {
     api
       .getAppStatus?.()
       .then((all) => {
-        if (!cancelled && !pushed && all?.length) mainStatus$.next(all);
+        // An empty pull is an answer, not a non-answer: it means the main
+        // process has nothing wrong to report. Skipping it would leave a stale
+        // banner up across a bridge remount that a healthy main cannot clear.
+        if (!cancelled && !pushed && all) mainStatus$.next(all);
       })
       .catch(() => {});
 

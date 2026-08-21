@@ -63,6 +63,11 @@ export function createReadinessTracker(deps: ReadinessDeps): ReadinessTracker {
   const required = deps.required ?? REQUIRED_PACKAGES;
   const timeoutMs = deps.timeoutMs ?? PACKAGE_READY_TIMEOUT_MS;
   const pending = new Set(required);
+  // main.ts forwards lifecycle events for EVERY Overwolf package, not just the
+  // ones we depend on, so an unrelated package's crash would otherwise raise a
+  // banner claiming augment coaching and the overlay are down. `pending` cannot
+  // serve as this check: it empties as packages arrive.
+  const watched = new Set(required);
 
   // Set once the deadline passes (or a package reports trouble) so a late
   // arrival knows there is a banner to take down. Without it, every `ready`
@@ -102,6 +107,7 @@ export function createReadinessTracker(deps: ReadinessDeps): ReadinessTracker {
       });
     },
     markFailed(packageName, reason) {
+      if (!watched.has(packageName)) return;
       stopTimer();
       report({
         id: "package",
@@ -113,6 +119,7 @@ export function createReadinessTracker(deps: ReadinessDeps): ReadinessTracker {
       });
     },
     markCrashed(packageName, canRecover) {
+      if (!watched.has(packageName)) return;
       stopTimer();
       report({
         id: "package",

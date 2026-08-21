@@ -78,18 +78,26 @@ export function createStatusRegistry(): StatusRegistry {
   const byId = new Map<SubsystemId, SubsystemStatus>();
   const listeners = new Set<(all: SubsystemStatus[]) => void>();
 
+  // Copied on the way in and on the way out. Both processes and every banner
+  // read this registry, so handing out the stored object would let any consumer
+  // silently rewrite the source of truth without going through `set`.
+  const copy = (s: SubsystemStatus): SubsystemStatus => ({ ...s });
+
   const snapshot = (): SubsystemStatus[] =>
-    [...byId.values()].sort(
-      (a, b) =>
-        LEVEL_RANK[a.level as Exclude<StatusLevel, "ok">] -
-        LEVEL_RANK[b.level as Exclude<StatusLevel, "ok">]
-    );
+    [...byId.values()]
+      .map(copy)
+      .sort(
+        (a, b) =>
+          LEVEL_RANK[a.level as Exclude<StatusLevel, "ok">] -
+          LEVEL_RANK[b.level as Exclude<StatusLevel, "ok">]
+      );
 
   const emit = (): void => {
-    const all = snapshot();
     for (const listener of listeners) {
       try {
-        listener(all);
+        // A fresh snapshot each time, so a listener that edits what it received
+        // cannot change what the next listener sees.
+        listener(snapshot());
       } catch {
         // A broken consumer must not silence the other consumers, and the
         // reporter is usually a subsystem that is already having a bad time.
@@ -104,7 +112,7 @@ export function createStatusRegistry(): StatusRegistry {
         this.clear(next.id);
         return;
       }
-      byId.set(next.id, next);
+      byId.set(next.id, copy(next));
       emit();
     },
     clear(id) {

@@ -1128,7 +1128,21 @@ async function reportGepHealth(loadedVersion: string): Promise<void> {
     sendToAllWindows("gep-health", verdict);
     appStatus.set(gepVerdictToStatus(verdict));
   } catch (err) {
+    // The floor lookup itself failed (not just returned null), which is exactly
+    // the "could not check" case `unknown` exists for. Logging alone left the
+    // renderer with no GEP status at all on a first run, or holding a stale
+    // green from a previous check that no longer means anything.
     gepLog.warn("GEP health check failed", err);
+    const verdict: GepHealthVerdict = {
+      level: "unknown",
+      reason:
+        "Could not check GEP against League's required version: augment coaching may or may not work this game.",
+      loadedVersion,
+      floor: null,
+    };
+    lastGepHealth = verdict;
+    sendToAllWindows("gep-health", verdict);
+    appStatus.set(gepVerdictToStatus(verdict));
   }
 }
 
