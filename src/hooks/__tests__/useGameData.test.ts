@@ -18,7 +18,11 @@ vi.mock("../../lib/data-ingest/champion-id-map", () => ({
 }));
 
 import { useGameData, LOADING_SLOW_MS } from "../useGameData";
-import { localStatus$ } from "../../lib/reactive/streams";
+import {
+  localStatus$,
+  localStatusRegistry,
+  mergeStatuses,
+} from "../../lib/reactive/streams";
 
 function fakeData(version = "16.15.1") {
   return {
@@ -30,12 +34,20 @@ function fakeData(version = "16.15.1") {
   };
 }
 
+/**
+ * What the data banner actually shows, not the raw stream.
+ *
+ * A renderer clear leaves an `ok` tombstone on `localStatus$` so it can take
+ * down a same-id main-process status; the merge is what drops it again. Reading
+ * the raw stream would see the tombstone and call it a banner.
+ */
 function dataStatus() {
-  return localStatus$.value.find((s) => s.id === "data");
+  return mergeStatuses([], localStatus$.value).find((s) => s.id === "data");
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStatusRegistry.clear("data");
   localStatus$.next([]);
   loadGameData.mockResolvedValue(fakeData());
   loadCachedGameData.mockResolvedValue(null);
@@ -44,6 +56,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  localStatusRegistry.clear("data");
   localStatus$.next([]);
   vi.useRealTimers();
 });
@@ -159,6 +172,69 @@ describe("useGameData", () => {
     loadGameData.mockRejectedValue(new Error("wiki timed out"));
     renderHook(() => useGameData());
     await waitFor(() => expect(dataStatus()?.level).toBe("broken"));
+  });
+
+  // Each click starts an independent load. If the player clicks twice and the
+  // slower attempt fails after the faster one succeeded, the stale failure used
+  // to restore the broken banner on top of perfectly good data.
+  it("ignores a stale retry that fails after a later one succeeded", async () => {
+    loadGameData.mockRejectedValueOnce(new Error("wiki timed out"));
+    const { result } = renderHook(() => useGameData());
+    await waitFor(() => expect(dataStatus()).toBeDefined());
+
+    let failSlow: ((err: Error) => void) | null = null;
+    loadGameData.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failSlow = (err) => reject(err);
+        })
+    );
+    act(() => {
+      result.current.retry();
+    });
+    await waitFor(() => expect(failSlow).not.toBeNull());
+
+    loadGameData.mockResolvedValue(fakeData());
+    await act(async () => {
+      result.current.retry();
+    });
+    await waitFor(() => expect(result.current.data).not.toBeNull());
+
+    await act(async () => {
+      failSlow?.(new Error("the slow one finally gave up"));
+    });
+
+    expect(result.current.data).not.toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(dataStatus()).toBeUndefined();
+  });
+
+  // A player who closes the window mid-retry must not have the unmounted hook
+  // keep writing to the shared status registry behind them.
+  it("stops reporting once the hook is unmounted mid-retry", async () => {
+    loadGameData.mockRejectedValueOnce(new Error("wiki timed out"));
+    const { result, unmount } = renderHook(() => useGameData());
+    await waitFor(() => expect(dataStatus()).toBeDefined());
+
+    let failLate: ((err: Error) => void) | null = null;
+    loadGameData.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failLate = (err) => reject(err);
+        })
+    );
+    act(() => {
+      result.current.retry();
+    });
+    await waitFor(() => expect(failLate).not.toBeNull());
+
+    localStatus$.next([]);
+    unmount();
+    await act(async () => {
+      failLate?.(new Error("landed after unmount"));
+    });
+
+    expect(dataStatus()).toBeUndefined();
   });
 
   it("shows loading again while a retry is in flight", async () => {

@@ -63,6 +63,7 @@ import { useAppStatus, useMainStatusBridge } from "./hooks/useAppStatus";
 import type { StatusAction } from "./lib/app-status";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
 import { WindowChrome } from "./surfaces/WindowChrome";
+import { PreDataShell } from "./surfaces/PreDataShell";
 import { ChromeStatus } from "./surfaces/ChromeStatus";
 import { IdleSurface } from "./surfaces/IdleSurface";
 import { ChampSelectSurface } from "./surfaces/ChampSelectSurface";
@@ -332,75 +333,42 @@ function App() {
     return () => sub.unsubscribe();
   }, []);
 
-  if (loading && !data) {
-    return (
-      <main className="app-root">
-        <WindowChrome
-          surface={surface}
-          onNavigate={navigate}
-          statusContent={
-            <ChromeStatus
-              isRecording={voice.isRecording}
-              voiceAvailable={whisperProvider !== null}
-            />
-          }
-        />
-        <StatusBanners statuses={statuses} onAction={handleStatusAction} />
-        <div className="app-loading">Loading game data...</div>
-      </main>
-    );
-  }
-
-  if (error && !data) {
-    return (
-      <main className="app-root">
-        <WindowChrome
-          surface={surface}
-          onNavigate={navigate}
-          statusContent={
-            <ChromeStatus
-              isRecording={voice.isRecording}
-              voiceAvailable={whisperProvider !== null}
-            />
-          }
-        />
-        <StatusBanners statuses={statuses} onAction={handleStatusAction} />
-        <div className="app-error">
-          Champ Sage needs its game data before it can coach. The banner above
-          has the reason and a way to try again.
-        </div>
-      </main>
-    );
-  }
-
-  // Neither loading, nor a reported error, and still no data. Rare, but it used
-  // to `return null`, which is a blank window: the app running and looking dead
-  // with nothing on screen to explain itself or offer a way out.
+  // Everything before game data exists shares one frame. The banners are the
+  // only thing that can explain a failure or offer a way out, so the states
+  // that most need them are exactly the states that must still render them.
   if (!data) {
     return (
-      <main className="app-root">
-        <WindowChrome
-          surface={surface}
-          onNavigate={navigate}
-          statusContent={
-            <ChromeStatus
-              isRecording={voice.isRecording}
-              voiceAvailable={whisperProvider !== null}
-            />
-          }
-        />
-        <StatusBanners statuses={statuses} onAction={handleStatusAction} />
-        <div className="app-error">
-          Champ Sage has no game data loaded.
-          <button
-            type="button"
-            className="status-banner__action"
-            onClick={retry}
-          >
-            Try again
-          </button>
-        </div>
-      </main>
+      <PreDataShell
+        surface={surface}
+        onNavigate={navigate}
+        isRecording={voice.isRecording}
+        voiceAvailable={whisperProvider !== null}
+        statuses={statuses}
+        onStatusAction={handleStatusAction}
+      >
+        {loading ? (
+          <div className="app-loading">Loading game data...</div>
+        ) : error ? (
+          <div className="app-error">
+            Champ Sage needs its game data before it can coach. The banner above
+            has the reason and a way to try again.
+          </div>
+        ) : (
+          // Neither loading nor a reported error, and still no data. Rare, but
+          // it used to `return null`, which is a blank window: the app running
+          // and looking dead, with nothing on screen to explain itself.
+          <div className="app-error">
+            Champ Sage has no game data loaded.
+            <button
+              type="button"
+              className="status-banner__action"
+              onClick={retry}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+      </PreDataShell>
     );
   }
 

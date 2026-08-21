@@ -1135,7 +1135,7 @@ button.augment-card {
   opacity: 0.75;
   font-family: var(--font-mono, monospace);
   font-size: 0.78rem;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .error-boundary__action {

@@ -96,6 +96,20 @@ export function useGameData(): UseGameDataResult {
     "idle" | "checking" | "refreshing"
   >("idle");
   const jitterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Which load attempt is the one that still counts.
+   *
+   * Every mount and every retry claims the next number, so an older attempt
+   * that settles late can tell it has been superseded. Without this, a player
+   * who clicks Try again twice and whose slower attempt fails after the faster
+   * one succeeded gets the broken banner restored on top of good data. It also
+   * stops an in-flight load writing to the shared registry after unmount.
+   */
+  const attemptRef = useRef(0);
+  const startAttempt = useCallback((): (() => boolean) => {
+    const attempt = ++attemptRef.current;
+    return () => attemptRef.current !== attempt;
+  }, []);
 
   const applyData = useCallback((result: LoadedGameData) => {
     populateChampionIdMap(result.champions);
@@ -242,16 +256,17 @@ export function useGameData(): UseGameDataResult {
 
   // Initial load on mount
   useEffect(() => {
-    let cancelled = false;
-    void load(() => cancelled);
+    void load(startAttempt());
 
     return () => {
-      cancelled = true;
+      // Retires whatever attempt is in flight, so nothing that settles after
+      // this point reaches React state or the status registry.
+      attemptRef.current++;
       if (jitterTimerRef.current) {
         clearTimeout(jitterTimerRef.current);
       }
     };
-  }, [load]);
+  }, [load, startAttempt]);
 
   /**
    * Runs the whole load again after a failure. Wired to the `retry` action on
@@ -260,8 +275,8 @@ export function useGameData(): UseGameDataResult {
   const retry = useCallback(() => {
     setLoading(true);
     setError(null);
-    void load(() => false);
-  }, [load]);
+    void load(startAttempt());
+  }, [load, startAttempt]);
 
   // Manual refresh: version check without jitter
   // Force mode skips the version check and fetches regardless
