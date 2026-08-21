@@ -1095,6 +1095,29 @@ Before this, the only visible health channel was `GepHealthBanner`, and it cover
 
 **App.tsx renders it in the loading and error branches too.** Every banner used to live inside the data-gated subtree, so no banner could render while data was missing, which is precisely when the app most needs to explain itself.
 
+### The renderer had no error boundaries at all
+
+Zero, before A-M4. A component that threw during render unmounted the whole React tree, which shows up as a blank window: the process alive, the logs normal, and the app apparently dead. That is the same failure class as a boot step killing the main process, and it gets the same answer.
+
+`ErrorBoundary` wraps the root (in `main.tsx`, logging through the `ui` scope) and each surface. Region-level matters as much as the root: a root-only boundary is honest but blunt, and a crash in the item list should cost the item list, not the window. The surface boundary is **keyed on the surface**, so navigating away from a crashed surface gives the next one a fresh boundary instead of the stuck fallback of the surface the player just left.
+
+The fallback offers "Try again", which clears the caught error and re-renders. Worth having because a render crash is often transient (a data shape that arrived half-built resolves on the next render); without a way back, one unlucky frame stays broken until the app restarts. Its markup is deliberately plain, since it renders when something has already gone wrong and must not depend on anything that could also be broken.
+
+### The ingest error screen was terminal
+
+`useGameData`'s failure path set an error string and stopped. No retry, no banner, and (before A-M3) no way to render a banner beside it anyway, because banners lived inside the data-gated subtree. A cold cache plus a `CACHE_VERSION` bump is a routine patch-day event, and it left the app permanently unusable.
+
+- **`retry()`** re-runs the whole initial load. `refresh` cannot serve as the retry: it returns early without `data`, which is exactly the cold-start state a retry exists to escape. The load path was extracted into a `load(isCancelled)` callback so both the mount effect and `retry` share it.
+- **The failure publishes a `data` status** at `broken` with the `retry` action, carrying the underlying message as detail since the player is the one reporting it. Any successful load clears it, including a background refresh that lands long after the failure.
+- **A 20 s slow-load deadline** (`LOADING_SLOW_MS`) publishes a `degraded` status, because a spinner that never ends is indistinguishable from one that is working. The timer is cleared by **both** outcomes: a failure landing before the deadline must not be overwritten at 20 s by the weaker "this is slow" message.
+- **`VITE_CS_SIMULATE_DATA_FAIL=1`** forces the failure. The `VITE_` prefix is not a typo: its `CS_SIMULATE_*` siblings are read by the main process, this one by the renderer, and Vite only exposes `VITE_`-prefixed variables to client code. It also has to be set on the WSL side, since Vite runs there while the launcher's environment goes to the Windows process.
+
+**The renderer reports through the same registry the main process uses.** `localStatusRegistry` in `src/lib/reactive/streams.ts` is a `createStatusRegistry()` instance piped into `localStatus$`, so renderer-side reporting inherits the one-entry-per-subsystem rule, the `ok`-is-a-clear rule, and the copy-on-the-boundary guarantee, instead of each hook doing its own array surgery on the subject.
+
+### `App.tsx` has no branch that renders nothing
+
+The last one was `if (!data) return null`, reached when the app is neither loading nor reporting an error and still has no data. All four branches now render the window chrome and `StatusBanners`; the two that cannot proceed also offer a retry. This closes G13.
+
 ### `CHAMP_SAGE_LAUNCH_STATUS`: the launcher's only way to talk to the app
 
 The launcher's degrades used to be terminal-only. It printed a warning about launching without package checks into a terminal nobody is looking at, and the app came up with no idea anything had happened.

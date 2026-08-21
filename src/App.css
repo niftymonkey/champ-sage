@@ -1106,3 +1106,49 @@ button.augment-card {
   background-color: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.18);
 }
+
+/* Error boundary fallback - what a crashed region shows instead of taking the
+   window down with it. Deliberately plain: it renders when something already
+   went wrong, so it must not depend on anything that could also be broken. */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid rgba(193, 72, 72, 0.45);
+  border-radius: var(--radius-card);
+  background-color: rgba(193, 72, 72, 0.12);
+  color: var(--threat-hi);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.error-boundary__message {
+  margin: 0;
+  font-weight: 600;
+}
+
+.error-boundary__detail {
+  margin: 0;
+  opacity: 0.75;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  word-break: break-word;
+}
+
+.error-boundary__action {
+  padding: 0.25rem var(--space-3);
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-chip);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error-boundary__action:hover {
+  background-color: rgba(193, 72, 72, 0.18);
+}

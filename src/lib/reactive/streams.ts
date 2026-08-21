@@ -6,6 +6,7 @@ import type {
   CoachingMessage,
   AppNotification,
 } from "./types";
+import { createStatusRegistry } from "../app-status";
 import type { SubsystemStatus } from "../app-status";
 
 function createDefaultLiveGameState(): LiveGameState {
@@ -106,6 +107,18 @@ export const mainStatus$ = new BehaviorSubject<SubsystemStatus[]>([]);
  * the gap the surface exists to close.
  */
 export const localStatus$ = new BehaviorSubject<SubsystemStatus[]>([]);
+
+/**
+ * The renderer's own registry, feeding `localStatus$`.
+ *
+ * The same `createStatusRegistry` the main process uses, so renderer-side
+ * reporting gets the one-entry-per-subsystem rule, the `ok`-is-a-clear rule,
+ * and the copy-on-the-boundary guarantee for free rather than each hook doing
+ * its own array surgery on the subject.
+ */
+export const localStatusRegistry = createStatusRegistry();
+
+localStatusRegistry.subscribe((all) => localStatus$.next(all));
 
 /**
  * Everything wrong with the app right now, worst first.

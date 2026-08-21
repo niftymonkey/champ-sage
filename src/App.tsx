@@ -57,6 +57,7 @@ import {
 import { InGameView } from "./components/InGameView";
 import { CoachingPipeline } from "./components/CoachingPipeline";
 import { StatusBanners } from "./components/StatusBanners";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UnsupportedModeBanner } from "./components/UnsupportedModeBanner";
 import { useAppStatus, useMainStatusBridge } from "./hooks/useAppStatus";
 import type { StatusAction } from "./lib/app-status";
@@ -68,6 +69,7 @@ import { ChampSelectSurface } from "./surfaces/ChampSelectSurface";
 import { PostGameSurface } from "./surfaces/PostGameSurface";
 import { SettingsSurface } from "./surfaces/SettingsSurface";
 import { useSurfaceState } from "./surfaces/useSurfaceState";
+import type { Surface } from "./surfaces/resolveSurface";
 import {
   createModeRegistry,
   aramMayhemMode,
@@ -84,6 +86,15 @@ const registry = createModeRegistry();
 registry.register(aramMayhemMode);
 registry.register(aramMode);
 registry.register(classicMode);
+
+/** What each surface is called when its boundary has to name what broke. */
+const SURFACE_LABEL: Record<Surface, string> = {
+  idle: "the home screen",
+  "champ-select": "champion select",
+  "in-game": "the in-game coaching",
+  "post-game": "the post-game review",
+  settings: "settings",
+};
 
 function App() {
   const engineRef = useRef<ReactiveEngine | null>(null);
@@ -126,31 +137,29 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const { data, loading, error } = useGameData();
+  const { data, loading, error, retry } = useGameData();
   const { event: lifecycle, lastPhase, championName } = useGameLifecycle();
   const liveGame = useLiveGameState();
   useUserInput();
   useZoom();
   useMainStatusBridge();
   const statuses = useAppStatus();
-  const handleStatusAction = useCallback((action: StatusAction) => {
-    const api = window.electronAPI;
-    switch (action) {
-      case "relaunch":
-        return api?.restartToUpdate?.();
-      case "open-logs":
-        return api?.openLogs?.();
-      case "retry":
-        // No producer emits `retry` yet: its only source will be the renderer's
-        // own data recovery, which A-M4 adds. A button that does nothing is
-        // worse than no button, so complain loudly rather than no-op quietly if
-        // a producer ever lands before the handler does.
-        console.warn(
-          "A status offered a retry action, but no retry handler is wired yet (A-M4)."
-        );
-        return;
-    }
-  }, []);
+  const handleStatusAction = useCallback(
+    (action: StatusAction) => {
+      const api = window.electronAPI;
+      switch (action) {
+        case "relaunch":
+          return api?.restartToUpdate?.();
+        case "open-logs":
+          return api?.openLogs?.();
+        case "retry":
+          // The only producer is the renderer's own data layer, which is why this
+          // arm calls a local callback rather than crossing the bridge.
+          return retry();
+      }
+    },
+    [retry]
+  );
 
   useEffect(() => {
     setMatchHistoryGameData(data);
@@ -356,12 +365,44 @@ function App() {
           }
         />
         <StatusBanners statuses={statuses} onAction={handleStatusAction} />
-        <div className="app-error">Error: {error}</div>
+        <div className="app-error">
+          Champ Sage needs its game data before it can coach. The banner above
+          has the reason and a way to try again.
+        </div>
       </main>
     );
   }
 
-  if (!data) return null;
+  // Neither loading, nor a reported error, and still no data. Rare, but it used
+  // to `return null`, which is a blank window: the app running and looking dead
+  // with nothing on screen to explain itself or offer a way out.
+  if (!data) {
+    return (
+      <main className="app-root">
+        <WindowChrome
+          surface={surface}
+          onNavigate={navigate}
+          statusContent={
+            <ChromeStatus
+              isRecording={voice.isRecording}
+              voiceAvailable={whisperProvider !== null}
+            />
+          }
+        />
+        <StatusBanners statuses={statuses} onAction={handleStatusAction} />
+        <div className="app-error">
+          Champ Sage has no game data loaded.
+          <button
+            type="button"
+            className="status-banner__action"
+            onClick={retry}
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="app-root">
@@ -408,23 +449,32 @@ function App() {
             gameMode={modeDetection.unrecognizedGameMode}
           />
           <div className="app-body">
-            {surface === "in-game" ? (
-              <InGameView state={effectiveState} gameData={data} />
-            ) : surface === "champ-select" ? (
-              <ChampSelectSurface data={data} />
-            ) : surface === "post-game" ? (
-              <PostGameSurface gameId={viewingGameId} />
-            ) : surface === "settings" ? (
-              <SettingsSurface />
-            ) : (
-              <IdleSurface
-                lifecycle={lifecycle}
-                lastPhase={lastPhase}
-                championName={championName}
-                onSelectGame={handleSelectGame}
-              />
+            {/* Keyed on the surface so switching away from a crashed surface
+                gives the next one a fresh boundary rather than the stuck
+                fallback of the surface the player just left. */}
+            <ErrorBoundary key={surface} region={SURFACE_LABEL[surface]}>
+              {surface === "in-game" ? (
+                <InGameView state={effectiveState} gameData={data} />
+              ) : surface === "champ-select" ? (
+                <ChampSelectSurface data={data} />
+              ) : surface === "post-game" ? (
+                <PostGameSurface gameId={viewingGameId} />
+              ) : surface === "settings" ? (
+                <SettingsSurface />
+              ) : (
+                <IdleSurface
+                  lifecycle={lifecycle}
+                  lastPhase={lastPhase}
+                  championName={championName}
+                  onSelectGame={handleSelectGame}
+                />
+              )}
+            </ErrorBoundary>
+            {devMode && (
+              <ErrorBoundary region="the simulator panel">
+                <SimulatorPanel gameData={data} />
+              </ErrorBoundary>
             )}
-            {devMode && <SimulatorPanel gameData={data} />}
           </div>
         </CoachingProvider>
       </SWRConfig>
