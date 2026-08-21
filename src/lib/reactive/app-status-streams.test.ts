@@ -1,10 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { firstValueFrom } from "rxjs";
 import {
   mergeStatuses,
   appStatus$,
   mainStatus$,
   localStatus$,
+  localStatusRegistry,
 } from "./streams";
 import type { SubsystemStatus } from "../app-status";
 
@@ -65,6 +66,47 @@ describe("mergeStatuses", () => {
       [status({ id: "data", level: "ok" })]
     );
     expect(merged).toEqual([]);
+  });
+});
+
+// The renderer's registry turns `ok` into a deletion, so without a tombstone a
+// renderer clear would silently defer to whatever the main process last said.
+// A main-process "data is broken" the renderer has since disproved would then
+// keep a banner up forever, with nothing left that could take it down.
+describe("localStatusRegistry -> localStatus$", () => {
+  beforeEach(() => {
+    mainStatus$.next([]);
+    localStatus$.next([]);
+    localStatusRegistry.clear("data");
+  });
+
+  afterEach(() => {
+    mainStatus$.next([]);
+    localStatus$.next([]);
+    localStatusRegistry.clear("data");
+  });
+
+  it("lets a renderer clear take down a main-process status for the same subsystem", async () => {
+    mainStatus$.next([status({ id: "data", level: "broken" })]);
+    localStatusRegistry.set(status({ id: "data", level: "broken" }));
+    localStatusRegistry.clear("data");
+    expect(await firstValueFrom(appStatus$)).toEqual([]);
+  });
+
+  // The happy path clears without ever having set: a first load that just works
+  // calls `clear("data")` on a registry that has no `data` entry.
+  it("lets a renderer clear win even when nothing was set first", async () => {
+    mainStatus$.next([status({ id: "data", level: "broken" })]);
+    localStatusRegistry.clear("data");
+    expect(await firstValueFrom(appStatus$)).toEqual([]);
+  });
+
+  it("does not invent an opinion about a subsystem the renderer never reported", async () => {
+    mainStatus$.next([status({ id: "gep", level: "broken" })]);
+    localStatusRegistry.set(status({ id: "data", level: "broken" }));
+    localStatusRegistry.clear("data");
+    const merged = await firstValueFrom(appStatus$);
+    expect(merged.map((s) => s.id)).toEqual(["gep"]);
   });
 });
 

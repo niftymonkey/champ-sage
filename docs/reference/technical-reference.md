@@ -1089,11 +1089,40 @@ Before this, the only visible health channel was `GepHealthBanner`, and it cover
 
 **Transport mirrors gep-health, and needs both halves for the same reason.** `sendToAllWindows("app-status", …)` on every change, plus an `app-status:get` pull. The pull is not a nicety: nearly every status is set during boot, which is over before the first renderer mounts, so without it the common case delivers nothing. `useMainStatusBridge()` subscribes before it pulls and lets a push win, so a slow pull cannot overwrite a newer verdict.
 
-**The renderer has its own half.** `mainStatus$` carries what the main process reported; `localStatus$` carries what only the renderer can know (a data-ingest failure or a missing preload bridge never reaches main). `mergeStatuses` folds them worst-first, letting the renderer's entry win for a subsystem both reported, since it is the side closer to what the player is looking at. It also drops `ok` on the way out, which is how a renderer-side report clears something main raised: the main registry refuses `ok` on the way in, but `localStatus$` has no registry in front of it.
+**The renderer has its own half.** `mainStatus$` carries what the main process reported; `localStatus$` carries what only the renderer can know (a data-ingest failure or a missing preload bridge never reaches main). `mergeStatuses` folds them worst-first, letting the renderer's entry win for a subsystem both reported, since it is the side closer to what the player is looking at. It also drops `ok` on the way out, which is how a renderer-side clear takes down something main raised (see the tombstone note under "The ingest error screen was terminal"). Both registries refuse `ok` on the way in, so the filter is also the last place an "I am fine" arriving over the bridge from an older main process can be stopped from becoming a banner.
 
 **`StatusBanners` knows nothing about GEP.** It renders whatever the list holds, which is what keeps a new subsystem from meaning a new banner component. `broken` gets `role="alert"` and everything else gets `role="status"`, so a screen reader interrupts for a missing feature and not for a note. It absorbed `GepHealthBanner` entirely (that file is gone), and the CSS moved from `.gep-health-banner*` to `.status-banner*`; `UnsupportedModeBanner` was borrowing those classes and moved with them.
 
 **App.tsx renders it in the loading and error branches too.** Every banner used to live inside the data-gated subtree, so no banner could render while data was missing, which is precisely when the app most needs to explain itself.
+
+### The renderer had no error boundaries at all
+
+Zero, before A-M4. A component that threw during render unmounted the whole React tree, which shows up as a blank window: the process alive, the logs normal, and the app apparently dead. That is the same failure class as a boot step killing the main process, and it gets the same answer.
+
+`ErrorBoundary` wraps the root (in `main.tsx`, logging through the `ui` scope) and each surface. Region-level matters as much as the root: a root-only boundary is honest but blunt, and a crash in the item list should cost the item list, not the window. The surface boundary is **keyed on the surface**, so navigating away from a crashed surface gives the next one a fresh boundary instead of the stuck fallback of the surface the player just left.
+
+The fallback offers "Try again", which clears the caught error and re-renders. Worth having because a render crash is often transient (a data shape that arrived half-built resolves on the next render); without a way back, one unlucky frame stays broken until the app restarts. Its markup is deliberately plain, since it renders when something has already gone wrong and must not depend on anything that could also be broken.
+
+### The ingest error screen was terminal
+
+`useGameData`'s failure path set an error string and stopped. No retry, no banner, and (before A-M3) no way to render a banner beside it anyway, because banners lived inside the data-gated subtree. A cold cache plus a `CACHE_VERSION` bump is a routine patch-day event, and it left the app permanently unusable.
+
+- **`retry()`** re-runs the whole initial load. `refresh` cannot serve as the retry: it returns early without `data`, which is exactly the cold-start state a retry exists to escape. The load path was extracted into a `load(isCancelled)` callback so both the mount effect and `retry` share it.
+- **The failure publishes a `data` status** at `broken` with the `retry` action, carrying the underlying message as detail since the player is the one reporting it. Any successful load clears it, including a background refresh that lands long after the failure.
+- **A 20 s slow-load deadline** (`LOADING_SLOW_MS`) publishes a `degraded` status, because a spinner that never ends is indistinguishable from one that is working. The timer is cleared by **both** outcomes: a failure landing before the deadline must not be overwritten at 20 s by the weaker "this is slow" message.
+- **`VITE_CS_SIMULATE_DATA_FAIL=1`** forces the failure. The `VITE_` prefix is not a typo: its `CS_SIMULATE_*` siblings are read by the main process, this one by the renderer, and Vite only exposes `VITE_`-prefixed variables to client code. It also has to be set on the WSL side, since Vite runs there while the launcher's environment goes to the Windows process.
+
+**The renderer reports through the same registry the main process uses.** `localStatusRegistry` in `src/lib/reactive/streams.ts` is a `createStatusRegistry()` instance piped into `localStatus$`, so renderer-side reporting inherits the one-entry-per-subsystem rule, the `ok`-is-a-clear rule, and the copy-on-the-boundary guarantee, instead of each hook doing its own array surgery on the subject.
+
+**A renderer clear needs a tombstone to reach the merge.** The registry turns `ok` into a deletion, so piping it straight into `localStatus$` leaves nothing for `mergeStatuses` to act on and the merge falls back to whatever main last said. `streams.ts` therefore wraps the registry, remembers every subsystem the renderer has ever had an opinion about, and republishes the cleared ones as explicit `{ level: "ok" }` entries: the merge lets them win for the id, then filters them out. The wrapper is what makes **clear-before-set** work, and that is the ordinary case rather than an edge one: `clear(id)` returns silently when it finds nothing to delete, and a first load that simply works clears `data` having never set it. Subscribing to the registry's own emissions would therefore miss every happy path. Without this, a main-process report the renderer has since disproved would keep its banner up forever, with nothing in the app able to take it down. Nothing overlaps today (the renderer only reports `data`), which is exactly why the gap was invisible. Tests that assert on the renderer's own status must read through `mergeStatuses`, not the raw `localStatus$`, or they see the tombstone and call it a banner.
+
+**Every load attempt carries an identity.** `attemptRef` is bumped by the mount effect, by each `retry()`, and by unmount; `isCancelled` is `attemptRef.current !== myAttempt`. Two clicks start two independent loads, and without this the slower one failing after the faster one succeeded restored the broken banner on top of good data. The unmount bump also stops an in-flight load writing to the shared registry after the hook is gone. A plain `let cancelled` flag cannot do this: it is per-effect, and `retry` runs outside any effect.
+
+### `App.tsx` has no branch that renders nothing
+
+The last one was `if (!data) return null`, reached when the app is neither loading nor reporting an error and still has no data. All four branches now render the window chrome and `StatusBanners`; the two that cannot proceed also offer a retry. This closes G13.
+
+The three pre-data branches share one `PreDataShell` (`src/surfaces/PreDataShell.tsx`) rather than each rebuilding the frame. Three hand-copied shells is three places for the banners to go missing from, and the banners are the whole reason those states render at all.
 
 ### `CHAMP_SAGE_LAUNCH_STATUS`: the launcher's only way to talk to the app
 
