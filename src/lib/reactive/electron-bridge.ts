@@ -4,6 +4,7 @@ import type {
   LcuDisconnectPayload,
 } from "./platform-bridge";
 import type { GepHealthVerdict } from "../gep-health";
+import type { SubsystemStatus } from "../app-status";
 
 /**
  * Type declaration for the API exposed by electron/preload.ts
@@ -19,6 +20,9 @@ interface ElectronAPI {
   onGepHealth(callback: (verdict: GepHealthVerdict) => void): () => void;
   getGepHealth(): Promise<GepHealthVerdict | null>;
   restartToUpdate(): void;
+  onAppStatus(callback: (all: SubsystemStatus[]) => void): () => void;
+  getAppStatus(): Promise<SubsystemStatus[]>;
+  openLogs(): void;
   onOverlayStatus(callback: (event: unknown) => void): () => void;
   onCalibrationCapture(callback: () => void): () => void;
   onOverlayEditMode(callback: (data: { editing: boolean }) => void): () => void;

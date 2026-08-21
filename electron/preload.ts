@@ -72,6 +72,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // "Restart now" from the update banner: relaunch to load the latest GEP.
   restartToUpdate: () => ipcRenderer.send("gep:restart-to-update"),
 
+  // Whole-app health: every subsystem that has something to report.
+  onAppStatus: (callback: (event: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>
+      callback(payload);
+    ipcRenderer.on("app-status", handler);
+    return () => ipcRenderer.removeListener("app-status", handler);
+  },
+
+  // Most statuses are set during boot, which is over before the first renderer
+  // mounts, so the pull matters more here than the push.
+  getAppStatus: () => ipcRenderer.invoke("app-status:get"),
+
+  // The `open-logs` banner action.
+  openLogs: () => ipcRenderer.send("app-status:open-logs"),
+
   // Overlay injection status
   onOverlayStatus: (callback: (event: unknown) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) =>

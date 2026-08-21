@@ -53,6 +53,7 @@ import {
   fetchGepFloor,
   evaluateGepHealth,
   parseVersion,
+  type GepHealthLevel,
 } from "../src/lib/gep-health";
 
 // League of Legends Overwolf game id; used to read the published GEP floor.
@@ -859,9 +860,32 @@ async function warnIfBelowFloor(served: string | null): Promise<void> {
 }
 
 /**
+ * Exit code for a healthcheck verdict: 0 checked and clear, 1 not clear but not
+ * confirmed broken, 2 augments will be silently unavailable.
+ *
+ * `unknown` shares 1 with `warn` on purpose. A floor we could not fetch is
+ * undetermined, not broken, and this mirrors the runtime preflight's contract
+ * where 1 means "could not decide, proceed with a warning". Writing this as a
+ * ternary chain with a trailing `: 2` is what silently turned the old
+ * unfetchable-floor case into a hard failure, which is why it is a named
+ * function with its own test.
+ */
+export function healthcheckExitCode(level: GepHealthLevel): number {
+  switch (level) {
+    case "green":
+      return 0;
+    case "warn":
+    case "unknown":
+      return 1;
+    case "red":
+      return 2;
+  }
+}
+
+/**
  * Reads the cached GEP build and League's published floor and prints a pre-game
  * health verdict, so the guard-off live test (OWEPM_OVERRIDE_DISABLE=1) has a
- * single watchable command. Exit code: 0 green, 1 warn, 2 red.
+ * single watchable command. Exit codes in `healthcheckExitCode`.
  */
 async function runHealthcheck(): Promise<number> {
   const cached = readCachedGep(resolvePackagesDir());
@@ -887,7 +911,7 @@ async function runHealthcheck(): Promise<number> {
   log(
     `healthcheck: ${verdict.level.toUpperCase()} (cached gep ${cacheDesc}, floor ${floorStr}): ${verdict.reason}`
   );
-  return verdict.level === "green" ? 0 : verdict.level === "warn" ? 1 : 2;
+  return healthcheckExitCode(verdict.level);
 }
 
 function parsePort(args: string[]): number {

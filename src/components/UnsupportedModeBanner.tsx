@@ -20,8 +20,8 @@ export function UnsupportedModeBanner({
   if (!gameMode) return null;
 
   return (
-    <div className="gep-health-banner gep-health-banner--warn" role="status">
-      <span className="gep-health-banner__text">
+    <div className="status-banner status-banner--degraded" role="status">
+      <span className="status-banner__text">
         Coaching is off this game: Champ Sage does not support this game mode
         yet ({gameMode}).
       </span>

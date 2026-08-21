@@ -1044,10 +1044,10 @@ button.augment-card {
   flex: 1;
 }
 
-/* GEP health banner - pre-queue warning that augment coaching will be
-   unavailable this game (GEP below League's floor, a stub, or a degraded
-   augments feature). Hidden on a healthy verdict. */
-.gep-health-banner {
+/* Status banners - the app's one channel for telling the player a subsystem is
+   in trouble (boot, launch, GEP, Overwolf packages, settings, data). One banner
+   per subsystem, worst first. Nothing renders when everything is healthy. */
+.status-banner {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -1059,11 +1059,11 @@ button.augment-card {
   line-height: 1.4;
 }
 
-.gep-health-banner__text {
+.status-banner__text {
   flex: 1;
 }
 
-.gep-health-banner__action {
+.status-banner__action {
   flex: none;
   padding: 0.25rem var(--space-3);
   background: transparent;
@@ -1076,19 +1076,33 @@ button.augment-card {
   opacity: 0.9;
 }
 
-.gep-health-banner__action:hover {
+.status-banner__action:hover {
   opacity: 1;
   background-color: rgba(193, 72, 72, 0.18);
 }
 
-.gep-health-banner--red {
+.status-banner__detail {
+  display: block;
+  margin-top: 0.15rem;
+  opacity: 0.75;
+  font-size: 0.8rem;
+}
+
+.status-banner--broken {
   color: var(--threat-hi);
   background-color: rgba(193, 72, 72, 0.14);
   border-color: rgba(193, 72, 72, 0.45);
 }
 
-.gep-health-banner--warn {
+.status-banner--degraded {
   color: var(--threat-md);
   background-color: rgba(212, 160, 80, 0.14);
   border-color: rgba(212, 160, 80, 0.45);
+}
+
+/* An update is good news, so it gets the calmest treatment of the three. */
+.status-banner--updating {
+  color: var(--text-secondary, inherit);
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
 }

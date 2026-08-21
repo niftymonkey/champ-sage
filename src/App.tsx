@@ -56,9 +56,10 @@ import {
 } from "./lib/voice/stt-provider";
 import { InGameView } from "./components/InGameView";
 import { CoachingPipeline } from "./components/CoachingPipeline";
-import { GepHealthBanner } from "./components/GepHealthBanner";
+import { StatusBanners } from "./components/StatusBanners";
 import { UnsupportedModeBanner } from "./components/UnsupportedModeBanner";
-import { useGepHealth } from "./hooks/useGepHealth";
+import { useAppStatus, useMainStatusBridge } from "./hooks/useAppStatus";
+import type { StatusAction } from "./lib/app-status";
 import { SimulatorPanel } from "./simulator/SimulatorPanel";
 import { WindowChrome } from "./surfaces/WindowChrome";
 import { ChromeStatus } from "./surfaces/ChromeStatus";
@@ -130,9 +131,25 @@ function App() {
   const liveGame = useLiveGameState();
   useUserInput();
   useZoom();
-  const gepHealth = useGepHealth();
-  const handleGepRestart = useCallback(() => {
-    window.electronAPI?.restartToUpdate?.();
+  useMainStatusBridge();
+  const statuses = useAppStatus();
+  const handleStatusAction = useCallback((action: StatusAction) => {
+    const api = window.electronAPI;
+    switch (action) {
+      case "relaunch":
+        return api?.restartToUpdate?.();
+      case "open-logs":
+        return api?.openLogs?.();
+      case "retry":
+        // No producer emits `retry` yet: its only source will be the renderer's
+        // own data recovery, which A-M4 adds. A button that does nothing is
+        // worse than no button, so complain loudly rather than no-op quietly if
+        // a producer ever lands before the handler does.
+        console.warn(
+          "A status offered a retry action, but no retry handler is wired yet (A-M4)."
+        );
+        return;
+    }
   }, []);
 
   useEffect(() => {
@@ -319,6 +336,7 @@ function App() {
             />
           }
         />
+        <StatusBanners statuses={statuses} onAction={handleStatusAction} />
         <div className="app-loading">Loading game data...</div>
       </main>
     );
@@ -337,6 +355,7 @@ function App() {
             />
           }
         />
+        <StatusBanners statuses={statuses} onAction={handleStatusAction} />
         <div className="app-error">Error: {error}</div>
       </main>
     );
@@ -384,7 +403,7 @@ function App() {
               />
             }
           />
-          <GepHealthBanner verdict={gepHealth} onRestart={handleGepRestart} />
+          <StatusBanners statuses={statuses} onAction={handleStatusAction} />
           <UnsupportedModeBanner
             gameMode={modeDetection.unrecognizedGameMode}
           />

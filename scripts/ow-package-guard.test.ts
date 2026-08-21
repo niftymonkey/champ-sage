@@ -14,6 +14,7 @@ import {
   type OverwolfPackagesManifest,
   type InstalledPackage,
   type Version,
+  healthcheckExitCode,
 } from "./ow-package-guard";
 
 /** A fetcher standing in for an unreachable manifest, forcing CDN discovery. */
@@ -510,5 +511,27 @@ describe("createCachedResolver", () => {
       now: () => 0,
     });
     expect(await get()).toBeNull();
+  });
+});
+
+describe("healthcheckExitCode", () => {
+  it("exits 0 only when the version was checked and cleared the floor", () => {
+    expect(healthcheckExitCode("green")).toBe(0);
+  });
+
+  it("exits 2 when augments will be silently unavailable", () => {
+    expect(healthcheckExitCode("red")).toBe(2);
+  });
+
+  it("exits 1 on a platform-reported feature outage", () => {
+    expect(healthcheckExitCode("warn")).toBe(1);
+  });
+
+  // Before `unknown` existed, an unfetchable floor evaluated green. The naive
+  // rewrite is a trailing `: 2`, which flips it all the way to "augments are
+  // broken" instead. Not being able to check is undetermined, which is 1, the
+  // same shape the runtime preflight uses.
+  it("exits 1, not 2, when the check could not be made", () => {
+    expect(healthcheckExitCode("unknown")).toBe(1);
   });
 });
