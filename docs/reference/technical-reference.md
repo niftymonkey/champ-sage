@@ -1059,10 +1059,28 @@ Running any Windows binary from WSL can fail with `WSL (<pid>) ERROR: UtilAccept
 
 These are the launcher's own final exit codes. The preflight's codes are separate and only code `3` becomes one of them: `1` (preflight could not determine anything) is consumed as a warning and the launch continues, so it never reaches the caller. A final `1` therefore comes from ow-electron itself, via the `other` row.
 
+**An unusable runtime is the only thing that stops a launch.** The guard's codes never become the launcher's, because the launcher no longer refuses on any of them. That arm used to exist and it was aiming at the wrong case: see "The guard could not tell a crash from a shrug" below.
+
 - The loop used to `break` and let the script exit 0, which laundered a crash into a clean-looking shutdown. `exit "${APP_EXIT}"` now ends the script.
 - Uptime is measured from just before the PowerShell launch, not from the top of the loop: the orphan sweep, the guard resolution, and the Vite wait together run ~5 s, enough to make an app that dies instantly look like it stayed up.
 - A crash (non-zero, non-42) after at least 60 s of uptime buys exactly one silent relaunch; a second crash exits and says so.
 - `CS_SIMULATE_EXIT=<code>` plus optional `CS_SIMULATE_EXIT_DELAY_MS` makes the app exit on cue (`maybeSimulateExit` in `electron/main.ts`, gated on `VITE_DEV_SERVER_URL`). The launcher passes both through to PowerShell only when they are digits, since they land on a command line. Without the hook none of these paths can be exercised without waiting for a real crash.
+
+### The guard could not tell a crash from a shrug
+
+`--check` had two outcomes and one of them was overloaded. "I resolved nothing" exited 1, and so did any unhandled rejection anywhere inside it, because that is what Node does. The launcher read 1 as the benign degrade and launched onto a GEP nobody had verified. Meanwhile the arm that was supposed to catch a broken guard, and abort, only ever fired on missing tooling (`tsx` absent exits 127).
+
+- **`cliMain(args, handlers)`** is the single entry every mode goes through, with one `catch` that maps any throw or rejection to **`EXIT_GUARD_CRASH = 4`**. Handlers are injected so the dispatch is testable without a network or a socket. It returns `null` for a `--serve` that is resident and serving, since there is no exit code for "still running"; the caller exits only on a number.
+- **`resolveCliMode` prefers `--serve`** when the arguments ask for more than one mode. Serving is the mode that holds a port and keeps a process alive, so an ambiguous argument list must not start a resident server by accident.
+- **The abort arm is gone.** Codes 3, 1, and 4 (and anything else) all launch; the only difference is which `CHAMP_SAGE_LAUNCH_STATUS` token the app is handed. A launcher that refuses to start the app because its own helper broke has turned a degraded launch into no launch, which is the failure this whole workstream exists to remove.
+- **`--check` is capped at `CHECK_TIMEOUT_MS` (20 s)** via `withTimeout`, and a timeout answers `EXIT_ERROR`. Resolution is network-bound and runs before any window exists, so a degraded connection used to hold the launch open for as long as the sockets took. An unresolved build is the ordinary "launch unguarded" degrade, and waiting longer only delays the window. `withTimeout` clears its timer on every path: a live one keeps Node's event loop open, so a guard that finished early would sit idle for the rest of the deadline.
+- **`--serve` binds through `listenOrFail`**, which answers **`EXIT_SERVE_LISTEN_FAILED = 5`** instead of letting EADDRINUSE surface as an unhandled `error` event. Verified live: with `python3 -m http.server 17865` holding the port, `--serve` logs `EADDRINUSE` and exits 5. `serveOverrideManifest` returns codes now rather than calling `process.exit` itself, so `cliMain` owns every exit.
+- **The launcher's readiness probe watches the guard process**, not just the port. A guard that already gave up is never going to answer, and polling it for the full 10 s is time the player spends looking at nothing. A guard that exited gets the `guard-crash` token; one that merely ran out of time keeps `override-timeout`, because those are different things and the banner should not claim the wrong one.
+
+### Two launcher bounds that were not bounds
+
+- **The Vite wait was unbounded** (`while ! curl -s localhost:1420`). A Vite that never comes up meant a launcher that never launched, so the failure had no window to report itself in. It is now `curl -fs --max-time 1` capped at 90 s of wall clock (not a poll count: each poll takes anywhere from milliseconds to 1.5 s), and then it launches anyway. Recovery from a late or dead dev server belongs to the app's own renderer retry loop, which needs a window to run in. `-f` also matters on its own: without it any answer counted as ready, including a 502 from something else on the port.
+- **The guard sweep was not scoped to this checkout.** `pkill -f "scripts/ow-package-guard.ts --serve"` matches that relative path in any working tree, so starting a second checkout killed the first one's guard and left it running unguarded. The guard is now invoked by absolute path, so its command line carries the project root, and the sweep pattern is built from it with regex metacharacters escaped (`pkill -f` takes a pattern, and a path like `.../nifty[monkey]/...` would otherwise change its meaning). `kill` alone is not enough: it reaps the subshell and leaves the `tsx` process under it, which is why the sweep exists.
 
 ## Main process boot (window-first)
 
@@ -1130,8 +1148,7 @@ The launcher's degrades used to be terminal-only. It printed a warning about lau
 
 `scripts/launch-electron.sh` accumulates comma-separated tokens and passes them beside `VITE_DEV_SERVER_URL`; `parseLaunchStatus` reads them, dropping anything unrecognised (the value crosses a PowerShell command line, so a mangled string is at least as likely as a newer launcher).
 
-- `unguarded` and `override-timeout` have producers today.
-- `guard-crash` is reserved for A-M5, which is what stops the launcher aborting on an unexpected guard exit.
+- `unguarded`, `override-timeout`, and `guard-crash` all have producers today.
 - `runtime-repaired` is reserved and will probably stay unused: the preflight exits 0 whether or not it repaired anything, so the launcher cannot tell, and `launchStatusToSubsystem` deliberately raises **no banner** for it anyway. Announcing a repair that already succeeded is how you teach someone to ignore banners.
 
 **The token has to be built inside the launch loop.** `SIM_ENV` is computed once before the loop, but `start_guard` runs inside it, so folding the launch status into `sim_env_prefix` shipped an env var that was always empty. It is its own `launch_status_prefix` function, called after `start_guard`, and `LAUNCH_STATUS` resets each iteration so a relaunch that guards cleanly does not inherit the previous attempt's banner.

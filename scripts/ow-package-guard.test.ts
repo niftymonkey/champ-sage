@@ -1,4 +1,6 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import {
   manifestIndicatesOutage,
   discoverLatestVersion,
@@ -15,6 +17,13 @@ import {
   type InstalledPackage,
   type Version,
   healthcheckExitCode,
+  resolveCliMode,
+  cliMain,
+  withTimeout,
+  listenOrFail,
+  EXIT_GUARD_CRASH,
+  EXIT_SERVE_LISTEN_FAILED,
+  type CliHandlers,
 } from "./ow-package-guard";
 
 /** A fetcher standing in for an unreachable manifest, forcing CDN discovery. */
@@ -533,5 +542,156 @@ describe("healthcheckExitCode", () => {
   // same shape the runtime preflight uses.
   it("exits 1, not 2, when the check could not be made", () => {
     expect(healthcheckExitCode("unknown")).toBe(1);
+  });
+});
+
+/** Handlers that fail the test if a mode other than the expected one runs. */
+function handlersOf(over: Partial<CliHandlers> = {}): CliHandlers {
+  const unexpected = (name: string) => () =>
+    Promise.reject(new Error(`unexpected ${name} handler call`));
+  return {
+    check: over.check ?? unexpected("check"),
+    healthcheck: over.healthcheck ?? unexpected("healthcheck"),
+    serve: over.serve ?? unexpected("serve"),
+  };
+}
+
+describe("resolveCliMode", () => {
+  it("defaults to check, the mode the launcher runs before every launch", () => {
+    expect(resolveCliMode([])).toBe("check");
+    expect(resolveCliMode(["--url", "http://x"])).toBe("check");
+  });
+
+  it("reads the explicit modes", () => {
+    expect(resolveCliMode(["--serve", "--port", "1"])).toBe("serve");
+    expect(resolveCliMode(["--healthcheck"])).toBe("healthcheck");
+  });
+
+  // Serving is the mode that keeps a process alive and holds a port, so an
+  // argument list asking for both must not silently start a resident server.
+  it("prefers serve when both serve and healthcheck are passed", () => {
+    expect(resolveCliMode(["--healthcheck", "--serve"])).toBe("serve");
+  });
+});
+
+describe("cliMain", () => {
+  it("returns the handler's exit code", async () => {
+    const code = await cliMain(
+      [],
+      handlersOf({ check: () => Promise.resolve(3) })
+    );
+    expect(code).toBe(3);
+  });
+
+  it("returns null for a serve that is resident and healthy", async () => {
+    const code = await cliMain(
+      ["--serve"],
+      handlersOf({ serve: () => Promise.resolve(null) })
+    );
+    expect(code).toBeNull();
+  });
+
+  // The whole point of the code. A crash used to surface as an unhandled
+  // rejection, which exits 1, which the launcher reads as the benign "no live
+  // build" degrade: a broken guard silently launching an unverified GEP.
+  it("turns a crashing handler into the guard-crash code, not a degrade", async () => {
+    const code = await cliMain(
+      [],
+      handlersOf({ check: () => Promise.reject(new Error("boom")) })
+    );
+    expect(code).toBe(EXIT_GUARD_CRASH);
+  });
+
+  it("treats a synchronous throw as a crash too", async () => {
+    const code = await cliMain(
+      ["--healthcheck"],
+      handlersOf({
+        healthcheck: () => {
+          throw new Error("boom");
+        },
+      })
+    );
+    expect(code).toBe(EXIT_GUARD_CRASH);
+  });
+
+  // A resolution failure is not a guard failure. The launcher already knows how
+  // to launch unguarded on 1; it must keep doing that.
+  it("passes a reported failure through untouched", async () => {
+    const code = await cliMain(
+      [],
+      handlersOf({ check: () => Promise.resolve(1) })
+    );
+    expect(code).toBe(1);
+  });
+});
+
+describe("withTimeout", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns the work's own answer when it settles in time", async () => {
+    const result = await withTimeout(
+      Promise.resolve("done"),
+      20_000,
+      () => "gave up"
+    );
+    expect(result).toBe("done");
+  });
+
+  // Resolution is network-bound and runs before any window exists, so a
+  // degraded connection used to hold the launch open for as long as the sockets
+  // took.
+  it("gives up once the deadline passes", async () => {
+    vi.useFakeTimers();
+    const never = new Promise<string>(() => {});
+    const pending = withTimeout(never, 20_000, () => "gave up");
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(await pending).toBe("gave up");
+  });
+
+  it("does not give up one tick early", async () => {
+    vi.useFakeTimers();
+    let settle: ((v: string) => void) | null = null;
+    const work = new Promise<string>((resolve) => {
+      settle = resolve;
+    });
+    const pending = withTimeout(work, 20_000, () => "gave up");
+    await vi.advanceTimersByTimeAsync(19_999);
+    settle?.("done");
+    expect(await pending).toBe("done");
+  });
+
+  // A left-running timer keeps Node's event loop alive, so a guard that
+  // finished its work would sit there for the rest of the deadline.
+  it("clears its timer once the work settles", async () => {
+    vi.useFakeTimers();
+    const cleared = vi.spyOn(globalThis, "clearTimeout");
+    await withTimeout(Promise.resolve("done"), 20_000, () => "gave up");
+    expect(cleared).toHaveBeenCalled();
+  });
+});
+
+describe("listenOrFail", () => {
+  it("resolves null once the port is taken and the server is serving", async () => {
+    const server = createServer(() => {});
+    const code = await listenOrFail(server, 0);
+    expect(code).toBeNull();
+    await new Promise((r) => server.close(r));
+  });
+
+  // No listen error handler meant EADDRINUSE threw as an unhandled 'error'
+  // event, and the launcher sat through its full readiness probe before
+  // deciding to launch unguarded.
+  it("reports a taken port instead of throwing", async () => {
+    const first = createServer(() => {});
+    await listenOrFail(first, 0);
+    const port = (first.address() as AddressInfo).port;
+
+    const second = createServer(() => {});
+    const code = await listenOrFail(second, port);
+    expect(code).toBe(EXIT_SERVE_LISTEN_FAILED);
+
+    await new Promise((r) => first.close(r));
   });
 });
