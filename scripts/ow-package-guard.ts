@@ -38,7 +38,7 @@
  *                       127.0.0.1:N until killed.
  */
 
-import { createServer } from "node:http";
+import { createServer, type Server } from "node:http";
 import { fileURLToPath } from "node:url";
 import {
   appendFileSync,
@@ -66,6 +66,131 @@ const CDN_BASE = "https://electrondl.overwolf.com";
 
 const EXIT_ERROR = 1;
 const EXIT_OVERRIDE_NEEDED = 3;
+
+/**
+ * The guard itself broke, as opposed to the guard reporting that it could not
+ * resolve a build.
+ *
+ * These used to be the same code. An unhandled rejection anywhere in `--check`
+ * exits 1, which the launcher reads as the benign "no live build" degrade, so
+ * a broken guard launched the app onto a GEP nobody had verified while the
+ * abort path sat waiting for a code it could not produce.
+ */
+export const EXIT_GUARD_CRASH = 4;
+
+/**
+ * `--serve` could not take the port. Usually a guard from a previous run that
+ * outlived its launcher.
+ */
+export const EXIT_SERVE_LISTEN_FAILED = 5;
+
+/**
+ * How long `--check` may spend resolving before it gives up and says so.
+ *
+ * Resolution is network-bound and runs before any window exists, so a degraded
+ * connection used to hold the whole launch open for as long as the sockets
+ * took. Giving up is not a failure: an unresolved build is the ordinary
+ * "launch unguarded" degrade the launcher already handles.
+ */
+export const CHECK_TIMEOUT_MS = 20_000;
+
+export type CliMode = "check" | "serve" | "healthcheck";
+
+/**
+ * What each CLI mode does, injected so `cliMain` can be tested without a
+ * network or a socket. `serve` resolves to `null` when it is resident and
+ * serving, since there is no exit code for "still running".
+ */
+export interface CliHandlers {
+  check(args: string[]): Promise<number>;
+  healthcheck(): Promise<number>;
+  serve(args: string[]): Promise<number | null>;
+}
+
+/**
+ * `--serve` wins a tie: it is the mode that keeps a process alive and holds a
+ * port, so an ambiguous argument list must not start a resident server by
+ * accident.
+ */
+export function resolveCliMode(args: string[]): CliMode {
+  if (args.includes("--serve")) return "serve";
+  if (args.includes("--healthcheck")) return "healthcheck";
+  return "check";
+}
+
+/**
+ * The single entry every mode goes through, so every mode has one place that
+ * turns a crash into an exit code the launcher can tell apart from a degrade.
+ *
+ * Returns `null` only for a `--serve` that is resident and serving; the caller
+ * leaves the process running rather than exiting on it.
+ */
+export async function cliMain(
+  args: string[],
+  handlers: CliHandlers
+): Promise<number | null> {
+  try {
+    switch (resolveCliMode(args)) {
+      case "serve":
+        return await handlers.serve(args);
+      case "healthcheck":
+        return await handlers.healthcheck();
+      case "check":
+        return await handlers.check(args);
+    }
+  } catch (err) {
+    log(
+      `guard crashed: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`
+    );
+    return EXIT_GUARD_CRASH;
+  }
+}
+
+/**
+ * Caps how long a piece of work may run, answering with `onTimeout()` instead
+ * of waiting. The timer is cleared on every path: a live one keeps Node's event
+ * loop open, so a guard that finished early would sit idle for the rest of the
+ * deadline.
+ */
+export async function withTimeout<T>(
+  work: Promise<T>,
+  ms: number,
+  onTimeout: () => T
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(onTimeout()), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Binds the port and answers with an exit code instead of throwing.
+ *
+ * Without an `error` listener, EADDRINUSE surfaces as an unhandled `error`
+ * event that takes the process down with a stack trace, and the launcher only
+ * finds out by sitting through its whole readiness probe.
+ */
+export async function listenOrFail(
+  server: Server,
+  port: number
+): Promise<number | null> {
+  return new Promise((resolve) => {
+    server.once("error", (err: NodeJS.ErrnoException) => {
+      log(
+        `could not listen on 127.0.0.1:${port} (${err.code ?? err.message}); not serving override`
+      );
+      resolve(EXIT_SERVE_LISTEN_FAILED);
+    });
+    server.listen(port, "127.0.0.1", () => resolve(null));
+  });
+}
 
 // A real GEP `.owepk` is ~19 MB; the broken Overwolf builds ship a ~21 KB stub
 // that carries no in-game handler. Any cached package under this size is a stub
@@ -764,7 +889,7 @@ async function resolveOverrideBody(): Promise<string | null> {
   return JSON.stringify(manifest);
 }
 
-async function serveOverrideManifest(port: number): Promise<void> {
+async function serveOverrideManifest(port: number): Promise<number | null> {
   const getBody = createCachedResolver({
     resolve: resolveOverrideBody,
     ttlMs: OVERRIDE_RESOLVE_TTL_MS,
@@ -778,7 +903,7 @@ async function serveOverrideManifest(port: number): Promise<void> {
     log(
       "no live GEP build found near the discovery baseline (League's published floor, or the gep anchor in PACKAGE_SPECS when the status endpoint is unreachable); not serving override"
     );
-    process.exit(EXIT_ERROR);
+    return EXIT_ERROR;
   }
 
   const server = createServer((_req, res) => {
@@ -787,14 +912,18 @@ async function serveOverrideManifest(port: number): Promise<void> {
       res.end(body ?? initial);
     });
   });
-  server.listen(port, "127.0.0.1", () => {
-    log(
-      `serving override manifest on http://localhost:${port}/packages (re-resolves every ${OVERRIDE_RESOLVE_TTL_MS / 1000}s)`
-    );
-  });
+
+  const listenFailure = await listenOrFail(server, port);
+  if (listenFailure !== null) return listenFailure;
+
+  log(
+    `serving override manifest on http://localhost:${port}/packages (re-resolves every ${OVERRIDE_RESOLVE_TTL_MS / 1000}s)`
+  );
   const shutdown = () => server.close(() => process.exit(0));
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+  // Resident and serving: there is no exit code for "still running".
+  return null;
 }
 
 /**
@@ -935,11 +1064,7 @@ const invokedDirectly = process.argv[1] === scriptPath;
 
 if (invokedDirectly) {
   const args = process.argv.slice(2);
-  const mode = args.includes("--serve")
-    ? "serve"
-    : args.includes("--healthcheck")
-      ? "healthcheck"
-      : "check";
+  const mode = resolveCliMode(args);
   // Resolved against the script path (not cwd) so it always lands at the repo
   // root regardless of where the guard is invoked from.
   logSink = join(dirname(scriptPath), "..", ".ow-guard.log");
@@ -952,11 +1077,20 @@ if (invokedDirectly) {
     logSink = null; // not writable: fall back to console-only.
   }
 
-  if (mode === "serve") {
-    void serveOverrideManifest(parsePort(args));
-  } else if (mode === "healthcheck") {
-    void runHealthcheck().then((code) => process.exit(code));
-  } else {
-    void runCheck(parseUrl(args)).then((code) => process.exit(code));
-  }
+  void cliMain(args, {
+    serve: (a) => serveOverrideManifest(parsePort(a)),
+    healthcheck: () => runHealthcheck(),
+    // A resolution that never comes back is the same answer as one that comes
+    // back empty: we cannot name the build, so the launcher launches unguarded
+    // and the in-app banner says so. Waiting longer only delays the window.
+    check: (a) =>
+      withTimeout(runCheck(parseUrl(a)), CHECK_TIMEOUT_MS, () => {
+        log(
+          `could not resolve the latest served GEP build within ${CHECK_TIMEOUT_MS / 1000}s; skipping override`
+        );
+        return EXIT_ERROR;
+      }),
+  }).then((code) => {
+    if (code !== null) process.exit(code);
+  });
 }
